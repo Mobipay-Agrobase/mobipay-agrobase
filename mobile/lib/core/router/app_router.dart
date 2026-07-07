@@ -22,6 +22,9 @@ import '../../features/auth/presentation/pages/splash_page.dart';
 import '../../features/impact/presentation/pages/impact_dashboard_page.dart';
 import '../../features/impact/presentation/pages/practice_logger_page.dart';
 import '../../features/impact/presentation/pages/my_passport_page.dart';
+import '../../features/purchases/presentation/pages/produce_purchase_page.dart';
+import '../../features/input_distribution/presentation/pages/input_distribution_page.dart';
+import '../../features/farmer_ledger/presentation/pages/farmer_ledger_page.dart';
 
 class AppRouter {
   static final _rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -69,6 +72,20 @@ class AppRouter {
           GoRoute(
             path: '/profile/trainings',
             builder: (_, __) => const MyTrainingsPage(),
+          ),
+          // ─── EKIBBO Phase 3: Purchase, Input Distribution, Farmer Ledger ───
+          GoRoute(
+            path: '/purchase/new',
+            builder: (_, __) => const ProducePurchasePage(),
+          ),
+          GoRoute(
+            path: '/input-distribution',
+            builder: (_, __) => const InputDistributionPage(),
+          ),
+          GoRoute(
+            path: '/farmer/:id/ledger',
+            builder: (_, state) =>
+                FarmerLedgerPage(farmerId: state.pathParameters['id']!),
           ),
           // ─── Phase 2: Farm Lands, Cultivations, Sales, Payments ───
           GoRoute(
@@ -119,7 +136,7 @@ class AppRouter {
               StatefulShellBranch(routes: [
                 GoRoute(
                   path: '/sales',
-                  builder: (_, __) => const SalesPage(),
+                  builder: (_, __) => const ProducePurchasePage(),
                 ),
               ]),
               StatefulShellBranch(routes: [
@@ -210,9 +227,9 @@ class ScaffoldWithNavBar extends StatelessWidget {
             label: 'Farms',
           ),
           NavigationDestination(
-            icon: Icon(Icons.receipt_outlined),
-            selectedIcon: Icon(Icons.receipt),
-            label: 'Sales',
+            icon: Icon(Icons.shopping_cart_outlined),
+            selectedIcon: Icon(Icons.shopping_cart),
+            label: 'Purchase',
           ),
           NavigationDestination(
             icon: Icon(Icons.payment_outlined),

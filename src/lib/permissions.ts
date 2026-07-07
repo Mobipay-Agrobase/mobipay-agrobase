@@ -52,6 +52,97 @@ const ROLE_PERMISSIONS: RolePerms = {
     'carbon:*', 'mfi:*', 'transport:*',
   ],
 
+  // ─── EKIBBO-Specific Roles (from EKIBBO requirements Excel) ───
+
+  // EKIBBO Managing Director (Eric): Overall oversight + governance
+  EKB_MD: [
+    'dashboard:read',
+    'farmers:read',
+    'purchases:read', 'purchases:approve',
+    'sales:read',
+    'loans:read',
+    'training:read',
+    'reports:read', 'reports:export',
+    'trace:read',
+    'compliance:read',
+    'carbon:read',
+    'impact_assessment:read',
+    'users:read',
+    'profile:read',
+    'billing:read',
+  ],
+
+  // EKIBBO Operations Manager: Manage farmers, groups, trainings, purchases
+  EKB_OPS_MANAGER: [
+    'dashboard:read',
+    'farmers:*',
+    'training:*',
+    'farm_visits:*',
+    'purchases:*', 'purchases:approve',
+    'input_aggregation:*',
+    'surveys:read',
+    'reports:read', 'reports:export',
+    'trace:read',
+    'compliance:read',
+    'profile:read', 'profile:update',
+  ],
+
+  // EKIBBO Finance Officer: Financial operations only — NO farmer CRUD
+  EKB_FINANCE: [
+    'dashboard:read',
+    'farmers:read',           // view only — no create/edit
+    'purchases:read', 'purchases:approve',
+    'sales:*',
+    'loans:read',
+    'payments:read',
+    'reports:read', 'reports:export',
+    'trace:read',
+    'profile:read', 'profile:update',
+    'billing:read',
+  ],
+
+  // EKIBBO Finance & Operations Assistant: Enter data, draft only — no approvals
+  EKB_FIN_ASSISTANT: [
+    'dashboard:read',
+    'farmers:read',
+    'purchases:read', 'purchases:create', 'purchases:update',  // draft only
+    'sales:read', 'sales:create', 'sales:update',              // draft only
+    'input_aggregation:read', 'input_aggregation:create',
+    'profile:read', 'profile:update',
+  ],
+
+  // EKIBBO M, E & C Officer: Data quality, reporting, communications — NO financial edits
+  EKB_MEC: [
+    'dashboard:read',
+    'farmers:read', 'farmers:update',   // can correct farmer profiles
+    'training:read', 'training:update', // can correct training records
+    'farm_visits:read',
+    'surveys:*',
+    'communication:*',
+    'reports:read', 'reports:export',
+    'compliance:read',
+    'carbon:read',
+    'impact_assessment:read',
+    'profile:read', 'profile:update',
+  ],
+
+  // EKIBBO Extension Officer: Field data collection — submit only, no edits after submission
+  EKB_EXTENSION: [
+    'dashboard:read',
+    'farmers:read', 'farmers:create',   // register farmers
+    'training:read', 'training:create', // record trainings + farm visits
+    'farm_visits:read', 'farm_visits:create',
+    'purchases:read', 'purchases:create',  // record produce purchases
+    'input_aggregation:read', 'input_aggregation:create',  // distribute inputs
+    'surveys:read', 'surveys:create',
+    'trace:read',
+    'compliance:read',
+    'carbon:read',
+    'profile:read', 'profile:update',
+  ],
+
+  // ─── Generic Roles (for non-EKIBBO tenants) ───
+
   // Agent: field data collection
   AGENT: [
     'dashboard:read',

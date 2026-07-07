@@ -27,8 +27,6 @@ const DEMO_ACCOUNTS = [
   { group: 'EKIBBO Coffee Exporters', email: 'mec@ekibbo.co', role: 'M,E&C Officer', country: 'UG', currency: 'UGX' },
   { group: 'EKIBBO Coffee Exporters', email: 'eo1@ekibbo.co', role: 'Extension Officer 1', country: 'UG', currency: 'UGX' },
   { group: 'EKIBBO Coffee Exporters', email: 'eo2@ekibbo.co', role: 'Extension Officer 2', country: 'UG', currency: 'UGX' },
-  { group: 'EKIBBO Coffee Exporters', email: 'exporter@ekibbo.co', role: 'Exporter (Legacy)', country: 'UG', currency: 'UGX' },
-  { group: 'EKIBBO Coffee Exporters', email: 'exporter.agent@ekibbo.co', role: 'Exporter Agent', country: 'UG', currency: 'UGX' },
   // ─── Demo Tenants (Uganda) ───
   { group: 'Demo — Uganda', email: 'ug.admin@agrobase.co', role: 'Country Admin', country: 'UG', currency: 'UGX' },
   { group: 'Demo — Uganda', email: 'ug.tenant@agrobase.co', role: 'Tenant Admin', country: 'UG', currency: 'UGX' },

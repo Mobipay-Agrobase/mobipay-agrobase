@@ -165,7 +165,7 @@ const ROLE_DEFINITIONS: RoleDef[] = [
 ]
 
 // Build a permission matrix: rows = modules, columns = roles
-const ROLES = ['SUPER_ADMIN', 'COUNTRY_ADMIN', 'TENANT_ADMIN', 'EXTENSION_OFFICER', 'AGENT', 'CBT', 'FARMER', 'VSLA_MEMBER']
+const ROLES = ['SUPER_ADMIN', 'COUNTRY_ADMIN', 'TENANT_ADMIN', 'EKB_MD', 'EKB_OPS_MANAGER', 'EKB_FINANCE', 'EKB_FIN_ASSISTANT', 'EKB_MEC', 'EKB_EXTENSION', 'EXTENSION_OFFICER', 'AGENT', 'CBT', 'FARMER', 'VSLA_MEMBER']
 
 function hasReadPerm(role: string, module: string): boolean {
   const perms = ROLE_PERMISSIONS[role]

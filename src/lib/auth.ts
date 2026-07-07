@@ -78,9 +78,31 @@ export const authOptions: NextAuthOptions = {
 
           // Auto-warm Edge entitlement cache on login/JWT refresh
           if (dbUser.tenantId) {
-            entitlementEngine.getEnabledModules(dbUser.tenantId).then(modules => {
-              setTenantEntitlements(dbUser.tenantId!, modules)
-            }).catch(() => { /* non-blocking */ })
+            // Fetch tenant active status + features + module entitlements
+            const tenant = await db.tenant.findUnique({
+              where: { id: dbUser.tenantId },
+              select: {
+                isActive: true,
+                features: true,
+                moduleEntitlements: { where: { isEnabled: true }, select: { moduleCode: true } },
+              },
+            })
+
+            if (tenant) {
+              // Parse features JSON
+              let features: Record<string, boolean> = {}
+              try {
+                features = tenant.features ? JSON.parse(tenant.features) : {}
+              } catch { /* invalid JSON, default to empty */ }
+
+              entitlementEngine.getEnabledModules(dbUser.tenantId).then(modules => {
+                setTenantEntitlements(dbUser.tenantId!, modules, tenant.isActive, features)
+              }).catch(() => { /* non-blocking */ })
+            } else {
+              entitlementEngine.getEnabledModules(dbUser.tenantId).then(modules => {
+                setTenantEntitlements(dbUser.tenantId!, modules)
+              }).catch(() => { /* non-blocking */ })
+            }
           }
         }
       }

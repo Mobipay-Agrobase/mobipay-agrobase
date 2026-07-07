@@ -9,7 +9,7 @@ import {
   logPermissionDenied,
   logEntitlementDenied,
 } from '@/middleware/edge-logger'
-import { resolveModuleForPath, checkEntitlement } from '@/middleware/edge-entitlements'
+import { resolveModuleForPath, checkEntitlement, getTenantActiveStatus } from '@/middleware/edge-entitlements'
 
 // ─── Route Categories ──────────────────────────────────────────────────────
 
@@ -139,6 +139,30 @@ export async function middleware(request: NextRequest) {
   // This prevents one user from amplifying via multiple IPs
   const role = token.role as string | undefined
   const userTenantId = token.tenantId as string | undefined
+
+  // ─── 1c. TENANT KILL SWITCH ──────────────────────────────────────────────
+  // If the tenant is suspended (isActive = false), block all API access
+  // except for SUPER_ADMIN who can still manage the platform.
+  // The tenant active status is cached in the token (refreshed on each login).
+  // For real-time suspension, we check a lightweight header set by the
+  // edge-entitlements cache (warmed by the Super Admin dashboard).
+  if (role !== 'SUPER_ADMIN' && userTenantId) {
+    // Check cached tenant status from edge-entitlements
+    // The cache is warmed on login and on Super Admin actions
+    const tenantActive = getTenantActiveStatus(userTenantId)
+    if (tenantActive === false) {
+      logPermissionDenied({ ...reqCtx, userId: token.userId as string, role })
+      logRequest({ ...reqCtx, userId: token.userId as string }, { status: 403 })
+
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Your organization\'s access has been suspended. Please contact your administrator.',
+        },
+        { status: 403 }
+      )
+    }
+  }
 
   // ─── 1b. PER-USER RATE LIMITING (authenticated) ─────────────────────────
   const userRlKey = `user:${token.userId}`

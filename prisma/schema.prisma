@@ -25,6 +25,7 @@ model Tenant {
   parent      Tenant?  @relation("TenantHierarchy", fields: [parentId], references: [id])
   children    Tenant[] @relation("TenantHierarchy")
   isActive    Boolean  @default(true)
+  features    String?  // JSON: tenant-specific feature flags e.g. {"purchaseWorkflow":true,"farmerLedger":true}
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

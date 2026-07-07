@@ -74,6 +74,10 @@ interface TenantEntitlements {
   modules: Set<string>
   /** Timestamp when this entry was last synced */
   syncedAt: number
+  /** Whether the tenant is active (for kill switch) */
+  isActive: boolean
+  /** Feature flags for this tenant (parsed from JSON) */
+  features: Record<string, boolean>
 }
 
 const CACHE_TTL_MS = 5 * 60 * 1000 // 5 minutes
@@ -132,12 +136,12 @@ export function getCachedEntitlements(tenantId: string): Set<string> | null {
  */
 export function setTenantEntitlements(
   tenantId: string,
-  enabledModules: string[]
+  enabledModules: string[],
+  isActive: boolean = true,
+  features: Record<string, boolean> = {},
 ): void {
   // Evict oldest entries if cache is full
   if (!entitlementCache.has(tenantId) && entitlementCache.size >= MAX_TENANTS) {
-    // Simple: clear all (a proper LRU would be better but adds complexity)
-    // In practice, 500 tenants is generous for this SaaS
     const firstKey = entitlementCache.keys().next().value
     if (firstKey !== undefined) entitlementCache.delete(firstKey)
   }
@@ -145,7 +149,45 @@ export function setTenantEntitlements(
   entitlementCache.set(tenantId, {
     modules: new Set(enabledModules.map(m => m.toUpperCase())),
     syncedAt: Date.now(),
+    isActive,
+    features,
   })
+}
+
+/**
+ * Check if a tenant is active (kill switch).
+ * Returns:
+ *   - false if tenant is explicitly suspended in cache
+ *   - true if tenant is active in cache
+ *   - true if cache is missing/stale (fail-open to avoid locking tenants out)
+ */
+export function getTenantActiveStatus(tenantId: string): boolean {
+  const entry = entitlementCache.get(tenantId)
+  if (!entry) return true // Cache miss — fail open
+  if (Date.now() - entry.syncedAt > CACHE_TTL_MS) return true // Stale — fail open
+  return entry.isActive
+}
+
+/**
+ * Check if a tenant has a specific feature flag enabled.
+ * Returns false if the flag is not set or the tenant is not cached.
+ */
+export function getTenantFeature(tenantId: string, featureName: string): boolean {
+  const entry = entitlementCache.get(tenantId)
+  if (!entry) return false
+  if (Date.now() - entry.syncedAt > CACHE_TTL_MS) return false
+  return entry.features[featureName] === true
+}
+
+/**
+ * Get all feature flags for a tenant.
+ * Returns empty object if not cached.
+ */
+export function getTenantFeatures(tenantId: string): Record<string, boolean> {
+  const entry = entitlementCache.get(tenantId)
+  if (!entry) return {}
+  if (Date.now() - entry.syncedAt > CACHE_TTL_MS) return {}
+  return entry.features
 }
 
 /**

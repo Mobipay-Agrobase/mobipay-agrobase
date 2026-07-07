@@ -8,6 +8,7 @@ import {
   ChevronLeft, ChevronRight, Filter, Loader2, Users, ArrowLeft, Star, AlertCircle,
   Layers, DollarSign, GraduationCap, PiggyBank, Leaf, Activity, QrCode, Download,
   Shield, Banknote, Award, Upload, FileSpreadsheet, CheckCircle, XCircle, FileDown,
+  Wallet,
   Trash2
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -26,6 +27,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { toast } from 'sonner'
 import { QRCodeSVG } from 'qrcode.react'
 import { FarmerTimeline } from '@/components/farmers/FarmerTimeline'
+import { FarmerLedger } from '@/components/ekbibo/FarmerLedger'
 import { EmptyState, exportToCSV } from '@/components/ui/empty-state'
 
 interface Farmer {
@@ -553,6 +555,7 @@ function FarmerDetail({ farmerId, onBack }: { farmerId: string; onBack: () => vo
           <TabsTrigger value="savings" className="gap-1.5"><PiggyBank className="w-3.5 h-3.5" /> Savings & Loans</TabsTrigger>
           <TabsTrigger value="impact" className="gap-1.5"><Activity className="w-3.5 h-3.5" /> Impact</TabsTrigger>
           <TabsTrigger value="timeline" className="gap-1.5"><Calendar className="w-3.5 h-3.5" /> Timeline</TabsTrigger>
+          <TabsTrigger value="ledger" className="gap-1.5"><Wallet className="w-3.5 h-3.5" /> Ledger</TabsTrigger>
         </TabsList>
 
         {/* Profile Tab */}
@@ -841,6 +844,11 @@ function FarmerDetail({ farmerId, onBack }: { farmerId: string; onBack: () => vo
               <FarmerTimeline farmerId={farmerId} />
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Ledger Tab */}
+        <TabsContent value="ledger" className="mt-4">
+          <FarmerLedger farmerId={farmerId} farmerName={`${farmer.firstName} ${farmer.lastName}`} />
         </TabsContent>
       </Tabs>
     </div>

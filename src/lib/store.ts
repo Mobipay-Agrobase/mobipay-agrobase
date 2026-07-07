@@ -13,6 +13,8 @@ export type ModuleKey =
   'carbon' | 'farm5x' | 'cost-of-cultivation' | 'crop-stages' |
   // Billing
   'billing' |
+  // EKIBBO modules
+  'input-distribution' | 'crop-insurance' |
   // Reference
   'roles-permissions' |
   'super-admin-overview' | 'super-admin-tenants' | 'super-admin-revenue' | 'super-admin-impact' | 'super-admin-users' | 'super-admin-mobile' | 'super-admin-config'

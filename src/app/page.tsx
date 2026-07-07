@@ -65,6 +65,8 @@ const Farm5xView = lazy(() => import('@/components/modules/Farm5xView'))
 const CostOfCultivationView = lazy(() => import('@/components/modules/CostOfCultivationView'))
 const CropStagesLibraryView = lazy(() => import('@/components/modules/CropStagesLibraryView'))
 const RolesPermissionsView = lazy(() => import('@/components/modules/RolesPermissionsView'))
+const InputDistributionView = lazy(() => import('@/components/ekbibo/InputDistributionView'))
+const CropInsuranceView = lazy(() => import('@/components/ekbibo/CropInsuranceView'))
 
 // Billing
 const BillingView = lazy(() => import('@/components/modules/BillingView'))
@@ -106,6 +108,8 @@ function ModuleRouter() {
     case 'cost-of-cultivation': return <CostOfCultivationView />
     case 'crop-stages': return <CropStagesLibraryView />
     case 'roles-permissions': return <RolesPermissionsView />
+    case 'input-distribution': return <InputDistributionView />
+    case 'crop-insurance': return <CropInsuranceView />
     // Supply Chain
     case 'input-aggregation': return <InputAggregationView />
     case 'purchases': return <PurchasesView />

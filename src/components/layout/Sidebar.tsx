@@ -45,8 +45,10 @@ const ALL_MODULES: NavItem[] = [
   { key: 'farm5x', label: 'Mazao Safi Practices', icon: Layers, group: 'Farm Management', permModule: 'carbon' },
   { key: 'cost-of-cultivation', label: 'Cost of Cultivation', icon: Calculator, group: 'Farm Management', permModule: 'farmers' },
   { key: 'carbon', label: 'Carbon & Compliance', icon: Cloud, group: 'Farm Management', permModule: 'carbon' },
+  { key: 'crop-insurance', label: 'Crop Insurance', icon: Shield, group: 'Farm Management', permModule: 'carbon' },
   // Supply Chain
   { key: 'input-aggregation', label: 'Input Aggregation', icon: Package, group: 'Supply Chain', permModule: 'input_aggregation' },
+  { key: 'input-distribution', label: 'Input Distribution', icon: Package, group: 'Supply Chain', permModule: 'input_aggregation' },
   { key: 'purchases', label: 'Purchases', icon: ShoppingCart, group: 'Supply Chain', permModule: 'purchases' },
   { key: 'approvals', label: 'Approvals Hub', icon: ClipboardCheck, group: 'Supply Chain', permModule: 'approvals' },
   { key: 'processing', label: 'Processing', icon: Layers, group: 'Supply Chain', permModule: 'processing' },

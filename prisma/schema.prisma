@@ -132,6 +132,10 @@ model Tenant {
   climateResilienceScores ClimateResilienceScore[] @relation("TenantClimateResilienceScores")
   cropStageEvents     CropStageEvent[]     @relation("TenantCropStageEvents")
   cropCalendars       CropCalendar[]       @relation("TenantCropCalendars")
+  // ─── EKIBBO: Ledger + Input Distribution + Crop Insurance ───
+  farmerLedgerEntries FarmerLedgerEntry[]
+  inputDistributions  InputDistribution[]
+  cropInsurances      CropInsurance[]
 }
 
 // --- USERS & AUTH ---
@@ -261,6 +265,14 @@ model FarmerGroup {
   isVsla      Boolean  @default(false)
   vslaSettings Json?    // shareValue, loanRate, maxLoanAmount, fines, welfare
   isActive    Boolean  @default(true)
+
+  // ─── EKIBBO Group Extensions (nullable) ───
+  coordinatorGender String?  // Male, Female
+  coordinatorAge    Int?     // age of coordinator
+  collectionDay     String?  // Monday, Tuesday, etc.
+  collectionCenter  String?  // name of collection center
+  youthCount        Int?     // number of youth in group
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -360,6 +372,9 @@ model FarmerProfile {
   mainCrops       String?  // JSON array of crop names
   livestockTypes  String?  // JSON array
 
+  // ─── EKIBBO Farmer Extensions (nullable) ───
+  shadeTreeVarieties String?  // JSON: [{variety: "Banana", count: 5}, {variety: " Albizia", count: 3}]
+
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -392,6 +407,11 @@ model FarmerProfile {
   impactKpiSnapshots   ImpactKpiSnapshot[]     @relation("FarmerImpactKpiSnapshots")
   practiceAdoptions    PracticeAdoption[]      @relation("FarmerPracticeAdoptions")
   climateResilienceScores ClimateResilienceScore[] @relation("FarmerClimateResilienceScores")
+
+  // ─── EKIBBO: Ledger + Input Distribution + Crop Insurance ───
+  ledgerEntries       FarmerLedgerEntry[]
+  inputDistributions  InputDistribution[]
+  cropInsurances      CropInsurance[]
 }
 
 model ChildProfile {
@@ -494,6 +514,10 @@ model Cultivation {
   sowingChargesBy String?  // hour, hectare
   sowingCharges   Float?   // per unit
   sowingCost      Float?   // auto-calc: area × charges (or hours × charges)
+
+  // ─── EKIBBO Bamboo Tracking (nullable) ───
+  bambooVariety   String?  // strictus, Vulgaris green, Asper
+  seedlingCount   Int?     // number of seedlings per variety
 
   // Relations
   stageEvents     CropStageEvent[] @relation("CultivationStageEvents")
@@ -795,8 +819,113 @@ model Purchase {
   initiatedBy String?
   reviewedBy  String?
   approvedBy  String?
+
+  // ─── EKIBBO Enhanced Purchase Workflow (nullable — no impact on other tenants) ───
+  tenantId        String?   // links to tenant for EKIBBO purchases
+  moistureReading Float?    // moisture percentage (coffee/cocoa)
+  moisturePhotoUrl String?  // URL of moisture meter photo
+  defectCount     Int?      // number of defects/blacks (coffee quality)
+  qualityDeduction Float?   // weight deducted due to quality (kg)
+  netWeight       Float?    // quantity - qualityDeduction
+  dailyPrice      Float?    // price per kg for this purchase
+  loanDeduction   Float?    // amount deducted for loan repayment
+  inputDeduction  Float?    // amount deducted for input repayment
+  momoCharges     Float?    // mobile money withdrawal charges
+  momoTax         Float?    // mobile money tax
+  netPayment      Float?    // final amount paid to farmer
+  loanId          String?   // linked loan for deduction
+  inputDistId     String?   // linked input distribution for deduction
+  approvalStatus  String?   // DRAFT, SUBMITTED, APPROVED, REJECTED
+  approvedById    String?   // user who approved
+  approvedAt      DateTime? // when approved
+  paymentRef      String?   // mobile money transaction reference
+
+  // Ledger entries created from this purchase
+  ledgerEntries   FarmerLedgerEntry[]
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+// --- EKIBBO: Farmer Ledger Engine ---
+
+model FarmerLedgerEntry {
+  id            String   @id @default(cuid())
+  tenantId      String
+  tenant        Tenant   @relation(fields: [tenantId], references: [id])
+  farmerId      String
+  farmer        FarmerProfile @relation(fields: [farmerId], references: [id], onDelete: Cascade)
+  date          DateTime @default(now())
+  type          String   // PURCHASE, SALE, LOAN_DISBURSE, LOAN_REPAY, INPUT_DIST,
+                         // INPUT_REPAY, TRAINING, INSURANCE, CHARGE, PAYMENT, ADJUSTMENT
+  description   String
+  amount        Float    // positive = credit to farmer, negative = debit
+  balanceAfter  Float?   // running balance after this entry
+  referenceType String?  // "Purchase", "Sale", "Loan", "Training", etc.
+  referenceId   String?  // links to the original record
+  purchaseId    String?  // optional link to Purchase
+  purchase      Purchase? @relation(fields: [purchaseId], references: [id])
+  createdBy     String?  // userId who created this entry
+  approvalStatus String? // DRAFT, SUBMITTED, APPROVED, REJECTED
+  approvedBy    String?  // userId who approved
+  createdAt     DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([farmerId])
+  @@index([type])
+  @@index([date])
+}
+
+// --- EKIBBO: Input Distribution ---
+
+model InputDistribution {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation(fields: [tenantId], references: [id])
+  farmerId        String
+  farmer          FarmerProfile @relation(fields: [farmerId], references: [id], onDelete: Cascade)
+  inputType       String   // tarpaulin, fertilizer, pruning_saw, seedling
+  inputName       String?  // specific name/brand
+  quantity        Float
+  unit            String   @default("pcs")
+  unitCost        Float
+  totalCost       Float    // quantity × unitCost
+  balanceRemaining Float?  // outstanding balance to be repaid
+  status          String   @default("DISTRIBUTED") // DISTRIBUTED, PARTIALLY_REPAID, FULLY_REPAID
+  distributionDate DateTime @default(now())
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([farmerId])
+  @@index([status])
+}
+
+// --- EKIBBO: Crop Insurance ---
+
+model CropInsurance {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation(fields: [tenantId], references: [id])
+  farmerId        String
+  farmer          FarmerProfile @relation(fields: [farmerId], references: [id], onDelete: Cascade)
+  crop            String   // coffee, cocoa, vanilla, etc.
+  provider        String?  // insurance company name
+  policyNumber    String?
+  premium         Float?   // premium amount
+  coverageAmount  Float?   // total coverage
+  status          String   @default("ENROLLED") // ENROLLED, ACTIVE, LAPSED, PAYOUT_RECEIVED
+  enrollmentDate  DateTime @default(now())
+  payoutAmount    Float?   // amount received if payout
+  payoutDate      DateTime?
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([farmerId])
+  @@index([status])
 }
 
 model Consignment {

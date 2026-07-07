@@ -19,27 +19,36 @@ import { useCurrency } from '@/lib/currency'
 const DEMO_ACCOUNTS = [
   // Super Admin
   { group: 'Super Admin', email: 'admin@agrobase.co', role: 'Super Admin', country: 'All', currency: 'UGX' },
-  // Uganda
-  { group: 'Uganda', email: 'ug.admin@agrobase.co', role: 'Country Admin', country: 'UG', currency: 'UGX' },
-  { group: 'Uganda', email: 'ug.tenant@agrobase.co', role: 'Tenant Admin', country: 'UG', currency: 'UGX' },
-  { group: 'Uganda', email: 'ug.eo1@agrobase.co', role: 'Extension Officer', country: 'UG', currency: 'UGX' },
-  { group: 'Uganda', email: 'ug.eo2@agrobase.co', role: 'Extension Officer', country: 'UG', currency: 'UGX' },
-  { group: 'Uganda', email: 'ug.agent1@agrobase.co', role: 'Agent', country: 'UG', currency: 'UGX' },
-  { group: 'Uganda', email: 'ug.cbt@agrobase.co', role: 'CBT', country: 'UG', currency: 'UGX' },
-  { group: 'Uganda', email: 'ug.farmer1@agrobase.co', role: 'Farmer', country: 'UG', currency: 'UGX' },
-  { group: 'Uganda', email: 'ug.farmer2@agrobase.co', role: 'Farmer', country: 'UG', currency: 'UGX' },
-  // Ghana
-  { group: 'Ghana', email: 'gh.admin@agrobase.co', role: 'Country Admin', country: 'GH', currency: 'GHS' },
-  { group: 'Ghana', email: 'gh.eo1@agrobase.co', role: 'Extension Officer', country: 'GH', currency: 'GHS' },
-  { group: 'Ghana', email: 'gh.agent1@agrobase.co', role: 'Agent', country: 'GH', currency: 'GHS' },
-  { group: 'Ghana', email: 'gh.farmer1@agrobase.co', role: 'Farmer', country: 'GH', currency: 'GHS' },
-  // Kenya
-  { group: 'Kenya', email: 'ke.admin@agrobase.co', role: 'Country Admin', country: 'KE', currency: 'KES' },
-  { group: 'Kenya', email: 'ke.eo1@agrobase.co', role: 'Extension Officer', country: 'KE', currency: 'KES' },
-  { group: 'Kenya', email: 'ke.agent1@agrobase.co', role: 'Agent', country: 'KE', currency: 'KES' },
-  { group: 'Kenya', email: 'ke.farmer1@agrobase.co', role: 'Farmer', country: 'KE', currency: 'KES' },
-  // Exporter & MFI
-  { group: 'Partners', email: 'exporter@ekibbo.co', role: 'EKIBBO Exporter', country: 'UG', currency: 'UGX' },
+  // ─── EKIBBO Coffee Exporters (Paying Tenant) ───
+  { group: 'EKIBBO Coffee Exporters', email: 'eric@ekibbo.co', role: 'Managing Director', country: 'UG', currency: 'UGX' },
+  { group: 'EKIBBO Coffee Exporters', email: 'ops@ekibbo.co', role: 'Operations Manager', country: 'UG', currency: 'UGX' },
+  { group: 'EKIBBO Coffee Exporters', email: 'finance@ekibbo.co', role: 'Finance Officer', country: 'UG', currency: 'UGX' },
+  { group: 'EKIBBO Coffee Exporters', email: 'assistant@ekibbo.co', role: 'Finance Assistant', country: 'UG', currency: 'UGX' },
+  { group: 'EKIBBO Coffee Exporters', email: 'mec@ekibbo.co', role: 'M,E&C Officer', country: 'UG', currency: 'UGX' },
+  { group: 'EKIBBO Coffee Exporters', email: 'eo1@ekibbo.co', role: 'Extension Officer 1', country: 'UG', currency: 'UGX' },
+  { group: 'EKIBBO Coffee Exporters', email: 'eo2@ekibbo.co', role: 'Extension Officer 2', country: 'UG', currency: 'UGX' },
+  { group: 'EKIBBO Coffee Exporters', email: 'exporter@ekibbo.co', role: 'Exporter (Legacy)', country: 'UG', currency: 'UGX' },
+  { group: 'EKIBBO Coffee Exporters', email: 'exporter.agent@ekibbo.co', role: 'Exporter Agent', country: 'UG', currency: 'UGX' },
+  // ─── Demo Tenants (Uganda) ───
+  { group: 'Demo — Uganda', email: 'ug.admin@agrobase.co', role: 'Country Admin', country: 'UG', currency: 'UGX' },
+  { group: 'Demo — Uganda', email: 'ug.tenant@agrobase.co', role: 'Tenant Admin', country: 'UG', currency: 'UGX' },
+  { group: 'Demo — Uganda', email: 'ug.eo1@agrobase.co', role: 'Extension Officer', country: 'UG', currency: 'UGX' },
+  { group: 'Demo — Uganda', email: 'ug.eo2@agrobase.co', role: 'Extension Officer', country: 'UG', currency: 'UGX' },
+  { group: 'Demo — Uganda', email: 'ug.agent1@agrobase.co', role: 'Agent', country: 'UG', currency: 'UGX' },
+  { group: 'Demo — Uganda', email: 'ug.cbt@agrobase.co', role: 'CBT', country: 'UG', currency: 'UGX' },
+  { group: 'Demo — Uganda', email: 'ug.farmer1@agrobase.co', role: 'Farmer', country: 'UG', currency: 'UGX' },
+  { group: 'Demo — Uganda', email: 'ug.farmer2@agrobase.co', role: 'Farmer', country: 'UG', currency: 'UGX' },
+  // ─── Demo Tenants (Ghana) ───
+  { group: 'Demo — Ghana', email: 'gh.admin@agrobase.co', role: 'Country Admin', country: 'GH', currency: 'GHS' },
+  { group: 'Demo — Ghana', email: 'gh.eo1@agrobase.co', role: 'Extension Officer', country: 'GH', currency: 'GHS' },
+  { group: 'Demo — Ghana', email: 'gh.agent1@agrobase.co', role: 'Agent', country: 'GH', currency: 'GHS' },
+  { group: 'Demo — Ghana', email: 'gh.farmer1@agrobase.co', role: 'Farmer', country: 'GH', currency: 'GHS' },
+  // ─── Demo Tenants (Kenya) ───
+  { group: 'Demo — Kenya', email: 'ke.admin@agrobase.co', role: 'Country Admin', country: 'KE', currency: 'KES' },
+  { group: 'Demo — Kenya', email: 'ke.eo1@agrobase.co', role: 'Extension Officer', country: 'KE', currency: 'KES' },
+  { group: 'Demo — Kenya', email: 'ke.agent1@agrobase.co', role: 'Agent', country: 'KE', currency: 'KES' },
+  { group: 'Demo — Kenya', email: 'ke.farmer1@agrobase.co', role: 'Farmer', country: 'KE', currency: 'KES' },
+  // ─── Partners ───
   { group: 'Partners', email: 'mfi@hopefinance.co', role: 'Hope MFI', country: 'UG', currency: 'UGX' },
 ]
 

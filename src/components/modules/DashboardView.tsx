@@ -17,6 +17,14 @@ import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from '
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Cell, PieChart, Pie, LineChart, Line, ResponsiveContainer, Tooltip } from 'recharts'
 import { formatDistanceToNow } from 'date-fns'
 import { MapDashboard } from '@/components/dashboard/MapDashboard'
+import {
+  EkbMdDashboard,
+  EkbOpsManagerDashboard,
+  EkbFinanceDashboard,
+  EkbFinAssistantDashboard,
+  EkbMecDashboard,
+  EkbExtensionDashboard,
+} from '@/components/dashboard/EkbiboDashboards'
 
 const COLORS = ['#059669', '#10b981', '#34d399', '#6ee7b7', '#a7f3d0', '#06b6d4', '#0ea5e9', '#3b82f6', '#8b5cf6', '#a855f7']
 
@@ -59,6 +67,21 @@ export default function DashboardView() {
       return <AgentDashboard userId={user?.userId || ''} />
     case 'CBT':
       return <CbtDashboard userId={user?.userId || ''} />
+
+    // ─── EKIBBO role-specific dashboards ───
+    case 'EKB_MD':
+      return <EkbMdDashboard />
+    case 'EKB_OPS_MANAGER':
+      return <EkbOpsManagerDashboard />
+    case 'EKB_FINANCE':
+      return <EkbFinanceDashboard />
+    case 'EKB_FIN_ASSISTANT':
+      return <EkbFinAssistantDashboard />
+    case 'EKB_MEC':
+      return <EkbMecDashboard />
+    case 'EKB_EXTENSION':
+      return <EkbExtensionDashboard />
+
     case 'TENANT_ADMIN':
     default:
       return <TenantAdminDashboard />

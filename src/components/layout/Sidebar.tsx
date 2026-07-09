@@ -23,8 +23,14 @@ interface NavItem {
   group: string
   /** Maps sidebar module key → RBAC module name used in permissions.ts */
   permModule?: string
-  /** Special keys always visible (Profile, Settings for self) */
+  /** Special keys always visible to every authenticated user (e.g. Profile) */
   alwaysVisible?: boolean
+  /** Restrict to specific roles only (overrides permModule). Use to exclude
+   *  a menu from roles even if they technically have the underlying perm —
+   *  e.g. finance should not see Plot-Level Trace. */
+  restrictToRoles?: string[]
+  /** Explicitly hide this menu from these roles (blocklist). */
+  hideFromRoles?: string[]
 }
 
 const ALL_MODULES: NavItem[] = [
@@ -32,8 +38,11 @@ const ALL_MODULES: NavItem[] = [
   { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, group: 'Overview', permModule: 'dashboard', alwaysVisible: true },
   // Core Operations
   { key: 'farmers', label: 'Farmer Profiling', icon: Users, group: 'Core Operations', permModule: 'farmers' },
-  { key: 'farm-lands', label: 'Farm Land Registry', icon: MapPin, group: 'Core Operations', permModule: 'farmers' },
-  { key: 'cultivations', label: 'Cultivations', icon: Sprout, group: 'Core Operations', permModule: 'farmers' },
+  { key: 'farm-lands', label: 'Farm Land Registry', icon: MapPin, group: 'Core Operations', permModule: 'farmers',
+    // Finance/MEC roles do not manage land — hide from them
+    hideFromRoles: ['EKB_FINANCE', 'EKB_FIN_ASSISTANT', 'EKB_MEC'] },
+  { key: 'cultivations', label: 'Cultivations', icon: Sprout, group: 'Core Operations', permModule: 'farmers',
+    hideFromRoles: ['EKB_FINANCE', 'EKB_FIN_ASSISTANT', 'EKB_MEC'] },
   { key: 'vsla', label: 'VSLA Management', icon: PiggyBank, group: 'Core Operations', permModule: 'vsla' },
   { key: 'marketplace', label: 'Marketplace', icon: Store, group: 'Core Operations', permModule: 'marketplace' },
   { key: 'payments', label: 'Payments', icon: CreditCard, group: 'Core Operations', permModule: 'payments' },
@@ -56,7 +65,10 @@ const ALL_MODULES: NavItem[] = [
   { key: 'deliveries', label: 'Deliveries', icon: Truck, group: 'Supply Chain', permModule: 'deliveries' },
   { key: 'consignments', label: 'Consignments', icon: Truck, group: 'Supply Chain', permModule: 'consignments' },
   { key: 'trace', label: 'Traceability', icon: Map, group: 'Supply Chain', permModule: 'trace' },
-  { key: 'plots', label: 'Plot-Level Trace', icon: MapPin, group: 'Supply Chain', permModule: 'trace' },
+  // Plot-Level Traceability is a heavy operational tool — restrict to admins,
+  // ops managers and field officers. Finance / finance-assistant / MEC should NOT see it.
+  { key: 'plots', label: 'Plot-Level Trace', icon: MapPin, group: 'Supply Chain', permModule: 'trace',
+    restrictToRoles: ['SUPER_ADMIN', 'COUNTRY_ADMIN', 'TENANT_ADMIN', 'EKB_MD', 'EKB_OPS_MANAGER', 'EKB_EXTENSION', 'EXTENSION_OFFICER', 'AGENT'] },
   // Intelligence
   { key: 'reports', label: 'Reports & Analytics', icon: BarChart3, group: 'Intelligence', permModule: 'reports' },
   { key: 'agritrack', label: 'AgriTrack', icon: Target, group: 'Intelligence', permModule: 'agritrack' },
@@ -78,10 +90,18 @@ const ALL_MODULES: NavItem[] = [
   { key: 'compliance', label: 'Compliance Hub', icon: Shield, group: 'Admin', permModule: 'compliance' },
   { key: 'companies', label: 'Companies', icon: Building2, group: 'Admin', permModule: 'companies' },
   { key: 'users', label: 'User Management', icon: UserCheck, group: 'Admin', permModule: 'users' },
-  { key: 'billing', label: 'Billing & Usage', icon: DollarSign, group: 'Admin', alwaysVisible: true },
-  { key: 'settings', label: 'Settings', icon: Settings, group: 'Admin', alwaysVisible: true },
+  // Billing — only visible to roles with billing:read permission OR admins.
+  // Field roles (extension, finance assistant, MEC, agent, farmer, vsla) must NOT see billing.
+  { key: 'billing', label: 'Billing & Usage', icon: DollarSign, group: 'Admin', permModule: 'billing',
+    restrictToRoles: ['SUPER_ADMIN', 'COUNTRY_ADMIN', 'TENANT_ADMIN', 'EKB_MD', 'EKB_FINANCE'] },
+  // Settings — admin-only. Field/finance/MEC staff should not configure tenants.
+  { key: 'settings', label: 'Settings', icon: Settings, group: 'Admin',
+    restrictToRoles: ['SUPER_ADMIN', 'COUNTRY_ADMIN', 'TENANT_ADMIN'] },
+  // Profile — everyone gets this.
   { key: 'profile', label: 'Profile', icon: Stethoscope, group: 'Admin', alwaysVisible: true },
-  { key: 'roles-permissions', label: 'Roles & Permissions', icon: KeyRound, group: 'Admin', alwaysVisible: true },
+  // Roles & Permissions — admin-only reference page.
+  { key: 'roles-permissions', label: 'Roles & Permissions', icon: KeyRound, group: 'Admin',
+    restrictToRoles: ['SUPER_ADMIN', 'COUNTRY_ADMIN', 'TENANT_ADMIN', 'EKB_MD'] },
   // Super Admin (only visible to SUPER_ADMIN role)
   { key: 'super-admin-overview', label: 'Platform Overview', icon: LayoutDashboard, group: 'Super Admin' },
   { key: 'super-admin-tenants', label: 'Tenants', icon: Building2, group: 'Super Admin' },
@@ -162,6 +182,10 @@ export function Sidebar() {
                 // Filter items by role permission (skip check for super admin group items & alwaysVisible items)
                 const visibleItems = items.filter(item => {
                   if (isSuperAdmin) return true
+                  // Explicit role allowlist (whitelist) — if present, role MUST be in it
+                  if (item.restrictToRoles && !item.restrictToRoles.includes(role)) return false
+                  // Explicit role blocklist (blacklist) — if present, role MUST NOT be in it
+                  if (item.hideFromRoles && item.hideFromRoles.includes(role)) return false
                   if (item.alwaysVisible) return true
                   if (!item.permModule) return true
                   // Check if role has read permission for this module

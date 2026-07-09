@@ -122,16 +122,17 @@ export default function PlotMap({
         mapRef.current.removeLayer(geoJsonLayerRef.current)
       }
 
-      const getColor = (props: PlotProperties) => {
+      const getColor = (props: Partial<PlotProperties> | null | undefined) => {
+        if (!props) return colorMode === 'risk' ? RISK_COLORS.UNKNOWN : VERIFICATION_COLORS.UNVERIFIED
         if (colorMode === 'risk') {
-          return RISK_COLORS[props.eudrRiskLevel] ?? RISK_COLORS.UNKNOWN
+          return RISK_COLORS[props.eudrRiskLevel ?? 'UNKNOWN'] ?? RISK_COLORS.UNKNOWN
         }
-        return VERIFICATION_COLORS[props.verificationStatus] ?? VERIFICATION_COLORS.UNVERIFIED
+        return VERIFICATION_COLORS[props.verificationStatus ?? 'UNVERIFIED'] ?? VERIFICATION_COLORS.UNVERIFIED
       }
 
       const layer = L.geoJSON(features, {
         style: (feature) => {
-          const props = (feature as any).properties as PlotProperties
+          const props = ((feature as any).properties ?? {}) as Partial<PlotProperties>
           return {
             color: getColor(props),
             weight: selectedPlotId === props.id ? 3 : 2,
@@ -141,19 +142,21 @@ export default function PlotMap({
           }
         },
         onEachFeature: (feature, layer) => {
-          const props = (feature as any).properties as PlotProperties
+          const props = ((feature as any).properties ?? {}) as Partial<PlotProperties>
+          const vStatus = props.verificationStatus || 'UNVERIFIED'
+          const rLevel = props.eudrRiskLevel || 'UNKNOWN'
 
           const popupContent = `
             <div style="font-family: system-ui; min-width: 180px;">
-              <strong style="font-size: 13px;">${props.plotCode}</strong><br/>
-              <span style="color: #666; font-size: 12px;">${props.name}</span><br/>
-              <span style="font-size: 12px;">${props.farmerName}</span><br/>
+              <strong style="font-size: 13px;">${props.plotCode || '—'}</strong><br/>
+              <span style="color: #666; font-size: 12px;">${props.name || ''}</span><br/>
+              <span style="font-size: 12px;">${props.farmerName || ''}</span><br/>
               <div style="margin-top: 6px; display: flex; gap: 4px; flex-wrap: wrap;">
-                <span style="background: ${VERIFICATION_COLORS[props.verificationStatus] ?? '#999'}22; color: ${VERIFICATION_COLORS[props.verificationStatus] ?? '#999'}; padding: 1px 6px; border-radius: 4px; font-size: 11px;">
-                  ${props.verificationStatus.replace(/_/g, ' ')}
+                <span style="background: ${VERIFICATION_COLORS[vStatus] ?? '#999'}22; color: ${VERIFICATION_COLORS[vStatus] ?? '#999'}; padding: 1px 6px; border-radius: 4px; font-size: 11px;">
+                  ${vStatus.replace(/_/g, ' ')}
                 </span>
-                <span style="background: ${RISK_COLORS[props.eudrRiskLevel] ?? '#999'}22; color: ${RISK_COLORS[props.eudrRiskLevel] ?? '#999'}; padding: 1px 6px; border-radius: 4px; font-size: 11px;">
-                  Risk: ${props.eudrRiskLevel}
+                <span style="background: ${RISK_COLORS[rLevel] ?? '#999'}22; color: ${RISK_COLORS[rLevel] ?? '#999'}; padding: 1px 6px; border-radius: 4px; font-size: 11px;">
+                  Risk: ${rLevel}
                 </span>
               </div>
               ${props.areaHectares ? `<div style="margin-top: 4px; font-size: 11px; color: #888;">${props.areaHectares.toFixed(2)} ha</div>` : ''}
@@ -169,6 +172,7 @@ export default function PlotMap({
             geoJsonLayerRef.current?.resetStyle(e.target)
           })
           layer.on('click', () => {
+            if (!props.id) return
             setSelectedPlotId(props.id)
             onSelectPlot?.(props.id)
           })
@@ -180,178 +184,88 @@ export default function PlotMap({
 
       const bounds = layer.getBounds()
       if (bounds.isValid()) {
-        mapRef.current.fitBounds(bounds, { padding: [30, 30], maxZoom: 14 })
+        mapRef.current.fitBounds(bounds, { padding: [20, 20] })
       }
 
       setLoading(false)
     } catch (err: any) {
-      setError(err.message)
+      setError(err.message || 'Failed to load map data')
       setLoading(false)
     }
   }, [colorMode, selectedPlotId, onSelectPlot])
 
   useEffect(() => {
-    const timer = setTimeout(loadGeoJson, 100)
-    return () => clearTimeout(timer)
+    loadGeoJson()
   }, [loadGeoJson])
 
-  const handleColorModeChange = (mode: string) => {
-    setColorMode(mode as 'verification' | 'risk')
-  }
-
   return (
-    <div className={cn('relative rounded-lg overflow-hidden border', className)}>
-      {/* Map Controls Overlay */}
-      <div className="absolute top-3 left-3 z-[1000] flex flex-col gap-2">
-        <Select value={colorMode} onValueChange={handleColorModeChange}>
-          <SelectTrigger className="w-[170px] h-8 text-xs bg-background/90 backdrop-blur-sm border shadow-sm">
-            <Layers className="w-3 h-3 mr-1" />
+    <div className={cn('relative rounded-lg border overflow-hidden bg-muted/20', className)} style={{ height }}>
+      <div ref={mapContainerRef} className="w-full h-full" />
+
+      {/* Color mode selector overlay */}
+      <div className="absolute top-3 left-3 z-[1000] bg-background/95 backdrop-blur rounded-lg border shadow-sm p-2">
+        <Select value={colorMode} onValueChange={(v) => setColorMode(v as 'verification' | 'risk')}>
+          <SelectTrigger className="h-8 w-[160px] text-xs">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="verification">Verification Status</SelectItem>
-            <SelectItem value="risk">EUDR Risk Level</SelectItem>
+            <SelectItem value="verification">Color by: Verification</SelectItem>
+            <SelectItem value="risk">Color by: EUDR Risk</SelectItem>
           </SelectContent>
         </Select>
+      </div>
 
-        <div className="bg-background/90 backdrop-blur-sm border shadow-sm rounded-md px-2.5 py-1 text-xs">
-          <span className="font-medium">{plotCount}</span>
-          <span className="text-muted-foreground ml-1">plots</span>
+      {/* Legend */}
+      <div className="absolute bottom-3 left-3 z-[1000] bg-background/95 backdrop-blur rounded-lg border shadow-sm p-3 max-w-[220px]">
+        <p className="text-xs font-semibold mb-2 flex items-center gap-1.5">
+          <Layers className="w-3.5 h-3.5" />
+          {colorMode === 'risk' ? 'EUDR Risk Level' : 'Verification Status'}
+        </p>
+        <div className="space-y-1">
+          {colorMode === 'verification'
+            ? Object.entries(VERIFICATION_COLORS).map(([k, v]) => (
+                <div key={k} className="flex items-center gap-2 text-[11px]">
+                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: v }} />
+                  <span>{k.replace(/_/g, ' ')}</span>
+                </div>
+              ))
+            : Object.entries(RISK_COLORS).map(([k, v]) => (
+                <div key={k} className="flex items-center gap-2 text-[11px]">
+                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: v }} />
+                  <span>{k}</span>
+                </div>
+              ))}
         </div>
+        {plotCount > 0 && (
+          <p className="text-[10px] text-muted-foreground mt-2 pt-2 border-t">
+            {plotCount} plot{plotCount !== 1 ? 's' : ''} on map
+          </p>
+        )}
       </div>
 
       {/* Loading */}
       {loading && (
-        <div className="absolute inset-0 z-[999] bg-background/80 flex items-center justify-center">
+        <div className="absolute inset-0 bg-background/80 backdrop-blur flex items-center justify-center z-[1100]">
           <div className="flex flex-col items-center gap-2">
-            <Loader2 className="w-6 h-6 animate-spin text-primary" />
-            <span className="text-sm text-muted-foreground">Loading plot boundaries...</span>
+            <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+            <span className="text-sm text-muted-foreground">Loading map...</span>
           </div>
         </div>
       )}
 
-      {/* Error */}
+      {/* Error / Empty state */}
       {error && !loading && (
-        <div className="absolute inset-0 z-[999] bg-background/90 flex items-center justify-center">
-          <div className="text-center max-w-sm px-4">
-            <p className="text-sm text-muted-foreground">{error}</p>
+        <div className="absolute inset-0 bg-background/95 flex items-center justify-center z-[1100] p-6">
+          <div className="text-center max-w-md">
+            <Layers className="w-10 h-10 mx-auto mb-3 text-muted-foreground/40" />
+            <p className="text-sm font-medium text-muted-foreground mb-1">No plots to display</p>
+            <p className="text-xs text-muted-foreground">{error}</p>
             <Button variant="outline" size="sm" className="mt-3" onClick={loadGeoJson}>
-              Retry
+              <Loader2 className="w-3.5 h-3.5 mr-1.5" /> Retry
             </Button>
           </div>
         </div>
       )}
-
-      {/* Map container */}
-      <div ref={mapContainerRef} style={{ height, width: '100%' }} />
-
-      {/* Legend */}
-      <div className="absolute bottom-3 left-3 z-[1000] bg-background/90 backdrop-blur-sm border shadow-sm rounded-md p-2.5">
-        <p className="text-[10px] font-medium text-muted-foreground mb-1.5 uppercase tracking-wider">
-          {colorMode === 'verification' ? 'Verification' : 'EUDR Risk'}
-        </p>
-        <div className="space-y-1">
-          {(colorMode === 'verification'
-            ? [
-                { key: 'VERIFIED', label: 'Verified' },
-                { key: 'FIELD_AUDITED', label: 'Field Audited' },
-                { key: 'SATELLITE_VERIFIED', label: 'Satellite' },
-                { key: 'GPS_VERIFIED', label: 'GPS' },
-                { key: 'UNVERIFIED', label: 'Unverified' },
-              ]
-            : [
-                { key: 'LOW', label: 'Low Risk' },
-                { key: 'MEDIUM', label: 'Medium Risk' },
-                { key: 'HIGH', label: 'High Risk' },
-                { key: 'UNKNOWN', label: 'Unknown' },
-              ]
-          ).map((item) => (
-            <div key={item.key} className="flex items-center gap-1.5 text-xs">
-              <div
-                className="w-3 h-3 rounded-sm flex-shrink-0"
-                style={{
-                  backgroundColor: colorMode === 'verification'
-                    ? VERIFICATION_COLORS[item.key]
-                    : RISK_COLORS[item.key],
-                }}
-              />
-              <span className="text-muted-foreground">{item.label}</span>
-            </div>
-          ))}
-        </div>
-      </div>
     </div>
   )
-}
-
-// ─── Mini Map for Plot Detail Panel ───────────────────────────────
-
-interface PlotMiniMapProps {
-  geoJson: string | null
-  className?: string
-}
-
-export function PlotMiniMap({ geoJson, className }: PlotMiniMapProps) {
-  const containerRef = useRef<HTMLDivElement>(null)
-  const mapRef = useRef<L.Map | null>(null)
-
-  useEffect(() => {
-    if (!containerRef.current) return
-
-    if (mapRef.current) {
-      mapRef.current.remove()
-      mapRef.current = null
-    }
-
-    if (!geoJson) return
-
-    try {
-      const parsed = JSON.parse(geoJson)
-      const coords = parsed.geometry?.coordinates?.[0] ?? parsed.coordinates?.[0]
-      if (!coords || coords.length < 3) return
-
-      const points: [number, number][] = coords
-        .filter((c: number[]) => c.length >= 2)
-        .map((c: number[]) => [c[1], c[0]] as [number, number])
-
-      const map = L.map(containerRef.current, {
-        center: points[0],
-        zoom: 15,
-        zoomControl: false,
-        attributionControl: false,
-      })
-
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
-      }).addTo(map)
-
-      L.polygon(points, {
-        color: '#22c55e',
-        weight: 2,
-        fillOpacity: 0.25,
-      }).addTo(map)
-
-      map.fitBounds(L.polygon(points as any).getBounds(), { padding: [10, 10] })
-      mapRef.current = map
-    } catch {
-      // Invalid GeoJSON
-    }
-
-    return () => {
-      if (mapRef.current) {
-        mapRef.current.remove()
-        mapRef.current = null
-      }
-    }
-  }, [geoJson])
-
-  if (!geoJson) {
-    return (
-      <div className={cn('bg-muted/30 rounded-lg flex items-center justify-center text-xs text-muted-foreground', className)}>
-        No GPS boundary available
-      </div>
-    )
-  }
-
-  return <div ref={containerRef} className={cn('rounded-lg overflow-hidden', className)} style={{ height: 200 }} />
 }

@@ -68,3 +68,4 @@ scripts/gap_analysis_cover.html
 
 # Docker
 docker-compose.override.yml
+.env*

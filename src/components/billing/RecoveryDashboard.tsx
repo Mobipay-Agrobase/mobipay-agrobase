@@ -26,6 +26,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Progress } from '@/components/ui/progress'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 
 const fmtUGX = (n: number | null | undefined) => 'UGX ' + (Number(n) || 0).toLocaleString()
 const fmtPct = (n: number | null | undefined) => (Number(n) || 0).toFixed(1) + '%'
@@ -43,6 +44,8 @@ interface RecoveryData {
 
 export function RecoveryDashboard() {
   const [data, setData] = useState<RecoveryData | null>(null)
+  const [invoices, setInvoices] = useState<any[]>([])
+  const [paying, setPaying] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
 
@@ -50,10 +53,15 @@ export function RecoveryDashboard() {
     if (!silent) setLoading(true)
     else setRefreshing(true)
     try {
-      const res = await fetch('/api/billing/recovery')
-      if (!res.ok) throw new Error('Failed')
-      const json = await res.json()
-      setData(json)
+      const [recoveryRes, invoicesRes] = await Promise.all([
+        fetch('/api/billing/recovery'),
+        fetch('/api/billing/invoices/list'),
+      ])
+      if (recoveryRes.ok) setData(await recoveryRes.json())
+      if (invoicesRes.ok) {
+        const invData = await invoicesRes.json()
+        setInvoices(invData.invoices || [])
+      }
     } catch (e) {
       console.error(e)
     } finally {
@@ -63,6 +71,30 @@ export function RecoveryDashboard() {
   }, [])
 
   useEffect(() => { fetchData() }, [fetchData])
+
+  const handlePay = async (invoiceId: string) => {
+    setPaying(invoiceId)
+    try {
+      const res = await fetch('/api/billing/pay-invoice', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ invoiceId }),
+      })
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error || 'Failed to initiate payment')
+      }
+      const data = await res.json()
+      // Redirect to Flutterwave payment page
+      if (data.paymentLink) {
+        window.location.href = data.paymentLink
+      }
+    } catch (e: any) {
+      alert(e.message || 'Payment failed to start')
+    } finally {
+      setPaying(null)
+    }
+  }
 
   if (loading) {
     return (
@@ -283,7 +315,59 @@ export function RecoveryDashboard() {
         </Card>
       )}
 
-      {/* Monthly Statements (placeholder — future feature) */}
+      {/* Pending Invoices */}
+      {invoices.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Pending Invoices</CardTitle>
+            <CardDescription>Pay your subscription invoices via Flutterwave (Mobile Money / Card)</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader><TableRow>
+                <TableHead>Invoice #</TableHead>
+                <TableHead>Plan</TableHead>
+                <TableHead className="text-right">Amount</TableHead>
+                <TableHead>Due Date</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Action</TableHead>
+              </TableRow></TableHeader>
+              <TableBody>
+                {invoices.filter(i => i.status !== 'PAID').map((inv) => (
+                  <TableRow key={inv.id}>
+                    <TableCell className="font-mono text-xs">{inv.invoiceNumber}</TableCell>
+                    <TableCell className="text-sm">{inv.plan}</TableCell>
+                    <TableCell className="text-right text-sm font-medium">
+                      {inv.currency} {(inv.total || 0).toLocaleString()}
+                    </TableCell>
+                    <TableCell className="text-xs">{new Date(inv.dueDate).toLocaleDateString()}</TableCell>
+                    <TableCell>
+                      <Badge className={cn(
+                        'text-[10px]',
+                        inv.status === 'PENDING' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300' :
+                        inv.status === 'OVERDUE' ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300' :
+                        'bg-gray-100 text-gray-700'
+                      )}>{inv.status}</Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        size="sm"
+                        onClick={() => handlePay(inv.id)}
+                        disabled={paying === inv.id}
+                      >
+                        {paying === inv.id ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : null}
+                        Pay Now
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Monthly Statements */}
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-base">Monthly Statements</CardTitle>

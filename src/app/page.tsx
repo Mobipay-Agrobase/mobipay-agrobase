@@ -207,6 +207,16 @@ export default function HomePage() {
       if (role === 'SUPER_ADMIN' && !isAllowedForSuperAdmin) {
         setActiveModule('super-admin-overview')
       }
+      // MOBIPAY_FINANCE: redirect to billing-operations if on a non-billing module
+      const isAllowedForFinance =
+        activeModule === 'billing-operations' ||
+        activeModule === 'platform-recovery' ||
+        activeModule === 'billing' ||
+        activeModule === 'profile' ||
+        activeModule === 'dashboard'
+      if (role === 'MOBIPAY_FINANCE' && !isAllowedForFinance) {
+        setActiveModule('billing-operations')
+      }
     } else {
       setUser(null)
     }

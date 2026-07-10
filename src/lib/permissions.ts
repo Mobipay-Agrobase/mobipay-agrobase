@@ -141,6 +141,21 @@ const ROLE_PERMISSIONS: RolePerms = {
     'profile:read', 'profile:update',
   ],
 
+  // ─── MobiPay Internal Staff (not tenant-scoped) ───
+
+  // MobiPay Finance: Internal finance team — billing operations, invoices, support
+  // Sees billing data across ALL tenants. Does NOT see farmer/purchase operational data.
+  MOBIPAY_FINANCE: [
+    'dashboard:read',
+    'billing:read', 'billing:manage',
+    'invoices:read', 'invoices:create', 'invoices:update', 'invoices:export',
+    'payments:read',
+    'reports:read', 'reports:export',
+    'support:read', 'support:manage',
+    'quotes:read', 'quotes:create', 'quotes:update',
+    'profile:read', 'profile:update',
+  ],
+
   // ─── Generic Roles (for non-EKIBBO tenants) ───
 
   // Agent: field data collection

@@ -183,17 +183,29 @@ export function Sidebar() {
                 if (groupLabel === 'Super Admin' && !isSuperAdmin) return null
                 // For SUPER_ADMIN role: ONLY show Super Admin group
                 if (isSuperAdmin && groupLabel !== 'Super Admin') return null
+                // MOBIPAY_FINANCE: hide most groups, only show Admin + Overview
+                if (role === 'MOBIPAY_FINANCE' && !['Overview', 'Admin'].includes(groupLabel)) return null
 
-                // Filter items by role permission (skip check for super admin group items & alwaysVisible items)
+                // Filter items by role permission
                 const visibleItems = items.filter(item => {
                   if (isSuperAdmin) return true
-                  // Explicit role allowlist (whitelist) — if present, role MUST be in it
+
+                  // MOBIPAY_FINANCE: only see billing-related menus + profile
+                  // Does NOT see farmer/purchase operational data, does NOT see super-admin menus
+                  if (role === 'MOBIPAY_FINANCE') {
+                    // Hide Super Admin group entirely
+                    if (groupLabel === 'Super Admin') return false
+                    // Only show billing-operations, platform-recovery, billing, profile
+                    const allowedKeys = ['billing-operations', 'platform-recovery', 'billing', 'profile', 'dashboard']
+                    return allowedKeys.includes(item.key)
+                  }
+
+                  // Explicit role allowlist (whitelist)
                   if (item.restrictToRoles && !item.restrictToRoles.includes(role)) return false
-                  // Explicit role blocklist (blacklist) — if present, role MUST NOT be in it
+                  // Explicit role blocklist (blacklist)
                   if (item.hideFromRoles && item.hideFromRoles.includes(role)) return false
                   if (item.alwaysVisible) return true
                   if (!item.permModule) return true
-                  // Check if role has read permission for this module
                   return hasPermission(role, `${item.permModule}:read`)
                 })
 

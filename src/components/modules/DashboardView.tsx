@@ -25,6 +25,7 @@ import {
   EkbMecDashboard,
   EkbExtensionDashboard,
 } from '@/components/dashboard/EkbiboDashboards'
+import BillingOperationsDashboard from '@/components/admin/BillingOperationsDashboard'
 
 const COLORS = ['#059669', '#10b981', '#34d399', '#6ee7b7', '#a7f3d0', '#06b6d4', '#0ea5e9', '#3b82f6', '#8b5cf6', '#a855f7']
 
@@ -67,6 +68,10 @@ export default function DashboardView() {
       return <AgentDashboard userId={user?.userId || ''} />
     case 'CBT':
       return <CbtDashboard userId={user?.userId || ''} />
+
+    // ─── MobiPay internal staff ───
+    case 'MOBIPAY_FINANCE':
+      return <BillingOperationsDashboard />
 
     // ─── EKIBBO role-specific dashboards ───
     case 'EKB_MD':

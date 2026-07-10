@@ -452,6 +452,30 @@ export async function getBillingOverview(): Promise<{
     where: { status: { in: ['ACTIVE', 'RECOVERED'] } },
     include: {
       tenant: { select: { id: true, name: true, country: true } },
+      investmentChanges: {
+        orderBy: { changedAt: 'desc' },
+        take: 10,
+        select: {
+          id: true,
+          previousAmount: true,
+          newAmount: true,
+          reason: true,
+          changedByUserId: true,
+          changedAt: true,
+        },
+      },
+      feeRateChanges: {
+        orderBy: { changedAt: 'desc' },
+        take: 10,
+        select: {
+          id: true,
+          previousRate: true,
+          newRate: true,
+          reason: true,
+          changedByUserId: true,
+          changedAt: true,
+        },
+      },
     },
     orderBy: { createdAt: 'desc' },
   })

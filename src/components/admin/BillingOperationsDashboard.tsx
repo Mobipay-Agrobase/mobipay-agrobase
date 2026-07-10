@@ -407,12 +407,12 @@ export function BillingOperationsDashboard() {
           {showHistory && (
             <div className="space-y-4 max-h-[60vh] overflow-y-auto">
               <div>
-                <h4 className="text-sm font-semibold mb-2">Investment Changes ({showHistory.investmentChanges.length})</h4>
-                {showHistory.investmentChanges.length === 0 ? (
+                <h4 className="text-sm font-semibold mb-2">Investment Changes ({(showHistory.investmentChanges ?? []).length})</h4>
+                {(showHistory.investmentChanges ?? []).length === 0 ? (
                   <p className="text-xs text-muted-foreground">No changes recorded</p>
                 ) : (
                   <div className="space-y-2">
-                    {showHistory.investmentChanges.map((c: any) => (
+                    {(showHistory.investmentChanges ?? []).map((c: any) => (
                       <div key={c.id} className="p-3 rounded-lg border text-xs">
                         <div className="flex items-center justify-between mb-1">
                           <span className="font-medium">{fmtUGX(c.previousAmount)} → {fmtUGX(c.newAmount)}</span>
@@ -425,12 +425,12 @@ export function BillingOperationsDashboard() {
                 )}
               </div>
               <div>
-                <h4 className="text-sm font-semibold mb-2">Fee Rate Changes ({showHistory.feeRateChanges.length})</h4>
-                {showHistory.feeRateChanges.length === 0 ? (
+                <h4 className="text-sm font-semibold mb-2">Fee Rate Changes ({(showHistory.feeRateChanges ?? []).length})</h4>
+                {(showHistory.feeRateChanges ?? []).length === 0 ? (
                   <p className="text-xs text-muted-foreground">No changes recorded</p>
                 ) : (
                   <div className="space-y-2">
-                    {showHistory.feeRateChanges.map((c: any) => (
+                    {(showHistory.feeRateChanges ?? []).map((c: any) => (
                       <div key={c.id} className="p-3 rounded-lg border text-xs">
                         <div className="flex items-center justify-between mb-1">
                           <span className="font-medium">{Number(c.previousRate) * 100}% → {Number(c.newRate) * 100}%</span>

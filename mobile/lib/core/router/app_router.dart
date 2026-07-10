@@ -19,6 +19,7 @@ import '../../features/profile/presentation/pages/profile_page.dart';
 import '../../features/profile/presentation/pages/farmer_id_card_page.dart';
 import '../../features/trainings/presentation/pages/my_trainings_page.dart';
 import '../../features/auth/presentation/pages/splash_page.dart';
+import '../../features/billing/presentation/pages/recovery_page.dart';
 import '../../features/impact/presentation/pages/impact_dashboard_page.dart';
 import '../../features/impact/presentation/pages/practice_logger_page.dart';
 import '../../features/impact/presentation/pages/my_passport_page.dart';
@@ -50,6 +51,10 @@ class AppRouter {
             path: '/plots/:id',
             builder: (_, state) =>
                 PlotDetailPage(id: state.pathParameters['id']!),
+          ),
+          GoRoute(
+            path: '/recovery',
+            builder: (_, __) => const RecoveryPage(),
           ),
           // ─── Impact Engine routes (6-week sprint) ───
           GoRoute(

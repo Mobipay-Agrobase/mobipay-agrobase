@@ -1,6 +1,5 @@
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'dart:io';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiClient {
@@ -15,10 +14,17 @@ class ApiClient {
 
   static String? _runtimeBaseUrl;
 
-  /// Returns the effective base URL, performing platform detection on first call.
-  /// Android emulator → http://10.0.2.2:3000
-  /// iOS simulator  → http://localhost:3000
-  /// Physical device → http://<host-lan-ip>:3000  (set via settings or --dart-define)
+  /// Returns the effective base URL.
+  /// Priority:
+  ///   1. Compile-time: `flutter run --dart-define=API_BASE_URL=http://...`
+  ///   2. Runtime: stored in SharedPreferences (set via settings screen)
+  ///   3. Default: Vercel production API
+  ///
+  /// For local dev against a local server:
+  ///   flutter run --dart-define=API_BASE_URL=http://10.0.2.2:3000
+  ///
+  /// For local dev against Vercel staging:
+  ///   flutter run --dart-define=API_BASE_URL=https://mobipay-agrobase-git-staging.vercel.app
   static Future<String> getBaseUrl() async {
     // 1. Compile-time override (highest priority)
     if (_compiledBaseUrl.isNotEmpty) return _compiledBaseUrl;
@@ -32,18 +38,8 @@ class ApiClient {
       return stored;
     }
 
-    // 3. Platform-aware defaults
-    if (Platform.isAndroid) {
-      // On Android emulator, 10.0.2.2 forwards to host localhost
-      // On real devices, this won't work — user must set the URL in settings
-      return 'http://10.0.2.2:3000';
-    } else if (Platform.isIOS) {
-      // iOS simulator can reach host localhost directly
-      return 'http://localhost:3000';
-    }
-
-    // Fallback
-    return 'http://10.0.2.2:3000';
+    // 3. Default: Vercel production API
+    return 'https://mobipay-agrobase.vercel.app';
   }
 
   /// Call this from a settings screen to let users configure the server URL.

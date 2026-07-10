@@ -13,8 +13,8 @@ import { updateUpfrontInvestment, updateFeeRate } from '@/lib/vendor-financing/e
 export async function GET() {
   try {
     const ctx = await getTenantContext()
-    if (!ctx.isSuperAdmin) {
-      return NextResponse.json({ error: 'Super Admin access required' }, { status: 403 })
+    if (!ctx.isSuperAdmin && ctx.role !== 'MOBIPAY_FINANCE') {
+      return NextResponse.json({ error: 'Super Admin or Finance access required' }, { status: 403 })
     }
 
     const agreements = await db.billingAgreement.findMany({
@@ -36,8 +36,8 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const ctx = await getTenantContext()
-    if (!ctx.isSuperAdmin) {
-      return NextResponse.json({ error: 'Super Admin access required' }, { status: 403 })
+    if (!ctx.isSuperAdmin && ctx.role !== 'MOBIPAY_FINANCE') {
+      return NextResponse.json({ error: 'Super Admin or Finance access required' }, { status: 403 })
     }
 
     const body = await request.json()
@@ -137,8 +137,8 @@ export async function POST(request: Request) {
 export async function PUT(request: Request) {
   try {
     const ctx = await getTenantContext()
-    if (!ctx.isSuperAdmin) {
-      return NextResponse.json({ error: 'Super Admin access required' }, { status: 403 })
+    if (!ctx.isSuperAdmin && ctx.role !== 'MOBIPAY_FINANCE') {
+      return NextResponse.json({ error: 'Super Admin or Finance access required' }, { status: 403 })
     }
 
     const body = await request.json()

@@ -190,18 +190,24 @@ export function Sidebar() {
                 if (isSuperAdmin && groupLabel !== 'Super Admin') return null
                 // MOBIPAY_FINANCE: hide most groups, only show Admin + Overview
                 if (role === 'MOBIPAY_FINANCE' && !['Overview', 'Admin'].includes(groupLabel)) return null
+                // MOBIPAY_SUPPORT: only show Overview + Admin
+                if (role === 'MOBIPAY_SUPPORT' && !['Overview', 'Admin'].includes(groupLabel)) return null
 
                 // Filter items by role permission
                 const visibleItems = items.filter(item => {
                   if (isSuperAdmin) return true
 
                   // MOBIPAY_FINANCE: only see billing-related menus + profile
-                  // Does NOT see farmer/purchase operational data, does NOT see super-admin menus
                   if (role === 'MOBIPAY_FINANCE') {
-                    // Hide Super Admin group entirely
                     if (groupLabel === 'Super Admin') return false
-                    // Only show billing-operations, platform-recovery, billing, profile
                     const allowedKeys = ['billing-operations', 'platform-recovery', 'billing', 'profile', 'dashboard', 'support-tickets', 'quotes']
+                    return allowedKeys.includes(item.key)
+                  }
+
+                  // MOBIPAY_SUPPORT: only see support tickets + profile + dashboard
+                  if (role === 'MOBIPAY_SUPPORT') {
+                    if (groupLabel === 'Super Admin') return false
+                    const allowedKeys = ['support-tickets', 'profile', 'dashboard']
                     return allowedKeys.includes(item.key)
                   }
 

@@ -223,6 +223,14 @@ export default function HomePage() {
       if (role === 'MOBIPAY_FINANCE' && !isAllowedForFinance) {
         setActiveModule('billing-operations')
       }
+      // MOBIPAY_SUPPORT: redirect to support-tickets if on a non-support module
+      const isAllowedForSupport =
+        activeModule === 'support-tickets' ||
+        activeModule === 'profile' ||
+        activeModule === 'dashboard'
+      if (role === 'MOBIPAY_SUPPORT' && !isAllowedForSupport) {
+        setActiveModule('support-tickets')
+      }
     } else {
       setUser(null)
     }

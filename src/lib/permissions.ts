@@ -143,16 +143,24 @@ const ROLE_PERMISSIONS: RolePerms = {
 
   // ─── MobiPay Internal Staff (not tenant-scoped) ───
 
-  // MobiPay Finance: Internal finance team — billing operations, invoices, support
-  // Sees billing data across ALL tenants. Does NOT see farmer/purchase operational data.
+  // MobiPay Finance: Internal finance team — billing, invoices, quotes
+  // Does NOT handle support tickets (that's MOBIPAY_SUPPORT).
   MOBIPAY_FINANCE: [
     'dashboard:read',
     'billing:read', 'billing:manage',
     'invoices:read', 'invoices:create', 'invoices:update', 'invoices:export',
     'payments:read',
     'reports:read', 'reports:export',
-    'support:read', 'support:manage',
+    'support:read',  // can VIEW tickets but not manage (respond)
     'quotes:read', 'quotes:create', 'quotes:update',
+    'profile:read', 'profile:update',
+  ],
+
+  // MobiPay Support: Internal support team — handles tenant support tickets
+  // Does NOT see billing/financial data (that's MOBIPAY_FINANCE).
+  MOBIPAY_SUPPORT: [
+    'dashboard:read',
+    'support:read', 'support:manage',
     'profile:read', 'profile:update',
   ],
 

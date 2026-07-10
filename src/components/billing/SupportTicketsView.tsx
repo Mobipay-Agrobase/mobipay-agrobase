@@ -41,7 +41,7 @@ const STATUS_COLORS: Record<string, string> = {
 
 export default function SupportTicketsView() {
   const { user } = useAppStore()
-  const isFinanceOrAdmin = user?.role === 'SUPER_ADMIN' || user?.role === 'MOBIPAY_FINANCE'
+  const isInternalStaff = user?.role === 'SUPER_ADMIN' || user?.role === 'MOBIPAY_FINANCE'
 
   const [tickets, setTickets] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -154,16 +154,18 @@ export default function SupportTicketsView() {
             Support Tickets
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            {isFinanceOrAdmin ? 'All tenant support tickets' : 'Your support tickets — billing, payments, technical issues'}
+            {isInternalStaff ? 'All tenant support tickets — respond and resolve' : 'Your support tickets — billing, payments, technical issues'}
           </p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={fetchTickets}>
             <RefreshCw className="w-4 h-4 mr-1.5" /> Refresh
           </Button>
-          <Button size="sm" onClick={() => setShowCreate(true)}>
-            <Plus className="w-4 h-4 mr-1.5" /> New Ticket
-          </Button>
+          {!isInternalStaff && (
+            <Button size="sm" onClick={() => setShowCreate(true)}>
+              <Plus className="w-4 h-4 mr-1.5" /> New Ticket
+            </Button>
+          )}
         </div>
       </div>
 
@@ -171,8 +173,8 @@ export default function SupportTicketsView() {
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
             <MessageSquare className="w-10 h-10 mx-auto mb-3 opacity-40" />
-            <p className="font-medium">No support tickets</p>
-            <p className="text-sm mt-1">Create a ticket if you have a billing or technical issue.</p>
+            <p className="font-medium">{isInternalStaff ? 'No support tickets from tenants' : 'No support tickets'}</p>
+            <p className="text-sm mt-1">{isInternalStaff ? 'Tenant tickets will appear here.' : 'Create a ticket if you have a billing or technical issue.'}</p>
           </CardContent>
         </Card>
       ) : (
@@ -274,7 +276,7 @@ export default function SupportTicketsView() {
                 <div className="flex items-center gap-2 flex-wrap">
                   <Badge className={cn('text-[10px]', CATEGORY_COLORS[selectedTicket.category])}>{selectedTicket.category}</Badge>
                   <Badge className={cn('text-[10px]', STATUS_COLORS[selectedTicket.status])}>{selectedTicket.status.replace(/_/g, ' ')}</Badge>
-                  {isFinanceOrAdmin && (
+                  {isInternalStaff && (
                     <Select
                       value={selectedTicket.status}
                       onValueChange={(v) => handleStatusChange(selectedTicket.id, v)}

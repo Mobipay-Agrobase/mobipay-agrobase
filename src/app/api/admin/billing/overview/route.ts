@@ -11,8 +11,8 @@ import { getBillingOverview } from '@/lib/vendor-financing/engine'
 export async function GET() {
   try {
     const ctx = await getTenantContext()
-    if (!ctx.isSuperAdmin) {
-      return NextResponse.json({ error: 'Super Admin access required' }, { status: 403 })
+    if (!ctx.isSuperAdmin && ctx.role !== 'MOBIPAY_FINANCE') {
+      return NextResponse.json({ error: 'Super Admin or Finance access required' }, { status: 403 })
     }
 
     const overview = await getBillingOverview()

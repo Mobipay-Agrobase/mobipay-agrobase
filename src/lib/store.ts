@@ -17,6 +17,7 @@ export type ModuleKey =
   'input-distribution' | 'crop-insurance' |
   // Billing Engine
   'billing-operations' | 'platform-recovery' |
+  'support-tickets' | 'quotes' |
   // Reference
   'roles-permissions' |
   'super-admin-overview' | 'super-admin-tenants' | 'super-admin-revenue' | 'super-admin-impact' | 'super-admin-users' | 'super-admin-mobile' | 'super-admin-config'

@@ -104,6 +104,11 @@ const ALL_MODULES: NavItem[] = [
     restrictToRoles: ['SUPER_ADMIN', 'COUNTRY_ADMIN', 'TENANT_ADMIN', 'EKB_MD'] },
   // Platform Recovery — visible to tenants with billing:read (EKIBBO MD, Finance)
   { key: 'platform-recovery', label: 'Platform Recovery', icon: TrendingUp, group: 'Admin', permModule: 'billing' },
+  // Support Tickets — visible to billing:read (tenants) + MOBIPAY_FINANCE + SUPER_ADMIN
+  { key: 'support-tickets', label: 'Support Tickets', icon: MessageSquare, group: 'Admin', permModule: 'support' },
+  // Quotes — SUPER_ADMIN + MOBIPAY_FINANCE only
+  { key: 'quotes', label: 'Quotes', icon: FileText, group: 'Super Admin',
+    restrictToRoles: ['SUPER_ADMIN', 'MOBIPAY_FINANCE'] },
   // Super Admin (only visible to SUPER_ADMIN role)
   { key: 'super-admin-overview', label: 'Platform Overview', icon: LayoutDashboard, group: 'Super Admin' },
   { key: 'super-admin-tenants', label: 'Tenants', icon: Building2, group: 'Super Admin' },
@@ -196,7 +201,7 @@ export function Sidebar() {
                     // Hide Super Admin group entirely
                     if (groupLabel === 'Super Admin') return false
                     // Only show billing-operations, platform-recovery, billing, profile
-                    const allowedKeys = ['billing-operations', 'platform-recovery', 'billing', 'profile', 'dashboard']
+                    const allowedKeys = ['billing-operations', 'platform-recovery', 'billing', 'profile', 'dashboard', 'support-tickets', 'quotes']
                     return allowedKeys.includes(item.key)
                   }
 

@@ -74,6 +74,8 @@ const BillingView = lazy(() => import('@/components/modules/BillingView'))
 // Billing Engine
 const BillingOperationsDashboard = lazy(() => import('@/components/admin/BillingOperationsDashboard'))
 const RecoveryDashboard = lazy(() => import('@/components/billing/RecoveryDashboard'))
+const SupportTicketsView = lazy(() => import('@/components/billing/SupportTicketsView'))
+const QuotesView = lazy(() => import('@/components/billing/QuotesView'))
 
 function ModuleLoader() {
   return (
@@ -159,6 +161,8 @@ function ModuleRouter() {
     // Billing Engine
     case 'billing-operations': return <BillingOperationsDashboard />
     case 'platform-recovery': return <RecoveryDashboard />
+    case 'support-tickets': return <SupportTicketsView />
+    case 'quotes': return <QuotesView />
     default: return <DashboardView />
   }
 }
@@ -211,6 +215,8 @@ export default function HomePage() {
       const isAllowedForFinance =
         activeModule === 'billing-operations' ||
         activeModule === 'platform-recovery' ||
+        activeModule === 'support-tickets' ||
+        activeModule === 'quotes' ||
         activeModule === 'billing' ||
         activeModule === 'profile' ||
         activeModule === 'dashboard'

@@ -158,14 +158,14 @@ class _RecoveryPageState extends State<RecoveryPage> {
         // KPI Cards
         if (isVendorFinancing && !isRecovered) ...[
           KpiCard(
-            label: 'Investment Remaining',
+            title: 'Investment Remaining',
             value: _currencyFormat.format(investmentRemaining),
             icon: Icons.access_time,
             color: Colors.amber,
           ),
           const SizedBox(height: 12),
           KpiCard(
-            label: 'Recovered',
+            title: 'Recovered',
             value: '${recoveredPercent.toStringAsFixed(1)}%',
             icon: Icons.trending_up,
             color: Colors.green,
@@ -173,16 +173,16 @@ class _RecoveryPageState extends State<RecoveryPage> {
           const SizedBox(height: 12),
         ],
         KpiCard(
-          label: 'Fees This Month',
+          title: 'Fees This Month',
           value: _currencyFormat.format(thisMonthFees),
           icon: Icons.receipt,
           color: Colors.blue,
         ),
         const SizedBox(height: 12),
         KpiCard(
-          label: 'Transactions This Month',
+          title: 'Transactions This Month',
           value: thisMonthTxnCount.toString(),
-          icon: Icons.activity,
+          icon: Icons.show_chart,
           color: Colors.purple,
         ),
         const SizedBox(height: 24),

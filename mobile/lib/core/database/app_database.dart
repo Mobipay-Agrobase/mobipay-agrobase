@@ -39,7 +39,7 @@ class FarmerCache extends Table {
   TextColumn get villageName => text().nullable()();
   TextColumn get district => text().nullable()();
   TextColumn get country => text().nullable()();
-  TextColumn get isCertified => boolean().withDefault(const Constant(false))();
+  BoolColumn get isCertified => boolean().withDefault(const Constant(false))();
   TextColumn get certificationType => text().nullable()();
   TextColumn get farmSize => real().nullable()();
   TextColumn get status => text().withDefault(const Constant('ACTIVE'))();

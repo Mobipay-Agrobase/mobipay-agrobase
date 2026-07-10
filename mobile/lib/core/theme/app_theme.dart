@@ -6,6 +6,7 @@ class AppTheme {
   static const Color lightGreen = Color(0xFFDCFCE7); // Green 100
   static const Color accentAmber = Color(0xFFF59E0B); // Amber 500
   static const Color surfaceLight = Color(0xFFF8FAFC); // Slate 50
+  static const Color background = surfaceLight; // alias
   static const Color textPrimary = Color(0xFF1E293B); // Slate 800
   static const Color textSecondary = Color(0xFF64748B); // Slate 500
   static const Color errorRed = Color(0xFFEF4444); // Red 500

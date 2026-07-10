@@ -5,6 +5,7 @@ class EmptyState extends StatelessWidget {
   final String title;
   final String? message;
   final String? subtitle; // alias for message
+  final String? description; // alias for message
   final String? actionLabel;
   final VoidCallback? onAction;
   final VoidCallback? onRetry; // alias for onAction
@@ -15,6 +16,7 @@ class EmptyState extends StatelessWidget {
     required this.title,
     this.message,
     this.subtitle,
+    this.description,
     this.actionLabel,
     this.onAction,
     this.onRetry,
@@ -22,7 +24,7 @@ class EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final displayMessage = message ?? subtitle;
+    final displayMessage = message ?? subtitle ?? description;
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 48),

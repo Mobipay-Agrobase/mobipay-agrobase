@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../sync/sync_engine.dart';
 import '../connectivity/connectivity_manager.dart';
 

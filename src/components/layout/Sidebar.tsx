@@ -106,8 +106,8 @@ const ALL_MODULES: NavItem[] = [
   { key: 'platform-recovery', label: 'Platform Recovery', icon: TrendingUp, group: 'Admin', permModule: 'billing' },
   // Support Tickets — visible to billing:read (tenants) + MOBIPAY_FINANCE + SUPER_ADMIN
   { key: 'support-tickets', label: 'Support Tickets', icon: MessageSquare, group: 'Admin', permModule: 'support' },
-  // Quotes — SUPER_ADMIN + MOBIPAY_FINANCE only
-  { key: 'quotes', label: 'Quotes', icon: FileText, group: 'Super Admin',
+  // Quotes — SUPER_ADMIN + MOBIPAY_FINANCE only (in Admin group so finance can see it)
+  { key: 'quotes', label: 'Quotes', icon: FileText, group: 'Admin',
     restrictToRoles: ['SUPER_ADMIN', 'MOBIPAY_FINANCE'] },
   // Super Admin (only visible to SUPER_ADMIN role)
   { key: 'super-admin-overview', label: 'Platform Overview', icon: LayoutDashboard, group: 'Super Admin' },
@@ -200,7 +200,7 @@ export function Sidebar() {
                   // MOBIPAY_FINANCE: only see billing-related menus + profile
                   if (role === 'MOBIPAY_FINANCE') {
                     if (groupLabel === 'Super Admin') return false
-                    const allowedKeys = ['billing-operations', 'platform-recovery', 'billing', 'profile', 'dashboard', 'support-tickets', 'quotes']
+                    const allowedKeys = ['billing-operations', 'platform-recovery', 'profile', 'dashboard', 'support-tickets', 'quotes']
                     return allowedKeys.includes(item.key)
                   }
 

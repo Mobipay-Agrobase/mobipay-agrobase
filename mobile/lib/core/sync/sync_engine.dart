@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import '../database/app_database.dart';
 import '../api/api_client.dart';
 import '../connectivity/connectivity_manager.dart';
+import 'package:http/http.dart' as http;
 
 /// SyncEngine — the heart of the offline-first architecture.
 ///
@@ -320,6 +321,3 @@ class SyncEngine extends ChangeNotifier {
     }
   }
 }
-
-/// Import http for Response type
-import 'package:http/http.dart' as http;

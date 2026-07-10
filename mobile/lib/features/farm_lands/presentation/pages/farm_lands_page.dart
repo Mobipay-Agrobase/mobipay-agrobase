@@ -139,7 +139,7 @@ class _FarmLandsPageState extends State<FarmLandsPage> {
           if (pos != null) ss(() => pts.add({'lat': pos.latitude, 'lng': pos.longitude}));
           ss(() => capturing = false);
         }),
-        if (pts.length >= 3) Padding(padding: const EdgeInsets.only(top: 8), child: Text('Area: ${_area(pts).toStringAsFixed(2)} ha', style: TextStyle(fontSize: 12, color: AppTheme.primaryGreen, fontWeight: FontWeight.w600)))),
+        if (pts.length >= 3) Padding(padding: const EdgeInsets.only(top: 8), child: Text('Area: ${_area(pts).toStringAsFixed(2)} ha', style: TextStyle(fontSize: 12, color: AppTheme.primaryGreen, fontWeight: FontWeight.w600))),
       ])),
       actions: [
         TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),

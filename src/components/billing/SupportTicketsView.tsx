@@ -41,7 +41,7 @@ const STATUS_COLORS: Record<string, string> = {
 
 export default function SupportTicketsView() {
   const { user } = useAppStore()
-  const isInternalStaff = user?.role === 'SUPER_ADMIN' || user?.role === 'MOBIPAY_FINANCE'
+  const isInternalStaff = user?.role === 'SUPER_ADMIN' || user?.role === 'MOBIPAY_FINANCE' || user?.role === 'MOBIPAY_SUPPORT'
 
   const [tickets, setTickets] = useState<any[]>([])
   const [loading, setLoading] = useState(true)

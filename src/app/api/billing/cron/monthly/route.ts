@@ -11,6 +11,7 @@
 import { db } from '@/lib/db'
 import { NextResponse } from 'next/server'
 import { runMonthlyReconciliation } from '@/lib/vendor-financing/engine'
+import { sendStatementEmail } from '@/lib/vendor-financing/notifications'
 
 export async function GET(request: Request) {
   try {
@@ -34,12 +35,38 @@ export async function GET(request: Request) {
       select: { tenantId: true },
     })
 
-    const results: Array<{ tenantId: string; status: string; error?: string }> = []
+    const results: Array<{ tenantId: string; status: string; error?: string; emailed?: number; emailError?: string }> = []
 
     for (const { tenantId } of agreements) {
       try {
         await runMonthlyReconciliation(tenantId, period)
-        results.push({ tenantId, status: 'success' })
+
+        // Send statement email to the tenant's finance contact
+        // Get finance users for this tenant
+        const financeUsers = await db.user.findMany({
+          where: {
+            tenantId,
+            role: { in: ['TENANT_ADMIN', 'EKB_MD', 'EKB_FINANCE'] },
+            isActive: true,
+            email: { not: null },
+          },
+          select: { email: true },
+        })
+
+        const emails = financeUsers
+          .map(u => u.email)
+          .filter((e): e is string => !!e)
+
+        if (emails.length > 0) {
+          try {
+            await sendStatementEmail({ tenantId, period, recipientEmails: emails })
+            results.push({ tenantId, status: 'success', emailed: emails.length })
+          } catch (emailErr: any) {
+            results.push({ tenantId, status: 'success', emailError: emailErr.message })
+          }
+        } else {
+          results.push({ tenantId, status: 'success', emailed: 0 })
+        }
       } catch (e: any) {
         results.push({ tenantId, status: 'error', error: e.message })
       }

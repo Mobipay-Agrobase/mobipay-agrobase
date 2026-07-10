@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import '../database/app_database.dart';
+import 'package:drift/drift.dart' show Value;
 import '../api/api_client.dart';
 import '../connectivity/connectivity_manager.dart';
 import '../sync/sync_engine.dart';
@@ -55,7 +56,7 @@ class OfflineRepository {
               farmSize: Value(f['farmSize']?.toDouble()),
               status: Value(f['status'] ?? 'ACTIVE'),
               photoUrl: Value(f['photoUrl']),
-              syncStatus: const Value('synced'),
+              syncStatus: Value('synced'),
               lastSyncedAt: Value(DateTime.now()),
               updatedAt: Value(f['updatedAt'] != null ? DateTime.tryParse(f['updatedAt']) : null),
             ));
@@ -156,7 +157,7 @@ class OfflineRepository {
             firstName: farmer['firstName'] ?? '',
             lastName: farmer['lastName'] ?? '',
             phone: farmer['phone'] ?? '',
-            syncStatus: const Value('synced'),
+            syncStatus: Value('synced'),
             lastSyncedAt: Value(DateTime.now()),
           ));
           return farmer;
@@ -179,7 +180,7 @@ class OfflineRepository {
       district: Value(data['district']),
       country: Value(data['country']),
       farmSize: Value(data['farmSize']?.toDouble()),
-      syncStatus: const Value('pending'),
+      syncStatus: Value('pending'),
     ));
 
     await _syncEngine.queueWrite(
@@ -215,7 +216,7 @@ class OfflineRepository {
               waterSource: Value(f['waterSource']),
               soilFertility: Value(f['soilFertility']),
               boundaryGeoJson: Value(f['boundaryGeoJson']),
-              syncStatus: const Value('synced'),
+              syncStatus: Value('synced'),
               lastSyncedAt: Value(DateTime.now()),
             ));
           }
@@ -256,7 +257,7 @@ class OfflineRepository {
             id: farm['id'],
             farmerId: farm['farmerId'] ?? '',
             name: farm['name'] ?? '',
-            syncStatus: const Value('synced'),
+            syncStatus: Value('synced'),
             lastSyncedAt: Value(DateTime.now()),
           ));
           return farm;
@@ -276,7 +277,7 @@ class OfflineRepository {
       longitude: Value(data['longitude']?.toDouble()),
       landOwnership: Value(data['landOwnership']),
       boundaryGeoJson: Value(data['boundaryGeoJson']),
-      syncStatus: const Value('pending'),
+      syncStatus: Value('pending'),
     ));
 
     await _syncEngine.queueWrite(
@@ -309,7 +310,7 @@ class OfflineRepository {
                 loanRate: Value(g['loanRate']?.toDouble()),
                 maxLoanAmount: Value(g['maxLoanAmount']?.toDouble()),
                 isActive: Value(g['isActive'] ?? true),
-                syncStatus: const Value('synced'),
+                syncStatus: Value('synced'),
                 lastSyncedAt: Value(DateTime.now()),
               ),
             ]);
@@ -353,7 +354,7 @@ class OfflineRepository {
                 location: Value(t['location']),
                 trainerName: Value(t['trainerName']),
                 description: Value(t['description']),
-                syncStatus: const Value('synced'),
+                syncStatus: Value('synced'),
                 lastSyncedAt: Value(DateTime.now()),
               ),
             ]);
@@ -424,7 +425,7 @@ class OfflineRepository {
       status: Value(data['status'] ?? 'SCHEDULED'),
       latitude: Value(data['latitude']?.toDouble()),
       longitude: Value(data['longitude']?.toDouble()),
-      syncStatus: const Value('pending'),
+      syncStatus: Value('pending'),
     ));
 
     if (_isOnline) {
@@ -511,7 +512,7 @@ class OfflineRepository {
       taxAmount: Value((data['taxAmount'] as num?)?.toDouble()),
       netAmount: Value((data['netAmount'] as num?)?.toDouble()),
       status: Value(data['status'] ?? 'COMPLETED'),
-      syncStatus: const Value('pending'),
+      syncStatus: Value('pending'),
     ));
 
     if (_isOnline) {
@@ -587,7 +588,7 @@ class OfflineRepository {
       carbonKgCO2e: Value((data['carbonKgCO2e'] as num?)?.toDouble() ?? 0),
       farm5xPractice: Value(data['farm5xPractice']),
       farm5xVariant: Value(data['farm5xVariant']),
-      syncStatus: const Value('pending'),
+      syncStatus: Value('pending'),
     ));
 
     if (_isOnline) {

@@ -39,8 +39,8 @@ class _CultivationsPageState extends State<CultivationsPage> {
       backgroundColor: AppTheme.background,
       appBar: AppBar(title: const Text('Cultivations'), backgroundColor: AppTheme.primaryGreen, foregroundColor: Colors.white, actions: const [SyncStatusWidget(), SizedBox(width: 12)]),
       body: _loading ? const LoadingShimmer() : _cultivations.isEmpty
-          ? EmptyState(icon: Icons.sprout_outlined, title: 'No Cultivations', description: 'Create a cultivation to track crop stages', actionLabel: 'Add Cultivation', onAction: _showCreate)
-          : ListView.builder(padding: const EdgeInsets.all(16), itemCount: _cultivations.length, itemBuilder: (_, i) => Card(child: ListTile(leading: const CircleAvatar(child: Icon(Icons.sprout)), title: Text(_cultivations[i]['cropName'] ?? ''), subtitle: Text('${_cultivations[i]['variety'] ?? ''} · ${_cultivations[i]['season'] ?? ''}')))),
+          ? EmptyState(icon: Icons.grass, title: 'No Cultivations', description: 'Create a cultivation to track crop stages', actionLabel: 'Add Cultivation', onAction: _showCreate)
+          : ListView.builder(padding: const EdgeInsets.all(16), itemCount: _cultivations.length, itemBuilder: (_, i) => Card(child: ListTile(leading: const CircleAvatar(child: Icon(Icons.grass)), title: Text(_cultivations[i]['cropName'] ?? ''), subtitle: Text('${_cultivations[i]['variety'] ?? ''} · ${_cultivations[i]['season'] ?? ''}')))),
       floatingActionButton: FloatingActionButton(onPressed: _showCreate, backgroundColor: AppTheme.primaryGreen, child: const Icon(Icons.add, color: Colors.white)),
     );
   }
@@ -60,7 +60,7 @@ class _CultivationsPageState extends State<CultivationsPage> {
       content: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
         DropdownButtonFormField(value: cropCategory, decoration: const InputDecoration(labelText: 'Crop Category'), items: ['Main Crop','Inter Crop','Border Crop'].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(), onChanged: (v) => ss(() => cropCategory = v!)),
         const SizedBox(height: 12),
-        TextField(controller: cropCtrl, decoration: const InputDecoration(labelText: 'Crop Name *', prefixIcon: Icon(Icons.sprout))),
+        TextField(controller: cropCtrl, decoration: const InputDecoration(labelText: 'Crop Name *', prefixIcon: Icon(Icons.grass))),
         const SizedBox(height: 12),
         TextField(controller: varietyCtrl, decoration: const InputDecoration(labelText: 'Variety')),
         const SizedBox(height: 12),

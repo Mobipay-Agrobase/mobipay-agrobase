@@ -3,8 +3,10 @@ import '../../../../core/utils/constants.dart';
 
 class StatusBadge extends StatelessWidget {
   final String status;
+  final String? label;  // optional override for display text
+  final Color? color;   // optional override for text color
 
-  const StatusBadge({super.key, required this.status});
+  const StatusBadge({super.key, required this.status, this.label, this.color});
 
   String _formatStatus(String s) {
     // Convert snake_case or camelCase to Title Case
@@ -21,7 +23,7 @@ class StatusBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final lowerStatus = status.toLowerCase();
-    final textColor = AppConstants.statusColors[lowerStatus] ??
+    final textColor = color ?? AppConstants.statusColors[lowerStatus] ??
         const Color(0xFF64748B);
     final bgColor = AppConstants.statusBackgroundColors[lowerStatus] ??
         const Color(0xFFF1F5F9);
@@ -33,7 +35,7 @@ class StatusBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
-        _formatStatus(status),
+        label ?? _formatStatus(status),
         style: TextStyle(
           color: textColor,
           fontSize: 12,

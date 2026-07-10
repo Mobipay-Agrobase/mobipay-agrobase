@@ -113,7 +113,7 @@ class CostOfCultivationPage extends ConsumerWidget {
                       child: ExpansionTile(
                         leading: CircleAvatar(
                           backgroundColor: Colors.green.shade50,
-                          child: const Icon(Icons.sprout, color: Colors.green),
+                          child: const Icon(Icons.grass, color: Colors.green),
                         ),
                         title: Text(c['crop'] as String),
                         subtitle: Text('${c['farm']} · ${c['area']} ha'),

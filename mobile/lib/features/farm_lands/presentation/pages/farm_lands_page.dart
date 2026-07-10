@@ -104,7 +104,7 @@ class _FarmLandsPageState extends State<FarmLandsPage> {
           Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             _row('Ownership', ownership), _row('Water Source', water), _row('GPS Polygon', hasPolygon ? 'Captured' : 'Not captured'),
             const SizedBox(height: 8),
-            OutlinedButton.icon(icon: const Icon(Icons.sprout, size: 16), label: const Text('Add Cultivation'), onPressed: () => context.push('/cultivations?farmId=${farm['id']}')),
+            OutlinedButton.icon(icon: const Icon(Icons.grass, size: 16), label: const Text('Add Cultivation'), onPressed: () => context.push('/cultivations?farmId=${farm['id']}')),
           ])),
         ],
       ),

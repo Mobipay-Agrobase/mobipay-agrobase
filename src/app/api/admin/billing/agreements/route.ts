@@ -75,6 +75,58 @@ export async function POST(request: Request) {
       },
     })
 
+    // ─── Integration: Create Subscription record for SUBSCRIPTION/HYBRID models ───
+    // This keeps the existing BillingView (which reads Subscription) working
+    // alongside the new BillingAgreement system.
+    if (body.billingModel === 'SUBSCRIPTION' || body.billingModel === 'HYBRID') {
+      // Deactivate any existing active subscription for this tenant
+      await db.subscription.updateMany({
+        where: { tenantId: body.tenantId, status: 'ACTIVE' },
+        data: { status: 'SUPERSEDED', endDate: new Date() },
+      })
+
+      const subAmount = parseFloat(body.subscriptionAmount) || 0
+      const cycle = body.subscriptionCycle || 'ANNUAL'
+
+      const subscription = await db.subscription.create({
+        data: {
+          tenantId: body.tenantId,
+          plan: body.billingModel, // SUBSCRIPTION or HYBRID
+          amount: subAmount,
+          billingCycle: cycle,
+          status: 'ACTIVE',
+          startDate: new Date(),
+          endDate: cycle === 'ANNUAL' ? new Date(Date.now() + 365 * 86400000) : new Date(Date.now() + 30 * 86400000),
+        },
+      })
+
+      // Generate the first invoice
+      const invoiceNumber = `INV-${Date.now()}-${body.tenantId.slice(-4)}`
+      const dueDate = new Date(Date.now() + 30 * 86400000) // 30 days from now
+
+      const items = JSON.stringify([
+        { description: `${body.billingModel} plan — ${cycle.toLowerCase()} subscription`, amount: subAmount, quantity: 1, total: subAmount },
+      ])
+
+      await db.invoice.create({
+        data: {
+          tenantId: body.tenantId,
+          invoiceNumber,
+          subscriptionId: subscription.id,
+          plan: body.billingModel,
+          billingCycle: cycle,
+          items,
+          subtotal: subAmount,
+          tax: 0,
+          taxRate: 0,
+          total: subAmount,
+          currency: body.subscriptionCurrency || 'UGX',
+          status: 'PENDING',
+          dueDate,
+        },
+      })
+    }
+
     return NextResponse.json({ agreement }, { status: 201 })
   } catch (error: any) {
     console.error('[billing/agreements POST] error:', error)

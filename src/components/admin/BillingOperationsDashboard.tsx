@@ -34,6 +34,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea'
 import { Progress } from '@/components/ui/progress'
 import { toast } from 'sonner'
+import { CreateAgreementDialog } from './CreateAgreementDialog'
 
 const fmtUGX = (n: number | null | undefined) => 'UGX ' + (Number(n) || 0).toLocaleString()
 const fmtPct = (n: number | null | undefined) => (Number(n) || 0).toFixed(1) + '%'
@@ -80,6 +81,7 @@ export function BillingOperationsDashboard() {
   const [editReason, setEditReason] = useState('')
   const [saving, setSaving] = useState(false)
   const [showHistory, setShowHistory] = useState<Agreement | null>(null)
+  const [showCreate, setShowCreate] = useState(false)
 
   const fetchOverview = useCallback(async (silent = false) => {
     if (!silent) setLoading(true)
@@ -182,10 +184,16 @@ export function BillingOperationsDashboard() {
             MobiPay-internal view — billing agreements, fee collection, and investment recovery across all tenants
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={() => fetchOverview(true)} disabled={refreshing}>
-          <RefreshCw className={cn('w-4 h-4 mr-1.5', refreshing && 'animate-spin')} />
-          Refresh
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={() => fetchOverview(true)} disabled={refreshing}>
+            <RefreshCw className={cn('w-4 h-4 mr-1.5', refreshing && 'animate-spin')} />
+            Refresh
+          </Button>
+          <Button size="sm" onClick={() => setShowCreate(true)}>
+            <Plus className="w-4 h-4 mr-1.5" />
+            Create Agreement
+          </Button>
+        </div>
       </div>
 
       {/* KPI Cards */}
@@ -446,6 +454,13 @@ export function BillingOperationsDashboard() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Create Agreement Dialog */}
+      <CreateAgreementDialog
+        open={showCreate}
+        onOpenChange={setShowCreate}
+        onCreated={() => fetchOverview(true)}
+      />
     </div>
   )
 }

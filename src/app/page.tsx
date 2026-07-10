@@ -198,8 +198,13 @@ export default function HomePage() {
         role,
         name: session.user.name || '',
       })
-      // If SUPER_ADMIN and currently on a non-super-admin module, switch to super-admin-overview
-      if (role === 'SUPER_ADMIN' && !activeModule.startsWith('super-admin')) {
+      // If SUPER_ADMIN and currently on a non-super-admin module (and not on a billing-allowed module),
+      // switch to super-admin-overview
+      const isAllowedForSuperAdmin =
+        activeModule.startsWith('super-admin') ||
+        activeModule === 'billing-operations' ||
+        activeModule === 'platform-recovery'
+      if (role === 'SUPER_ADMIN' && !isAllowedForSuperAdmin) {
         setActiveModule('super-admin-overview')
       }
     } else {

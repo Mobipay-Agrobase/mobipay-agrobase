@@ -8,7 +8,7 @@ import { db } from '@/lib/db'
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const ctx = await getTenantContext()
@@ -16,6 +16,7 @@ export async function POST(
       return NextResponse.json({ error: 'Support access required' }, { status: 403 })
     }
 
+    const { id } = await params
     const body = await request.json()
     const { message } = body
 
@@ -27,7 +28,7 @@ export async function POST(
 
     // Verify ticket exists and user has access
     const ticket = await db.supportTicket.findFirst({
-      where: { id: params.id, ...(isFinanceOrAdmin ? {} : { tenantId: ctx.tenantId }) },
+      where: { id, ...(isFinanceOrAdmin ? {} : { tenantId: ctx.tenantId }) },
     })
 
     if (!ticket) {
@@ -36,7 +37,7 @@ export async function POST(
 
     const reply = await db.supportTicketReply.create({
       data: {
-        ticketId: params.id,
+        ticketId: id,
         message,
         fromUserId: ctx.userId,
         fromRole: ctx.role,
@@ -46,7 +47,7 @@ export async function POST(
     // If finance/admin replies, mark ticket as IN_PROGRESS
     if (isFinanceOrAdmin && ticket.status === 'OPEN') {
       await db.supportTicket.update({
-        where: { id: params.id },
+        where: { id },
         data: { status: 'IN_PROGRESS' },
       })
     }

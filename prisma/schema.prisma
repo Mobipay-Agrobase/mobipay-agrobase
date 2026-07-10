@@ -136,6 +136,10 @@ model Tenant {
   farmerLedgerEntries FarmerLedgerEntry[]
   inputDistributions  InputDistribution[]
   cropInsurances      CropInsurance[]
+  // ─── Vendor Financing & Billing Engine ───
+  billingAgreement       BillingAgreement?
+  transactionFeeLedger   TransactionFeeLedger[]
+  monthlyReconciliations MonthlyReconciliation[]
 }
 
 // --- USERS & AUTH ---
@@ -3776,4 +3780,158 @@ model CropCalendar {
   @@index([tenantId])
   @@index([cropName])
   @@index([country])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// VENDOR FINANCING & BILLING ENGINE
+// ═══════════════════════════════════════════════════════════════════════════
+// Configurable billing engine supporting 3 models:
+//   SUBSCRIPTION     — fixed annual/monthly fee, no transaction fees
+//   VENDOR_FINANCING — no upfront, fees only, investment recovered over time
+//   HYBRID           — lower subscription + lower per-kg fee
+//
+// upfrontInvestment and feeRate are MUTABLE (editable from admin UI).
+// Every change is logged in BillingInvestmentChange / BillingFeeRateChange.
+
+model BillingAgreement {
+  id                    String   @id @default(cuid())
+  tenantId              String   @unique
+  tenant                Tenant   @relation(fields: [tenantId], references: [id])
+
+  billingModel          String   // SUBSCRIPTION | VENDOR_FINANCING | HYBRID
+  costTrackingMode      String   @default("FIXED")  // FIXED | ACTUAL
+
+  subscriptionAmount    Decimal? @db.Decimal(18, 2)
+  subscriptionCurrency  String?
+  subscriptionCycle     String?  // MONTHLY | ANNUAL
+
+  feeType               String?  // PERCENTAGE | PER_KG | FLAT_PER_TXN | NONE
+  feeRate               Decimal? @db.Decimal(8, 4)   // EDITABLE
+  feeAppliesTo          String?  // PURCHASES | SALES | PAYOUTS | ALL
+  feeMinPerTxn          Decimal? @default(0) @db.Decimal(18, 2)
+  feeMaxPerMonth        Decimal? @db.Decimal(18, 2)
+
+  upfrontInvestment     Decimal? @db.Decimal(18, 2)  // EDITABLE
+  recoveryPeriodMonths  Int?
+  recurringMonthlyCost  Decimal? @db.Decimal(18, 2)
+
+  status                String   @default("ACTIVE")  // ACTIVE | RECOVERED | TERMINATED | SUPERSEDED
+  startDate             DateTime
+  endDate               DateTime?
+  recoveredAt           DateTime?
+  supersededById        String?
+
+  recoveredAmount       Decimal  @default(0) @db.Decimal(18, 2)
+  totalFeesCollected    Decimal  @default(0) @db.Decimal(18, 2)
+  totalRecurringCost    Decimal  @default(0) @db.Decimal(18, 2)
+
+  feeLedger             TransactionFeeLedger[]
+  reconciliations       MonthlyReconciliation[]
+  investmentChanges     BillingInvestmentChange[]
+  feeRateChanges        BillingFeeRateChange[]
+
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([tenantId, status])
+  @@index([status])
+}
+
+model TransactionFeeLedger {
+  id                    String   @id @default(cuid())
+  tenantId              String
+  tenant                Tenant   @relation(fields: [tenantId], references: [id])
+  agreementId           String
+  agreement             BillingAgreement @relation(fields: [agreementId], references: [id])
+
+  transactionType       String   // PURCHASE | SALE | PAYOUT
+  transactionId         String
+  transactionAmount     Decimal  @db.Decimal(18, 2)
+  transactionQuantity   Decimal? @db.Decimal(18, 2)
+
+  feeType               String
+  feeRate               Decimal  @db.Decimal(8, 4)   // snapshot at txn time
+  feeAmount             Decimal  @db.Decimal(18, 2)
+  momoGatewayFee        Decimal  @default(0) @db.Decimal(18, 2)
+  mobipayFee            Decimal  @db.Decimal(18, 2)
+
+  allocatedToRecovery   Decimal  @default(0) @db.Decimal(18, 2)
+  allocatedToProfit     Decimal  @default(0) @db.Decimal(18, 2)
+
+  reversed              Boolean  @default(false)
+  reversedAt            DateTime?
+  reversalOfId          String?
+
+  recordedAt            DateTime @default(now())
+
+  @@index([tenantId, recordedAt])
+  @@index([agreementId])
+  @@index([transactionId])
+  @@index([transactionType, reversed])
+}
+
+model MonthlyReconciliation {
+  id                    String   @id @default(cuid())
+  tenantId              String
+  tenant                Tenant   @relation(fields: [tenantId], references: [id])
+  agreementId           String
+  agreement             BillingAgreement @relation(fields: [agreementId], references: [id])
+
+  period                String   // "2026-07"
+  periodStart           DateTime
+  periodEnd             DateTime
+
+  transactionCount      Int      @default(0)
+  grossVolume           Decimal  @default(0) @db.Decimal(18, 2)
+  totalFeesCollected    Decimal  @default(0) @db.Decimal(18, 2)
+  momoGatewayFees       Decimal  @default(0) @db.Decimal(18, 2)
+  mobipayFees           Decimal  @default(0) @db.Decimal(18, 2)
+
+  costTrackingMode      String
+  recurringCostIncurred Decimal  @default(0) @db.Decimal(18, 2)
+  costBreakdown         Json?
+  surplusApplied        Decimal  @default(0) @db.Decimal(18, 2)
+
+  investmentBefore      Decimal? @db.Decimal(18, 2)
+  investmentAfter       Decimal? @db.Decimal(18, 2)
+  recoveredThisMonth    Decimal? @db.Decimal(18, 2)
+
+  status                String   @default("OPEN")  // OPEN | FINALIZED | EMAILED
+  finalizedAt           DateTime?
+  statementPdfUrl       String?
+  emailedTo             String[]
+
+  createdAt             DateTime @default(now())
+
+  @@unique([tenantId, period])
+  @@index([tenantId, period])
+  @@index([agreementId])
+}
+
+model BillingInvestmentChange {
+  id              String   @id @default(cuid())
+  agreementId     String
+  agreement       BillingAgreement @relation(fields: [agreementId], references: [id])
+  changedByUserId String
+  previousAmount  Decimal  @db.Decimal(18, 2)
+  newAmount       Decimal  @db.Decimal(18, 2)
+  reason          String
+  changedAt       DateTime @default(now())
+
+  @@index([agreementId])
+  @@index([changedByUserId])
+}
+
+model BillingFeeRateChange {
+  id              String   @id @default(cuid())
+  agreementId     String
+  agreement       BillingAgreement @relation(fields: [agreementId], references: [id])
+  changedByUserId String
+  previousRate    Decimal  @db.Decimal(8, 4)
+  newRate         Decimal  @db.Decimal(8, 4)
+  reason          String
+  changedAt       DateTime @default(now())
+
+  @@index([agreementId])
+  @@index([changedByUserId])
 }

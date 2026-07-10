@@ -15,6 +15,8 @@ export type ModuleKey =
   'billing' |
   // EKIBBO modules
   'input-distribution' | 'crop-insurance' |
+  // Billing Engine
+  'billing-operations' | 'platform-recovery' |
   // Reference
   'roles-permissions' |
   'super-admin-overview' | 'super-admin-tenants' | 'super-admin-revenue' | 'super-admin-impact' | 'super-admin-users' | 'super-admin-mobile' | 'super-admin-config'

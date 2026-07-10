@@ -102,6 +102,8 @@ const ALL_MODULES: NavItem[] = [
   // Roles & Permissions — admin-only reference page.
   { key: 'roles-permissions', label: 'Roles & Permissions', icon: KeyRound, group: 'Admin',
     restrictToRoles: ['SUPER_ADMIN', 'COUNTRY_ADMIN', 'TENANT_ADMIN', 'EKB_MD'] },
+  // Platform Recovery — visible to tenants with billing:read (EKIBBO MD, Finance)
+  { key: 'platform-recovery', label: 'Platform Recovery', icon: TrendingUp, group: 'Admin', permModule: 'billing' },
   // Super Admin (only visible to SUPER_ADMIN role)
   { key: 'super-admin-overview', label: 'Platform Overview', icon: LayoutDashboard, group: 'Super Admin' },
   { key: 'super-admin-tenants', label: 'Tenants', icon: Building2, group: 'Super Admin' },
@@ -110,6 +112,9 @@ const ALL_MODULES: NavItem[] = [
   { key: 'super-admin-users', label: 'All Users', icon: UserCheck, group: 'Super Admin' },
   { key: 'super-admin-mobile', label: 'Mobile App', icon: Smartphone, group: 'Super Admin' },
   { key: 'super-admin-config', label: 'Configuration', icon: Settings, group: 'Super Admin' },
+  // Billing Operations — SUPER_ADMIN only (MobiPay-internal view across all tenants)
+  { key: 'billing-operations', label: 'Billing Operations', icon: DollarSign, group: 'Super Admin',
+    restrictToRoles: ['SUPER_ADMIN'] },
 ]
 
 const MODULE_GROUPS: Record<string, NavItem[]> = {}

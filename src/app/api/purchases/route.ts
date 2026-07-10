@@ -108,6 +108,26 @@ export async function POST(request: Request) {
       include: { farmer: { select: { id: true, firstName: true, lastName: true, farmerCode: true, phone: true } } },
     })
 
+    // ─── Vendor Financing Fee Hook ───────────────────────────────────
+    // If this tenant has an active BillingAgreement, calculate and record
+    // the transaction fee. This is what powers the billing engine.
+    // Wrapped in try/catch — fee collection is non-critical; the purchase
+    // should still succeed even if the fee hook fails.
+    try {
+      const { recordTransactionFee } = await import('@/lib/vendor-financing/engine')
+      await recordTransactionFee({
+        tenantId: ctx.tenantId,
+        transactionType: 'PURCHASE',
+        transactionId: purchase.id,
+        transactionAmount: Number(totalAmount || purchase.totalAmount || 0),
+        transactionQuantity: parseFloat(body.quantity) || undefined,
+        momoGatewayFee: Number(body.momoCharges || 0) + Number(body.momoTax || 0),
+      })
+    } catch (feeError) {
+      console.error('[purchases] fee hook error:', feeError)
+    }
+    // ─── End Fee Hook ────────────────────────────────────────────────
+
     return NextResponse.json({ data: purchase }, { status: 201 })
   } catch (error: any) {
     console.error('Purchase create error:', error)

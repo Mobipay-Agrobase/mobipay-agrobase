@@ -71,6 +71,10 @@ const CropInsuranceView = lazy(() => import('@/components/ekbibo/CropInsuranceVi
 // Billing
 const BillingView = lazy(() => import('@/components/modules/BillingView'))
 
+// Billing Engine
+const BillingOperationsDashboard = lazy(() => import('@/components/admin/BillingOperationsDashboard'))
+const RecoveryDashboard = lazy(() => import('@/components/billing/RecoveryDashboard'))
+
 function ModuleLoader() {
   return (
     <div className="space-y-4 animate-pulse">
@@ -152,6 +156,9 @@ function ModuleRouter() {
     case 'super-admin-users': return <SuperAdminAllUsersView />
     case 'super-admin-mobile': return <SuperAdminMobileView />
     case 'super-admin-config': return <SuperAdminConfigView />
+    // Billing Engine
+    case 'billing-operations': return <BillingOperationsDashboard />
+    case 'platform-recovery': return <RecoveryDashboard />
     default: return <DashboardView />
   }
 }

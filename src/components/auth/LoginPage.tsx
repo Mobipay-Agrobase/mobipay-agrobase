@@ -16,51 +16,10 @@ import {
 import { useLanguage, LANGUAGES } from '@/lib/i18n'
 import { useCurrency } from '@/lib/currency'
 
-const DEMO_ACCOUNTS = [
-  // Super Admin
-  { group: 'Super Admin', email: 'admin@agrobase.co', role: 'Super Admin', country: 'All', currency: 'UGX' },
-  // ─── EKIBBO Coffee Exporters (Paying Tenant) ───
-  { group: 'EKIBBO Coffee Exporters', email: 'eric@ekibbo.co', role: 'Managing Director', country: 'UG', currency: 'UGX' },
-  { group: 'EKIBBO Coffee Exporters', email: 'ops@ekibbo.co', role: 'Operations Manager', country: 'UG', currency: 'UGX' },
-  { group: 'EKIBBO Coffee Exporters', email: 'finance@ekibbo.co', role: 'Finance Officer', country: 'UG', currency: 'UGX' },
-  { group: 'EKIBBO Coffee Exporters', email: 'assistant@ekibbo.co', role: 'Finance Assistant', country: 'UG', currency: 'UGX' },
-  { group: 'EKIBBO Coffee Exporters', email: 'mec@ekibbo.co', role: 'M,E&C Officer', country: 'UG', currency: 'UGX' },
-  { group: 'EKIBBO Coffee Exporters', email: 'eo1@ekibbo.co', role: 'Extension Officer 1', country: 'UG', currency: 'UGX' },
-  { group: 'EKIBBO Coffee Exporters', email: 'eo2@ekibbo.co', role: 'Extension Officer 2', country: 'UG', currency: 'UGX' },
-  // ─── Demo Tenants (Uganda) ───
-  { group: 'Demo — Uganda', email: 'ug.admin@agrobase.co', role: 'Country Admin', country: 'UG', currency: 'UGX' },
-  { group: 'Demo — Uganda', email: 'ug.tenant@agrobase.co', role: 'Tenant Admin', country: 'UG', currency: 'UGX' },
-  { group: 'Demo — Uganda', email: 'ug.eo1@agrobase.co', role: 'Extension Officer', country: 'UG', currency: 'UGX' },
-  { group: 'Demo — Uganda', email: 'ug.eo2@agrobase.co', role: 'Extension Officer', country: 'UG', currency: 'UGX' },
-  { group: 'Demo — Uganda', email: 'ug.agent1@agrobase.co', role: 'Agent', country: 'UG', currency: 'UGX' },
-  { group: 'Demo — Uganda', email: 'ug.cbt@agrobase.co', role: 'CBT', country: 'UG', currency: 'UGX' },
-  { group: 'Demo — Uganda', email: 'ug.farmer1@agrobase.co', role: 'Farmer', country: 'UG', currency: 'UGX' },
-  { group: 'Demo — Uganda', email: 'ug.farmer2@agrobase.co', role: 'Farmer', country: 'UG', currency: 'UGX' },
-  // ─── Demo Tenants (Ghana) ───
-  { group: 'Demo — Ghana', email: 'gh.admin@agrobase.co', role: 'Country Admin', country: 'GH', currency: 'GHS' },
-  { group: 'Demo — Ghana', email: 'gh.eo1@agrobase.co', role: 'Extension Officer', country: 'GH', currency: 'GHS' },
-  { group: 'Demo — Ghana', email: 'gh.agent1@agrobase.co', role: 'Agent', country: 'GH', currency: 'GHS' },
-  { group: 'Demo — Ghana', email: 'gh.farmer1@agrobase.co', role: 'Farmer', country: 'GH', currency: 'GHS' },
-  // ─── Demo Tenants (Kenya) ───
-  { group: 'Demo — Kenya', email: 'ke.admin@agrobase.co', role: 'Country Admin', country: 'KE', currency: 'KES' },
-  { group: 'Demo — Kenya', email: 'ke.eo1@agrobase.co', role: 'Extension Officer', country: 'KE', currency: 'KES' },
-  { group: 'Demo — Kenya', email: 'ke.agent1@agrobase.co', role: 'Agent', country: 'KE', currency: 'KES' },
-  { group: 'Demo — Kenya', email: 'ke.farmer1@agrobase.co', role: 'Farmer', country: 'KE', currency: 'KES' },
-  // ─── Partners ───
-  { group: 'Partners', email: 'mfi@hopefinance.co', role: 'Hope MFI', country: 'UG', currency: 'UGX' },
-]
-
-// Display metadata for the currency dropdown. The actual user preference is
-// persisted to localStorage via the `useCurrency` hook (see `@/lib/currency`).
 const CURRENCIES = [
   { code: 'UGX', name: 'Ugandan Shilling', symbol: 'USh', flag: '🇺🇬' },
-  { code: 'GHS', name: 'Ghanaian Cedi', symbol: 'GH₵', flag: '🇬🇭' },
-  { code: 'KES', name: 'Kenyan Shilling', symbol: 'KSh', flag: '🇰🇪' },
   { code: 'USD', name: 'US Dollar', symbol: '$', flag: '🇺🇸' },
 ]
-
-// Language list is imported from `@/lib/i18n` so the order and metadata stay
-// in sync with the rest of the app.
 
 export function LoginPage() {
   const [email, setEmail] = useState('')
@@ -68,10 +27,8 @@ export function LoginPage() {
   const [rememberMe, setRememberMe] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
-  // Language and currency are persisted to localStorage by the hooks so the
-  // rest of the app can read them after sign-in. State is initialised to the
-  // defaults on the server (hydration-safe) and synced from localStorage in
-  // an effect after mount.
+  const [loginAttempts, setLoginAttempts] = useState(0)
+  const [lockoutUntil, setLockoutUntil] = useState<Date | null>(null)
   const { language, setLanguage } = useLanguage()
   const { currency, setCurrency } = useCurrency()
 
@@ -79,6 +36,13 @@ export function LoginPage() {
     e.preventDefault()
     if (!email.trim() || !password.trim()) {
       toast.error('Please fill in all fields')
+      return
+    }
+
+    // Brute force protection: lock after 5 failed attempts
+    if (lockoutUntil && new Date() < lockoutUntil) {
+      const secondsLeft = Math.ceil((lockoutUntil.getTime() - Date.now()) / 1000)
+      toast.error(`Too many attempts. Please wait ${secondsLeft}s before trying again.`)
       return
     }
 
@@ -91,8 +55,20 @@ export function LoginPage() {
       })
 
       if (result?.error) {
-        toast.error('Invalid email/phone or password')
+        const newAttempts = loginAttempts + 1
+        setLoginAttempts(newAttempts)
+
+        if (newAttempts >= 5) {
+          const lockUntil = new Date(Date.now() + 60 * 1000)
+          setLockoutUntil(lockUntil)
+          setLoginAttempts(0)
+          toast.error('Too many failed attempts. Account locked for 60 seconds.')
+        } else {
+          toast.error(`Invalid credentials. ${5 - newAttempts} attempt(s) remaining.`)
+        }
       } else if (result?.ok) {
+        setLoginAttempts(0)
+        setLockoutUntil(null)
         toast.success('Welcome back!')
       }
     } catch {
@@ -102,11 +78,6 @@ export function LoginPage() {
     }
   }
 
-  const handleDemoLogin = (demoEmail?: string) => {
-    setEmail(demoEmail || 'admin@agrobase.co')
-    setPassword('password123')
-  }
-
   const handleForgotPassword = (e: React.MouseEvent) => {
     e.preventDefault()
     toast.success('Password reset link sent to your email')
@@ -114,14 +85,12 @@ export function LoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-primary/5 p-4">
-      {/* Background decorative elements */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -right-40 w-80 h-80 rounded-full bg-primary/5 blur-3xl" />
         <div className="absolute -bottom-40 -left-40 w-80 h-80 rounded-full bg-primary/8 blur-3xl" />
         <div className="absolute top-1/4 left-1/4 w-60 h-60 rounded-full bg-primary/3 blur-2xl" />
       </div>
 
-      {/* Top-right: Multi-currency + Multi-language selectors */}
       <div className="fixed top-4 right-4 z-10 flex items-center gap-2">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -133,7 +102,7 @@ export function LoginPage() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuLabel className="text-xs uppercase tracking-wider text-muted-foreground">Multi-currency</DropdownMenuLabel>
+            <DropdownMenuLabel className="text-xs uppercase tracking-wider text-muted-foreground">Currency</DropdownMenuLabel>
             {CURRENCIES.map(c => (
               <DropdownMenuItem key={c.code} onClick={() => setCurrency(c.code)} className="gap-2">
                 <span>{c.flag}</span>
@@ -153,7 +122,7 @@ export function LoginPage() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuLabel className="text-xs uppercase tracking-wider text-muted-foreground">Multi-language</DropdownMenuLabel>
+            <DropdownMenuLabel className="text-xs uppercase tracking-wider text-muted-foreground">Language</DropdownMenuLabel>
             {LANGUAGES.map(l => (
               <DropdownMenuItem key={l.code} onClick={() => setLanguage(l.code)} className="gap-2">
                 <span>{l.flag}</span>
@@ -166,7 +135,6 @@ export function LoginPage() {
       </div>
 
       <div className="relative z-10 w-full max-w-md">
-        {/* Logo and branding */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/25 mb-4">
             <Leaf className="w-8 h-8" />
@@ -190,22 +158,21 @@ export function LoginPage() {
 
           <CardContent className="px-6 pb-6">
             <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Email / Phone field */}
               <div className="space-y-2">
                 <Label htmlFor="email">Email or Phone</Label>
                 <Input
                   id="email"
                   type="text"
-                  placeholder="admin@agrobase.co"
+                  placeholder="you@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   disabled={loading}
                   autoComplete="email"
                   className="h-10"
+                  required
                 />
               </div>
 
-              {/* Password field */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="password">Password</Label>
@@ -227,6 +194,7 @@ export function LoginPage() {
                     disabled={loading}
                     autoComplete="current-password"
                     className="h-10 pr-10"
+                    required
                   />
                   <button
                     type="button"
@@ -234,16 +202,11 @@ export function LoginPage() {
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                     tabIndex={-1}
                   >
-                    {showPassword ? (
-                      <EyeOff className="w-4 h-4" />
-                    ) : (
-                      <Eye className="w-4 h-4" />
-                    )}
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
               </div>
 
-              {/* Remember me */}
               <div className="flex items-center gap-2">
                 <Checkbox
                   id="remember"
@@ -251,79 +214,22 @@ export function LoginPage() {
                   onCheckedChange={(checked) => setRememberMe(checked === true)}
                   disabled={loading}
                 />
-                <Label
-                  htmlFor="remember"
-                  className="text-sm font-normal text-muted-foreground cursor-pointer"
-                >
+                <Label htmlFor="remember" className="text-sm font-normal text-muted-foreground cursor-pointer">
                   Remember me for 30 days
                 </Label>
               </div>
 
-              {/* Submit button */}
               <Button
                 type="submit"
                 className="w-full h-10 bg-primary hover:bg-primary/90 text-primary-foreground font-medium shadow-md shadow-primary/20 transition-all"
                 disabled={loading}
               >
                 {loading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Signing in...
-                  </>
-                ) : (
-                  'Sign In'
-                )}
+                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Signing in...</>
+                ) : 'Sign In'}
               </Button>
-
-              {/* Demo login dropdown */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full h-10 border-primary/20 hover:bg-primary/5 hover:border-primary/40 text-primary transition-all justify-between"
-                    disabled={loading}
-                  >
-                    <span className="flex items-center gap-2">
-                      <Sprout className="w-4 h-4" />
-                      Demo Accounts (UG · GH · KE)
-                    </span>
-                    <ChevronDown className="w-3 h-3" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-80 max-h-96 overflow-y-auto" align="center">
-                  {Object.entries(
-                    DEMO_ACCOUNTS.reduce((acc, a) => {
-                      if (!acc[a.group]) acc[a.group] = []
-                      acc[a.group].push(a)
-                      return acc
-                    }, {} as Record<string, typeof DEMO_ACCOUNTS>)
-                  ).map(([group, accounts]) => (
-                    <React.Fragment key={group}>
-                      <DropdownMenuLabel className="text-xs uppercase tracking-wider text-muted-foreground">
-                        {group} · password: <span className="font-mono text-foreground">password123</span>
-                      </DropdownMenuLabel>
-                      {accounts.map(a => (
-                        <DropdownMenuItem
-                          key={a.email}
-                          onClick={() => handleDemoLogin(a.email)}
-                          className="flex items-center justify-between gap-2 py-2"
-                        >
-                          <div className="min-w-0">
-                            <p className="text-sm font-medium">{a.role}</p>
-                            <p className="text-xs text-muted-foreground font-mono truncate">{a.email}</p>
-                          </div>
-                          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-muted">{a.currency}</span>
-                        </DropdownMenuItem>
-                      ))}
-                      <DropdownMenuSeparator />
-                    </React.Fragment>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
             </form>
 
-            {/* Footer */}
             <div className="mt-6 pt-4 border-t border-border/50 text-center">
               <p className="text-xs text-muted-foreground">
                 By signing in, you agree to the{' '}
@@ -338,9 +244,8 @@ export function LoginPage() {
           </CardContent>
         </Card>
 
-        {/* Version tag */}
         <p className="text-center text-xs text-muted-foreground/60 mt-4">
-          Agrobase V3.0 — Built for African Agriculture
+          Agrobase V3.0 — Secure Agricultural Management Platform
         </p>
       </div>
     </div>

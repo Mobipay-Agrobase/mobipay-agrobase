@@ -1,6 +1,6 @@
 'use client'
 
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { useAppStore, type ModuleKey } from '@/lib/store'
 import { cn } from '@/lib/utils'
 import { hasPermission, getRoleModules } from '@/lib/permissions'
@@ -133,8 +133,54 @@ for (const mod of ALL_MODULES) {
   MODULE_GROUPS[mod.group].push(mod)
 }
 
+// Maps sidebar permModule values to ModuleEntitlement module codes
+const PERM_TO_ENTITLEMENT: Record<string, string> = {
+  'farmers': 'FARMERS',
+  'vsla': 'VSLA',
+  'marketplace': 'MARKETPLACE',
+  'payments': 'PAYMENTS',
+  'loans': 'LOANS',
+  'training': 'TRAINING',
+  'farm_visits': 'FARM_VISITS',
+  'reports': 'REPORTS',
+  'agritrack': 'AGRITRACK',
+  'communication': 'COMMUNICATION',
+  'surveys': 'SURVEYS',
+  'feedback': 'FEEDBACK',
+  'input_aggregation': 'INVENTORY',
+  'purchases': 'COOPERATIVE',
+  'approvals': 'COOPERATIVE',
+  'processing': 'COOPERATIVE',
+  'sales': 'COOPERATIVE',
+  'deliveries': 'COOPERATIVE',
+  'consignments': 'COOPERATIVE',
+  'trace': 'TRACE',
+  'carbon': 'CARBON',
+  'compliance': 'COMPLIANCE',
+  'mfi': 'MFI',
+  'transport': 'LOGISTICS',
+  'billing': 'BILLING',
+  'nssf': 'NSSF',
+  'support': 'SUPPORT',
+}
+
 export function Sidebar() {
   const { activeModule, setActiveModule, sidebarOpen, setSidebarOpen, user } = useAppStore()
+  const [enabledModules, setEnabledModules] = useState<Set<string>>(new Set())
+  const [entitlementsLoaded, setEntitlementsLoaded] = useState(false)
+
+  // Fetch tenant's enabled modules on mount
+  useEffect(() => {
+    fetch('/api/entitlements')
+      .then(r => r.ok ? r.json() : { modules: [] })
+      .then(data => {
+        setEnabledModules(new Set(data.modules || []))
+        setEntitlementsLoaded(true)
+      })
+      .catch(() => {
+        setEntitlementsLoaded(true) // fail open — show all menus
+      })
+  }, [user?.tenantId])
 
   const handleNav = (key: ModuleKey) => {
     setActiveModule(key)
@@ -198,7 +244,7 @@ export function Sidebar() {
                 // MOBIPAY_SUPPORT: only show Overview + Admin
                 if (role === 'MOBIPAY_SUPPORT' && !['Overview', 'Admin'].includes(groupLabel)) return null
 
-                // Filter items by role permission
+                // Filter items by role permission + module entitlement
                 const visibleItems = items.filter(item => {
                   if (isSuperAdmin) return true
 
@@ -221,8 +267,19 @@ export function Sidebar() {
                   // Explicit role blocklist (blacklist)
                   if (item.hideFromRoles && item.hideFromRoles.includes(role)) return false
                   if (item.alwaysVisible) return true
-                  if (!item.permModule) return true
-                  return hasPermission(role, `${item.permModule}:read`)
+
+                  // Check role permission
+                  if (item.permModule && !hasPermission(role, `${item.permModule}:read`)) return false
+
+                  // Check module entitlement (if entitlements are loaded)
+                  if (entitlementsLoaded && item.permModule) {
+                    const entitlementCode = PERM_TO_ENTITLEMENT[item.permModule]
+                    if (entitlementCode && !enabledModules.has(entitlementCode)) {
+                      return false // module is disabled for this tenant
+                    }
+                  }
+
+                  return true
                 })
 
                 if (visibleItems.length === 0) return null

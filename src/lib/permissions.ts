@@ -50,6 +50,7 @@ const ROLE_PERMISSIONS: RolePerms = {
     'companies:read', 'users:*', 'agritrack:*',
     'feedback:*', 'farm_visits:*', 'impact_assessment:*',
     'carbon:*', 'mfi:*', 'transport:*',
+    'nssf:*',
   ],
 
   // ─── EKIBBO-Specific Roles (from EKIBBO requirements Excel) ───
@@ -152,6 +153,7 @@ const ROLE_PERMISSIONS: RolePerms = {
     'payments:read',
     'reports:read', 'reports:export',
     'support:read',  // can VIEW tickets but not manage (respond)
+    'nssf:read', 'nssf:manage',
     'quotes:read', 'quotes:create', 'quotes:update',
     'profile:read', 'profile:update',
   ],

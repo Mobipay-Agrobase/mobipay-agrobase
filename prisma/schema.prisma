@@ -142,6 +142,11 @@ model Tenant {
   monthlyReconciliations MonthlyReconciliation[]
   // ─── Support + Quotes ───
   supportTickets         SupportTicket[]
+  // ─── NSSF Collection Module ───
+  nssfRegistrations      NssfRegistration[]
+  nssfContributions      NssfContribution[]
+  fundSettlements        FundSettlement[]
+  nssfCommissions        NssfCommission[]
 }
 
 // --- USERS & AUTH ---
@@ -159,6 +164,11 @@ model User {
   avatarUrl     String?
   isActive      Boolean  @default(true)
   lastLogin     DateTime?
+  // ─── 2FA (TOTP) ───
+  twoFactorEnabled  Boolean  @default(false)
+  twoFactorSecret   String?
+  twoFactorBackupCodes String?  // JSON array of hashed backup codes
+  twoFactorEnrolledAt DateTime?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -423,6 +433,9 @@ model FarmerProfile {
   ledgerEntries       FarmerLedgerEntry[]
   inputDistributions  InputDistribution[]
   cropInsurances      CropInsurance[]
+  // ─── NSSF Voluntary Savings ───
+  nssfRegistration    NssfRegistration? @relation("NssfRegistrationFarmer")
+  nssfContributions   NssfContribution[] @relation("NssfContributionFarmer")
 }
 
 model ChildProfile {
@@ -4007,4 +4020,131 @@ model Quote {
 
   @@index([status])
   @@index([createdById])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// NSSF VOLUNTARY SAVINGS COLLECTION MODULE
+// ═══════════════════════════════════════════════════════════════════════════
+// Collects voluntary savings contributions from farmers for NSSF Uganda,
+// routes funds to Klimotrust (who remits to NSSF), and tracks commission.
+
+model NssfRegistration {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation(fields: [tenantId], references: [id])
+  farmerId        String   @unique
+  farmer          FarmerProfile @relation("NssfRegistrationFarmer", fields: [farmerId], references: [id])
+  nssfNumber      String?  // NSSF member number (assigned by NSSF)
+  nationalId      String   // National ID number (required for KYC)
+  fullName        String   // Full name as per national ID
+  dateOfBirth     DateTime?
+  gender          String?
+  phoneNumber     String
+  email           String?
+  district        String?
+  village         String?
+  valueChain      String?  // coffee, cocoa, vanilla, etc.
+  employer        String?  // Usually "Self-employed (Farmer)"
+  activationStatus String  @default("PENDING") // PENDING, VERIFIED, ACTIVATED, REJECTED
+  verifiedAt      DateTime?
+  activatedAt     DateTime?
+  registeredById  String   // User who registered the farmer
+  contributions   NssfContribution[]
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([tenantId, nationalId])
+  @@index([tenantId, activationStatus])
+  @@index([farmerId])
+}
+
+model NssfContribution {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation(fields: [tenantId], references: [id])
+  registrationId  String
+  registration    NssfRegistration @relation(fields: [registrationId], references: [id])
+  farmerId        String
+  farmer          FarmerProfile @relation("NssfContributionFarmer", fields: [farmerId], references: [id])
+  amount          Decimal  @db.Decimal(18, 2)
+  currency        String   @default("UGX")
+  paymentMethod   String   // MTN_MOMO, AIRTEL_MONEY, CARD, BANK_TRANSFER, CASH
+  paymentReference String? // Flutterwave or MoMo transaction reference
+  paymentProvider String?  // FLUTTERWAVE, MTN_DIRECT, AIRTEL_DIRECT
+  status          String   @default("PENDING") // PENDING, COMPLETED, FAILED, REFUNDED
+  failureReason   String?
+  contributionDate DateTime @default(now())
+  completedAt     DateTime?
+  // Settlement tracking
+  settlementId    String?
+  settlement      FundSettlement? @relation(fields: [settlementId], references: [id])
+  settlementStatus String @default("UNSETTLED") // UNSETTLED, SETTLED
+  // Audit
+  initiatedById   String   // User who initiated (farmer self-service or officer)
+  channel         String   @default("WEB") // WEB, MOBILE, USSD, FIELD_OFFICER
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([tenantId, status])
+  @@index([farmerId])
+  @@index([settlementStatus])
+  @@index([contributionDate])
+}
+
+model FundSettlement {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation(fields: [tenantId], references: [id])
+  settlementNumber String  @unique
+  settlementDate  DateTime @default(now())
+  periodStart     DateTime
+  periodEnd       DateTime
+  totalAmount     Decimal  @db.Decimal(18, 2)
+  contributionCount Int
+  currency        String   @default("UGX")
+  status          String   @default("PENDING") // PENDING, SENT, CONFIRMED, FAILED
+  // Destination (Klimotrust account)
+  destinationAccount String? // Bank account or MoMo number
+  destinationName String?
+  destinationProvider String? // BANK, MTN, AIRTEL
+  sentAt          DateTime?
+  confirmedAt     DateTime?
+  confirmationRef String?  // Bank/MoMo confirmation reference
+  // Commission calculation
+  commissionAmount Decimal? @db.Decimal(18, 2) // 30% of totalAmount
+  mobipayShare    Decimal? @db.Decimal(18, 2)
+  klimotrustShare Decimal? @db.Decimal(18, 2)
+  // Audit
+  createdById     String
+  notes           String?
+  contributions   NssfContribution[]
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([tenantId, status])
+  @@index([settlementDate])
+}
+
+model NssfCommission {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation(fields: [tenantId], references: [id])
+  period          String   @unique // "2026-07" (YYYY-MM)
+  periodStart     DateTime
+  periodEnd       DateTime
+  totalContributions Decimal @db.Decimal(18, 2)
+  contributionCount Int
+  commissionRate  Decimal  @db.Decimal(5, 4) @default(0.30) // 30%
+  commissionAmount Decimal @db.Decimal(18, 2) // 30% of totalContributions
+  mobipaySharePercent Decimal @db.Decimal(5, 4) @default(0.50) // 50% placeholder
+  mobipayShare    Decimal  @db.Decimal(18, 2)
+  klimotrustShare Decimal  @db.Decimal(18, 2)
+  receivedAt      DateTime?
+  receivedAmount  Decimal? @db.Decimal(18, 2)
+  status          String   @default("PENDING") // PENDING, RECEIVED, RECONCILED
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([tenantId, period])
 }

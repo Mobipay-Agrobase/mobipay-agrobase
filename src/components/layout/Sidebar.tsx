@@ -109,6 +109,11 @@ const ALL_MODULES: NavItem[] = [
   // Quotes — SUPER_ADMIN + MOBIPAY_FINANCE only (in Admin group so finance can see it)
   { key: 'quotes', label: 'Quotes', icon: FileText, group: 'Admin',
     restrictToRoles: ['SUPER_ADMIN', 'MOBIPAY_FINANCE'] },
+  // ─── NSSF Voluntary Savings (Klimotrust tenants) ───
+  { key: 'nssf-registration', label: 'NSSF Registration', icon: UserCheck, group: 'NSSF', permModule: 'nssf' },
+  { key: 'nssf-contributions', label: 'NSSF Contributions', icon: PiggyBank, group: 'NSSF', permModule: 'nssf' },
+  { key: 'nssf-settlement', label: 'NSSF Settlement', icon: Receipt, group: 'NSSF',
+    restrictToRoles: ['SUPER_ADMIN', 'MOBIPAY_FINANCE'] },
   // Super Admin (only visible to SUPER_ADMIN role)
   { key: 'super-admin-overview', label: 'Platform Overview', icon: LayoutDashboard, group: 'Super Admin' },
   { key: 'super-admin-tenants', label: 'Tenants', icon: Building2, group: 'Super Admin' },
@@ -189,7 +194,7 @@ export function Sidebar() {
                 // For SUPER_ADMIN role: ONLY show Super Admin group
                 if (isSuperAdmin && groupLabel !== 'Super Admin') return null
                 // MOBIPAY_FINANCE: hide most groups, only show Admin + Overview
-                if (role === 'MOBIPAY_FINANCE' && !['Overview', 'Admin'].includes(groupLabel)) return null
+                if (role === 'MOBIPAY_FINANCE' && !['Overview', 'Admin', 'NSSF'].includes(groupLabel)) return null
                 // MOBIPAY_SUPPORT: only show Overview + Admin
                 if (role === 'MOBIPAY_SUPPORT' && !['Overview', 'Admin'].includes(groupLabel)) return null
 
@@ -200,7 +205,7 @@ export function Sidebar() {
                   // MOBIPAY_FINANCE: only see billing-related menus + profile
                   if (role === 'MOBIPAY_FINANCE') {
                     if (groupLabel === 'Super Admin') return false
-                    const allowedKeys = ['billing-operations', 'platform-recovery', 'profile', 'dashboard', 'support-tickets', 'quotes']
+                    const allowedKeys = ['billing-operations', 'platform-recovery', 'profile', 'dashboard', 'support-tickets', 'quotes', 'nssf-settlement']
                     return allowedKeys.includes(item.key)
                   }
 

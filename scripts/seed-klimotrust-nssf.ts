@@ -228,20 +228,10 @@ async function main() {
 
   console.log('\n⚠️  PLACEHOLDER VALUES — Update after Eric confirms:')
   console.log('   1. Revenue split (MobiPay vs Klimotrust)')
-  console.log('   2. Contribution amount rules (min/max/frequency)')
-  console.log('   3. Upfront investment amount (currently UGX 15M)')
-  console.log('   4. Recurring monthly cost (currently UGX 2M)')
-  console.log('   5. Klimotrust bank/MoMo account for settlements')
 
   console.log('\n💡 To update the NSSF config later:')
-  console.log('   npx tsx -e \"')
-  console.log('   import { PrismaClient } from \\'@prisma/client\\'')
-  console.log('   const db = new PrismaClient()')
-  console.log('   db.moduleEntitlement.updateMany({')
-  console.log('     where: { moduleCode: \\'NSSF\\', tenantId: \\'TENANT_ID\\' },')
-  console.log('     data: { config: JSON.stringify({ ...newConfig }) }')
-  console.log('   })')
-  console.log('   \"')
+  console.log('   Use the Billing Operations dashboard to edit the agreement,')
+  console.log('   or update the ModuleEntitlement record directly in the DB.')
 }
 
 main()

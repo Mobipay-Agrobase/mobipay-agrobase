@@ -76,7 +76,6 @@ const BillingOperationsDashboard = lazy(() => import('@/components/admin/Billing
 const RecoveryDashboard = lazy(() => import('@/components/billing/RecoveryDashboard'))
 const SupportTicketsView = lazy(() => import('@/components/billing/SupportTicketsView'))
 const QuotesView = lazy(() => import('@/components/billing/QuotesView'))
-const NssfRegistrationView = lazy(() => import('@/components/nssf/NssfRegistrationView'))
 const NssfContributionsView = lazy(() => import('@/components/nssf/NssfContributionsView'))
 const NssfSettlementView = lazy(() => import('@/components/nssf/NssfSettlementView'))
 
@@ -166,7 +165,6 @@ function ModuleRouter() {
     case 'platform-recovery': return <RecoveryDashboard />
     case 'support-tickets': return <SupportTicketsView />
     case 'quotes': return <QuotesView />
-    case 'nssf-registration': return <NssfRegistrationView />
     case 'nssf-contributions': return <NssfContributionsView />
     case 'nssf-settlement': return <NssfSettlementView />
     default: return <DashboardView />

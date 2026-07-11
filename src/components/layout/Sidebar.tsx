@@ -110,7 +110,7 @@ const ALL_MODULES: NavItem[] = [
   { key: 'quotes', label: 'Quotes', icon: FileText, group: 'Admin',
     restrictToRoles: ['SUPER_ADMIN', 'MOBIPAY_FINANCE'] },
   // ─── NSSF Voluntary Savings (Klimotrust tenants) ───
-  { key: 'nssf-registration', label: 'NSSF Registration', icon: UserCheck, group: 'NSSF', permModule: 'nssf' },
+  // NSSF Registration is now a section on the Farmer Profile page (not a separate menu)
   { key: 'nssf-contributions', label: 'NSSF Contributions', icon: PiggyBank, group: 'NSSF', permModule: 'nssf' },
   { key: 'nssf-settlement', label: 'NSSF Settlement', icon: Receipt, group: 'NSSF',
     restrictToRoles: ['SUPER_ADMIN', 'MOBIPAY_FINANCE'] },

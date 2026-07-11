@@ -18,7 +18,7 @@ export type ModuleKey =
   // Billing Engine
   'billing-operations' | 'platform-recovery' |
   'support-tickets' | 'quotes' |
-  'nssf-registration' | 'nssf-contributions' | 'nssf-settlement' |
+  'nssf-contributions' | 'nssf-settlement' |
   // Reference
   'roles-permissions' |
   'super-admin-overview' | 'super-admin-tenants' | 'super-admin-revenue' | 'super-admin-impact' | 'super-admin-users' | 'super-admin-mobile' | 'super-admin-config'

@@ -434,6 +434,16 @@ model FarmerProfile {
   inputDistributions  InputDistribution[]
   cropInsurances      CropInsurance[]
   // ─── NSSF Voluntary Savings ───
+  // NSSF fields are ON the farmer profile (not a separate registration module).
+  // Field officers register farmers normally, then enroll them in NSSF by
+  // filling in these fields. Nullable so non-NSSF tenants (like EKIBBO) are unaffected.
+  nssfNationalId      String?   // National ID number (required for NSSF KYC)
+  nssfNumber          String?   // NSSF member number (assigned by NSSF)
+  nssfActivationStatus String?  // null = not enrolled, PENDING, VERIFIED, ACTIVATED, REJECTED
+  nssfEnrolledAt      DateTime? // When the farmer was enrolled in NSSF
+  nssfActivatedAt     DateTime? // When NSSF confirmed the activation
+  nssfValueChain      String?   // Coffee, Cocoa, Vanilla, etc. (for NSSF reporting)
+  // Relations
   nssfRegistration    NssfRegistration? @relation("NssfRegistrationFarmer")
   nssfContributions   NssfContribution[] @relation("NssfContributionFarmer")
 }

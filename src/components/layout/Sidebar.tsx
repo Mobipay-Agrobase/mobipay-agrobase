@@ -169,7 +169,7 @@ const PERM_TO_ENTITLEMENT: Record<string, string> = {
 
 export function Sidebar() {
   const { activeModule, setActiveModule, sidebarOpen, setSidebarOpen, user } = useAppStore()
-  const [enabledModules, setEnabledModules] = useState<Set<string>>(new Set())
+  const [disabledModules, setDisabledModules] = useState<Set<string>>(new Set())
   const [entitlementsLoaded, setEntitlementsLoaded] = useState(false)
 
   // Fetch tenant's enabled modules on mount
@@ -177,7 +177,7 @@ export function Sidebar() {
     fetch('/api/entitlements')
       .then(r => r.ok ? r.json() : { modules: [] })
       .then(data => {
-        setEnabledModules(new Set(data.modules || []))
+        setDisabledModules(new Set(data.disabledModules || []))
         setEntitlementsLoaded(true)
       })
       .catch(() => {
@@ -275,12 +275,19 @@ export function Sidebar() {
                   if (item.permModule && !hasPermission(role, `${item.permModule}:read`)) return false
 
                   // Check module entitlement (if entitlements are loaded)
-                  // Skip for admin roles that have full access — they see everything
-                  const skipEntitlementCheck = role === 'SUPER_ADMIN' || role === 'TENANT_ADMIN' || role === 'EKB_MD'
-                  if (entitlementsLoaded && item.permModule && !skipEntitlementCheck) {
+                  // Skip for admin roles — they see everything EXCEPT NSSF
+                  const isAdminRole = role === 'SUPER_ADMIN' || role === 'TENANT_ADMIN' || role === 'EKB_MD'
+                  if (entitlementsLoaded && item.permModule) {
                     const entitlementCode = PERM_TO_ENTITLEMENT[item.permModule]
-                    if (entitlementCode && !enabledModules.has(entitlementCode)) {
-                      return false // module is disabled for this tenant
+                    if (entitlementCode) {
+                      // NSSF check applies to ALL roles (including admin) — only show if NSSF is enabled
+                      if (entitlementCode === 'NSSF' && disabledModules.has('NSSF')) {
+                        return false
+                      }
+                      // For non-admin roles: hide if explicitly disabled
+                      if (!isAdminRole && disabledModules.has(entitlementCode)) {
+                        return false
+                      }
                     }
                   }
 

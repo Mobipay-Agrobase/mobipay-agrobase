@@ -87,7 +87,6 @@ const ROLE_PERMISSIONS: RolePerms = {
     'transport:*',
     'profile:*',
     'billing:read',
-    'nssf:read',
   ],
 
   // EKIBBO Operations Manager: Manage farmers, groups, trainings, purchases

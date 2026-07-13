@@ -14,13 +14,16 @@ export async function GET() {
       return NextResponse.json({ modules: [] })
     }
 
+    // Return ALL entitlement records (both enabled and disabled)
+    // Sidebar will: show if enabled OR no record exists, hide only if explicitly disabled
     const entitlements = await db.moduleEntitlement.findMany({
-      where: { tenantId: ctx.tenantId, isEnabled: true },
-      select: { moduleCode: true },
+      where: { tenantId: ctx.tenantId },
+      select: { moduleCode: true, isEnabled: true },
     })
 
-    const modules = entitlements.map(e => e.moduleCode)
-    return NextResponse.json({ modules })
+    const enabled = entitlements.filter(e => e.isEnabled).map(e => e.moduleCode)
+    const disabled = entitlements.filter(e => !e.isEnabled).map(e => e.moduleCode)
+    return NextResponse.json({ modules: enabled, disabledModules: disabled })
   } catch (error) {
     console.error('[entitlements] error:', error)
     return NextResponse.json({ modules: [] })

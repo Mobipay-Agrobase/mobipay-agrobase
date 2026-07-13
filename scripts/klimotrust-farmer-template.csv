@@ -1,0 +1,4 @@
+firstName,lastName,phone,gender,district,village,valueChain,nationalId,nssfNumber,email,farmSize,mainCrops
+John,Mukasa,+256771234567,Male,Kampala,Ntinda,Coffee,CF12345678,NSSF12345,john@example.com,2.5,Coffee
+Sarah,Nakato,+256772345678,Female,Wakiso,Gayaza,Coffee,CF87654321,NSSF67890,,3.0,Coffee
+David,Okello,+256773456789,Male,Mukono,Namugongo,Cocoa,CF11223344,NSSF11223,,1.5,Cocoa

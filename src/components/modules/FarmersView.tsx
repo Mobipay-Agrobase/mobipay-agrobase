@@ -440,6 +440,11 @@ function FarmerDetail({ farmerId, onBack }: { farmerId: string; onBack: () => vo
   const [farmLands, setFarmLands] = useState<any[]>([])
   const [cultivations, setCultivations] = useState<any[]>([])
   const [creditScore, setCreditScore] = useState<any>(null)
+  const [nssfContributions, setNssfContributions] = useState<any[]>([])
+  const [nssfEnrolling, setNssfEnrolling] = useState(false)
+  const [nssfContributing, setNssfContributing] = useState(false)
+  const [nssfAmount, setNssfAmount] = useState('')
+  const [nssfMethod, setNssfMethod] = useState('MTN_MOMO')
 
   useEffect(() => {
     setLoading(true)
@@ -460,10 +465,76 @@ function FarmerDetail({ farmerId, onBack }: { farmerId: string; onBack: () => vo
       })
       .catch(console.error)
       .finally(() => setLoading(false))
+
+    // Fetch NSSF contributions
+    fetch(`/api/nssf/contributions?farmerId=${farmerId}&limit=10`)
+      .then(r => r.ok ? r.json() : { data: [] })
+      .then(d => setNssfContributions(d.data || []))
+      .catch(() => {})
   }, [farmerId])
 
   if (loading) return <div className="space-y-4">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-32 w-full rounded-xl" />)}</div>
   if (!farmer) return <div className="text-center py-12"><AlertCircle className="w-10 h-10 mx-auto text-muted-foreground mb-2" /><p>Farmer not found</p><Button variant="link" onClick={onBack}>Go back</Button></div>
+
+  // NSSF enrollment handler
+  const handleNssfEnroll = async () => {
+    setNssfEnrolling(true)
+    try {
+      await fetch(`/api/farmers/${farmerId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nssfNationalId: farmer.nationalId || prompt('Enter National ID:') || '',
+          nssfActivationStatus: 'PENDING',
+          nssfValueChain: 'Coffee',
+        }),
+      })
+      // Refresh farmer data
+      const res = await fetch(`/api/farmers/${farmerId}`)
+      const data = await res.json()
+      setFarmer(data.data || data.farmer || data)
+      alert('Farmer enrolled in NSSF. Status: PENDING. Awaiting activation.')
+    } catch (e) {
+      alert('Failed to enroll')
+    } finally {
+      setNssfEnrolling(false)
+    }
+  }
+
+  // NSSF contribution handler
+  const handleNssfContribute = async () => {
+    if (!nssfAmount || parseFloat(nssfAmount) < 10000) {
+      alert('Minimum contribution is UGX 10,000')
+      return
+    }
+    setNssfContributing(true)
+    try {
+      const res = await fetch('/api/nssf/contribute', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          registrationId: farmer.id, // using farmer ID directly
+          amount: parseFloat(nssfAmount),
+          paymentMethod: nssfMethod,
+          channel: 'WEB',
+        }),
+      })
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error || 'Failed')
+      }
+      alert('Contribution initiated! Reference will be sent via SMS.')
+      setNssfAmount('')
+      // Refresh contributions
+      const contribRes = await fetch(`/api/nssf/contributions?farmerId=${farmerId}&limit=10`)
+      const contribData = await contribRes.json()
+      setNssfContributions(contribData.data || [])
+    } catch (e: any) {
+      alert(e.message || 'Failed to contribute')
+    } finally {
+      setNssfContributing(false)
+    }
+  }
 
   // Generate QR data URL (farm-passport URL)
   const qrData = JSON.stringify({
@@ -556,6 +627,7 @@ function FarmerDetail({ farmerId, onBack }: { farmerId: string; onBack: () => vo
           <TabsTrigger value="impact" className="gap-1.5"><Activity className="w-3.5 h-3.5" /> Impact</TabsTrigger>
           <TabsTrigger value="timeline" className="gap-1.5"><Calendar className="w-3.5 h-3.5" /> Timeline</TabsTrigger>
           <TabsTrigger value="ledger" className="gap-1.5"><Wallet className="w-3.5 h-3.5" /> Ledger</TabsTrigger>
+          <TabsTrigger value="nssf" className="gap-1.5"><Shield className="w-3.5 h-3.5" /> NSSF</TabsTrigger>
         </TabsList>
 
         {/* Profile Tab */}
@@ -850,6 +922,124 @@ function FarmerDetail({ farmerId, onBack }: { farmerId: string; onBack: () => vo
         <TabsContent value="ledger" className="mt-4">
           <FarmerLedger farmerId={farmerId} farmerName={`${farmer.firstName} ${farmer.lastName}`} />
         </TabsContent>
+        {/* NSSF Tab */}
+        <TabsContent value="nssf" className="mt-4 space-y-4">
+          {/* NSSF Status Card */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Shield className="w-4 h-4 text-primary" />
+                NSSF Voluntary Savings
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div>
+                  <p className="text-xs text-muted-foreground">National ID</p>
+                  <p className="text-sm font-medium">{farmer.nssfNationalId || '—'}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">NSSF Number</p>
+                  <p className="text-sm font-medium">{farmer.nssfNumber || '—'}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Value Chain</p>
+                  <p className="text-sm font-medium">{farmer.nssfValueChain || '—'}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Status</p>
+                  <Badge className={cn(
+                    'text-[10px]',
+                    farmer.nssfActivationStatus === 'ACTIVATED' ? 'bg-emerald-100 text-emerald-700' :
+                    farmer.nssfActivationStatus === 'PENDING' ? 'bg-amber-100 text-amber-700' :
+                    'bg-gray-100 text-gray-700'
+                  )}>{farmer.nssfActivationStatus || 'NOT ENROLLED'}</Badge>
+                </div>
+              </div>
+
+              {(!farmer.nssfActivationStatus || farmer.nssfActivationStatus === 'NOT_ENROLLED') && (
+                <Button onClick={handleNssfEnroll} disabled={nssfEnrolling}>
+                  {nssfEnrolling ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Shield className="w-4 h-4 mr-2" />}
+                  Enroll in NSSF
+                </Button>
+              )}
+
+              {farmer.nssfActivationStatus === 'ACTIVATED' && (
+                <div className="space-y-3 pt-3 border-t">
+                  <p className="text-sm font-semibold">Make a Contribution</p>
+                  <div className="grid grid-cols-3 gap-2">
+                    <Input
+                      type="number"
+                      placeholder="Amount (UGX)"
+                      value={nssfAmount}
+                      onChange={(e) => setNssfAmount(e.target.value)}
+                      className="col-span-1"
+                    />
+                    <Select value={nssfMethod} onValueChange={setNssfMethod}>
+                      <SelectTrigger className="col-span-1"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="MTN_MOMO">MTN MoMo</SelectItem>
+                        <SelectItem value="AIRTEL_MONEY">Airtel Money</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Button onClick={handleNssfContribute} disabled={nssfContributing}>
+                      {nssfContributing ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : null}
+                      Contribute
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">Minimum: UGX 10,000</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Contribution History */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm">Contribution History</CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              {nssfContributions.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground text-sm">No contributions yet</div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Date</TableHead>
+                      <TableHead className="text-right">Amount</TableHead>
+                      <TableHead>Method</TableHead>
+                      <TableHead>Channel</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Settled</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {nssfContributions.map((c: any) => (
+                      <TableRow key={c.id}>
+                        <TableCell className="text-xs">{new Date(c.createdAt).toLocaleDateString()}</TableCell>
+                        <TableCell className="text-right text-sm font-medium">UGX {Number(c.amount).toLocaleString()}</TableCell>
+                        <TableCell className="text-xs">{c.paymentMethod}</TableCell>
+                        <TableCell className="text-xs">{c.channel}</TableCell>
+                        <TableCell>
+                          <Badge className={cn(
+                            'text-[10px]',
+                            c.status === 'COMPLETED' ? 'bg-emerald-100 text-emerald-700' :
+                            c.status === 'PENDING' ? 'bg-amber-100 text-amber-700' :
+                            'bg-rose-100 text-rose-700'
+                          )}>{c.status}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="text-[10px]">{c.settlementStatus}</Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
       </Tabs>
     </div>
   )

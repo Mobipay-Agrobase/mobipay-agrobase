@@ -141,7 +141,7 @@ const PERM_TO_ENTITLEMENT: Record<string, string> = {
   'payments': 'PAYMENTS',
   'loans': 'LOANS',
   'training': 'TRAINING',
-  'farm_visits': 'FARM_VISITS',
+  'farm_visits': 'TRAINING', // farm_visits is part of TRAINING module
   'reports': 'REPORTS',
   'agritrack': 'AGRITRACK',
   'communication': 'COMMUNICATION',
@@ -162,6 +162,9 @@ const PERM_TO_ENTITLEMENT: Record<string, string> = {
   'billing': 'BILLING',
   'nssf': 'NSSF',
   'support': 'SUPPORT',
+  // Modules that share the FARMERS entitlement (farm management sub-modules)
+  // These don't need their own entitlement — they're part of FARMERS
+  // 'farm-lands', 'cultivations', 'crop-stages', 'cost-of-cultivation' all use permModule: 'farmers'
 }
 
 export function Sidebar() {
@@ -272,7 +275,9 @@ export function Sidebar() {
                   if (item.permModule && !hasPermission(role, `${item.permModule}:read`)) return false
 
                   // Check module entitlement (if entitlements are loaded)
-                  if (entitlementsLoaded && item.permModule) {
+                  // Skip for admin roles that have full access — they see everything
+                  const skipEntitlementCheck = role === 'SUPER_ADMIN' || role === 'TENANT_ADMIN' || role === 'EKB_MD'
+                  if (entitlementsLoaded && item.permModule && !skipEntitlementCheck) {
                     const entitlementCode = PERM_TO_ENTITLEMENT[item.permModule]
                     if (entitlementCode && !enabledModules.has(entitlementCode)) {
                       return false // module is disabled for this tenant

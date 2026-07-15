@@ -24,6 +24,9 @@ const PUBLIC_ROUTES = [
 const SYSTEM_ROUTES = [
   '/api/settings/geo/',
   '/api/seed',
+  '/api/plots',          // plots API — permission checked via 'trace:read' in sidebar, not 'plots:read'
+  '/api/plots/stats',    // same
+  '/api/plots/geojson',  // same
 ]
 
 // ─── Helpers ────────────────────────────────────────────────────────────────

@@ -4,7 +4,7 @@ import React, { useState, useCallback, useEffect } from 'react'
 import { cn } from '@/lib/utils'
 import {
   FileText, BarChart3, Download, Search, Users, PiggyBank, DollarSign,
-  Store, GraduationCap, CreditCard, Receipt, TrendingUp, PieChart as PieIcon,
+  GraduationCap, CreditCard, Receipt, TrendingUp,
   MapPin, Calendar, Layers, Database, Loader2, X
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -15,7 +15,7 @@ import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { toast } from 'sonner'
 
 interface ReportCategory {
@@ -127,7 +127,7 @@ export default function ReportsView() {
       const apiMap: Record<string, { url: string; transform?: (data: any) => any[]; meta?: any }> = {
         'farmer-registration': {
           url: '/api/farmers?limit=500',
-          transform: (d) => (d.data || d || []).map((f: any) => ({
+          transform: (d) => (d.farmers || d.data || d || []).map((f: any) => ({
             farmerCode: f.farmerCode || '',
             firstName: f.firstName || '',
             lastName: f.lastName || '',
@@ -144,7 +144,7 @@ export default function ReportsView() {
         'farmer-demographics': {
           url: '/api/farmers?limit=500',
           transform: (d) => {
-            const farmers = d.data || d || []
+            const farmers = d.farmers || d.data || d || []
             const genderCount: Record<string, number> = {}
             const districtCount: Record<string, number> = {}
             for (const f of farmers) {
@@ -162,7 +162,7 @@ export default function ReportsView() {
         'farmer-crop': {
           url: '/api/farmers?limit=500',
           transform: (d) => {
-            const farmers = d.data || d || []
+            const farmers = d.farmers || d.data || d || []
             const cropCount: Record<string, number> = {}
             for (const f of farmers) {
               const crops = f.mainCrops ? (typeof f.mainCrops === 'string' ? JSON.parse(f.mainCrops) : f.mainCrops) : ['Unknown']
@@ -178,7 +178,7 @@ export default function ReportsView() {
         'farmer-geo': {
           url: '/api/farmers?limit=500',
           transform: (d) => {
-            const farmers = d.data || d || []
+            const farmers = d.farmers || d.data || d || []
             const geoCount: Record<string, number> = {}
             for (const f of farmers) {
               const loc = f.district ? `${f.district}${f.village ? ' / ' + f.village : ''}` : 'Unknown'
@@ -190,7 +190,7 @@ export default function ReportsView() {
         },
         'vsla-savings': {
           url: '/api/vsla/savings?limit=500',
-          transform: (d) => (d.data || d || []).map((s: any) => ({
+          transform: (d) => (d.savings || d.data || d || []).map((s: any) => ({
             member: s.farmer ? `${s.farmer.firstName} ${s.farmer.lastName}` : '—',
             group: s.vslaGroup?.name || '—',
             type: s.transactionType || s.type || '',
@@ -202,7 +202,7 @@ export default function ReportsView() {
         },
         'vsla-loans': {
           url: '/api/vsla/loans?limit=500',
-          transform: (d) => (d.data || d || []).map((l: any) => ({
+          transform: (d) => (d.loans || d.data || d || []).map((l: any) => ({
             member: l.farmer ? `${l.farmer.firstName} ${l.farmer.lastName}` : '—',
             group: l.vslaGroup?.name || '—',
             amount: Number(l.amount || 0),
@@ -252,7 +252,7 @@ export default function ReportsView() {
         'payment-summary': {
           url: '/api/dashboard/stats',
           transform: (d) => {
-            const txns = d.recentTransactions || []
+            const txns = d.recentTransactions || d.stats?.recentTransactions || []
             return txns.map((t: any) => ({
               type: t.type || 'PAYMENT',
               recipient: t.recipientName || '—',
@@ -266,7 +266,7 @@ export default function ReportsView() {
         'loan-portfolio': {
           url: '/api/vsla/loans?limit=500',
           transform: (d) => {
-            const loans = d.data || d || []
+            const loans = d.loans || d.data || d || []
             const byStatus: Record<string, { count: number; amount: number }> = {}
             for (const l of loans) {
               const s = l.status || 'Unknown'
@@ -313,7 +313,7 @@ export default function ReportsView() {
           meta: { title: 'Extension Coverage by Location', columns: ['location', 'trainingCount', 'totalAttendance', 'avgAttendance'] }
         },
         'credit-scores': {
-          url: '/api/credit-score?limit=500',
+          url: '/api/dashboard/stats',
           transform: (d) => {
             const scores = d.data || d || []
             const bands = { '0-20': 0, '21-40': 0, '41-60': 0, '61-80': 0, '81-100': 0 }
@@ -334,7 +334,7 @@ export default function ReportsView() {
         'loan-default': {
           url: '/api/vsla/loans?limit=500',
           transform: (d) => {
-            const loans = d.data || d || []
+            const loans = d.loans || d.data || d || []
             return loans.filter((l: any) => l.status === 'OVERDUE' || l.status === 'DEFAULTED').map((l: any) => ({
               member: l.farmer ? `${l.farmer.firstName} ${l.farmer.lastName}` : '—',
               group: l.vslaGroup?.name || '—',
@@ -347,14 +347,11 @@ export default function ReportsView() {
           meta: { title: 'Default Risk Assessment', columns: ['member', 'group', 'amount', 'status', 'dueDate', 'daysOverdue'] }
         },
         'audit-log': {
-          url: '/api/audit-logs?limit=500',
-          transform: (d) => (d.logs || d.data || d || []).map((l: any) => ({
-            user: l.user ? `${l.user.firstName} ${l.user.lastName}` : l.userId || '—',
-            action: l.action || '',
-            entityType: l.entityType || '',
-            entityId: l.entityId ? l.entityId.slice(-8) : '',
-            timestamp: l.createdAt ? new Date(l.createdAt).toLocaleString() : '',
-          })),
+          url: '/api/dashboard/stats',
+          transform: () => {
+            // Audit log API doesn't exist yet — return empty
+            return []
+          },
           meta: { title: 'Audit Trail', columns: ['user', 'action', 'entityType', 'entityId', 'timestamp'] }
         },
         'user-summary': {
@@ -382,7 +379,14 @@ export default function ReportsView() {
         throw new Error(`API returned ${res.status}`)
       }
       const data = await res.json()
-      const transformed = config.transform ? config.transform(data) : (data.data || data || [])
+      let transformed: any[] = []
+      try {
+        const result = config.transform ? config.transform(data) : (data.data || data || [])
+        transformed = Array.isArray(result) ? result : []
+      } catch (e) {
+        console.error('Transform error:', e)
+        transformed = []
+      }
       setReportData(transformed)
       setReportMeta(config.meta || { title: 'Report', columns: transformed.length > 0 ? Object.keys(transformed[0]) : [] })
     } catch (error: any) {

@@ -87,13 +87,16 @@ const ALL_MODULES: NavItem[] = [
   // Admin
   { key: 'mfi', label: 'MFI / Bank Portal', icon: Landmark, group: 'Finance', permModule: 'mfi' },
   { key: 'transport', label: 'Transport & Logistics', icon: Truck, group: 'Supply Chain', permModule: 'transport' },
-  { key: 'compliance', label: 'Compliance Hub', icon: Shield, group: 'Admin', permModule: 'compliance' },
-  { key: 'companies', label: 'Companies', icon: Building2, group: 'Admin', permModule: 'companies' },
-  { key: 'users', label: 'User Management', icon: UserCheck, group: 'Admin', permModule: 'users' },
+  { key: 'compliance', label: 'Compliance Hub', icon: Shield, group: 'Admin', permModule: 'compliance',
+    hideFromRoles: ['EKB_MD', 'EKB_OPS_MANAGER', 'EKB_FINANCE', 'EKB_FIN_ASSISTANT', 'EKB_MEC', 'EKB_EXTENSION'] },
+  { key: 'companies', label: 'Companies', icon: Building2, group: 'Admin', permModule: 'companies',
+    hideFromRoles: ['EKB_MD', 'EKB_OPS_MANAGER', 'EKB_FINANCE', 'EKB_FIN_ASSISTANT', 'EKB_MEC', 'EKB_EXTENSION'] },
+  { key: 'users', label: 'User Management', icon: UserCheck, group: 'Admin', permModule: 'users',
+    hideFromRoles: ['EKB_MD', 'EKB_OPS_MANAGER', 'EKB_FINANCE', 'EKB_FIN_ASSISTANT', 'EKB_MEC', 'EKB_EXTENSION'] },
   // Billing — only visible to roles with billing:read permission OR admins.
   // Field roles (extension, finance assistant, MEC, agent, farmer, vsla) must NOT see billing.
   { key: 'billing', label: 'Billing & Usage', icon: DollarSign, group: 'Admin', permModule: 'billing',
-    restrictToRoles: ['SUPER_ADMIN', 'COUNTRY_ADMIN', 'TENANT_ADMIN', 'EKB_MD', 'EKB_FINANCE'] },
+    restrictToRoles: ['SUPER_ADMIN', 'COUNTRY_ADMIN', 'TENANT_ADMIN'] },
   // Settings — admin-only. Field/finance/MEC staff should not configure tenants.
   { key: 'settings', label: 'Settings', icon: Settings, group: 'Admin',
     restrictToRoles: ['SUPER_ADMIN', 'COUNTRY_ADMIN', 'TENANT_ADMIN'] },
@@ -101,9 +104,10 @@ const ALL_MODULES: NavItem[] = [
   { key: 'profile', label: 'Profile', icon: Stethoscope, group: 'Admin', alwaysVisible: true },
   // Roles & Permissions — admin-only reference page.
   { key: 'roles-permissions', label: 'Roles & Permissions', icon: KeyRound, group: 'Admin',
-    restrictToRoles: ['SUPER_ADMIN', 'COUNTRY_ADMIN', 'TENANT_ADMIN', 'EKB_MD'] },
+    restrictToRoles: ['SUPER_ADMIN', 'COUNTRY_ADMIN', 'TENANT_ADMIN'] },
   // Platform Recovery — visible to tenants with billing:read (EKIBBO MD, Finance)
-  { key: 'platform-recovery', label: 'Platform Recovery', icon: TrendingUp, group: 'Admin', permModule: 'billing' },
+  { key: 'platform-recovery', label: 'Platform Recovery', icon: TrendingUp, group: 'Admin', permModule: 'billing',
+    hideFromRoles: ['EKB_MD', 'EKB_OPS_MANAGER', 'EKB_FINANCE', 'EKB_FIN_ASSISTANT', 'EKB_MEC', 'EKB_EXTENSION'] },
   // Support Tickets — visible to billing:read (tenants) + MOBIPAY_FINANCE + SUPER_ADMIN
   { key: 'support-tickets', label: 'Support Tickets', icon: MessageSquare, group: 'Admin', permModule: 'support' },
   // Quotes — SUPER_ADMIN + MOBIPAY_FINANCE only (in Admin group so finance can see it)

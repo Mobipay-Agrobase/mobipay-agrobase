@@ -433,6 +433,10 @@ model FarmerProfile {
   ledgerEntries       FarmerLedgerEntry[]
   inputDistributions  InputDistribution[]
   cropInsurances      CropInsurance[]
+  // ─── Next of Kin (required for NSSF) ───
+  nextOfKinName     String?
+  nextOfKinPhone    String?
+  nextOfKinRelation String?
   // ─── NSSF Voluntary Savings ───
   // NSSF fields are ON the farmer profile (not a separate registration module).
   // Field officers register farmers normally, then enroll them in NSSF by

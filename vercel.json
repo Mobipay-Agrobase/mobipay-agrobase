@@ -20,6 +20,10 @@
     {
       "path": "/api/nssf/cron/settle?key=CRON_SECRET_PLACEHOLDER",
       "schedule": "0 2 * * 1"
+    },
+    {
+      "path": "/api/nssf/cron/reminders?key=CRON_SECRET_PLACEHOLDER",
+      "schedule": "0 5 1 * *"
     }
   ],
   "functions": {

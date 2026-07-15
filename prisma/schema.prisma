@@ -437,6 +437,8 @@ model FarmerProfile {
   nextOfKinName     String?
   nextOfKinPhone    String?
   nextOfKinRelation String?
+  // ─── VSLA: PIN for USSD/app login ───
+  vslaPin         String?  // 4-digit PIN for USSD login
   // ─── NSSF Voluntary Savings ───
   // NSSF fields are ON the farmer profile (not a separate registration module).
   // Field officers register farmers normally, then enroll them in NSSF by
@@ -579,6 +581,22 @@ model VslaGroup {
   fines           Float    @default(0)
   welfareAmount   Float    @default(0)
   meetingFrequency String?  // Weekly, Bi-weekly, Monthly
+  // ─── VSLA 2.0 fields ───
+  sharePrice      Float    @default(1000) // price per share (UGX)
+  cycleNumber     Int      @default(1)
+  cycleStartDate  DateTime?
+  cycleEndDate    DateTime?
+  minRepaymentAmount Float  @default(100)
+  allowFlexibleRepayment Boolean @default(true)
+  autoPenaltyEnabled Boolean @default(true)
+  lateFeeAmount   Float    @default(0)
+  graceDays       Int      @default(7)
+  postMaturityInterestRate Float @default(0)
+  requiredApprovals Int    @default(3) // number of keyholders needed
+  paymentAccountId String? // linked payment account (MTN/Airtel merchant)
+  paymentProvider String?  // MTN, AIRTEL, FLUTTERWAVE
+  paymentApiKey   String?  // API key for payment system
+  paymentUsername String?  // username for payment system
   isActive        Boolean  @default(true)
   isClosed        Boolean  @default(false)
   createdAt       DateTime @default(now())
@@ -590,6 +608,9 @@ model VslaGroup {
   meetings        VslaMeeting[]
   transactions    VslaTransaction[]
   welfarePayments WelfarePayment[]
+  loanApprovals    VslaLoanApproval[]
+  historicalTxns   VslaHistoricalTransaction[]
+  cycles           VslaCycle[]
 }
 
 model VslaMember {
@@ -645,6 +666,8 @@ model VslaLoan {
   updatedAt       DateTime @updatedAt
 
   repayments      VslaLoanRepayment[]
+  approvals       VslaLoanApproval[]
+  penalties       VslaLoanPenalty[]
 }
 
 model VslaLoanRepayment {
@@ -657,6 +680,80 @@ model VslaLoanRepayment {
   repaidOnBehalfOf String?
   transactionRef String?
   createdAt   DateTime @default(now())
+}
+
+// ─── VSLA 2.0: Loan approval tracking ───
+model VslaLoanApproval {
+  id          String   @id @default(cuid())
+  vslaGroupId String
+  vslaGroup   VslaGroup @relation(fields: [vslaGroupId], references: [id])
+  loanId      String
+  loan        VslaLoan @relation(fields: [loanId], references: [id], onDelete: Cascade)
+  approverId  String   // VslaMember ID of the keyholder
+  approverName String?
+  decision    String   // APPROVED, REJECTED
+  comments    String?
+  createdAt   DateTime @default(now())
+
+  @@unique([loanId, approverId])
+  @@index([loanId])
+}
+
+// ─── VSLA 2.0: Historical data migration ───
+model VslaHistoricalTransaction {
+  id              String   @id @default(cuid())
+  vslaGroupId     String
+  vslaGroup       VslaGroup @relation(fields: [vslaGroupId], references: [id])
+  farmerId        String?
+  memberId        String?
+  txnType         String   // savings, loan_repayment, fine, welfare
+  amount          Float
+  txnDate         DateTime
+  cycleWeek       Int?
+  isVerified      Boolean  @default(false)
+  verifiedBy      String?
+  passbookRef     String?  // URL to uploaded passbook image
+  createdBy       String
+  createdAt       DateTime @default(now())
+
+  @@index([vslaGroupId])
+  @@index([farmerId])
+}
+
+// ─── VSLA 2.0: Loan penalties ───
+model VslaLoanPenalty {
+  id          String   @id @default(cuid())
+  loanId      String
+  loan        VslaLoan @relation(fields: [loanId], references: [id], onDelete: Cascade)
+  penaltyType String   // late_fee, post_maturity_interest, missed_meeting_fine
+  amount      Float
+  waivedBy    String?
+  waivedAt    DateTime?
+  createdAt   DateTime @default(now())
+
+  @@index([loanId])
+}
+
+// ─── VSLA 2.0: VSLA Cycle (share-out) ───
+model VslaCycle {
+  id              String   @id @default(cuid())
+  vslaGroupId     String
+  vslaGroup       VslaGroup @relation(fields: [vslaGroupId], references: [id])
+  cycleNumber     Int
+  startDate       DateTime
+  endDate         DateTime?
+  status          String   @default("ACTIVE") // ACTIVE, CLOSED, SHARE_OUT_PENDING, SHARE_OUT_COMPLETE
+  totalSavings    Float    @default(0)
+  totalLoans      Float    @default(0)
+  totalInterest   Float    @default(0)
+  totalFines      Float    @default(0)
+  totalWelfare    Float    @default(0)
+  shareOutAmount  Float?
+  shareOutDate    DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([vslaGroupId, cycleNumber])
 }
 
 model VslaMeeting {
@@ -699,6 +796,7 @@ model VslaTransaction {
   vslaGroupId     String
   vslaGroup       VslaGroup @relation(fields: [vslaGroupId], references: [id])
   type            String   // SAVING, LOAN_DISBURSEMENT, LOAN_REPAYMENT, WELFARE, FINE, SHARE_REDEEM
+  walletType      String   @default("SAVINGS") // SAVINGS, WELFARE, FINE, LOAN
   amount          Float
   description     String?
   transactionRef  String?

@@ -24,6 +24,14 @@
     {
       "path": "/api/nssf/cron/reminders?key=CRON_SECRET_PLACEHOLDER",
       "schedule": "0 5 1 * *"
+    },
+    {
+      "path": "/api/vsla/cron/reconcile?key=CRON_SECRET_PLACEHOLDER",
+      "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/vsla/cron/penalties?key=CRON_SECRET_PLACEHOLDER",
+      "schedule": "0 1 * * *"
     }
   ],
   "functions": {

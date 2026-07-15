@@ -198,10 +198,10 @@ export function EkbMdDashboard() {
   const [sales, setSales] = useState<any[]>([])
 
   useEffect(() => {
-    fetchJson('/api/purchases?limit=50').then(d => {
+    fetchJson('/api/purchases?limit=200').then(d => {
       setPurchases(Array.isArray(d?.data) ? d.data : [])
     })
-    fetchJson('/api/sales?limit=50').then(d => {
+    fetchJson('/api/sales?limit=200').then(d => {
       setSales(Array.isArray(d?.data) ? d.data : [])
     })
   }, [])
@@ -209,44 +209,183 @@ export function EkbMdDashboard() {
   if (loading) return <DashSkeleton />
   if (!stats) return <DashError />
 
-  const totalPurchaseValue = purchases.reduce((sum, p) => sum + (Number(p.totalAmount) || 0), 0)
-  const totalSalesValue = sales.reduce((sum, s) => sum + (Number(s.totalAmount) || 0), 0)
+  // ─── Aggregate by value chain (commodity) ───
+  const purchaseByCommodity: Record<string, { volume: number; value: number; count: number }> = {}
+  for (const p of purchases) {
+    const commodity = (p.commodity || 'Unknown').charAt(0).toUpperCase() + (p.commodity || 'Unknown').slice(1).toLowerCase()
+    if (!purchaseByCommodity[commodity]) purchaseByCommodity[commodity] = { volume: 0, value: 0, count: 0 }
+    purchaseByCommodity[commodity].volume += Number(p.quantity) || 0
+    purchaseByCommodity[commodity].value += Number(p.totalAmount) || 0
+    purchaseByCommodity[commodity].count += 1
+  }
+
+  const salesByCommodity: Record<string, { volume: number; value: number; count: number }> = {}
+  for (const s of sales) {
+    const commodity = (s.commodity || 'Unknown').charAt(0).toUpperCase() + (s.commodity || 'Unknown').slice(1).toLowerCase()
+    if (!salesByCommodity[commodity]) salesByCommodity[commodity] = { volume: 0, value: 0, count: 0 }
+    salesByCommodity[commodity].volume += Number(s.quantity) || 0
+    salesByCommodity[commodity].value += Number(s.totalAmount) || 0
+    salesByCommodity[commodity].count += 1
+  }
+
+  const totalPurchaseVolume = Object.values(purchaseByCommodity).reduce((sum, v) => sum + v.volume, 0)
+  const totalPurchaseValue = Object.values(purchaseByCommodity).reduce((sum, v) => sum + v.value, 0)
+  const totalSalesVolume = Object.values(salesByCommodity).reduce((sum, v) => sum + v.volume, 0)
+  const totalSalesValue = Object.values(salesByCommodity).reduce((sum, v) => sum + v.value, 0)
   const pendingApprovals = purchases.filter(p => p.approvalStatus === 'SUBMITTED').length
 
-  const lineConfig: ChartConfig = { value: { label: 'Farmers', color: 'var(--chart-1)' } }
+  // Chart data
+  const purchaseChart = Object.entries(purchaseByCommodity).map(([name, v]) => ({ name, volume: Math.round(v.volume), value: Math.round(v.value / 1000) }))
+  const salesChart = Object.entries(salesByCommodity).map(([name, v]) => ({ name, volume: Math.round(v.volume), value: Math.round(v.value / 1000) }))
+
+  const volumeConfig: ChartConfig = { volume: { label: 'Volume (kg)', color: 'var(--chart-1)' } }
+  const salesConfig: ChartConfig = { volume: { label: 'Volume (kg)', color: 'var(--chart-3)' } }
+  const lineConfig: ChartConfig = { value: { label: 'Farmers', color: 'var(--chart-2)' } }
 
   return (
     <div className="space-y-6">
-      <DashHeader title="Managing Director Overview" subtitle="Cross-functional KPIs across operations, finance, and compliance" />
+      <DashHeader title="Managing Director Overview" subtitle="Volumes, value chains, and financial performance" />
 
-      {/* KPI Row 1 — Strategic indicators */}
+      {/* KPI Row 1 — Volumes & Values */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="Total Farmers" value={fmtNum(stats.farmerCount)} icon={Users} color="bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600" trend="+12%" />
-        <StatCard label="Purchase Value (FY)" value={fmtUGX(totalPurchaseValue)} icon={ShoppingCart} color="bg-blue-50 dark:bg-blue-950/40 text-blue-600" />
-        <StatCard label="Sales Revenue" value={fmtUGX(totalSalesValue)} icon={Receipt} color="bg-purple-50 dark:bg-purple-950/40 text-purple-600" />
+        <StatCard label="Total Purchased (kg)" value={fmtNum(totalPurchaseVolume)} icon={ShoppingCart} color="bg-blue-50 dark:bg-blue-950/40 text-blue-600" />
+        <StatCard label="Purchase Value" value={fmtUGX(totalPurchaseValue)} icon={DollarSign} color="bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600" />
+        <StatCard label="Total Sold (kg)" value={fmtNum(totalSalesVolume)} icon={Receipt} color="bg-purple-50 dark:bg-purple-950/40 text-purple-600" />
+        <StatCard label="Sales Revenue" value={fmtUGX(totalSalesValue)} icon={TrendingUp} color="bg-amber-50 dark:bg-amber-950/40 text-amber-600" />
+      </div>
+
+      {/* KPI Row 2 — Operations */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard label="Total Farmers" value={fmtNum(stats.farmerCount)} icon={Users} color="bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600" />
         <StatCard label="Pending Approvals" value={pendingApprovals} icon={Clock} color="bg-amber-50 dark:bg-amber-950/40 text-amber-600" />
+        <StatCard label="Active Loans" value={stats.activeLoanCount} icon={CreditCard} color="bg-teal-50 dark:bg-teal-950/40 text-teal-600" />
+        <StatCard label="Trainings" value={stats.trainingCount} icon={GraduationCap} color="bg-cyan-50 dark:bg-cyan-950/40 text-cyan-600" />
       </div>
 
-      {/* KPI Row 2 — Operational health */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="Active Loans" value={stats.activeLoanCount} icon={DollarSign} color="bg-amber-50 dark:bg-amber-950/40 text-amber-600" />
-        <StatCard label="Trainings Conducted" value={stats.trainingCount} icon={GraduationCap} color="bg-cyan-50 dark:bg-cyan-950/40 text-cyan-600" />
-        <StatCard label="VSLA Groups" value={stats.vslaCount} icon={PiggyBank} color="bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600" />
-        <StatCard label="Loan Portfolio" value={stats.loanCount} icon={CreditCard} color="bg-teal-50 dark:bg-teal-950/40 text-teal-600" />
-      </div>
+      {/* Volume by Value Chain — Purchases */}
+      <Card>
+        <CardHeader className="pb-2"><CardTitle className="text-base">Purchase Volume by Value Chain (kg)</CardTitle></CardHeader>
+        <CardContent>
+          {purchaseChart.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground text-sm">No purchases recorded yet</div>
+          ) : (
+            <ChartContainer config={volumeConfig} className="h-[260px] w-full">
+              <BarChart data={purchaseChart}>
+                <CartesianGrid vertical={false} strokeDasharray="3 3" opacity={0.3} />
+                <XAxis dataKey="name" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+                <ChartTooltip content={<ChartTooltipContent />} />
+                <Bar dataKey="volume" fill="var(--chart-1)" radius={[6, 6, 0, 0]}>
+                  {purchaseChart.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                </Bar>
+              </BarChart>
+            </ChartContainer>
+          )}
+        </CardContent>
+      </Card>
 
-      {/* Charts */}
+      {/* Volume by Value Chain — Sales */}
+      <Card>
+        <CardHeader className="pb-2"><CardTitle className="text-base">Sales Volume by Value Chain (kg)</CardTitle></CardHeader>
+        <CardContent>
+          {salesChart.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground text-sm">No sales recorded yet</div>
+          ) : (
+            <ChartContainer config={salesConfig} className="h-[260px] w-full">
+              <BarChart data={salesChart}>
+                <CartesianGrid vertical={false} strokeDasharray="3 3" opacity={0.3} />
+                <XAxis dataKey="name" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+                <ChartTooltip content={<ChartTooltipContent />} />
+                <Bar dataKey="volume" fill="var(--chart-3)" radius={[6, 6, 0, 0]}>
+                  {salesChart.map((_, i) => <Cell key={i} fill={COLORS[(i + 3) % COLORS.length]} />)}
+                </Bar>
+              </BarChart>
+            </ChartContainer>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Purchase Summary by Commodity Table */}
+      <Card>
+        <CardHeader className="pb-2"><CardTitle className="text-base">Purchase Summary by Value Chain</CardTitle></CardHeader>
+        <CardContent className="p-0">
+          {Object.keys(purchaseByCommodity).length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground text-sm">No purchases recorded yet</div>
+          ) : (
+            <Table>
+              <TableHeader><TableRow>
+                <TableHead>Value Chain</TableHead>
+                <TableHead className="text-right">Transactions</TableHead>
+                <TableHead className="text-right">Total Volume (kg)</TableHead>
+                <TableHead className="text-right">Avg per Txn (kg)</TableHead>
+                <TableHead className="text-right">Total Value (UGX)</TableHead>
+                <TableHead className="text-right">Avg Price/kg</TableHead>
+              </TableRow></TableHeader>
+              <TableBody>
+                {Object.entries(purchaseByCommodity)
+                  .sort(([, a], [, b]) => b.volume - a.volume)
+                  .map(([commodity, v]) => (
+                    <TableRow key={commodity}>
+                      <TableCell className="font-medium text-sm">{commodity}</TableCell>
+                      <TableCell className="text-right text-sm">{v.count}</TableCell>
+                      <TableCell className="text-right text-sm font-medium">{fmtNum(v.volume)}</TableCell>
+                      <TableCell className="text-right text-sm">{fmtNum(v.volume / v.count)}</TableCell>
+                      <TableCell className="text-right text-sm font-medium">{fmtUGX(v.value)}</TableCell>
+                      <TableCell className="text-right text-sm">{v.volume > 0 ? fmtUGX(v.value / v.volume) : '—'}</TableCell>
+                    </TableRow>
+                  ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Sales Summary by Commodity Table */}
+      <Card>
+        <CardHeader className="pb-2"><CardTitle className="text-base">Sales Summary by Value Chain</CardTitle></CardHeader>
+        <CardContent className="p-0">
+          {Object.keys(salesByCommodity).length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground text-sm">No sales recorded yet</div>
+          ) : (
+            <Table>
+              <TableHeader><TableRow>
+                <TableHead>Value Chain</TableHead>
+                <TableHead className="text-right">Transactions</TableHead>
+                <TableHead className="text-right">Total Volume (kg)</TableHead>
+                <TableHead className="text-right">Total Value (UGX)</TableHead>
+                <TableHead className="text-right">Avg Price/kg</TableHead>
+              </TableRow></TableHeader>
+              <TableBody>
+                {Object.entries(salesByCommodity)
+                  .sort(([, a], [, b]) => b.volume - a.volume)
+                  .map(([commodity, v]) => (
+                    <TableRow key={commodity}>
+                      <TableCell className="font-medium text-sm">{commodity}</TableCell>
+                      <TableCell className="text-right text-sm">{v.count}</TableCell>
+                      <TableCell className="text-right text-sm font-medium">{fmtNum(v.volume)}</TableCell>
+                      <TableCell className="text-right text-sm font-medium">{fmtUGX(v.value)}</TableCell>
+                      <TableCell className="text-right text-sm">{v.volume > 0 ? fmtUGX(v.value / v.volume) : '—'}</TableCell>
+                    </TableRow>
+                  ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Farmer Registrations + Loan Portfolio */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card>
           <CardHeader className="pb-2"><CardTitle className="text-base">Farmer Registrations (Monthly)</CardTitle></CardHeader>
           <CardContent>
-            <ChartContainer config={lineConfig} className="h-[260px] w-full">
+            <ChartContainer config={lineConfig} className="h-[220px] w-full">
               <BarChart data={monthlyRegs.map(m => ({ ...m, month: formatMonth(m.month) }))}>
                 <CartesianGrid vertical={false} strokeDasharray="3 3" opacity={0.3} />
                 <XAxis dataKey="month" tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
                 <ChartTooltip content={<ChartTooltipContent />} />
-                <Bar dataKey="count" fill="var(--chart-1)" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="count" fill="var(--chart-2)" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ChartContainer>
           </CardContent>
@@ -260,12 +399,12 @@ export function EkbMdDashboard() {
               <span className="font-bold">{stats.loanCount}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Completed</span>
-              <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">{stats.completedLoans}</Badge>
+              <span className="text-sm text-muted-foreground">Active</span>
+              <Badge className="bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">{stats.activeLoanCount}</Badge>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Pending</span>
-              <Badge className="bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">{stats.pendingLoans}</Badge>
+              <span className="text-sm text-muted-foreground">Repaid</span>
+              <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">{stats.completedLoans}</Badge>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">Overdue</span>
@@ -280,50 +419,6 @@ export function EkbMdDashboard() {
           </CardContent>
         </Card>
       </div>
-
-      {/* Recent high-value purchases awaiting MD visibility */}
-      <Card>
-        <CardHeader className="pb-2"><CardTitle className="text-base">Recent Purchases (Executive View)</CardTitle></CardHeader>
-        <CardContent>
-          {purchases.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground text-sm">No purchases recorded yet</div>
-          ) : (
-            <Table>
-              <TableHeader><TableRow>
-                <TableHead>Farmer</TableHead>
-                <TableHead>Commodity</TableHead>
-                <TableHead className="text-right">Weight (kg)</TableHead>
-                <TableHead className="text-right">Total (UGX)</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Status</TableHead>
-              </TableRow></TableHeader>
-              <TableBody>
-                {purchases.slice(0, 6).map(p => (
-                  <TableRow key={p.id}>
-                    <TableCell className="font-medium text-sm">
-                      {p.farmer ? `${p.farmer.firstName} ${p.farmer.lastName}` : '—'}
-                    </TableCell>
-                    <TableCell className="text-sm capitalize">{p.commodity || '—'}</TableCell>
-                    <TableCell className="text-right text-sm">{fmtNum(p.quantity)}</TableCell>
-                    <TableCell className="text-right text-sm font-medium">{fmtUGX(p.totalAmount)}</TableCell>
-                    <TableCell className="text-xs text-muted-foreground">
-                      {p.createdAt ? formatDistanceToNow(new Date(p.createdAt), { addSuffix: true }) : '—'}
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={cn(
-                        'text-[10px]',
-                        p.approvalStatus === 'APPROVED' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300' :
-                        p.approvalStatus === 'REJECTED' ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300' :
-                        'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'
-                      )}>{p.approvalStatus || 'SUBMITTED'}</Badge>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
     </div>
   )
 }

@@ -51,6 +51,7 @@ export default function AgriTrackView() {
   const { activeSubTab, setActiveSubTab } = useAppStore()
   const [scores, setScores] = useState<CreditScoreData[]>([])
   const [loading, setLoading] = useState(true)
+  const [businessData, setBusinessData] = useState<any>(null)
   const [activeTab, setActiveTab] = useState(activeSubTab || 'credit-scores')
   const [search, setSearch] = useState('')
 
@@ -210,15 +211,90 @@ export default function AgriTrackView() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="business" className="mt-4">
+        <TabsContent value="business" className="mt-4 space-y-4">
+          {/* KPI Cards */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <Card><CardContent className="p-4">
+              <p className="text-xs text-muted-foreground mb-1">Total Purchase Volume</p>
+              <p className="text-xl font-bold">{(businessData?.totalPurchaseVolume || 0).toLocaleString()} kg</p>
+            </CardContent></Card>
+            <Card><CardContent className="p-4">
+              <p className="text-xs text-muted-foreground mb-1">Total Purchase Value</p>
+              <p className="text-xl font-bold">UGX {(businessData?.totalPurchaseValue || 0).toLocaleString()}</p>
+            </CardContent></Card>
+            <Card><CardContent className="p-4">
+              <p className="text-xs text-muted-foreground mb-1">Total Sales Volume</p>
+              <p className="text-xl font-bold">{(businessData?.totalSalesVolume || 0).toLocaleString()} kg</p>
+            </CardContent></Card>
+            <Card><CardContent className="p-4">
+              <p className="text-xs text-muted-foreground mb-1">Total Sales Revenue</p>
+              <p className="text-xl font-bold">UGX {(businessData?.totalSalesRevenue || 0).toLocaleString()}</p>
+            </CardContent></Card>
+          </div>
+
+          {/* Value Chain Performance */}
           <Card>
-            <CardContent className="py-12 text-center text-muted-foreground">
-              <BarChart3 className="w-10 h-10 mx-auto mb-3 opacity-40" />
-              <p className="font-medium">Business Tracking</p>
-              <p className="text-sm mt-1">Track agribusiness performance, value chain analytics, and farmer revenue</p>
-              <Button className="mt-4" variant="outline" onClick={() => {}}>
-                Coming Soon
-              </Button>
+            <CardHeader className="pb-2"><CardTitle className="text-base">Value Chain Performance</CardTitle></CardHeader>
+            <CardContent className="p-0">
+              {(businessData?.valueChains || []).length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground text-sm">No purchase or sales data yet</div>
+              ) : (
+                <Table>
+                  <TableHeader><TableRow>
+                    <TableHead>Value Chain</TableHead>
+                    <TableHead className="text-right">Purchased (kg)</TableHead>
+                    <TableHead className="text-right">Purchase Value</TableHead>
+                    <TableHead className="text-right">Sold (kg)</TableHead>
+                    <TableHead className="text-right">Sales Revenue</TableHead>
+                    <TableHead className="text-right">Margin</TableHead>
+                  </TableRow></TableHeader>
+                  <TableBody>
+                    {(businessData?.valueChains || []).map((vc: any) => (
+                      <TableRow key={vc.name}>
+                        <TableCell className="font-medium text-sm">{vc.name}</TableCell>
+                        <TableCell className="text-right text-sm">{vc.purchaseVolume.toLocaleString()}</TableCell>
+                        <TableCell className="text-right text-sm">UGX {vc.purchaseValue.toLocaleString()}</TableCell>
+                        <TableCell className="text-right text-sm">{vc.salesVolume.toLocaleString()}</TableCell>
+                        <TableCell className="text-right text-sm">UGX {vc.salesRevenue.toLocaleString()}</TableCell>
+                        <TableCell className={cn('text-right text-sm font-medium', vc.margin >= 0 ? 'text-emerald-600' : 'text-rose-600')}>
+                          UGX {vc.margin.toLocaleString()}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Monthly Trends */}
+          <Card>
+            <CardHeader className="pb-2"><CardTitle className="text-base">Monthly Purchase Trends (Volume)</CardTitle></CardHeader>
+            <CardContent>
+              {(businessData?.monthlyTrends || []).length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground text-sm">No trend data available</div>
+              ) : (
+                <Table>
+                  <TableHeader><TableRow>
+                    <TableHead>Month</TableHead>
+                    <TableHead className="text-right">Purchases (kg)</TableHead>
+                    <TableHead className="text-right">Purchase Value (UGX)</TableHead>
+                    <TableHead className="text-right">Sales (kg)</TableHead>
+                    <TableHead className="text-right">Sales Revenue (UGX)</TableHead>
+                  </TableRow></TableHeader>
+                  <TableBody>
+                    {(businessData?.monthlyTrends || []).map((m: any) => (
+                      <TableRow key={m.month}>
+                        <TableCell className="text-sm font-medium">{m.month}</TableCell>
+                        <TableCell className="text-right text-sm">{m.purchaseVolume.toLocaleString()}</TableCell>
+                        <TableCell className="text-right text-sm">{m.purchaseValue.toLocaleString()}</TableCell>
+                        <TableCell className="text-right text-sm">{m.salesVolume.toLocaleString()}</TableCell>
+                        <TableCell className="text-right text-sm">{m.salesRevenue.toLocaleString()}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

@@ -122,8 +122,12 @@ export function PlotsView() {
   const fetchStats = useCallback(async () => {
     try {
       const res = await fetch('/api/plots/stats')
+      if (!res.ok) return
       const data = await res.json()
-      setStats(data)
+      // Only set stats if it has the expected shape
+      if (data && data.plotsByStatus && data.plotsByRisk) {
+        setStats(data)
+      }
     } catch { /* silent */ }
   }, [])
 
@@ -167,9 +171,9 @@ export function PlotsView() {
 
   // ─── Render Helpers ─────────────────────────────────────────────────
 
-  const statusChartData = stats ? Object.entries(stats.plotsByStatus).map(([k, v]) => ({ name: k.replace(/_/g, ' '), value: v })) : []
-  const riskChartData = stats ? Object.entries(stats.plotsByRisk).map(([k, v]) => ({ name: k, value: v })) : []
-  const cropChartData = stats ? Object.entries(stats.plotsByCrop).map(([k, v]) => ({ name: k, value: v })).sort((a, b) => b.value - a.value).slice(0, 6) : []
+  const statusChartData = stats && stats.plotsByStatus ? Object.entries(stats.plotsByStatus).map(([k, v]) => ({ name: k.replace(/_/g, ' '), value: v })) : []
+  const riskChartData = stats && stats.plotsByRisk ? Object.entries(stats.plotsByRisk).map(([k, v]) => ({ name: k, value: v })) : []
+  const cropChartData = stats && stats.plotsByCrop ? Object.entries(stats.plotsByCrop).map(([k, v]) => ({ name: k, value: v })).sort((a, b) => b.value - a.value).slice(0, 6) : []
 
   return (
     <div className="space-y-6">
@@ -253,7 +257,7 @@ export function PlotsView() {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm text-muted-foreground">High Risk Plots</p>
-                        <p className="text-3xl font-bold text-red-600">{stats.plotsByRisk.HIGH || 0}</p>
+                        <p className="text-3xl font-bold text-red-600">{(stats?.plotsByRisk?.HIGH) || 0}</p>
                         <p className="text-xs text-muted-foreground mt-1">need attention</p>
                       </div>
                       <div className="p-3 rounded-full bg-red-100 dark:bg-red-900/30">
@@ -272,7 +276,7 @@ export function PlotsView() {
                 <CardContent>
                   <div className="flex items-center gap-1 mb-3">
                     {VERIFY_STEPS.map((step, i) => {
-                      const count = stats.plotsByStatus[step.key] || 0
+                      const count = stats?.plotsByStatus?.[step.key] || 0
                       return (
                         <React.Fragment key={step.key}>
                           {i > 0 && <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />}
@@ -290,7 +294,7 @@ export function PlotsView() {
                                   step.key === 'SATELLITE_VERIFIED' ? 'bg-purple-500' :
                                   step.key === 'GPS_VERIFIED' ? 'bg-blue-500' : 'bg-gray-400'
                                 )}
-                                style={{ width: stats.totalPlots > 0 ? `${(count / stats.totalPlots) * 100}%` : '0%' }}
+                                style={{ width: stats?.totalPlots > 0 ? `${(count / stats.totalPlots) * 100}%` : '0%' }}
                               />
                             </div>
                             <span className="text-xs font-semibold mt-1 block">{count}</span>

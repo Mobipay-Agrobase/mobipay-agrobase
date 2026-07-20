@@ -12,6 +12,7 @@ interface SmsParams {
 export async function sendSms({ phone, message }: SmsParams): Promise<{ sent: boolean; method: string }> {
   const apiKey = process.env.AT_API_KEY || process.env.AFRICAS_TALKING_API_KEY
   const username = process.env.AT_USERNAME || process.env.AFRICAS_TALKING_USERNAME || 'sandbox'
+  const senderId = process.env.AT_SENDER_ID || 'KILIMO'
 
   if (!apiKey) {
     console.log(`[SMS - not configured] To: ${phone}, Message: ${message}`)
@@ -29,7 +30,7 @@ export async function sendSms({ phone, message }: SmsParams): Promise<{ sent: bo
         username,
         to: phone,
         message,
-        from: 'KILIMO',
+        from: senderId,
       }),
     })
 

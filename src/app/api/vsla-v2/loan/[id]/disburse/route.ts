@@ -8,6 +8,7 @@ import { getTenantContext } from '@/lib/tenant'
 import { hasPermission } from '@/lib/permissions'
 import { logSecureAction } from '@/lib/security/secure-audit-logger'
 import { z } from 'zod'
+import { sendSms, sendBulkSms, buildLoanDisbursedSms } from '@/lib/vsla-v2/sms'
 
 const DisburseSchema = z.object({
   disbursedByName: z.string().min(2),
@@ -100,8 +101,21 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     })
 
     // ─── Send SMS to member + all key holders (SRS 5.1) ───
-    // TODO: Wire to Africa's Talking
-    console.log(`[SMS] Loan disbursed: ${loan.amount} UGX to ${loan.member.fullName} (${loan.member.phone})`)
+    const disbursedMsg = buildLoanDisbursedSms({
+      memberName: loan.member.fullName,
+      amount: loan.amount,
+      groupName: loan.group.name,
+    })
+    const memberSmsResult = await sendSms(loan.member.phone, disbursedMsg)
+    console.log(`[SMS] Disbursement notification to member ${loan.member.phone}: ${memberSmsResult.success ? 'sent' : memberSmsResult.error}`)
+
+    // Notify all key holders
+    const keyHolders = await db.vslaKeyHolderV2.findMany({
+      where: { groupId: loan.groupId, status: 'ACTIVE' },
+      select: { phone: true },
+    })
+    const khResult = await sendBulkSms(keyHolders.map(kh => kh.phone), `Loan disbursed: UGX ${loan.amount.toLocaleString()} to ${loan.member.fullName} in ${loan.group.name}. — MobiPay Agrobase`)
+    console.log(`[SMS] Disbursement notification to ${khResult.sent}/${keyHolders.length} key holders`)
 
     await logSecureAction({
       tenantId: ctx.tenantId,

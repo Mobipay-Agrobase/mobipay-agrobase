@@ -14,6 +14,7 @@ import { getTenantContext } from '@/lib/tenant'
 import { hasPermission } from '@/lib/permissions'
 import { logSecureAction } from '@/lib/security/secure-audit-logger'
 import { z } from 'zod'
+import { sendSms, buildShareOutSms } from '@/lib/vsla-v2/sms'
 
 const CloseCycleSchema = z.object({
   approvedByName: z.string().min(2),
@@ -146,7 +147,26 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     }
 
     // ─── Send SMS to all members with their share-out amount ───
-    // TODO: Wire to Africa's Talking
+    for (const member of members) {
+      const shareOutAmount = member.totalShares * shareOutPerShare
+      if (shareOutAmount > 0) {
+        const memberWithPhone = await db.vslaMemberV2.findUnique({
+          where: { id: member.id },
+          select: { phone: true },
+        })
+        if (memberWithPhone) {
+          const shareMsg = buildShareOutSms({
+            memberName: member.fullName,
+            groupName: cycle.group.name,
+            shares: member.totalShares,
+            amount: shareOutAmount,
+            perShare: shareOutPerShare,
+          })
+          const result = await sendSms(memberWithPhone.phone, shareMsg)
+          console.log(`[SMS] Share-out to ${memberWithPhone.phone}: ${result.success ? 'sent' : result.error}`)
+        }
+      }
+    }
     console.log(`[SMS] Share-out completed for cycle ${cycle.name}. Per-share: UGX ${shareOutPerShare.toFixed(2)}`)
 
     await logSecureAction({

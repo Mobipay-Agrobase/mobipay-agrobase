@@ -8,6 +8,7 @@ import { getTenantContext } from '@/lib/tenant'
 import { hasPermission } from '@/lib/permissions'
 import { logSecureAction } from '@/lib/security/secure-audit-logger'
 import { z } from 'zod'
+import { sendSms, buildWelcomeSms } from '@/lib/vsla-v2/sms'
 import bcrypt from 'bcryptjs'
 import crypto from 'crypto'
 
@@ -88,12 +89,18 @@ export async function POST(req: NextRequest) {
     })
 
     // ─── Send welcome SMS with PIN (SRS 3.4) ───
-    // TODO: Wire to Africa's Talking SMS gateway
-    // For now, log the PIN (in production, this goes via SMS only)
-    const welcomeMessage = `Welcome to ${group.name}, ${validated.fullName}! Your member ID is ${memberId} and your PIN is ${pin}. Use these to log in via USSD or the app. Do not share your PIN.`
-    console.log(`[SMS] Welcome SMS to ${validated.phone}: ${welcomeMessage}`)
-
-    // In production, call: await sendSms(validated.phone, welcomeMessage)
+    const welcomeMessage = buildWelcomeSms({
+      memberName: validated.fullName,
+      groupName: group.name,
+      memberId,
+      pin,
+    })
+    const smsResult = await sendSms(validated.phone, welcomeMessage)
+    if (smsResult.success) {
+      console.log(`[SMS] Welcome SMS sent to ${validated.phone} (ID: ${smsResult.messageId})`)
+    } else {
+      console.error(`[SMS] Failed to send welcome SMS to ${validated.phone}: ${smsResult.error}`)
+    }
 
     await logSecureAction({
       tenantId: ctx.tenantId,

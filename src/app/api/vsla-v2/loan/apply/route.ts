@@ -8,6 +8,7 @@ import { getTenantContext } from '@/lib/tenant'
 import { hasPermission } from '@/lib/permissions'
 import { logSecureAction } from '@/lib/security/secure-audit-logger'
 import { z } from 'zod'
+import { sendBulkSms, buildLoanPendingApprovalSms } from '@/lib/vsla-v2/sms'
 
 const LoanApplySchema = z.object({
   groupId: z.string().min(1),
@@ -123,11 +124,18 @@ export async function POST(req: NextRequest) {
     })
 
     // ─── Notify all key holders (SRS 5.1: "Notify all 3-6 key holders") ───
-    // TODO: Send SMS notification to each key holder
     const keyHolders = await db.vslaKeyHolderV2.findMany({
       where: { groupId: validated.groupId, status: 'ACTIVE' },
     })
-    console.log(`[SMS] Notifying ${keyHolders.length} key holders about loan ${loan.id} pending approval`)
+    const khPhones = keyHolders.map(kh => kh.phone)
+    const khMessage = buildLoanPendingApprovalSms({
+      memberName: member.fullName,
+      amount: validated.amount,
+      groupName: group.name,
+      loanId: loan.id,
+    })
+    const khSmsResult = await sendBulkSms(khPhones, khMessage)
+    console.log(`[SMS] Notified ${khSmsResult.sent}/${keyHolders.length} key holders about loan ${loan.id}`)
 
     await logSecureAction({
       tenantId: ctx.tenantId,

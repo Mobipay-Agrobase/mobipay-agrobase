@@ -10,6 +10,7 @@ import { getTenantContext } from '@/lib/tenant'
 import { hasPermission } from '@/lib/permissions'
 import { logSecureAction } from '@/lib/security/secure-audit-logger'
 import { z } from 'zod'
+import { sendSms, buildLoanApprovedSms, buildLoanRejectedSms } from '@/lib/vsla-v2/sms'
 
 const ApproveSchema = z.object({
   keyHolderId: z.string().min(1),
@@ -41,6 +42,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       where: { id: loanId },
       include: {
         group: { include: { keyHolders: { where: { status: 'ACTIVE' } } } },
+        member: { select: { id: true, fullName: true, phone: true } },
       },
     })
     if (!loan) return NextResponse.json({ error: 'Loan not found' }, { status: 404 })
@@ -112,6 +114,36 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
           where: { id: loanId },
           data: { status: newStatus, closedAt: new Date() },
         })
+      }
+    }
+
+    // ─── Send SMS to member if loan is fully approved or rejected (SRS 5.1) ───
+    if (newStatus === 'KEYHOLDER_APPROVED') {
+      const smsMsg = buildLoanApprovedSms({
+        memberName: loan.member.fullName,
+        amount: loan.amount,
+        groupName: loan.group.name,
+      })
+      const memberPhone = await db.vslaMemberV2.findUnique({
+        where: { id: loan.memberId },
+        select: { phone: true },
+      })
+      if (memberPhone) {
+        const result = await sendSms(memberPhone.phone, smsMsg)
+        console.log(`[SMS] Loan approved notification to ${memberPhone.phone}: ${result.success ? 'sent' : result.error}`)
+      }
+    } else if (newStatus === 'REJECTED') {
+      const smsMsg = buildLoanRejectedSms({
+        memberName: loan.member.fullName,
+        groupName: loan.group.name,
+      })
+      const memberPhone = await db.vslaMemberV2.findUnique({
+        where: { id: loan.memberId },
+        select: { phone: true },
+      })
+      if (memberPhone) {
+        const result = await sendSms(memberPhone.phone, smsMsg)
+        console.log(`[SMS] Loan rejected notification to ${memberPhone.phone}: ${result.success ? 'sent' : result.error}`)
       }
     }
 

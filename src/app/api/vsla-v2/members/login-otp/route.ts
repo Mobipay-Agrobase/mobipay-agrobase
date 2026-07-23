@@ -5,6 +5,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { z } from 'zod'
+import { sendSms, buildOtpSms } from '@/lib/vsla-v2/sms'
 import bcrypt from 'bcryptjs'
 
 const LoginOtpSchema = z.object({
@@ -64,9 +65,13 @@ export async function POST(req: NextRequest) {
     })
 
     // ─── Send OTP via SMS (SRS 4) ───
-    // TODO: Wire to Africa's Talking
-    const otpMessage = `Your MobiPay VSLA login code is ${otp}. It expires in 5 minutes. Do not share this code.`
-    console.log(`[SMS] OTP to ${member.phone}: ${otpMessage}`)
+    const otpMessage = buildOtpSms(otp)
+    const smsResult = await sendSms(member.phone, otpMessage)
+    if (smsResult.success) {
+      console.log(`[SMS] OTP sent to ${member.phone} (ID: ${smsResult.messageId})`)
+    } else {
+      console.error(`[SMS] Failed to send OTP to ${member.phone}: ${smsResult.error}`)
+    }
 
     return NextResponse.json({
       message: 'OTP sent to your registered phone number',

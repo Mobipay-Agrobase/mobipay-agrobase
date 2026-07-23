@@ -8,6 +8,7 @@ import { getTenantContext, buildTenantFilter } from '@/lib/tenant'
 import { hasPermission } from '@/lib/permissions'
 import { db } from '@/lib/db'
 import { logAction, logPaymentAction } from '@/lib/security/audit-logger'
+import { logSecureAction } from '@/lib/security/secure-audit-logger'
 import { sendContributionConfirmationSms, sendActivationSms } from '@/lib/nssf/notifications'
 import { z } from 'zod'
 
@@ -63,7 +64,7 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    // Audit log
+    // Audit log (legacy — backward compat)
     await logPaymentAction({
       userId: ctx.userId,
       tenantId: ctx.tenantId,
@@ -72,6 +73,29 @@ export async function POST(request: NextRequest) {
       entityId: contribution.id,
       after: { amount: validated.amount, farmerId: registration.farmerId, paymentMethod: validated.paymentMethod },
       ipAddress: request.headers.get('x-forwarded-for') || '',
+    })
+
+    // Secure tamper-evident audit log (hash-chained)
+    await logSecureAction({
+      tenantId: ctx.tenantId,
+      userId: ctx.userId,
+      actorName: undefined,
+      actorRole: ctx.role,
+      action: 'NSSF_CONTRIBUTION_INITIATED',
+      entityType: 'NssfContribution',
+      entityId: contribution.id,
+      description: `NSSF contribution of UGX ${validated.amount} via ${validated.paymentMethod}`,
+      metadata: {
+        amount: validated.amount,
+        farmerId: registration.farmerId,
+        paymentMethod: validated.paymentMethod,
+        channel: validated.channel,
+        registrationId: validated.registrationId,
+      },
+      ipAddress: request.headers.get('x-forwarded-for') || undefined,
+      userAgent: request.headers.get('user-agent') || undefined,
+      httpMethod: 'POST',
+      path: '/api/nssf/contribute',
     })
 
     // ─── AUTO-ACTIVATION: If this is the first contribution, mark farmer as ACTIVATED ───

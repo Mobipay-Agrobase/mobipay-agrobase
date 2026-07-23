@@ -56,7 +56,13 @@ dependencies:
   # Root/jailbreak detection: refuse to run on compromised devices
   root_jailbreak_sniffer: ^1.0.1
   # Crypto for local DB encryption (drift uses sqlite3_flutter_libs — add SQLCipher for encryption at rest)
-  # NOTE: SQLCipher requires swapping sqlite3_flutter_libs for sqlcipher_flutter_libs — see migration guide
+  # NOTE: SQLCipher migration:
+  # 1. Uncomment the line below
+  # 2. Comment out sqlite3_flutter_libs above
+  # 3. Run: flutter pub get
+  # 4. Run: flutter pub run build_runner build --delete-conflicting-outputs
+  # 5. Update _openConnection() in app_database.dart to pass PRAGMA key
+  # sqlcipher_flutter_libs: ^0.6.4
 
 dev_dependencies:
   flutter_test:

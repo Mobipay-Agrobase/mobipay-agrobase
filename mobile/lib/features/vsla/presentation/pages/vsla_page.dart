@@ -2,6 +2,7 @@ import 'dart:convert';
 import '../../../../core/sync/offline_repository.dart';
 import '../../../../core/sync/sync_status_widget.dart';
 import '../../../../core/connectivity/connectivity_manager.dart';
+import '../../../core/security/biometric_gate.dart';
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -773,6 +774,19 @@ class _VslaPageState extends State<VslaPage>
                               if (formKey.currentState
                                       ?.validate() ??
                                   false) {
+                                // ─── BIOMETRIC GATE for financial operations ───
+                                final biometricOk = await requireBiometricForFinancialOp('record savings');
+                                if (!biometricOk) {
+                                  if (ctx.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('Biometric authentication required to record savings.'),
+                                        backgroundColor: AppTheme.errorRed,
+                                      ),
+                                    );
+                                  }
+                                  return;
+                                }
                                 setModalState(
                                     () => isSubmitting = true);
                                 try {

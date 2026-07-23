@@ -3,7 +3,7 @@
 import React, { useState } from 'react'
 import { signIn } from 'next-auth/react'
 import { toast } from 'sonner'
-import { Loader2, Leaf, Eye, EyeOff, Sprout, Globe, Coins, ChevronDown } from 'lucide-react'
+import { Loader2, Leaf, Eye, EyeOff, Sprout, Globe, Coins, ChevronDown, Shield, ArrowLeft } from 'lucide-react'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -32,6 +32,13 @@ export function LoginPage() {
   const { language, setLanguage } = useLanguage()
   const { currency, setCurrency } = useCurrency()
 
+  // ─── 2FA State ───
+  const [twoFactorRequired, setTwoFactorRequired] = useState(false)
+  const [challengeToken, setChallengeToken] = useState<string | null>(null)
+  const [totpCode, setTotpCode] = useState('')
+  const [backupCode, setBackupCode] = useState('')
+  const [useBackupCode, setUseBackupCode] = useState(false)
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!email.trim() || !password.trim()) {
@@ -39,7 +46,6 @@ export function LoginPage() {
       return
     }
 
-    // Brute force protection: lock after 5 failed attempts
     if (lockoutUntil && new Date() < lockoutUntil) {
       const secondsLeft = Math.ceil((lockoutUntil.getTime() - Date.now()) / 1000)
       toast.error(`Too many attempts. Please wait ${secondsLeft}s before trying again.`)
@@ -48,16 +54,16 @@ export function LoginPage() {
 
     setLoading(true)
     try {
-      const result = await signIn('credentials', {
-        email: email.trim(),
-        password,
-        redirect: false,
+      // ─── Step 1: Check credentials + 2FA status ───
+      const checkRes = await fetch('/api/auth/2fa/login-check', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim(), password }),
       })
 
-      if (result?.error) {
+      if (!checkRes.ok) {
         const newAttempts = loginAttempts + 1
         setLoginAttempts(newAttempts)
-
         if (newAttempts >= 5) {
           const lockUntil = new Date(Date.now() + 60 * 1000)
           setLockoutUntil(lockUntil)
@@ -66,16 +72,99 @@ export function LoginPage() {
         } else {
           toast.error(`Invalid credentials. ${5 - newAttempts} attempt(s) remaining.`)
         }
-      } else if (result?.ok) {
-        setLoginAttempts(0)
-        setLockoutUntil(null)
-        toast.success('Welcome back!')
+        setLoading(false)
+        return
       }
+
+      const checkData = await checkRes.json()
+
+      // ─── If 2FA required, show 2FA step ───
+      if (checkData.twoFactorRequired) {
+        setChallengeToken(checkData.challengeToken)
+        setTwoFactorRequired(true)
+        toast.info('Enter your 2FA verification code')
+        setLoading(false)
+        return
+      }
+
+      // ─── No 2FA — proceed with NextAuth signin ───
+      await completeNextAuthSignIn()
     } catch {
       toast.error('An error occurred. Please try again.')
     } finally {
       setLoading(false)
     }
+  }
+
+  // ─── Step 2: Verify 2FA code ───
+  const handle2FAVerify = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!challengeToken) {
+      toast.error('Session expired. Please log in again.')
+      setTwoFactorRequired(false)
+      setChallengeToken(null)
+      return
+    }
+    if (!useBackupCode && totpCode.length !== 6) {
+      toast.error('Enter the 6-digit code from your authenticator app')
+      return
+    }
+    if (useBackupCode && !backupCode.trim()) {
+      toast.error('Enter a backup code')
+      return
+    }
+
+    setLoading(true)
+    try {
+      const verifyRes = await fetch('/api/auth/2fa/challenge', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          challengeToken,
+          ...(useBackupCode ? { backupCode: backupCode.trim() } : { code: totpCode }),
+        }),
+      })
+
+      if (!verifyRes.ok) {
+        const data = await verifyRes.json().catch(() => ({}))
+        toast.error(data.error || 'Invalid verification code')
+        return
+      }
+
+      // 2FA passed — complete NextAuth signin
+      setTwoFactorRequired(false)
+      setChallengeToken(null)
+      setTotpCode('')
+      setBackupCode('')
+      await completeNextAuthSignIn()
+    } catch {
+      toast.error('Verification failed. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const completeNextAuthSignIn = async () => {
+    const result = await signIn('credentials', {
+      email: email.trim(),
+      password,
+      redirect: false,
+    })
+    if (result?.error) {
+      toast.error('Login failed after 2FA. Please try again.')
+    } else if (result?.ok) {
+      setLoginAttempts(0)
+      setLockoutUntil(null)
+      toast.success('Welcome back!')
+    }
+  }
+
+  const cancel2FA = () => {
+    setTwoFactorRequired(false)
+    setChallengeToken(null)
+    setTotpCode('')
+    setBackupCode('')
+    setUseBackupCode(false)
   }
 
   const handleForgotPassword = (e: React.MouseEvent) => {
@@ -157,7 +246,84 @@ export function LoginPage() {
           </CardHeader>
 
           <CardContent className="px-6 pb-6">
-            <form onSubmit={handleSubmit} className="space-y-4">
+            {twoFactorRequired ? (
+              /* ─── 2FA Verification Step ─── */
+              <form onSubmit={handle2FAVerify} className="space-y-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Shield className="w-5 h-5 text-primary" />
+                  <h3 className="text-base font-semibold">Two-Factor Authentication</h3>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  {useBackupCode
+                    ? 'Enter one of your backup codes:'
+                    : 'Enter the 6-digit code from your authenticator app (Google Authenticator, Authy, etc.):'}
+                </p>
+
+                {!useBackupCode ? (
+                  <div className="space-y-2">
+                    <Label htmlFor="totp">Verification Code</Label>
+                    <Input
+                      id="totp"
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      maxLength={6}
+                      placeholder="000000"
+                      value={totpCode}
+                      onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, ''))}
+                      disabled={loading}
+                      className="h-12 text-center text-xl tracking-[0.5em] font-mono"
+                      autoFocus
+                      required
+                    />
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <Label htmlFor="backup">Backup Code</Label>
+                    <Input
+                      id="backup"
+                      type="text"
+                      placeholder="XXXXXXXX"
+                      value={backupCode}
+                      onChange={(e) => setBackupCode(e.target.value.toUpperCase())}
+                      disabled={loading}
+                      className="h-10 font-mono"
+                      autoFocus
+                      required
+                    />
+                  </div>
+                )}
+
+                <Button
+                  type="submit"
+                  className="w-full h-10 bg-primary hover:bg-primary/90 text-primary-foreground font-medium"
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Verifying...</>
+                  ) : 'Verify & Sign In'}
+                </Button>
+
+                <div className="flex items-center justify-between text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setUseBackupCode(!useBackupCode)}
+                    className="text-primary hover:text-primary/80 font-medium"
+                  >
+                    {useBackupCode ? 'Use authenticator code instead' : 'Use backup code instead'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={cancel2FA}
+                    className="text-muted-foreground hover:text-foreground flex items-center gap-1"
+                  >
+                    <ArrowLeft className="w-3 h-3" /> Back to login
+                  </button>
+                </div>
+              </form>
+            ) : (
+              /* ─── Standard Login Form ─── */
+              <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email">Email or Phone</Label>
                 <Input
@@ -229,6 +395,7 @@ export function LoginPage() {
                 ) : 'Sign In'}
               </Button>
             </form>
+            )}
 
             <div className="mt-6 pt-4 border-t border-border/50 text-center">
               <p className="text-xs text-muted-foreground">

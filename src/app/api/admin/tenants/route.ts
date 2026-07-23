@@ -12,11 +12,11 @@ export async function GET() {
   // Compute MRR and active VSLA groups per tenant
   const enriched = await Promise.all(
     tenants.map(async (t) => {
-      const vslaGroupCount = await db.vslaGroup.count({ where: { tenantId: t.id, status: 'ACTIVE' } });
-      const vslaMemberCount = await db.vslaMember.count({
+      const vslaGroupCount = await db.vslaGroupV3.count({ where: { tenantId: t.id, status: 'ACTIVE' } });
+      const vslaMemberCount = await db.vslaMemberV3.count({
         where: { group: { tenantId: t.id }, status: 'ACTIVE' },
       });
-      const savingsTotal = await db.vslaSaving.aggregate({
+      const savingsTotal = await db.vslaSavingV3.aggregate({
         where: { group: { tenantId: t.id }, status: 'COMPLETED' },
         _sum: { amount: true },
       });

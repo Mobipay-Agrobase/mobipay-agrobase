@@ -1,0 +1,73 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { db } from '@/lib/db';
+import { ensureGroupAccounts, getGroupStats, writeAuditLogV3 } from '@/lib/vsla-engine';
+
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const group = await db.vslaGroupV3.findUnique({
+    where: { id },
+    include: {
+      members: { orderBy: { joinedAt: 'asc' } },
+      cycles: { orderBy: { startDate: 'desc' } },
+      loanProducts: { where: { isActive: true } },
+      officerRoles: { where: { status: 'ACTIVE' }, include: { member: true } },
+      _count: { select: { savings: true, loans: true, meetings: true } },
+    },
+  });
+  if (!group) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+
+  const stats = await getGroupStats(id);
+  return NextResponse.json({ group, stats });
+}
+
+export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const body = await req.json();
+  const allowedFields = [
+    // Basic
+    'name', 'region', 'district', 'description', 'status',
+    // Savings config
+    'shareValue', 'minSavingsPerMeeting', 'maxSavingsPerMeeting',
+    // Loan config
+    'loanInterestRate', 'maxLoanMultiplier', 'defaultLoanTermDays', 'gracePeriodDays', 'lateRepaymentPenaltyRate',
+    // Meeting config
+    'meetingFrequency', 'meetingDay', 'meetingStartTime', 'meetingEndTime', 'defaultMeetingLocation',
+    // Welfare / Social Fund config
+    'welfareContribution', 'socialFundMaxClaim',
+    // Fines config
+    'lateAttendanceFine', 'absenceFine', 'lateRepaymentFine',
+    // Share-out config
+    'shareOutInterestSplit', 'reservePercentage',
+  ];
+  const data: Record<string, unknown> = {};
+  for (const f of allowedFields) {
+    if (body[f] !== undefined) data[f] = body[f];
+  }
+
+  const group = await db.vslaGroupV3.update({ where: { id }, data });
+  await writeAuditLogV3({
+    tenantId: group.tenantId,
+    action: 'UPDATE',
+    entityType: 'VslaGroup',
+    entityId: id,
+    description: `Updated VSLA group "${group.name}" config`,
+    metadata: data,
+  });
+  return NextResponse.json({ group });
+}
+
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const group = await db.vslaGroupV3.update({
+    where: { id },
+    data: { status: 'CLOSED', closedAt: new Date() },
+  });
+  await writeAuditLogV3({
+    tenantId: group.tenantId,
+    action: 'CLOSE',
+    entityType: 'VslaGroup',
+    entityId: id,
+    description: `Closed VSLA group "${group.name}"`,
+  });
+  return NextResponse.json({ group });
+}

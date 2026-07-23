@@ -1,0 +1,601 @@
+// MobiPay Agrobase V3 — VSLA Module + Unified Platform Admin
+// SQLite-compatible schema (no enums; status fields use String with code-level constants)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// PLATFORM CORE
+// ============================================================
+
+model Tenant {
+  id              String   @id @default(cuid())
+  name            String
+  code            String   @unique
+  country         String?
+  plan            String   @default("GROWTH") // STARTER | GROWTH | ENTERPRISE
+  status          String   @default("ACTIVE") // ACTIVE | SUSPENDED | TRIAL
+  mrr             Float    @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  users           User[]
+  entitlements    ModuleEntitlement[]
+  vslaGroups      VslaGroup[]
+  nssfContributions NssfContribution[]
+  payments        Payment[]
+  auditLogs       AuditLog[]
+}
+
+model User {
+  id            String   @id @default(cuid())
+  tenantId      String
+  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  email         String   @unique
+  phone         String?
+  name          String
+  passwordHash  String
+  role          String   @default("TENANT_ADMIN") // SUPER_ADMIN | TENANT_ADMIN | VSLA_OFFICER | VSLA_MEMBER | FARMER | PARTNER_ADMIN
+  status        String   @default("ACTIVE") // ACTIVE | DISABLED
+  lastLoginAt   DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+// Unified module registry — single source of truth
+model Module {
+  id          String   @id @default(cuid())
+  code        String   @unique // VSLA | NSSF | PAYMENTS | SMS | USSD | PARTNERS | REPORTS | etc.
+  name        String
+  description String?
+  category    String   // CORE | FINANCE | COMMUNICATION | COMPLIANCE | INTELLIGENCE
+  icon        String?
+  isCore      Boolean  @default(false) // core modules can't be disabled
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+}
+
+model ModuleEntitlement {
+  id          String   @id @default(cuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  moduleCode  String
+  isEnabled   Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([tenantId, moduleCode])
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  tenantId    String?
+  tenant      Tenant?  @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  actorId     String?
+  actorName   String?
+  actorRole   String?
+  action      String   // CREATE | UPDATE | DELETE | LOGIN | APPROVE | DISBURSE | etc.
+  entityType  String   // VslaGroup | VslaLoan | Payment | User | etc.
+  entityId    String?
+  description String?
+  metadata    String?  // JSON string
+  ipAddress   String?
+  createdAt   DateTime @default(now())
+}
+
+// ============================================================
+// VSLA MODULE — Full lifecycle
+// ============================================================
+
+model VslaGroup {
+  id                String   @id @default(cuid())
+  tenantId          String
+  tenant            Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name              String
+  code              String   @unique
+  region            String?
+  district          String?
+  description       String?
+  shareValue        Float    @default(5000) // UGX per share
+  loanInterestRate  Float    @default(10)   // % per cycle
+  maxLoanMultiplier Float    @default(3)    // max loan = X * member savings
+  meetingFrequency  String   @default("WEEKLY") // WEEKLY | BIWEEKLY | MONTHLY
+  meetingDay        String?  // MONDAY | TUESDAY | ...
+  welfareContribution Float  @default(0)   // per-meeting welfare contribution
+  status            String   @default("ACTIVE") // ACTIVE | CLOSED | DORMANT
+  formedAt          DateTime @default(now())
+  closedAt          DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  members           VslaMember[]
+  cycles            VslaCycle[]
+  loanProducts      VslaLoanProduct[]
+  savings           VslaSaving[]
+  withdrawals       VslaSavingWithdrawal[]
+  loans             VslaLoan[]
+  meetings          VslaMeeting[]
+  socialFundContributions VslaSocialFundContribution[]
+  socialFundClaims  VslaSocialFundClaim[]
+  fines             VslaFine[]
+  officerRoles      VslaOfficerRole[]
+  accounts          VslaAccount[]
+  journalEntries    VslaJournalEntry[]
+  transactions      VslaTransaction[]
+}
+
+model VslaMember {
+  id            String   @id @default(cuid())
+  groupId       String
+  group         VslaGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  nationalId    String?
+  memberId      String   @unique
+  fullName      String
+  phone         String?
+  email         String?
+  gender        String?
+  dateOfBirth   DateTime?
+  occupation    String?
+  nextOfKin     String?
+  nextOfKinPhone String?
+  status        String   @default("ACTIVE") // ACTIVE | INACTIVE | EXITED | DECEASED
+  joinedAt      DateTime @default(now())
+  exitedAt      DateTime?
+  exitReason    String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  savings       VslaSaving[]
+  withdrawals   VslaSavingWithdrawal[]
+  loans         VslaLoan[]
+  guarantors    VslaLoanGuarantor[]
+  meetingAttendance VslaAttendance[]
+  socialFundClaims VslaSocialFundClaim[]
+  socialFundContributions VslaSocialFundContribution[]
+  officerRoles  VslaOfficerRole[]
+}
+
+model VslaCycle {
+  id            String   @id @default(cuid())
+  groupId       String
+  group         VslaGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  name          String   // e.g. "Cycle 2025-Q1"
+  startDate     DateTime
+  endDate       DateTime
+  shareOutDate  DateTime?
+  status        String   @default("ACTIVE") // PLANNED | ACTIVE | CLOSING | CLOSED
+  targetSavings Float    @default(0)
+  interestEarned Float   @default(0)
+  finesCollected Float   @default(0)
+  shareOutPerShare Float @default(0)
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model VslaLoanProduct {
+  id            String   @id @default(cuid())
+  groupId       String
+  group         VslaGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  cycleId       String?
+  name          String   // Short-Term | Seasonal | Emergency | School Fees
+  code          String
+  interestRate  Float    // %
+  minAmount     Float    @default(0)
+  maxAmount     Float    @default(200000)
+  termDays      Int      @default(90)
+  gracePeriodDays Int    @default(0)
+  guarantorCount Int     @default(2)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+
+  loans         VslaLoan[]
+}
+
+model VslaSaving {
+  id              String   @id @default(cuid())
+  groupId         String
+  group           VslaGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  memberId        String
+  member          VslaMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  cycleId         String?
+  amount          Float
+  sharesBought    Int      @default(0) // calculated = floor(amount / group.shareValue)
+  paymentMethod   String   @default("CASH") // CASH | MOBILE_MONEY | BANK
+  mobileMoneyRef  String?
+  transactionRef  String
+  recordedById    String?
+  savedOnBehalfOf String?
+  status          String   @default("COMPLETED") // PENDING | COMPLETED | FAILED | REVERSED
+  meetingId       String?
+  notes           String?
+  createdAt       DateTime @default(now())
+  reversedAt      DateTime?
+}
+
+model VslaSavingWithdrawal {
+  id              String   @id @default(cuid())
+  groupId         String
+  group           VslaGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  memberId        String
+  member          VslaMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  amount          Float
+  sharesRedeemed  Int
+  reason          String?
+  paymentMethod   String   @default("CASH")
+  mobileMoneyRef  String?
+  transactionRef  String
+  status          String   @default("COMPLETED") // PENDING | APPROVED | COMPLETED | REJECTED
+  approvedById    String?
+  approvedAt      DateTime?
+  createdAt       DateTime @default(now())
+}
+
+model VslaLoan {
+  id              String   @id @default(cuid())
+  groupId         String
+  group           VslaGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  memberId        String
+  member          VslaMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  productId       String?
+  product         VslaLoanProduct? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  cycleId         String?
+  amount          Float
+  interestRate    Float
+  interestAmount  Float
+  totalRepayable  Float
+  amountRepaid    Float    @default(0)
+  outstanding     Float    @default(0)
+  purpose         String
+  termDays        Int      @default(90)
+  gracePeriodDays Int      @default(0)
+  applicationDate DateTime @default(now())
+  approvalDate    DateTime?
+  disbursementDate DateTime?
+  expectedRepaymentDate DateTime?
+  closedDate      DateTime?
+  status          String   @default("PENDING") // PENDING | APPROVED | DISBURSED | REPAID | OVERDUE | DEFAULTED | REJECTED | WRITTEN_OFF
+  rejectionReason String?
+  disbursementMethod String? // CASH | MOBILE_MONEY
+  mobileMoneyRef  String?
+  transactionRef  String
+  notes           String?
+  approvedById    String?
+  approvedByName  String?
+  disbursedById   String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  repayments      VslaLoanRepayment[]
+  guarantors      VslaLoanGuarantor[]
+}
+
+model VslaLoanRepayment {
+  id              String   @id @default(cuid())
+  loanId          String
+  loan            VslaLoan  @relation(fields: [loanId], references: [id], onDelete: Cascade)
+  amount          Float
+  paymentMethod   String   @default("CASH")
+  mobileMoneyRef  String?
+  transactionRef  String
+  repaidOnBehalfOf String?
+  recordedById    String?
+  notes           String?
+  createdAt       DateTime @default(now())
+}
+
+model VslaLoanGuarantor {
+  id              String   @id @default(cuid())
+  loanId          String
+  loan            VslaLoan  @relation(fields: [loanId], references: [id], onDelete: Cascade)
+  memberId        String
+  member          VslaMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  guaranteedAmount Float
+  status          String   @default("PENDING") // PENDING | APPROVED | DECLINED
+  approvedAt      DateTime?
+  createdAt       DateTime @default(now())
+}
+
+model VslaMeeting {
+  id              String   @id @default(cuid())
+  groupId         String
+  group           VslaGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  meetingNumber   Int      @default(1)
+  title           String
+  agenda          String?
+  meetingDate     DateTime
+  startTime       String?
+  endTime         String?
+  meetingType     String   @default("REGULAR") // REGULAR | AGM | EMERGENCY | SHARE_OUT
+  location        String?
+  notes           String?
+  minutes         String?
+  status          String   @default("SCHEDULED") // SCHEDULED | IN_PROGRESS | CONCLUDED | CANCELLED
+  attendanceCount Int      @default(0)
+  totalMembers    Int      @default(0)
+  totalSavings    Float    @default(0)
+  totalLoanDisbursed Float @default(0)
+  totalLoanRepaid Float    @default(0)
+  createdById     String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  attendance      VslaAttendance[]
+}
+
+model VslaAttendance {
+  id              String   @id @default(cuid())
+  meetingId       String
+  meeting         VslaMeeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  memberId        String
+  member          VslaMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  present         Boolean  @default(false)
+  arrivalTime     String?
+  contributedSavings Float @default(0)
+  notes           String?
+  createdAt       DateTime @default(now())
+
+  @@unique([meetingId, memberId])
+}
+
+model VslaSocialFundContribution {
+  id              String   @id @default(cuid())
+  groupId         String
+  group           VslaGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  memberId        String?
+  member          VslaMember? @relation(fields: [memberId], references: [id], onDelete: SetNull)
+  amount          Float
+  contributionType String  @default("REGULAR") // REGULAR | TOPUP | PENALTY
+  paymentMethod   String   @default("CASH")
+  transactionRef  String
+  meetingId       String?
+  notes           String?
+  createdAt       DateTime @default(now())
+}
+
+model VslaSocialFundClaim {
+  id              String   @id @default(cuid())
+  groupId         String
+  group           VslaGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  memberId        String
+  member          VslaMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  amount          Float
+  claimType       String   // MEDICAL | BEREAVEMENT | EMERGENCY | EDUCATION
+  description     String
+  beneficiaryName String?
+  beneficiaryPhone String?
+  status          String   @default("PENDING") // PENDING | APPROVED | REJECTED | DISBURSED
+  approvedById    String?
+  approvedAt      DateTime?
+  disbursedAt     DateTime?
+  disbursementMethod String?
+  mobileMoneyRef  String?
+  transactionRef  String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model VslaFine {
+  id              String   @id @default(cuid())
+  groupId         String
+  group           VslaGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  memberId        String?
+  amount          Float
+  fineType        String   // LATE_ATTENDANCE | LATE_REPAYMENT | DEFAULT | OTHER
+  description     String?
+  status          String   @default("OUTSTANDING") // OUTSTANDING | PAID | WAIVED
+  paidAt          DateTime?
+  paymentMethod   String?
+  transactionRef  String?
+  meetingId       String?
+  createdAt       DateTime @default(now())
+}
+
+model VslaOfficerRole {
+  id              String   @id @default(cuid())
+  groupId         String
+  group           VslaGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  memberId        String
+  member          VslaMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  role            String   // CHAIRPERSON | SECRETARY | TREASURER | KEYHOLDER
+  startDate       DateTime @default(now())
+  endDate         DateTime?
+  status          String   @default("ACTIVE") // ACTIVE | PAST
+  electedAt       DateTime?
+  createdAt       DateTime @default(now())
+}
+
+// Double-entry bookkeeping
+model VslaAccount {
+  id              String   @id @default(cuid())
+  groupId         String
+  group           VslaGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  code            String   // 1000-CASH, 1100-MOMO, 1200-LOANS_RECEIVABLE, 2000-SAVINGS, 2100-SOCIAL_FUND, 3000-CAPITAL, 4000-INTEREST_INCOME
+  name            String
+  type            String   // ASSET | LIABILITY | EQUITY | INCOME | EXPENSE
+  balance         Float    @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  journalEntries  VslaJournalEntry[]
+
+  @@unique([groupId, code])
+}
+
+model VslaJournalEntry {
+  id              String   @id @default(cuid())
+  groupId         String
+  group           VslaGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  accountId       String
+  account         VslaAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  transactionId   String
+  description     String
+  debit           Float    @default(0)
+  credit          Float    @default(0)
+  refType         String?  // SAVING | LOAN | REPAYMENT | FINE | SOCIAL_FUND | WITHDRAWAL
+  refId           String?
+  createdAt       DateTime @default(now())
+}
+
+model VslaTransaction {
+  id              String   @id @default(cuid())
+  groupId         String
+  group           VslaGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  type            String   // SAVING | WITHDRAWAL | LOAN_DISBURSEMENT | LOAN_REPAYMENT | SOCIAL_FUND_CONTRIBUTION | SOCIAL_FUND_CLAIM | FINE | INTEREST_EARNED
+  amount          Float
+  description     String?
+  transactionRef  String
+  status          String   @default("COMPLETED")
+  refType         String?
+  refId           String?
+  memberId        String?
+  meetingId       String?
+  createdAt       DateTime @default(now())
+}
+
+// ============================================================
+// NSSF MODULE
+// ============================================================
+
+model NssfContribution {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  farmerName      String
+  farmerPhone     String?
+  nationalId      String?
+  nssfNumber      String?
+  amount          Float
+  contributionMonth String? // 2025-01
+  paymentMethod   String   @default("MOBILE_MONEY")
+  mobileMoneyRef  String?
+  status          String   @default("RECEIVED") // RECEIVED | CONFIRMED | FAILED | REVERSED
+  partnerCode     String?  // KT for Kilimo Trust
+  smsSent         Boolean  @default(false)
+  smsMessageId    String?
+  createdAt       DateTime @default(now())
+  confirmedAt     DateTime?
+}
+
+// ============================================================
+// PAYMENTS (Mobile Money)
+// ============================================================
+
+model Payment {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  reference       String   @unique
+  payerPhone      String
+  payerName       String?
+  amount          Float
+  currency        String   @default("UGX")
+  provider        String   // MTN | AIRTEL | FLUTTERWAVE
+  type            String   // CONTRIBUTION | LOAN_DISBURSEMENT | LOAN_REPAYMENT | VSLA_SAVING | SOCIAL_FUND
+  status          String   @default("PENDING") // PENDING | SUCCESS | FAILED | REVERSED
+  refType         String?
+  refId           String?
+  providerRef     String?
+  callbackPayload String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+// ============================================================
+// SMS NOTIFICATIONS
+// ============================================================
+
+model SmsLog {
+  id              String   @id @default(cuid())
+  tenantId        String?
+  toPhone         String
+  message         String
+  templateCode    String?
+  category        String?  // NSSF | VSLA | PAYMENT | USSD
+  provider        String   @default("AFRICAS_TALKING")
+  providerMessageId String?
+  status          String   @default("PENDING") // PENDING | SENT | DELIVERED | FAILED
+  cost            Float    @default(0)
+  retryCount      Int      @default(0)
+  errorMessage    String?
+  refType         String?
+  refId           String?
+  createdAt       DateTime @default(now())
+  sentAt          DateTime?
+}
+
+// ============================================================
+// USSD SESSIONS
+// ============================================================
+
+model UssdSession {
+  id              String   @id @default(cuid())
+  sessionId       String   @unique
+  phoneNumber     String
+  serviceCode     String?
+  text            String   @default("")
+  currentMenu     String   @default("ROOT")
+  tenantId        String?
+  farmerId        String?
+  vslaGroupId     String?
+  status          String   @default("ACTIVE") // ACTIVE | COMPLETED | TIMED_OUT | FAILED
+  duration        Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+// ============================================================
+// PARTNERS (Kilimo Trust)
+// ============================================================
+
+model Partner {
+  id              String   @id @default(cuid())
+  code            String   @unique // KT
+  name            String
+  type            String   @default("IMPLEMENTING_PARTNER")
+  contactName     String?
+  contactEmail    String?
+  contactPhone    String?
+  status          String   @default("ACTIVE")
+  agreementDate   DateTime?
+  agreementTerms  String?  // JSON: { commission: { kt: 55, mp: 45 }, transactionFee: { mp: 70, kt: 30 }, float: { kt: 55, mp: 45 } }
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  settlements     PartnerSettlement[]
+  revenueSplits   RevenueSplit[]
+}
+
+model PartnerSettlement {
+  id              String   @id @default(cuid())
+  partnerId       String
+  partner         Partner  @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  period          String   // 2025-01
+  streamType      String   // COMMISSION | TRANSACTION_FEE | FLOAT_INTEREST
+  grossAmount     Float
+  partnerShare    Float
+  mobipayShare    Float
+  status          String   @default("PENDING") // PENDING | CONFIRMED | PAID
+  paidAt          DateTime?
+  createdAt       DateTime @default(now())
+}
+
+model RevenueSplit {
+  id              String   @id @default(cuid())
+  partnerId       String
+  partner         Partner  @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  transactionRef  String
+  streamType      String   // COMMISSION | TRANSACTION_FEE | FLOAT_INTEREST
+  grossAmount     Float
+  partnerShare    Float
+  mobipayShare    Float
+  costDeduction   Float    @default(0) // MNO/USSD costs
+  partnerNet      Float
+  mobipayNet      Float
+  createdAt       DateTime @default(now())
+}

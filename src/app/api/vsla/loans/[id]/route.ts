@@ -1,85 +1,108 @@
-import { db } from '@/lib/db'
-import { NextRequest, NextResponse } from 'next/server'
-import { getTenantContext, buildTenantFilter } from '@/lib/tenant'
+import { NextRequest, NextResponse } from 'next/server';
+import { db } from '@/lib/db';
+import { postJournalEntry, VSLA_LOAN_STATUS, VSLA_TRANSACTION_TYPES, Refs, writeAuditLog } from '@/lib/vsla-engine';
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const ctx = await getTenantContext(req)
-  const tf = buildTenantFilter(ctx, 'tenantId') as any
-  const { id } = await params
-
-  const loan = await db.vslaLoan.findFirst({
-    where: { id, ...tf },
+  const { id } = await params;
+  const loan = await db.vslaLoan.findUnique({
+    where: { id },
     include: {
+      member: true,
+      group: true,
+      product: true,
+      guarantors: { include: { member: true } },
       repayments: { orderBy: { createdAt: 'desc' } },
-      vslaGroup: { select: { id: true, name: true } },
-      farmer: { select: { id: true, firstName: true, lastName: true } },
     },
-  })
-  if (!loan) return NextResponse.json({ error: 'Loan not found' }, { status: 404 })
-  return NextResponse.json({ data: loan })
+  });
+  if (!loan) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  return NextResponse.json({ loan });
 }
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const ctx = await getTenantContext(req)
-  const tf = buildTenantFilter(ctx, 'tenantId') as any
-  const { id } = await params
-  const body = await req.json()
+  const { id } = await params;
+  const body = await req.json();
+  const { action, approvedByName = 'Officer', rejectionReason, disbursementMethod, mobileMoneyRef } = body;
 
-  const existing = await db.vslaLoan.findFirst({ where: { id, ...tf } })
-  if (!existing) return NextResponse.json({ error: 'Loan not found' }, { status: 404 })
-
-  const { status, amount, interestRate, purpose } = body
-  const loan = await db.vslaLoan.update({
+  const loan = await db.vslaLoan.findUnique({
     where: { id },
-    data: {
-      ...(status !== undefined && { status }),
-      ...(amount !== undefined && { amount }),
-      ...(interestRate !== undefined && { interestRate }),
-      ...(purpose !== undefined && { purpose }),
-      ...(status === 'APPROVED' && { approvedAt: new Date() }),
-      ...(status === 'DISBURSED' && { disbursedAt: new Date() }),
-    },
-  })
-  return NextResponse.json({ data: loan })
-}
+    include: { group: true, member: true },
+  });
+  if (!loan) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const ctx = await getTenantContext(req)
-  const tf = buildTenantFilter(ctx, 'tenantId') as any
-  const { id } = await params
-  const body = await req.json()
-  const loan = await db.vslaLoan.findFirst({ where: { id, ...tf } })
-  if (!loan) return NextResponse.json({ error: 'Loan not found' }, { status: 404 })
+  let updateData: Record<string, unknown> = {};
+  let auditAction = 'UPDATE';
 
-  const repayment = await db.vslaLoanRepayment.create({
-    data: { loanId: id, amount: body.amount, transactionRef: `RPY-${Date.now()}`, tenantId: ctx.tenantId },
-  })
-  const allRepayments = await db.vslaLoanRepayment.findMany({ where: { loanId: id, ...tf } })
-  const totalRepaid = allRepayments.reduce((sum, r) => sum + r.amount, 0)
-  const newStatus = totalRepaid >= loan.totalRepayable ? 'REPAID' : 'DISBURSED'
-  await db.vslaLoan.update({
-    where: { id },
-    data: { amountRepaid: totalRepaid, status: newStatus },
-  })
-  return NextResponse.json({ data: repayment })
-}
+  if (action === 'approve') {
+    updateData = {
+      status: VSLA_LOAN_STATUS.APPROVED,
+      approvalDate: new Date(),
+      approvedByName,
+    };
+    auditAction = 'APPROVE';
+  } else if (action === 'reject') {
+    updateData = {
+      status: VSLA_LOAN_STATUS.REJECTED,
+      rejectionReason,
+    };
+    auditAction = 'REJECT';
+  } else if (action === 'disburse') {
+    updateData = {
+      status: VSLA_LOAN_STATUS.DESBURSED,
+      disbursementDate: new Date(),
+      disbursementMethod: disbursementMethod || 'CASH',
+      mobileMoneyRef,
+      disbursedById: approvedByName,
+    };
+    auditAction = 'DISBURSE';
 
-export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const ctx = await getTenantContext(req)
-  const tf = buildTenantFilter(ctx, 'tenantId') as any
-  const { id } = await params
+    // Post double-entry: Debit Loans Receivable, Credit Cash/MoMo
+    await postJournalEntry({
+      groupId: loan.groupId,
+      description: `Loan disbursement to ${loan.member.fullName} (${loan.amount} UGX)`,
+      refType: 'LOAN',
+      refId: loan.id,
+      transactionId: loan.transactionRef,
+      lines: [
+        { accountCode: '1200', debit: loan.amount },
+        { accountCode: disbursementMethod === 'MOBILE_MONEY' ? '1100' : '1000', credit: loan.amount },
+      ],
+    });
 
-  const existing = await db.vslaLoan.findFirst({ where: { id, ...tf } })
-  if (!existing) return NextResponse.json({ error: 'Loan not found' }, { status: 404 })
-
-  // Only PENDING loans can be deleted/cancelled
-  if (existing.status !== 'PENDING') {
-    return NextResponse.json({ error: 'Only pending loans can be cancelled' }, { status: 400 })
+    // Write master ledger
+    await db.vslaTransaction.create({
+      data: {
+        groupId: loan.groupId,
+        type: VSLA_TRANSACTION_TYPES.LOAN_DISBURSEMENT,
+        amount: loan.amount,
+        transactionRef: Refs.loan(),
+        refType: 'LOAN',
+        refId: loan.id,
+        memberId: loan.memberId,
+      },
+    });
+  } else if (action === 'writeoff') {
+    updateData = {
+      status: VSLA_LOAN_STATUS.WRITTEN_OFF,
+      closedDate: new Date(),
+    };
+    auditAction = 'WRITE_OFF';
+  } else {
+    // Generic update
+    const allowed = ['purpose', 'termDays'];
+    for (const f of allowed) if (body[f] !== undefined) updateData[f] = body[f];
   }
 
-  await db.vslaLoan.update({
-    where: { id },
-    data: { status: 'REJECTED', updatedAt: new Date() },
-  })
-  return NextResponse.json({ message: 'Loan cancelled' })
+  const updated = await db.vslaLoan.update({ where: { id }, data: updateData });
+
+  await writeAuditLog({
+    tenantId: loan.group.tenantId,
+    actorName: approvedByName,
+    action: auditAction,
+    entityType: 'VslaLoan',
+    entityId: id,
+    description: `Loan ${auditAction.toLowerCase()} — ${loan.amount} UGX to ${loan.member.fullName}`,
+    metadata: { action, amount: loan.amount, status: updateData.status },
+  });
+
+  return NextResponse.json({ loan: updated });
 }

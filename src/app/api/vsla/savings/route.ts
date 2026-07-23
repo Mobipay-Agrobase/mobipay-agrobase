@@ -1,54 +1,111 @@
-import { db } from '@/lib/db'
-import { NextRequest, NextResponse } from 'next/server'
-import { getTenantContext } from '@/lib/tenant'
+import { NextRequest, NextResponse } from 'next/server';
+import { db } from '@/lib/db';
+import { calculateShares, Refs, postJournalEntry, VSLA_TRANSACTION_TYPES, writeAuditLog } from '@/lib/vsla-engine';
 
 export async function GET(req: NextRequest) {
-  try {
-    const ctx = await getTenantContext()
-    const groupId = req.nextUrl.searchParams.get('groupId') || ''
-    const where: Record<string, unknown> = {}
-    if (groupId) where.vslaGroupId = groupId
-    // Filter through vslaGroup tenantId
-    if (!ctx.isSuperAdmin) {
-      where.vslaGroup = { tenantId: { in: ctx.tenantScope as string[] } }
-    }
-    const savings = await db.vslaSaving.findMany({
-      where,
-      include: { farmer: { select: { firstName: true, lastName: true, farmerCode: true } } },
-      orderBy: { createdAt: 'desc' }, take: 100,
-    })
-    const total = await db.vslaSaving.aggregate({ where, _sum: { amount: true } })
-    return NextResponse.json({ savings, totalAmount: total._sum.amount || 0 })
-  } catch (error) {
-    return NextResponse.json({ error: 'Failed to fetch savings' }, { status: 500 })
-  }
+  const url = new URL(req.url);
+  const groupId = url.searchParams.get('groupId');
+  const memberId = url.searchParams.get('memberId');
+  const limit = parseInt(url.searchParams.get('limit') || '100');
+
+  const where: Record<string, unknown> = {};
+  if (groupId) where.groupId = groupId;
+  if (memberId) where.memberId = memberId;
+
+  const savings = await db.vslaSaving.findMany({
+    where,
+    include: {
+      member: { select: { id: true, fullName: true, memberId: true } },
+      group: { select: { id: true, name: true, code: true } },
+    },
+    orderBy: { createdAt: 'desc' },
+    take: limit,
+  });
+
+  const total = await db.vslaSaving.aggregate({
+    where,
+    _sum: { amount: true, sharesBought: true },
+  });
+
+  return NextResponse.json({
+    savings,
+    totalAmount: total._sum.amount ?? 0,
+    totalShares: total._sum.sharesBought ?? 0,
+  });
 }
 
 export async function POST(req: NextRequest) {
-  try {
-    const ctx = await getTenantContext()
-    const body = await req.json()
+  const body = await req.json();
+  const { groupId, memberId, amount, paymentMethod = 'CASH', mobileMoneyRef, meetingId, notes, recordedById, savedOnBehalfOf, recordedByName = 'System' } = body;
 
-    // Verify VSLA group belongs to tenant
-    if (!ctx.isSuperAdmin) {
-      const group = await db.vslaGroup.findFirst({
-        where: { id: body.vslaGroupId, tenantId: { in: ctx.tenantScope as string[] } },
-      })
-      if (!group) {
-        return NextResponse.json({ error: 'VSLA group not found in your tenant' }, { status: 403 })
-      }
-    }
-
-    const saving = await db.vslaSaving.create({
-      data: {
-        vslaGroupId: body.vslaGroupId, farmerId: body.farmerId,
-        amount: body.amount, sharesBought: Math.floor(body.amount / 5000) || 1,
-        savedOnBehalfOf: body.savedOnBehalfOf || null,
-        transactionRef: `SAV-${Date.now()}`, status: 'COMPLETED'
-      }
-    })
-    return NextResponse.json({ data: saving }, { status: 201 })
-  } catch (error) {
-    return NextResponse.json({ error: 'Failed to create saving' }, { status: 500 })
+  if (!groupId || !memberId || !amount || amount <= 0) {
+    return NextResponse.json({ error: 'groupId, memberId, and a positive amount are required' }, { status: 400 });
   }
+
+  const group = await db.vslaGroup.findUnique({ where: { id: groupId } });
+  if (!group) return NextResponse.json({ error: 'Group not found' }, { status: 404 });
+
+  // FIXED: Use group.shareValue (was inconsistent /1000 vs /5000)
+  const sharesBought = calculateShares(amount, group.shareValue);
+  const transactionRef = Refs.saving();
+
+  // Run in transaction
+  const saving = await db.$transaction(async (tx) => {
+    const s = await tx.vslaSaving.create({
+      data: {
+        groupId,
+        memberId,
+        amount,
+        sharesBought,
+        paymentMethod,
+        mobileMoneyRef,
+        transactionRef,
+        meetingId,
+        notes,
+        savedOnBehalfOf,
+        status: 'COMPLETED',
+      },
+    });
+
+    // Write master ledger transaction
+    await tx.vslaTransaction.create({
+      data: {
+        groupId,
+        type: VSLA_TRANSACTION_TYPES.SAVING,
+        amount,
+        transactionRef,
+        refType: 'SAVING',
+        refId: s.id,
+        memberId,
+        meetingId,
+      },
+    });
+
+    return s;
+  });
+
+  // Post double-entry: Debit Cash/MoMo, Credit Members Savings
+  await postJournalEntry({
+    groupId,
+    description: `Savings deposit by member (${amount} UGX, ${sharesBought} shares)`,
+    refType: 'SAVING',
+    refId: saving.id,
+    transactionId: transactionRef,
+    lines: [
+      { accountCode: paymentMethod === 'MOBILE_MONEY' ? '1100' : '1000', debit: amount },
+      { accountCode: '2000', credit: amount },
+    ],
+  });
+
+  await writeAuditLog({
+    tenantId: group.tenantId,
+    actorName: recordedByName,
+    action: 'CREATE',
+    entityType: 'VslaSaving',
+    entityId: saving.id,
+    description: `Savings deposit ${amount} UGX (${sharesBought} shares) by ${savedOnBehalfOf || 'self'}`,
+    metadata: { groupId, memberId, amount, sharesBought, paymentMethod },
+  });
+
+  return NextResponse.json({ saving }, { status: 201 });
 }

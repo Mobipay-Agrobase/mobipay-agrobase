@@ -1,0 +1,26 @@
+name: mobipay_agrobase
+description: MobiPay Agrobase V3 — VSLA + NSSF + Payments mobile app for field officers and members.
+publish_to: 'none'
+version: 3.0.0+1
+
+environment:
+  sdk: '>=3.4.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  http: ^1.2.2
+  shared_preferences: ^2.3.2
+  cupertino_icons: ^1.0.8
+  intl: ^0.20.0
+  flutter_svg: ^2.0.10+1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/logo.png

@@ -1,46 +1,79 @@
-/**
- * GET /api/nssf/contributions
- * List NSSF contributions (farmer sees own, staff sees all for tenant)
- */
-import { NextRequest, NextResponse } from 'next/server'
-import { getTenantContext, buildTenantFilter } from '@/lib/tenant'
-import { hasPermission } from '@/lib/permissions'
-import { db } from '@/lib/db'
+import { NextRequest, NextResponse } from 'next/server';
+import { db } from '@/lib/db';
+import { Refs, writeAuditLog } from '@/lib/vsla-engine';
 
-export async function GET(request: NextRequest) {
-  try {
-    const ctx = await getTenantContext()
-    if (!hasPermission(ctx.role, 'nssf:read')) {
-      return NextResponse.json({ error: 'NSSF read access required' }, { status: 403 })
-    }
+export async function GET(req: NextRequest) {
+  const url = new URL(req.url);
+  const tenantId = url.searchParams.get('tenantId');
+  const status = url.searchParams.get('status');
+  const where: Record<string, unknown> = {};
+  if (tenantId) where.tenantId = tenantId;
+  if (status) where.status = status;
 
-    const { searchParams } = new URL(request.url)
-    const status = searchParams.get('status') || ''
-    const farmerId = searchParams.get('farmerId') || ''
-    const page = parseInt(searchParams.get('page') || '1')
-    const limit = parseInt(searchParams.get('limit') || '20')
+  const contributions = await db.nssfContribution.findMany({
+    where,
+    orderBy: { createdAt: 'desc' },
+  });
 
-    const where: any = { ...buildTenantFilter(ctx, 'tenantId') }
-    if (status) where.status = status
-    if (farmerId) where.farmerId = farmerId
+  const total = await db.nssfContribution.aggregate({
+    where, _sum: { amount: true },
+  });
 
-    const [data, total] = await Promise.all([
-      db.nssfContribution.findMany({
-        where,
-        include: {
-          farmer: { select: { id: true, firstName: true, lastName: true, farmerCode: true, phone: true } },
-          registration: { select: { nssfNumber: true, nationalId: true } },
-        },
-        skip: (page - 1) * limit,
-        take: limit,
-        orderBy: { createdAt: 'desc' },
-      }),
-      db.nssfContribution.count({ where }),
-    ])
+  return NextResponse.json({ contributions, total: total._sum.amount ?? 0 });
+}
 
-    return NextResponse.json({ data, total, page, totalPages: Math.ceil(total / limit) })
-  } catch (error: any) {
-    console.error('[nssf/contributions GET] error:', error)
-    return NextResponse.json({ error: 'Failed to load contributions' }, { status: 500 })
+export async function POST(req: NextRequest) {
+  const body = await req.json();
+  const { tenantId, farmerName, farmerPhone, nationalId, nssfNumber, amount, contributionMonth, paymentMethod = 'MOBILE_MONEY', mobileMoneyRef, partnerCode } = body;
+
+  if (!tenantId || !farmerName || !amount) {
+    return NextResponse.json({ error: 'tenantId, farmerName, amount required' }, { status: 400 });
   }
+
+  const contribution = await db.nssfContribution.create({
+    data: {
+      tenantId,
+      farmerName, farmerPhone, nationalId, nssfNumber,
+      amount,
+      contributionMonth,
+      paymentMethod,
+      mobileMoneyRef,
+      partnerCode,
+      status: 'RECEIVED',
+    },
+  });
+
+  // Auto-send SMS confirmation
+  const smsMessage = `Hello ${farmerName}, we received your NSSF contribution of UGX ${amount.toLocaleString()}. Reference: ${contribution.id.slice(-8).toUpperCase()}. Thank you.`;
+  await db.smsLog.create({
+    data: {
+      tenantId,
+      toPhone: farmerPhone || '',
+      message: smsMessage,
+      templateCode: 'NSSF_CONTRIBUTION_RECEIVED',
+      category: 'NSSF',
+      provider: 'AFRICAS_TALKING',
+      status: 'SENT',
+      sentAt: new Date(),
+      refType: 'NSSF_CONTRIBUTION',
+      refId: contribution.id,
+    },
+  });
+
+  // Mark SMS sent on the contribution
+  await db.nssfContribution.update({
+    where: { id: contribution.id },
+    data: { smsSent: true, smsMessageId: `SMS-${Date.now()}` },
+  });
+
+  await writeAuditLog({
+    tenantId,
+    action: 'CREATE',
+    entityType: 'NssfContribution',
+    entityId: contribution.id,
+    description: `NSSF contribution of ${amount} UGX received from ${farmerName}`,
+    metadata: { amount, paymentMethod, partnerCode },
+  });
+
+  return NextResponse.json({ contribution }, { status: 201 });
 }

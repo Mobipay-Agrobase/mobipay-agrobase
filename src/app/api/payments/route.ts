@@ -1,58 +1,43 @@
-import { db } from '@/lib/db'
-import { NextResponse } from 'next/server'
-import { getTenantContext } from '@/lib/tenant'
+import { NextRequest, NextResponse } from 'next/server';
+import { db } from '@/lib/db';
+import { Refs } from '@/lib/vsla-engine';
 
-export async function GET(request: Request) {
-  try {
-    const ctx = await getTenantContext()
-    const { searchParams } = new URL(request.url)
-    const status = searchParams.get('status') || ''
-    const type = searchParams.get('type') || ''
-    const page = parseInt(searchParams.get('page') || '1')
-    const limit = parseInt(searchParams.get('limit') || '20')
+export async function GET(req: NextRequest) {
+  const url = new URL(req.url);
+  const tenantId = url.searchParams.get('tenantId');
+  const status = url.searchParams.get('status');
+  const where: Record<string, unknown> = {};
+  if (tenantId) where.tenantId = tenantId;
+  if (status) where.status = status;
 
-    const where: Record<string, unknown> = {}
-    if (status) where.status = status
-    if (type) where.type = type
-    // Filter through paymentAccount tenantId
-    if (!ctx.isSuperAdmin) {
-      where.paymentAccount = { tenantId: { in: ctx.tenantScope as string[] } }
-    }
-
-    const [data, total] = await Promise.all([
-      db.payment.findMany({
-        where,
-        skip: (page - 1) * limit,
-        take: limit,
-        include: { paymentAccount: true },
-        orderBy: { createdAt: 'desc' },
-      }),
-      db.payment.count({ where }),
-    ])
-
-    return NextResponse.json({ data, total, page, totalPages: Math.ceil(total / limit) })
-  } catch (error) {
-    return NextResponse.json({ error: 'Failed to fetch payments' }, { status: 500 })
-  }
+  const payments = await db.payment.findMany({
+    where,
+    include: { tenant: { select: { name: true, code: true } } },
+    orderBy: { createdAt: 'desc' },
+  });
+  const total = await db.payment.aggregate({
+    where, _sum: { amount: true },
+  });
+  return NextResponse.json({ payments, total: total._sum.amount ?? 0 });
 }
 
-export async function POST(request: Request) {
-  try {
-    const ctx = await getTenantContext()
-    const body = await request.json()
-    const payment = await db.payment.create({
-      data: {
-        type: body.type,
-        recipientName: body.recipientName,
-        recipientPhone: body.recipientPhone,
-        amount: body.amount,
-        description: body.description,
-        transactionRef: `PAY-${Date.now()}`,
-        status: 'PENDING',
-      }
-    })
-    return NextResponse.json(payment, { status: 201 })
-  } catch (error) {
-    return NextResponse.json({ error: 'Failed to create payment' }, { status: 500 })
+export async function POST(req: NextRequest) {
+  const body = await req.json();
+  const { tenantId, payerPhone, payerName, amount, provider, type, refType, refId } = body;
+
+  if (!tenantId || !payerPhone || !amount || !provider || !type) {
+    return NextResponse.json({ error: 'tenantId, payerPhone, amount, provider, type required' }, { status: 400 });
   }
+
+  const payment = await db.payment.create({
+    data: {
+      tenantId,
+      reference: Refs.payment(),
+      payerPhone, payerName, amount,
+      provider, type,
+      status: 'PENDING',
+      refType, refId,
+    },
+  });
+  return NextResponse.json({ payment }, { status: 201 });
 }

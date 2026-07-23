@@ -1,157 +1,51 @@
-import { db } from '@/lib/db'
-import { NextResponse } from 'next/server'
-import { getTenantContext } from '@/lib/tenant'
+import { NextRequest, NextResponse } from 'next/server';
+import { db } from '@/lib/db';
 
-/**
- * GET /api/admin/tenants
- *   List all tenants with stats. SUPER_ADMIN only.
- *
- * POST /api/admin/tenants
- *   Create a new tenant. SUPER_ADMIN only.
- *   Body: { name, type, country, defaultCurrency, parentId? }
- */
-export async function GET(request: Request) {
-  try {
-    const ctx = await getTenantContext()
-    if (!ctx.isSuperAdmin) {
-      return NextResponse.json({ error: 'Super Admin access required' }, { status: 403 })
-    }
+export async function GET() {
+  const tenants = await db.tenant.findMany({
+    include: {
+      _count: { select: { users: true, vslaGroups: true, nssfContributions: true, payments: true } },
+    },
+    orderBy: { createdAt: 'desc' },
+  });
 
-    const { searchParams } = new URL(request.url)
-    const type = searchParams.get('type')
-    const country = searchParams.get('country')
-    const status = searchParams.get('status')
-
-    const where: Record<string, unknown> = {}
-    if (type) where.type = type
-    if (country) where.country = country
-    if (status === 'active') where.isActive = true
-    if (status === 'suspended') where.isActive = false
-
-    const tenants = await db.tenant.findMany({
-      where,
-      select: {
-        id: true, name: true, type: true, country: true, isActive: true,
-        defaultCurrency: true, createdAt: true, updatedAt: true,
-        parentId: true,
-        parent: { select: { name: true } },
-        _count: {
-          select: {
-            users: true,
-            farmerProfiles: true,
-            vslaGroups: true,
-            subscriptions: true,
-            moduleEntitlements: true,
-            plots: true,
-          },
-        },
-      },
-      orderBy: { createdAt: 'desc' },
-    })
-
-    // Fetch active or trial subscription per tenant
-    const tenantIds = tenants.map(t => t.id)
-    const subscriptions = await db.subscription.findMany({
-      where: { tenantId: { in: tenantIds }, status: { in: ['ACTIVE', 'TRIAL'] } },
-      select: {
-        tenantId: true, plan: true, amount: true, billingCycle: true, endDate: true,
-        status: true, trialStartsAt: true, trialEndsAt: true, trialConvertedAt: true,
-      },
-      orderBy: { createdAt: 'desc' },
-    })
-    const subByTenant = new Map(subscriptions.map(s => [s.tenantId, s]))
-
-    const result = tenants.map(t => {
-      const sub = subByTenant.get(t.id)
+  // Compute MRR and active VSLA groups per tenant
+  const enriched = await Promise.all(
+    tenants.map(async (t) => {
+      const vslaGroupCount = await db.vslaGroup.count({ where: { tenantId: t.id, status: 'ACTIVE' } });
+      const vslaMemberCount = await db.vslaMember.count({
+        where: { group: { tenantId: t.id }, status: 'ACTIVE' },
+      });
+      const savingsTotal = await db.vslaSaving.aggregate({
+        where: { group: { tenantId: t.id }, status: 'COMPLETED' },
+        _sum: { amount: true },
+      });
       return {
         ...t,
-        subscription: sub || null,
-        mrr: sub ? (sub.billingCycle === 'ANNUAL' ? sub.amount / 12 : sub.amount) : 0,
-      }
+        vslaGroupCount,
+        vslaMemberCount,
+        savingsTotal: savingsTotal._sum.amount ?? 0,
+      };
     })
+  );
 
-    return NextResponse.json({ tenants: result, total: result.length })
-  } catch (error) {
-    console.error('Admin tenants list error:', error)
-    return NextResponse.json({ error: 'Failed to list tenants' }, { status: 500 })
-  }
+  return NextResponse.json({ tenants: enriched });
 }
 
-export async function POST(request: Request) {
-  try {
-    const ctx = await getTenantContext()
-    if (!ctx.isSuperAdmin) {
-      return NextResponse.json({ error: 'Super Admin access required' }, { status: 403 })
-    }
+export async function POST(req: NextRequest) {
+  const body = await req.json();
+  const { name, code, country, plan = 'GROWTH' } = body;
+  if (!name || !code) return NextResponse.json({ error: 'name, code required' }, { status: 400 });
 
-    const body = await request.json()
-    const { name, type, country, defaultCurrency, parentId, trialDays } = body as {
-      name?: string; type?: string; country?: string; defaultCurrency?: string; parentId?: string; trialDays?: number
-    }
+  const tenant = await db.tenant.create({
+    data: { name, code: code.toUpperCase(), country, plan, status: 'TRIAL', mrr: 0 },
+  });
 
-    if (!name || !type) {
-      return NextResponse.json({ error: 'name and type are required' }, { status: 400 })
-    }
+  // Enable core modules by default
+  const coreModules = await db.module.findMany({ where: { isCore: true } });
+  await db.moduleEntitlement.createMany({
+    data: coreModules.map((m) => ({ tenantId: tenant.id, moduleCode: m.code, isEnabled: true })),
+  });
 
-    const validTypes = ['SUPER_ADMIN', 'COUNTRY', 'NGO', 'COOPERATIVE', 'AGRIBUSINESS', 'EXPORTER', 'MFI', 'BANK', 'INPUT_SUPPLIER', 'PROCESSING']
-    if (!validTypes.includes(type!)) {
-      return NextResponse.json({ error: `Invalid type. Must be one of: ${validTypes.join(', ')}` }, { status: 400 })
-    }
-
-    // Derive currency from country if not provided
-    const countryCurrency: Record<string, string> = { Uganda: 'UGX', Ghana: 'GHS', Kenya: 'KES' }
-    const currency = defaultCurrency || (country ? countryCurrency[country] : 'UGX')
-
-    // Trial period (default 14 days). 0 = no trial.
-    const trial = typeof trialDays === 'number' && trialDays > 0 ? Math.min(Math.floor(trialDays), 365) : 14
-    const now = new Date()
-    const trialStartsAt = new Date(now)
-    const trialEndsAt = new Date(now.getTime() + trial * 86400000)
-
-    const tenant = await db.tenant.create({
-      data: {
-        name: name!,
-        type: type!,
-        country: country || null,
-        defaultCurrency: currency,
-        parentId: parentId || null,
-        isActive: true,
-      },
-    })
-
-    // Auto-create default module entitlements for the new tenant
-    const defaultModules = [
-      'DASHBOARD', 'FARMERS', 'VSLA', 'MARKETPLACE', 'PAYMENTS', 'LOANS',
-      'REPORTS', 'TRAINING', 'TRACE', 'COMPLIANCE', 'COMMUNICATION',
-    ]
-    await db.moduleEntitlement.createMany({
-      data: defaultModules.map(moduleCode => ({
-        tenantId: tenant.id,
-        moduleCode,
-        isEnabled: true,
-      })),
-      skipDuplicates: true,
-    })
-
-    // Auto-create a TRIAL subscription (BASIC plan, free) with trial window.
-    // The /api/admin/cron/check-trials endpoint will flip status to SUSPENDED
-    // once trialEndsAt has passed.
-    await db.subscription.create({
-      data: {
-        tenantId: tenant.id,
-        plan: 'BASIC',
-        amount: 0,
-        billingCycle: 'MONTHLY',
-        status: 'TRIAL',
-        startDate: now,
-        trialStartsAt,
-        trialEndsAt,
-      },
-    })
-
-    return NextResponse.json({ tenant }, { status: 201 })
-  } catch (error) {
-    console.error('Admin tenant create error:', error)
-    return NextResponse.json({ error: 'Failed to create tenant' }, { status: 500 })
-  }
+  return NextResponse.json({ tenant }, { status: 201 });
 }

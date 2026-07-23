@@ -1,43 +1,101 @@
-import { db } from '@/lib/db'
-import { NextRequest, NextResponse } from 'next/server'
-import { getTenantContext, buildTenantFilter } from '@/lib/tenant'
+import { NextRequest, NextResponse } from 'next/server';
+import { db } from '@/lib/db';
+import { ensureGroupAccounts, writeAuditLog, VSLA_GROUP_STATUS } from '@/lib/vsla-engine';
 
-export async function GET() {
-  try {
-    const ctx = await getTenantContext()
-    const groups = await db.vslaGroup.findMany({
-      where: { ...buildTenantFilter(ctx, 'tenantId'), isActive: true },
-      include: {
-        _count: { select: { members: true, savings: true, loans: true, meetings: true } },
-        members: { include: { farmer: { select: { firstName: true, lastName: true } } } }
+// GET /api/vsla/groups — list all groups with stats (FIXED: totalSavings was hardcoded to 0)
+export async function GET(req: NextRequest) {
+  const url = new URL(req.url);
+  const tenantId = url.searchParams.get('tenantId');
+
+  const where = tenantId ? { tenantId } : {};
+  const groups = await db.vslaGroup.findMany({
+    where,
+    include: {
+      _count: {
+        select: { members: true, loans: true, savings: true, meetings: true },
       },
-      orderBy: { createdAt: 'desc' }
+      members: { where: { status: 'ACTIVE' }, select: { id: true } },
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  // Compute real savings totals per group
+  const enriched = await Promise.all(
+    groups.map(async (g) => {
+      const savingsAgg = await db.vslaSaving.aggregate({
+        where: { groupId: g.id, status: 'COMPLETED' },
+        _sum: { amount: true },
+      });
+      const loansOutstanding = await db.vslaLoan.aggregate({
+        where: { groupId: g.id, status: { in: ['DISBURSED', 'OVERDUE'] } },
+        _sum: { outstanding: true },
+      });
+      const socialContrib = await db.vslaSocialFundContribution.aggregate({
+        where: { groupId: g.id },
+        _sum: { amount: true },
+      });
+      const socialClaims = await db.vslaSocialFundClaim.aggregate({
+        where: { groupId: g.id, status: 'DISBURSED' },
+        _sum: { amount: true },
+      });
+      return {
+        ...g,
+        totalSavings: savingsAgg._sum.amount ?? 0,
+        outstandingLoans: loansOutstanding._sum.outstanding ?? 0,
+        socialFundBalance: (socialContrib._sum.amount ?? 0) - (socialClaims._sum.amount ?? 0),
+      };
     })
-    const enriched = groups.map(g => {
-      return { ...g, totalSavings: 0 }
-    })
-    return NextResponse.json({ groups: enriched })
-  } catch (error) {
-    return NextResponse.json({ error: 'Failed to fetch VSLA groups' }, { status: 500 })
-  }
+  );
+
+  return NextResponse.json({ groups: enriched });
 }
 
+// POST /api/vsla/groups — create a new VSLA group
 export async function POST(req: NextRequest) {
-  try {
-    const ctx = await getTenantContext()
-    const body = await req.json()
-    const group = await db.vslaGroup.create({
-      data: {
-        tenantId: ctx.tenantId,
-        groupId: body.groupId || null,
-        name: body.name, shareValue: body.shareValue || 5000,
-        loanRate: body.loanRate || 10, maxLoanAmount: body.maxLoanAmount || 200000,
-        fines: body.fines || 0, welfareAmount: body.welfareAmount || 0,
-        meetingFrequency: body.meetingFrequency || 'Weekly', isActive: true
-      }
-    })
-    return NextResponse.json({ data: group }, { status: 201 })
-  } catch (error) {
-    return NextResponse.json({ error: 'Failed to create VSLA group' }, { status: 500 })
+  const body = await req.json();
+  const {
+    tenantId, name, region, district, description,
+    shareValue = 5000, loanInterestRate = 10, maxLoanMultiplier = 3,
+    meetingFrequency = 'WEEKLY', meetingDay, welfareContribution = 0,
+    formedAt,
+  } = body;
+
+  if (!tenantId || !name) {
+    return NextResponse.json({ error: 'tenantId and name are required' }, { status: 400 });
   }
+
+  const code = `VSLA-${Date.now().toString(36).toUpperCase()}`;
+
+  const group = await db.vslaGroup.create({
+    data: {
+      tenantId,
+      name,
+      code,
+      region,
+      district,
+      description,
+      shareValue,
+      loanInterestRate,
+      maxLoanMultiplier,
+      meetingFrequency,
+      meetingDay,
+      welfareContribution,
+      formedAt: formedAt ? new Date(formedAt) : new Date(),
+      status: VSLA_GROUP_STATUS.ACTIVE,
+    },
+  });
+
+  // Initialize chart of accounts for this group
+  await ensureGroupAccounts(group.id);
+
+  await writeAuditLog({
+    tenantId,
+    action: 'CREATE',
+    entityType: 'VslaGroup',
+    entityId: group.id,
+    description: `Created VSLA group "${name}" (${code})`,
+    metadata: { shareValue, loanInterestRate, meetingFrequency },
+  });
+
+  return NextResponse.json({ group }, { status: 201 });
 }

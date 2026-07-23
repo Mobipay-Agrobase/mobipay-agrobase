@@ -1,5 +1,7 @@
 /**
- * VSLA V2 — Seed demo data
+ * VSLA V2 — Seed demo data (IDEMPOTENT)
+ * Safely re-runnable: deletes existing V2 data first, then re-seeds.
+ * 
  * Creates: 1 group, 3 key holders, 5 members, 1 active cycle, sample loans
  */
 import { PrismaClient } from '@prisma/client'
@@ -8,7 +10,23 @@ import bcrypt from 'bcryptjs'
 const db = new PrismaClient()
 
 async function main() {
-  console.log('🌱 Seeding VSLA V2 demo data...')
+  console.log('🌱 Seeding VSLA V2 demo data (idempotent)...')
+
+  // ─── CLEANUP: Delete existing V2 data first (safe re-run) ───
+  console.log('🧹 Cleaning up existing V2 data...')
+  await db.vslaSmsOtpV2.deleteMany()
+  await db.vslaCashboxEntryV2.deleteMany()
+  await db.vslaTransactionV2.deleteMany()
+  await db.vslaETellerV2.deleteMany()
+  await db.vslaMeetingAttendanceV2.deleteMany()
+  await db.vslaMeetingV2.deleteMany()
+  await db.vslaLoanApprovalV2.deleteMany()
+  await db.vslaLoanV2.deleteMany()
+  await db.vslaCycleV2.deleteMany()
+  await db.vslaKeyHolderV2.deleteMany()
+  await db.vslaMemberV2.deleteMany()
+  await db.vslaGroupV2.deleteMany()
+  console.log('✓ Cleanup complete')
 
   // Get the MobiPay AgroSys tenant (SUPER_ADMIN tenant)
   const tenant = await db.tenant.findFirst({
@@ -37,7 +55,7 @@ async function main() {
       cycleLengthDays: 365,
       minKeyHolders: 3,
       maxKeyHolders: 6,
-      cashboxBalance: 500000, // starting cashbox
+      cashboxBalance: 500000,
       status: 'ACTIVE',
     },
   })
@@ -72,10 +90,9 @@ async function main() {
   for (let i = 0; i < membersData.length; i++) {
     const m = membersData[i]
     const memberId = `VSLA-MBR-${String(i + 1).padStart(4, '0')}`
-    const pin = String(1000 + i) // PIN: 1000, 1001, 1002, 1003, 1004
+    const pin = String(1000 + i)
     const pinHash = await bcrypt.hash(pin, 12)
 
-    // Give each member some savings (5 contributions of sharePrice)
     const totalSavings = group.sharePrice * 5
     const totalShares = 5
 
@@ -116,7 +133,7 @@ async function main() {
     console.log(`✓ Assigned key holder: ${members[i].fullName} (${keyHolderRoles[i]})`)
   }
 
-  // 5. Create sample savings transactions (for the cashbox)
+  // 5. Create sample savings transactions
   for (const member of members) {
     await db.vslaTransactionV2.create({
       data: {
@@ -138,7 +155,7 @@ async function main() {
   const loan = await db.vslaLoanV2.create({
     data: {
       groupId: group.id,
-      memberId: members[3].id, // Grace Auma applies
+      memberId: members[3].id,
       cycleId: cycle.id,
       amount: 50000,
       interestRate: 10,
@@ -178,7 +195,7 @@ async function main() {
   console.log('   Admin login: admin@agrobase.co / password123')
   console.log('   Then visit: /vsla-v2')
   console.log('\n📱 VSLA Member login (mobile app):')
-  members.forEach((m, i) => {
+  members.forEach((m) => {
     console.log(`   ${m.memberId} / PIN: ${m.pin} (${m.fullName})`)
   })
 }

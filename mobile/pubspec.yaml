@@ -46,6 +46,18 @@ dependencies:
   uuid: ^4.5.1
   geolocator: ^13.0.2
 
+  # ─── Security (added V3 — defense in depth) ───
+  # Secure storage: stores auth tokens in iOS Keychain / Android Keystore (not plaintext SharedPreferences)
+  flutter_secure_storage: ^9.2.2
+  # Biometric auth: fingerprint / Face ID for app access + financial operations
+  local_auth: ^2.3.0
+  # Certificate pinning: prevents MITM attacks on dev networks
+  http_certificate_pinning: ^0.0.1
+  # Root/jailbreak detection: refuse to run on compromised devices
+  root_jailbreak_sniffer: ^1.0.1
+  # Crypto for local DB encryption (drift uses sqlite3_flutter_libs — add SQLCipher for encryption at rest)
+  # NOTE: SQLCipher requires swapping sqlite3_flutter_libs for sqlcipher_flutter_libs — see migration guide
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

@@ -33,13 +33,30 @@ export const authOptions: NextAuthOptions = {
           return null
         }
 
-        // Verify hashed password (supports both bcrypt and legacy plain-text during migration)
+        // Verify password (supports Argon2id + legacy bcrypt with auto-upgrade)
         if (!user.passwordHash) {
           return null
         }
-        const isValid = await verifyPassword(credentials.password, user.passwordHash)
+        const { valid: isValid, needsRehash } = await verifyPassword(credentials.password, user.passwordHash)
         if (!isValid) {
           return null
+        }
+        // SECURITY: Silently upgrade bcrypt hashes to Argon2id on successful login.
+        // This gradually migrates the entire user base to Argon2id without requiring
+        // a password reset campaign.
+        if (needsRehash) {
+          try {
+            const { hashPassword } = await import('@/lib/password')
+            const newHash = await hashPassword(credentials.password)
+            await db.user.update({
+              where: { id: user.id },
+              data: { passwordHash: newHash },
+            })
+            console.log('[security] Upgraded user password hash to Argon2id:', user.id)
+          } catch (e) {
+            console.error('[security] Failed to upgrade password hash:', e)
+            // Non-blocking — user can still log in, will retry on next login
+          }
         }
 
         return {
@@ -139,5 +156,23 @@ export const authOptions: NextAuthOptions = {
   session: {
     strategy: 'jwt',
   },
-  secret: process.env.NEXTAUTH_SECRET || 'agrobase-v3-dev-secret-change-in-production',
+  // SECURITY FIX: No hardcoded fallback. Fail hard if NEXTAUTH_SECRET is missing.
+  // Previous code had a publicly-known fallback in git history — anyone could forge JWTs.
+  secret: (() => {
+    const secret = process.env.NEXTAUTH_SECRET
+    if (!secret) {
+      if (process.env.NODE_ENV === 'production') {
+        throw new Error(
+          'FATAL: NEXTAUTH_SECRET not set. Refusing to start in production. ' +
+          'Generate with: openssl rand -base64 32'
+        )
+      }
+      console.warn('⚠️  NEXTAUTH_SECRET not set — using ephemeral dev secret. Set it in .env')
+      return 'dev-only-ephemeral-secret-do-not-use-in-production'
+    }
+    if (secret.length < 32 && process.env.NODE_ENV === 'production') {
+      throw new Error('FATAL: NEXTAUTH_SECRET must be at least 32 chars. Generate with: openssl rand -base64 32')
+    }
+    return secret
+  })(),
 }

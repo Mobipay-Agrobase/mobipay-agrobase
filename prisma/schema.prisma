@@ -4162,3 +4162,37 @@ model NssfCommission {
 
   @@index([tenantId, period])
 }
+
+// ============================================================
+// SECURITY V3 — Tamper-evident audit log (hash-chained)
+// Each row's hash is computed from the previous row's hash + this row's data.
+// Any tampering breaks the chain — auditors can verify integrity with a script.
+// ============================================================
+
+model SecureAuditLog {
+  id          String   @id @default(cuid())
+  // Hash chain fields — make tampering detectable
+  hash        String   @unique  // SHA-256(prevHash + canonical(data) + timestamp)
+  prevHash    String?  // null for the first entry only
+  chainIndex  Int      @unique  // sequential counter for chain verification
+  // Audit fields
+  tenantId    String?
+  userId      String?  // nullable — some events are system-generated
+  actorName   String?  // denormalized for forensics even if user is deleted
+  actorRole   String?
+  action      String   // CREATE, UPDATE, DELETE, LOGIN, APPROVE, DISBURSE, etc.
+  entityType  String   // VslaGroup, Payment, User, etc.
+  entityId    String?
+  description String?
+  metadata    String?  // JSON string — encrypted PII if needed
+  ipAddress   String?
+  userAgent   String?
+  httpMethod  String?
+  path        String?
+  // Integrity
+  createdAt   DateTime @default(now())
+  
+  @@index([tenantId, createdAt])
+  @@index([entityType, entityId])
+  @@index([action, createdAt])
+}

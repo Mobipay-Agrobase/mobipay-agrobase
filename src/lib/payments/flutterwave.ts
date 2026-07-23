@@ -1,3 +1,4 @@
+import crypto from 'crypto'
 /**
  * Flutterwave Payment Integration
  *
@@ -285,7 +286,21 @@ export async function createPaymentPlan(
  */
 export function verifyWebhookSignature(signature: string | null): boolean {
   if (!FLW_CONFIG.webhookHash || !signature) return false
-  return signature === FLW_CONFIG.webhookHash
+  // SECURITY FIX: Use timing-safe comparison to prevent timing attacks.
+  // Previous code used `===` which leaks information about the hash via
+  // response time differences, allowing an attacker to recover the secret
+  // over many requests.
+  // 
+  // Buffer.isEncoding handles different-length inputs safely (returns false
+  // without throwing) and uses a constant-time comparison internally.
+  try {
+    const a = Buffer.from(String(signature))
+    const b = Buffer.from(String(FLW_CONFIG.webhookHash))
+    if (a.length !== b.length) return false
+    return crypto.timingSafeEqual(a, b)
+  } catch {
+    return false
+  }
 }
 
 // ─── Supported Currencies & Countries ─────────────────────────────

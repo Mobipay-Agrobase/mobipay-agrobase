@@ -11,7 +11,7 @@ import {
   RefreshCw, Eye, EyeOff
 } from 'lucide-react';
 import { useApi, api, toast } from '@/lib/api';
-import { formatUGX, formatNumber, formatDate, timeAgo, statusColor } from '@/lib/format';
+import { formatUGX, formatNumber, formatDate, formatDateTime, timeAgo, statusColor } from '@/lib/format';
 
 // ============================================================
 // TYPES

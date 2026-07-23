@@ -65,10 +65,30 @@ export async function POST(req: NextRequest) {
       status: 'ACTIVE',
       agreementDate: new Date('2025-07-22'),
       agreementTerms: JSON.stringify({
-        commission: { kilimoTrust: 55, mobipay: 45 },
-        transactionFee: { mobipay: 70, kilimoTrust: 30 },
-        float: { kilimoTrust: 55, mobipay: 45 },
-        notes: 'OVA held by Kilimo Trust. Float management risk transferred to KT.',
+        commission: { kilimoTrust: 55, mobipay: 45, costAllocation: 'NONE' },
+        transactionFee: {
+          mobipay: 70,
+          kilimoTrust: 30,
+          costAllocation: 'MOBIPAY_ABSORBS',
+          note: "MobiPay's 70% covers system, USSD, and payment processing costs (gross split). KT receives full 30% with no cost deduction."
+        },
+        float: {
+          kilimoTrust: 55,
+          mobipay: 45,
+          costAllocation: 'NONE',
+          note: 'OVA held by Kilimo Trust. Float management risk transferred to KT.'
+        },
+        operationalRoles: {
+          kilimoTrust: 'Farmer mobilization, coordination, M&E, all field activities in regions where KT has an existing farmer base',
+          mobipay: 'System provision, onboarding of farmers once mobilized by KT, overall payment infrastructure',
+        },
+        nextSteps: [
+          'Formalize into MoU between MobiPay and Kilimo Trust',
+          'Confirm OVA account setup with respective MNOs under Kilimo Trust',
+          'Align on farmer onboarding timelines once mobilization begins',
+        ],
+        signedOff: true,
+        source: 'Eric Mwangi meeting with Kilimo Trust, 22 July 2026',
       }),
     },
   });
@@ -526,7 +546,8 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  // 18. Revenue splits (Kilimo Trust MoU)
+  // 18. Revenue splits (Kilimo Trust MoU — gross split on transaction fees per Eric's wording:
+  // "MobiPay: 70% - Covers system, USSD, and payment processing")
   for (let i = 0; i < 20; i++) {
     const streamType = ['COMMISSION', 'TRANSACTION_FEE', 'FLOAT_INTEREST'][Math.floor(Math.random() * 3)];
     const grossAmount = 10000 + Math.floor(Math.random() * 100000);
@@ -535,7 +556,14 @@ export async function POST(req: NextRequest) {
       : streamType === 'TRANSACTION_FEE'
       ? { partnerPct: 30, mobipayPct: 70 }
       : { partnerPct: 55, mobipayPct: 45 };
+    // Cost deduction only applies to transaction fees (MNO + USSD costs)
+    // Commission and float have no MNO cost — KT holds OVA, float risk transferred to KT
     const costDeduction = streamType === 'TRANSACTION_FEE' ? grossAmount * 0.01 : 0;
+    const partnerShare = (grossAmount * splits.partnerPct) / 100;
+    const mobipayShare = (grossAmount * splits.mobipayPct) / 100;
+    // GROSS SPLIT (per MoU): MobiPay absorbs ALL MNO/USSD costs from its 70% share
+    const partnerNet = partnerShare; // partner pays no costs
+    const mobipayNet = mobipayShare - costDeduction; // MobiPay absorbs all costs
 
     await db.revenueSplit.create({
       data: {
@@ -543,11 +571,11 @@ export async function POST(req: NextRequest) {
         streamType,
         transactionRef: `SPLIT-${Date.now()}-${i}`,
         grossAmount,
-        partnerShare: (grossAmount * splits.partnerPct) / 100,
-        mobipayShare: (grossAmount * splits.mobipayPct) / 100,
+        partnerShare,
+        mobipayShare,
         costDeduction,
-        partnerNet: (grossAmount * splits.partnerPct) / 100 - costDeduction * splits.partnerPct / 100,
-        mobipayNet: (grossAmount * splits.mobipayPct) / 100 - costDeduction * splits.mobipayPct / 100,
+        partnerNet,
+        mobipayNet,
         createdAt: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000),
       },
     });

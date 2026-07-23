@@ -1,31 +1,35 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { NextRequest, NextResponse } from 'next/server'
+import { db } from '@/lib/db'
+import { getTenantContext, buildTenantFilter } from '@/lib/tenant'
 
-export async function GET() {
-  const partners = await db.kilimoPartner.findMany({
-    include: {
-      _count: { select: { settlements: true, revenueSplits: true } },
-    },
-    orderBy: { createdAt: 'desc' },
-  });
-  return NextResponse.json({ partners });
+export async function GET(req: NextRequest) {
+  try {
+    const ctx = await getTenantContext()
+    if (!ctx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const filter = buildTenantFilter(ctx)
+    const { searchParams } = new URL(req.url)
+    const page = parseInt(searchParams.get('page') || '1')
+    const limit = parseInt(searchParams.get('limit') || '20')
+    const [data, total] = await Promise.all([
+      db.partner.findMany({ where: filter, skip: (page - 1) * limit, take: limit, orderBy: { createdAt: 'desc' } }),
+      db.partner.count({ where: filter }),
+    ])
+    return NextResponse.json({ data, pagination: { page, limit, total, pages: Math.ceil(total / limit) } })
+  } catch (error) {
+    console.error('Error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
 }
 
 export async function POST(req: NextRequest) {
-  const body = await req.json();
-  const { code, name, type = 'IMPLEMENTING_PARTNER', contactName, contactEmail, contactPhone, agreementTerms } = body;
-
-  if (!code || !name) return NextResponse.json({ error: 'code, name required' }, { status: 400 });
-
-  const partner = await db.kilimoPartner.create({
-    data: {
-      code: code.toUpperCase(),
-      name, type,
-      contactName, contactEmail, contactPhone,
-      status: 'ACTIVE',
-      agreementDate: new Date(),
-      agreementTerms: agreementTerms ? JSON.stringify(agreementTerms) : null,
-    },
-  });
-  return NextResponse.json({ partner }, { status: 201 });
+  try {
+    const ctx = await getTenantContext()
+    if (!ctx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const body = await req.json()
+    const record = await db.partner.create({ data: { tenantId: ctx.tenantId, ...body } })
+    return NextResponse.json({ data: record }, { status: 201 })
+  } catch (error) {
+    console.error('Error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
 }

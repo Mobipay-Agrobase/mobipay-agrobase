@@ -87,18 +87,22 @@ export interface LoanCalculation {
   interestAmount: number;
   totalRepayable: number;
   expectedRepaymentDate: Date;
+  lateRepaymentPenalty: number; // estimated penalty if repaid 1 week late
 }
 
 export function calculateLoan(
   amount: number,
   interestRate: number,
   termDays: number = 90,
-  startDate: Date = new Date()
+  startDate: Date = new Date(),
+  lateRepaymentPenaltyRate: number = 0
 ): LoanCalculation {
   const interestAmount = (amount * interestRate) / 100;
   const totalRepayable = amount + interestAmount;
   const expectedRepaymentDate = new Date(startDate);
   expectedRepaymentDate.setDate(expectedRepaymentDate.getDate() + termDays);
+  // Penalty estimate: 1 week late × penalty rate × outstanding
+  const lateRepaymentPenalty = (totalRepayable * lateRepaymentPenaltyRate) / 100;
   return {
     amount,
     interestRate,
@@ -106,12 +110,70 @@ export function calculateLoan(
     interestAmount,
     totalRepayable,
     expectedRepaymentDate,
+    lateRepaymentPenalty,
   };
 }
 
-// Maximum loan a member can take = multiplier × their savings
+// Maximum loan a member can take = multiplier × their net savings
 export function calculateMaxLoan(memberSavings: number, maxLoanMultiplier: number): number {
   return memberSavings * maxLoanMultiplier;
+}
+
+// Calculate late repayment penalty based on days overdue
+export function calculateLatePenalty(
+  outstanding: number,
+  daysOverdue: number,
+  penaltyRatePerWeek: number
+): number {
+  if (daysOverdue <= 0 || penaltyRatePerWeek <= 0) return 0;
+  const weeksOverdue = Math.ceil(daysOverdue / 7);
+  return (outstanding * penaltyRatePerWeek * weeksOverdue) / 100;
+}
+
+// ============================================================
+// SHARE-OUT CALCULATION (per-group config)
+// ============================================================
+
+export interface ShareOutCalculation {
+  totalShares: number;
+  totalSavings: number;
+  interestEarned: number;
+  finesCollected: number;
+  grossTotal: number;
+  reserveAmount: number;     // amount retained as group reserve
+  distributableAmount: number; // amount distributed to members
+  shareOutPerShare: number;  // distributable / totalShares
+  reservePercentage: number;
+  interestSplitPercentage: number;
+}
+
+export function calculateShareOut(params: {
+  totalShares: number;
+  totalSavings: number;
+  interestEarned: number;
+  finesCollected: number;
+  reservePercentage: number;     // from group config
+  interestSplitPercentage: number; // from group config (e.g. 100 = all interest distributed)
+}): ShareOutCalculation {
+  const { totalShares, totalSavings, interestEarned, finesCollected, reservePercentage, interestSplitPercentage } = params;
+  // Distributable interest = interestEarned × (interestSplitPercentage / 100)
+  const distributableInterest = (interestEarned * interestSplitPercentage) / 100;
+  const grossTotal = totalSavings + distributableInterest + finesCollected;
+  const reserveAmount = (grossTotal * reservePercentage) / 100;
+  const distributableAmount = grossTotal - reserveAmount;
+  const shareOutPerShare = totalShares > 0 ? distributableAmount / totalShares : 0;
+  return {
+    totalShares,
+    totalSavings,
+    interestEarned,
+    finesCollected,
+    grossTotal,
+    reserveAmount,
+    distributableAmount,
+    shareOutPerShare,
+    reservePercentage,
+    interestSplitPercentage,
+  };
 }
 
 // ============================================================

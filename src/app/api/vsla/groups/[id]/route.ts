@@ -24,8 +24,20 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   const { id } = await params;
   const body = await req.json();
   const allowedFields = [
-    'name', 'region', 'district', 'description', 'shareValue', 'loanInterestRate',
-    'maxLoanMultiplier', 'meetingFrequency', 'meetingDay', 'welfareContribution', 'status',
+    // Basic
+    'name', 'region', 'district', 'description', 'status',
+    // Savings config
+    'shareValue', 'minSavingsPerMeeting', 'maxSavingsPerMeeting',
+    // Loan config
+    'loanInterestRate', 'maxLoanMultiplier', 'defaultLoanTermDays', 'gracePeriodDays', 'lateRepaymentPenaltyRate',
+    // Meeting config
+    'meetingFrequency', 'meetingDay', 'meetingStartTime', 'meetingEndTime', 'defaultMeetingLocation',
+    // Welfare / Social Fund config
+    'welfareContribution', 'socialFundMaxClaim',
+    // Fines config
+    'lateAttendanceFine', 'absenceFine', 'lateRepaymentFine',
+    // Share-out config
+    'shareOutInterestSplit', 'reservePercentage',
   ];
   const data: Record<string, unknown> = {};
   for (const f of allowedFields) {
@@ -38,7 +50,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     action: 'UPDATE',
     entityType: 'VslaGroup',
     entityId: id,
-    description: `Updated VSLA group "${group.name}"`,
+    description: `Updated VSLA group "${group.name}" config`,
     metadata: data,
   });
   return NextResponse.json({ group });

@@ -21,11 +21,24 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const { groupId, title, agenda, meetingDate, startTime, endTime, meetingType = 'REGULAR', location, notes, createdById } = body;
+  const {
+    groupId, title, agenda, meetingDate,
+    startTime: startTimeRaw, endTime: endTimeRaw,
+    meetingType = 'REGULAR', location: locationRaw, notes, createdById,
+    useGroupDefaults = false,
+  } = body;
 
   if (!groupId || !title || !meetingDate) {
     return NextResponse.json({ error: 'groupId, title, meetingDate required' }, { status: 400 });
   }
+
+  const group = await db.vslaGroup.findUnique({ where: { id: groupId } });
+  if (!group) return NextResponse.json({ error: 'Group not found' }, { status: 404 });
+
+  // Apply per-group defaults when useGroupDefaults=true or values not provided
+  const startTime = startTimeRaw ?? (useGroupDefaults ? group.meetingStartTime : null);
+  const endTime = endTimeRaw ?? (useGroupDefaults ? group.meetingEndTime : null);
+  const location = locationRaw ?? (useGroupDefaults ? group.defaultMeetingLocation : null);
 
   // Auto-number the meeting
   const lastMeeting = await db.vslaMeeting.findFirst({

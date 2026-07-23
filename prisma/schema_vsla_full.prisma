@@ -101,12 +101,33 @@ model VslaGroup {
   region            String?
   district          String?
   description       String?
-  shareValue        Float    @default(5000) // UGX per share
-  loanInterestRate  Float    @default(10)   // % per cycle
-  maxLoanMultiplier Float    @default(3)    // max loan = X * member savings
+  // ─── Savings config (per group) ───
+  shareValue        Float    @default(5000) // UGX per share — drives sharesBought calculation
+  minSavingsPerMeeting Float @default(0)    // optional minimum contribution per meeting
+  maxSavingsPerMeeting Float @default(0)    // optional cap (0 = no cap)
+  // ─── Loan config (per group) ───
+  loanInterestRate  Float    @default(10)   // default % per cycle (overridable per LoanProduct)
+  maxLoanMultiplier Float    @default(3)    // max loan = X × member's net savings
+  defaultLoanTermDays Int    @default(90)   // default term if product doesn't specify
+  gracePeriodDays   Int      @default(0)    // grace period before repayment starts
+  lateRepaymentPenaltyRate Float @default(0) // % per week overdue, applied to outstanding
+  // ─── Meeting config (per group) ───
   meetingFrequency  String   @default("WEEKLY") // WEEKLY | BIWEEKLY | MONTHLY
   meetingDay        String?  // MONDAY | TUESDAY | ...
-  welfareContribution Float  @default(0)   // per-meeting welfare contribution
+  meetingStartTime  String?  // e.g. "14:00"
+  meetingEndTime    String?  // e.g. "16:00"
+  defaultMeetingLocation String?
+  // ─── Welfare / Social Fund config (per group) ───
+  welfareContribution Float  @default(0)   // default per-meeting welfare contribution
+  socialFundMaxClaim Float   @default(0)   // max claim per member (0 = no cap)
+  // ─── Fines config (per group) ───
+  lateAttendanceFine Float   @default(0)   // UGX charged for arriving late
+  absenceFine        Float   @default(0)   // UGX charged for missing meeting
+  lateRepaymentFine  Float   @default(0)   // UGX charged per week of late repayment
+  // ─── Share-out config (per group) ───
+  shareOutInterestSplit Float @default(100) // % of interest income distributed to members (rest goes to group reserve)
+  reservePercentage   Float   @default(0)   // % of total share-out retained as group reserve
+  // ─── Status & dates ───
   status            String   @default("ACTIVE") // ACTIVE | CLOSED | DORMANT
   formedAt          DateTime @default(now())
   closedAt          DateTime?

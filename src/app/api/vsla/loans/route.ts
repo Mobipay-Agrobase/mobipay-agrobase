@@ -30,7 +30,8 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const body = await req.json();
   const {
-    groupId, memberId, productId, amount, purpose, termDays = 90,
+    groupId, memberId, productId, amount, purpose,
+    termDays: termDaysOverride,
     appliedByName = 'Member', interestRateOverride,
   } = body;
 
@@ -41,18 +42,33 @@ export async function POST(req: NextRequest) {
   const group = await db.vslaGroup.findUnique({ where: { id: groupId } });
   if (!group) return NextResponse.json({ error: 'Group not found' }, { status: 404 });
 
-  // Determine interest rate
+  // Determine interest rate — loan product overrides group default
   let interestRate = group.loanInterestRate;
+  let termDays = termDaysOverride ?? group.defaultLoanTermDays;
+  let gracePeriodDays = group.gracePeriodDays;
   let product = null;
   if (productId) {
     product = await db.vslaLoanProduct.findUnique({ where: { id: productId } });
     if (product && product.groupId === groupId) {
       interestRate = product.interestRate;
+      termDays = termDaysOverride ?? product.termDays;
+      gracePeriodDays = product.gracePeriodDays ?? group.gracePeriodDays;
+      // Enforce product min/max amount
+      if (product.minAmount > 0 && amount < product.minAmount) {
+        return NextResponse.json({
+          error: `Amount below product minimum (${product.name}: ${product.minAmount} UGX)`,
+        }, { status: 400 });
+      }
+      if (product.maxAmount > 0 && amount > product.maxAmount) {
+        return NextResponse.json({
+          error: `Amount exceeds product cap (${product.name}: ${product.maxAmount} UGX)`,
+        }, { status: 400 });
+      }
     }
   }
   if (interestRateOverride !== undefined) interestRate = interestRateOverride;
 
-  // Check max loan eligibility
+  // Check max loan eligibility based on group's multiplier
   const memberSavings = await db.vslaSaving.aggregate({
     where: { memberId, status: 'COMPLETED' },
     _sum: { amount: true },
@@ -70,7 +86,19 @@ export async function POST(req: NextRequest) {
     }, { status: 400 });
   }
 
-  const calc = calculateLoan(amount, interestRate, termDays);
+  // Use per-group config for loan calculation
+  const calc = calculateLoan(
+    amount,
+    interestRate,
+    termDays,
+    new Date(),
+    group.lateRepaymentPenaltyRate
+  );
+
+  // Apply grace period to expected repayment date
+  const expectedRepaymentDate = new Date(calc.expectedRepaymentDate);
+  expectedRepaymentDate.setDate(expectedRepaymentDate.getDate() + gracePeriodDays);
+
   const transactionRef = Refs.loan();
 
   const loan = await db.$transaction(async (tx) => {
@@ -85,8 +113,9 @@ export async function POST(req: NextRequest) {
         outstanding: calc.totalRepayable,
         purpose,
         termDays,
+        gracePeriodDays,
         applicationDate: new Date(),
-        expectedRepaymentDate: calc.expectedRepaymentDate,
+        expectedRepaymentDate,
         status: VSLA_LOAN_STATUS.PENDING,
         transactionRef,
       },
@@ -100,8 +129,8 @@ export async function POST(req: NextRequest) {
     action: 'APPLY',
     entityType: 'VslaLoan',
     entityId: loan.id,
-    description: `Loan application: ${amount} UGX for "${purpose}"`,
-    metadata: { groupId, memberId, amount, interestRate, termDays, maxEligible },
+    description: `Loan application: ${amount} UGX for "${purpose}" (rate ${interestRate}%, term ${termDays}d, grace ${gracePeriodDays}d)`,
+    metadata: { groupId, memberId, amount, interestRate, termDays, maxEligible, gracePeriodDays, productId },
   });
 
   return NextResponse.json({ loan }, { status: 201 });

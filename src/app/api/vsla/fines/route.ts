@@ -20,14 +20,43 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const { groupId, memberId, amount, fineType, description, meetingId } = body;
+  const { groupId, memberId, amount: amountRaw, fineType, description, meetingId, useGroupSchedule = false } = body;
 
-  if (!groupId || !amount || !fineType) {
-    return NextResponse.json({ error: 'groupId, amount, fineType required' }, { status: 400 });
+  if (!groupId || !fineType) {
+    return NextResponse.json({ error: 'groupId, fineType required' }, { status: 400 });
   }
 
   const group = await db.vslaGroup.findUnique({ where: { id: groupId } });
   if (!group) return NextResponse.json({ error: 'Group not found' }, { status: 404 });
+
+  // Determine amount — if useGroupSchedule=true, look up the group's configured fine for this type
+  let amount = amountRaw;
+  if (useGroupSchedule || !amount) {
+    switch (fineType) {
+      case 'LATE_ATTENDANCE':
+        amount = group.lateAttendanceFine;
+        break;
+      case 'ABSENCE':
+        amount = group.absenceFine;
+        break;
+      case 'LATE_REPAYMENT':
+        amount = group.lateRepaymentFine;
+        break;
+      default:
+        // For OTHER fine type, amount must be provided
+        if (!amount) {
+          return NextResponse.json({
+            error: `Amount required for fine type ${fineType}. Group has no default configured.`,
+          }, { status: 400 });
+        }
+    }
+  }
+
+  if (!amount || amount <= 0) {
+    return NextResponse.json({
+      error: `Fine amount is 0 or not configured for type ${fineType}. Update group fine schedule or provide amount.`,
+    }, { status: 400 });
+  }
 
   const transactionRef = Refs.fine();
   const fine = await db.vslaFine.create({
@@ -43,8 +72,8 @@ export async function POST(req: NextRequest) {
     action: 'CREATE',
     entityType: 'VslaFine',
     entityId: fine.id,
-    description: `Fine ${amount} UGX (${fineType}) — ${description || 'no description'}`,
-    metadata: { groupId, memberId, amount, fineType },
+    description: `Fine ${amount} UGX (${fineType}) — ${description || 'auto from group schedule'}`,
+    metadata: { groupId, memberId, amount, fineType, useGroupSchedule },
   });
 
   return NextResponse.json({ fine }, { status: 201 });

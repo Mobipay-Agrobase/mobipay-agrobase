@@ -25,6 +25,28 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'groupId, memberId, amount, claimType, description required' }, { status: 400 });
   }
 
+  const group = await db.vslaGroup.findUnique({ where: { id: groupId } });
+  if (!group) return NextResponse.json({ error: 'Group not found' }, { status: 404 });
+
+  // Enforce per-group max claim
+  if (group.socialFundMaxClaim > 0 && amount > group.socialFundMaxClaim) {
+    return NextResponse.json({
+      error: `Claim exceeds group cap. This group's max social fund claim is ${group.socialFundMaxClaim} UGX.`,
+    }, { status: 400 });
+  }
+
+  // Check available social fund balance
+  const [contrib, disbursed] = await Promise.all([
+    db.vslaSocialFundContribution.aggregate({ where: { groupId }, _sum: { amount: true } }),
+    db.vslaSocialFundClaim.aggregate({ where: { groupId, status: 'DISBURSED' }, _sum: { amount: true } }),
+  ]);
+  const available = (contrib._sum.amount ?? 0) - (disbursed._sum.amount ?? 0);
+  if (amount > available) {
+    return NextResponse.json({
+      error: `Insufficient social fund balance. Available: ${available} UGX.`,
+    }, { status: 400 });
+  }
+
   const claim = await db.vslaSocialFundClaim.create({
     data: {
       groupId, memberId, amount, claimType, description,

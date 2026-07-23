@@ -45,6 +45,18 @@ export async function POST(req: NextRequest) {
   const group = await db.vslaGroup.findUnique({ where: { id: groupId } });
   if (!group) return NextResponse.json({ error: 'Group not found' }, { status: 404 });
 
+  // Enforce per-group savings limits
+  if (group.minSavingsPerMeeting > 0 && amount < group.minSavingsPerMeeting) {
+    return NextResponse.json({
+      error: `Amount below group minimum. This group requires at least ${group.minSavingsPerMeeting} UGX per meeting.`,
+    }, { status: 400 });
+  }
+  if (group.maxSavingsPerMeeting > 0 && amount > group.maxSavingsPerMeeting) {
+    return NextResponse.json({
+      error: `Amount exceeds group cap. This group allows max ${group.maxSavingsPerMeeting} UGX per meeting.`,
+    }, { status: 400 });
+  }
+
   // FIXED: Use group.shareValue (was inconsistent /1000 vs /5000)
   const sharesBought = calculateShares(amount, group.shareValue);
   const transactionRef = Refs.saving();

@@ -73,13 +73,65 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  // 4. VSLA Groups
+  // 4. VSLA Groups — each with UNIQUE per-group config (demonstrating dynamic behavior)
   const groupsData = [
-    { tenantId: tenants[0].id, name: 'Buwama Rural Farmers VSLA', region: 'Central', district: 'Mpigi', shareValue: 5000, loanInterestRate: 10, maxLoanMultiplier: 3, meetingFrequency: 'WEEKLY', meetingDay: 'TUESDAY', welfareContribution: 1000 },
-    { tenantId: tenants[0].id, name: 'Kayunga Coffee Growers VSLA', region: 'Central', district: 'Kayunga', shareValue: 5000, loanInterestRate: 12, maxLoanMultiplier: 4, meetingFrequency: 'WEEKLY', meetingDay: 'THURSDAY', welfareContribution: 2000 },
-    { tenantId: tenants[0].id, name: 'Nakivale Refugee Women VSLA', region: 'Western', district: 'Isingiro', shareValue: 2000, loanInterestRate: 8, maxLoanMultiplier: 2, meetingFrequency: 'BIWEEKLY', meetingDay: 'MONDAY', welfareContribution: 500 },
-    { tenantId: tenants[1].id, name: 'Mpigi Matooke Traders VSLA', region: 'Central', district: 'Mpigi', shareValue: 10000, loanInterestRate: 15, maxLoanMultiplier: 3, meetingFrequency: 'MONTHLY', meetingDay: 'FRIDAY', welfareContribution: 5000 },
-    { tenantId: tenants[0].id, name: 'Jinja Cassava Cooperative VSLA', region: 'Eastern', district: 'Jinja', shareValue: 5000, loanInterestRate: 10, maxLoanMultiplier: 3, meetingFrequency: 'WEEKLY', meetingDay: 'WEDNESDAY', welfareContribution: 1500 },
+    {
+      tenantId: tenants[0].id, name: 'Buwama Rural Farmers VSLA', region: 'Central', district: 'Mpigi',
+      // Savings config
+      shareValue: 5000, minSavingsPerMeeting: 5000, maxSavingsPerMeeting: 25000,
+      // Loan config
+      loanInterestRate: 10, maxLoanMultiplier: 3, defaultLoanTermDays: 90, gracePeriodDays: 7, lateRepaymentPenaltyRate: 2,
+      // Meeting config
+      meetingFrequency: 'WEEKLY', meetingDay: 'TUESDAY', meetingStartTime: '14:00', meetingEndTime: '16:00', defaultMeetingLocation: 'Buwama Community Hall',
+      // Welfare
+      welfareContribution: 1000, socialFundMaxClaim: 200000,
+      // Fines
+      lateAttendanceFine: 500, absenceFine: 2000, lateRepaymentFine: 1000,
+      // Share-out
+      shareOutInterestSplit: 80, reservePercentage: 20,
+    },
+    {
+      tenantId: tenants[0].id, name: 'Kayunga Coffee Growers VSLA', region: 'Central', district: 'Kayunga',
+      shareValue: 5000, minSavingsPerMeeting: 5000, maxSavingsPerMeeting: 50000,
+      loanInterestRate: 12, maxLoanMultiplier: 4, defaultLoanTermDays: 120, gracePeriodDays: 14, lateRepaymentPenaltyRate: 3,
+      meetingFrequency: 'WEEKLY', meetingDay: 'THURSDAY', meetingStartTime: '15:00', meetingEndTime: '17:00', defaultMeetingLocation: 'Kayunga Co-op Society',
+      welfareContribution: 2000, socialFundMaxClaim: 500000,
+      lateAttendanceFine: 1000, absenceFine: 3000, lateRepaymentFine: 2000,
+      shareOutInterestSplit: 90, reservePercentage: 10,
+    },
+    {
+      tenantId: tenants[0].id, name: 'Nakivale Refugee Women VSLA', region: 'Western', district: 'Isingiro',
+      // Smaller share value (lower income demographic)
+      shareValue: 2000, minSavingsPerMeeting: 2000, maxSavingsPerMeeting: 10000,
+      // Lower interest rate (refugee program subsidy)
+      loanInterestRate: 8, maxLoanMultiplier: 2, defaultLoanTermDays: 60, gracePeriodDays: 14, lateRepaymentPenaltyRate: 1,
+      meetingFrequency: 'BIWEEKLY', meetingDay: 'MONDAY', meetingStartTime: '10:00', meetingEndTime: '12:00', defaultMeetingLocation: 'Nakivale Settlement Zone 3',
+      welfareContribution: 500, socialFundMaxClaim: 100000,
+      // Smaller fines (lower income)
+      lateAttendanceFine: 200, absenceFine: 1000, lateRepaymentFine: 500,
+      shareOutInterestSplit: 100, reservePercentage: 0,
+    },
+    {
+      tenantId: tenants[1].id, name: 'Mpigi Matooke Traders VSLA', region: 'Central', district: 'Mpigi',
+      // Traders — higher share value (business capital)
+      shareValue: 10000, minSavingsPerMeeting: 10000, maxSavingsPerMeeting: 100000,
+      // Higher interest rate (commercial borrower)
+      loanInterestRate: 15, maxLoanMultiplier: 3, defaultLoanTermDays: 30, gracePeriodDays: 0, lateRepaymentPenaltyRate: 5,
+      meetingFrequency: 'MONTHLY', meetingDay: 'FRIDAY', meetingStartTime: '09:00', meetingEndTime: '11:00', defaultMeetingLocation: 'Mpigi Trading Centre',
+      welfareContribution: 5000, socialFundMaxClaim: 1000000,
+      // Higher fines (commercial group)
+      lateAttendanceFine: 2000, absenceFine: 5000, lateRepaymentFine: 5000,
+      shareOutInterestSplit: 70, reservePercentage: 30,
+    },
+    {
+      tenantId: tenants[0].id, name: 'Jinja Cassava Cooperative VSLA', region: 'Eastern', district: 'Jinja',
+      shareValue: 5000, minSavingsPerMeeting: 5000, maxSavingsPerMeeting: 30000,
+      loanInterestRate: 10, maxLoanMultiplier: 3, defaultLoanTermDays: 180, gracePeriodDays: 30, lateRepaymentPenaltyRate: 2,
+      meetingFrequency: 'WEEKLY', meetingDay: 'WEDNESDAY', meetingStartTime: '13:00', meetingEndTime: '15:00', defaultMeetingLocation: 'Jinja Coop Warehouse',
+      welfareContribution: 1500, socialFundMaxClaim: 300000,
+      lateAttendanceFine: 750, absenceFine: 2500, lateRepaymentFine: 1500,
+      shareOutInterestSplit: 85, reservePercentage: 15,
+    },
   ];
 
   const groups = [];
@@ -154,12 +206,37 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  // 7. Loan products per group
+  // 7. Loan products per group — DIFFERENT products per group (demonstrating per-group customization)
+  const groupProducts: Record<string, Array<{ name: string; code: string; interestRate: number; minAmount: number; maxAmount: number; termDays: number; gracePeriodDays: number; guarantorCount: number }>> = {
+    'Buwama': [
+      { name: 'School Fees', code: 'SCH', interestRate: 10, minAmount: 50000, maxAmount: 200000, termDays: 90, gracePeriodDays: 7, guarantorCount: 2 },
+      { name: 'Farm Inputs', code: 'FARM', interestRate: 8, minAmount: 30000, maxAmount: 150000, termDays: 180, gracePeriodDays: 30, guarantorCount: 2 },
+    ],
+    'Kayunga': [
+      { name: 'Coffee Harvest', code: 'CHV', interestRate: 12, minAmount: 100000, maxAmount: 500000, termDays: 120, gracePeriodDays: 14, guarantorCount: 3 },
+      { name: 'Processing', code: 'PRC', interestRate: 14, minAmount: 50000, maxAmount: 300000, termDays: 90, gracePeriodDays: 14, guarantorCount: 2 },
+      { name: 'Emergency', code: 'EM', interestRate: 18, minAmount: 20000, maxAmount: 100000, termDays: 30, gracePeriodDays: 0, guarantorCount: 1 },
+    ],
+    'Nakivale': [
+      // Refugee women — small loans, low rates, longer grace
+      { name: 'Micro Business', code: 'MIC', interestRate: 5, minAmount: 10000, maxAmount: 50000, termDays: 60, gracePeriodDays: 14, guarantorCount: 1 },
+      { name: 'Emergency', code: 'EM', interestRate: 0, minAmount: 5000, maxAmount: 20000, termDays: 30, gracePeriodDays: 14, guarantorCount: 1 },
+    ],
+    'Mpigi Matooke': [
+      // Traders — short-term working capital, higher rates
+      { name: 'Working Capital', code: 'WC', interestRate: 15, minAmount: 100000, maxAmount: 1000000, termDays: 30, gracePeriodDays: 0, guarantorCount: 3 },
+      { name: 'Bulk Purchase', code: 'BULK', interestRate: 18, minAmount: 500000, maxAmount: 3000000, termDays: 60, gracePeriodDays: 0, guarantorCount: 4 },
+    ],
+    'Jinja Cassava': [
+      { name: 'Seasonal Planting', code: 'SEAS', interestRate: 10, minAmount: 50000, maxAmount: 300000, termDays: 180, gracePeriodDays: 30, guarantorCount: 2 },
+      { name: 'Harvest Bridge', code: 'HBR', interestRate: 12, minAmount: 30000, maxAmount: 200000, termDays: 90, gracePeriodDays: 14, guarantorCount: 2 },
+    ],
+  };
+
   for (const group of groups) {
-    const products = [
-      { name: 'Short-Term', code: 'ST', interestRate: 10, maxAmount: 200000, termDays: 60, guarantorCount: 2 },
-      { name: 'Seasonal', code: 'SE', interestRate: 12, maxAmount: 500000, termDays: 180, guarantorCount: 3 },
-      { name: 'Emergency', code: 'EM', interestRate: 15, maxAmount: 100000, termDays: 30, guarantorCount: 1 },
+    const key = Object.keys(groupProducts).find((k) => group.name.includes(k));
+    const products = key ? groupProducts[key] : [
+      { name: 'Short-Term', code: 'ST', interestRate: 10, minAmount: 0, maxAmount: 200000, termDays: 60, gracePeriodDays: 0, guarantorCount: 2 },
     ];
     for (const p of products) {
       await db.vslaLoanProduct.create({

@@ -21,12 +21,20 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const { groupId, memberId, amount, contributionType = 'REGULAR', paymentMethod = 'CASH', meetingId, notes } = body;
+  const { groupId, memberId, amount: amountRaw, contributionType = 'REGULAR', paymentMethod = 'CASH', meetingId, notes, useGroupDefault = false } = body;
 
-  if (!groupId || !amount) return NextResponse.json({ error: 'groupId, amount required' }, { status: 400 });
+  if (!groupId) return NextResponse.json({ error: 'groupId required' }, { status: 400 });
 
   const group = await db.vslaGroup.findUnique({ where: { id: groupId } });
   if (!group) return NextResponse.json({ error: 'Group not found' }, { status: 404 });
+
+  // If useGroupDefault is true OR no amount provided, use the group's welfare contribution default
+  const amount = amountRaw ?? (useGroupDefault ? group.welfareContribution : 0);
+  if (!amount || amount <= 0) {
+    return NextResponse.json({
+      error: `Amount required. This group's default welfare contribution is ${group.welfareContribution} UGX.`,
+    }, { status: 400 });
+  }
 
   const transactionRef = Refs.socialFundContribution();
 

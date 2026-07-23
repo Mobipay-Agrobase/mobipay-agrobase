@@ -585,6 +585,7 @@ function VslaKpiBar() {
 function VslaGroupsTab({ selectedGroup, setSelectedGroup }: { selectedGroup: string | null; setSelectedGroup: (id: string | null) => void }) {
   const { data, loading, refetch } = useApi('/api/vsla/groups');
   const [showCreate, setShowCreate] = useState(false);
+  const [configGroup, setConfigGroup] = useState<any | null>(null);
 
   if (loading) return <LoadingState label="Loading groups..." />;
   if (!data) return null;
@@ -592,7 +593,7 @@ function VslaGroupsTab({ selectedGroup, setSelectedGroup }: { selectedGroup: str
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <p className="text-sm text-slate-600">{data.groups.length} VSLA groups across the platform</p>
+        <p className="text-sm text-slate-600">{data.groups.length} VSLA groups across the platform — each with its own dynamic config</p>
         <button
           onClick={() => setShowCreate(true)}
           className="px-3 py-1.5 bg-emerald-600 text-white rounded-md text-sm hover:bg-emerald-700 flex items-center gap-1.5"
@@ -605,7 +606,7 @@ function VslaGroupsTab({ selectedGroup, setSelectedGroup }: { selectedGroup: str
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {data.groups.map((g: any) => (
-          <Card key={g.id} className="p-4 hover:shadow-md transition-shadow cursor-pointer" >
+          <Card key={g.id} className="p-4 hover:shadow-md transition-shadow">
             <div className="flex items-start justify-between">
               <div>
                 <div className="font-semibold text-slate-900">{g.name}</div>
@@ -630,14 +631,242 @@ function VslaGroupsTab({ selectedGroup, setSelectedGroup }: { selectedGroup: str
                 <div className="text-slate-500">Loan Rate</div>
                 <div className="font-semibold text-slate-900">{g.loanInterestRate}%</div>
               </div>
+              <div>
+                <div className="text-slate-500">Max Multiplier</div>
+                <div className="font-semibold text-slate-900">{g.maxLoanMultiplier}×</div>
+              </div>
+              <div>
+                <div className="text-slate-500">Welfare/Mtg</div>
+                <div className="font-semibold text-slate-900">{formatUGX(g.welfareContribution)}</div>
+              </div>
             </div>
             <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
               <span className="text-slate-500">Outstanding: <span className="font-semibold text-amber-700">{formatUGX(g.outstandingLoans)}</span></span>
               <span className="text-slate-500">Social: <span className="font-semibold text-slate-900">{formatUGX(g.socialFundBalance)}</span></span>
             </div>
+            <button
+              onClick={() => setConfigGroup(g)}
+              className="mt-3 w-full px-3 py-1.5 border border-slate-300 rounded-md text-xs hover:bg-slate-100 flex items-center justify-center gap-1.5"
+            >
+              <Boxes className="w-3 h-3" /> Configure group
+            </button>
           </Card>
         ))}
       </div>
+
+      {configGroup && (
+        <GroupConfigModal
+          group={configGroup}
+          onClose={() => setConfigGroup(null)}
+          onSaved={() => { setConfigGroup(null); refetch(); }}
+        />
+      )}
+    </div>
+  );
+}
+
+// ============================================================
+// GROUP CONFIG MODAL — edit all per-group dynamic config
+// ============================================================
+
+function GroupConfigModal({ group, onClose, onSaved }: { group: any; onClose: () => void; onSaved: () => void }) {
+  const [form, setForm] = useState<any>({ ...group });
+  const [saving, setSaving] = useState(false);
+  const [section, setSection] = useState<'savings' | 'loans' | 'meetings' | 'welfare' | 'fines' | 'shareout'>('savings');
+
+  const sections = [
+    { key: 'savings', label: 'Savings', icon: Wallet },
+    { key: 'loans', label: 'Loans', icon: TrendingUp },
+    { key: 'meetings', label: 'Meetings', icon: Users },
+    { key: 'welfare', label: 'Welfare', icon: Handshake },
+    { key: 'fines', label: 'Fines', icon: AlertCircle },
+    { key: 'shareout', label: 'Share-Out', icon: PieChart },
+  ] as const;
+
+  function setField(field: string, value: any) {
+    setForm({ ...form, [field]: value });
+  }
+
+  async function save() {
+    setSaving(true);
+    try {
+      await api(`/api/vsla/groups/${group.id}`, {
+        method: 'PUT',
+        body: JSON.stringify(form),
+      });
+      toast('Group config updated', 'success');
+      onSaved();
+    } catch (e: any) {
+      toast(`Failed: ${e.message}`, 'error');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <Card className="max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+        <CardHeader
+          title={`Configure — ${group.name}`}
+          subtitle={`${group.code} · Per-group dynamic config`}
+          action={<button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X className="w-4 h-4" /></button>}
+        />
+
+        {/* Section tabs */}
+        <div className="flex border-b border-slate-200 overflow-x-auto">
+          {sections.map((s) => {
+            const Icon = s.icon;
+            return (
+              <button
+                key={s.key}
+                onClick={() => setSection(s.key)}
+                className={`px-4 py-2 text-xs font-medium border-b-2 transition-colors whitespace-nowrap flex items-center gap-1.5 ${
+                  section === s.key ? 'border-emerald-600 text-emerald-700' : 'border-transparent text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <Icon className="w-3 h-3" /> {s.label}
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-5">
+          {section === 'savings' && (
+            <div className="space-y-3">
+              <ConfigField label="Share Value (UGX)" hint="Drives sharesBought calculation: shares = floor(amount / shareValue)">
+                <input type="number" value={form.shareValue ?? 0} onChange={(e) => setField('shareValue', +e.target.value)} className="cfg-input" />
+              </ConfigField>
+              <ConfigField label="Min Savings per Meeting" hint="0 = no minimum">
+                <input type="number" value={form.minSavingsPerMeeting ?? 0} onChange={(e) => setField('minSavingsPerMeeting', +e.target.value)} className="cfg-input" />
+              </ConfigField>
+              <ConfigField label="Max Savings per Meeting" hint="0 = no cap">
+                <input type="number" value={form.maxSavingsPerMeeting ?? 0} onChange={(e) => setField('maxSavingsPerMeeting', +e.target.value)} className="cfg-input" />
+              </ConfigField>
+            </div>
+          )}
+
+          {section === 'loans' && (
+            <div className="space-y-3">
+              <ConfigField label="Default Loan Interest Rate (%)" hint="Per-cycle rate; can be overridden per LoanProduct">
+                <input type="number" step="0.1" value={form.loanInterestRate ?? 0} onChange={(e) => setField('loanInterestRate', +e.target.value)} className="cfg-input" />
+              </ConfigField>
+              <ConfigField label="Max Loan Multiplier" hint="Max loan = multiplier × member's net savings">
+                <input type="number" step="0.1" value={form.maxLoanMultiplier ?? 0} onChange={(e) => setField('maxLoanMultiplier', +e.target.value)} className="cfg-input" />
+              </ConfigField>
+              <ConfigField label="Default Loan Term (days)" hint="Default if loan product doesn't specify">
+                <input type="number" value={form.defaultLoanTermDays ?? 90} onChange={(e) => setField('defaultLoanTermDays', +e.target.value)} className="cfg-input" />
+              </ConfigField>
+              <ConfigField label="Grace Period (days)" hint="Days before repayment starts">
+                <input type="number" value={form.gracePeriodDays ?? 0} onChange={(e) => setField('gracePeriodDays', +e.target.value)} className="cfg-input" />
+              </ConfigField>
+              <ConfigField label="Late Repayment Penalty Rate (%/week)" hint="Applied to outstanding balance per week overdue">
+                <input type="number" step="0.1" value={form.lateRepaymentPenaltyRate ?? 0} onChange={(e) => setField('lateRepaymentPenaltyRate', +e.target.value)} className="cfg-input" />
+              </ConfigField>
+            </div>
+          )}
+
+          {section === 'meetings' && (
+            <div className="space-y-3">
+              <ConfigField label="Meeting Frequency">
+                <select value={form.meetingFrequency ?? 'WEEKLY'} onChange={(e) => setField('meetingFrequency', e.target.value)} className="cfg-input">
+                  <option value="WEEKLY">Weekly</option>
+                  <option value="BIWEEKLY">Bi-weekly</option>
+                  <option value="MONTHLY">Monthly</option>
+                </select>
+              </ConfigField>
+              <ConfigField label="Meeting Day">
+                <select value={form.meetingDay ?? ''} onChange={(e) => setField('meetingDay', e.target.value)} className="cfg-input">
+                  <option value="">—</option>
+                  {['MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY','SATURDAY','SUNDAY'].map((d) => (
+                    <option key={d} value={d}>{d}</option>
+                  ))}
+                </select>
+              </ConfigField>
+              <ConfigField label="Default Start Time">
+                <input type="text" value={form.meetingStartTime ?? ''} onChange={(e) => setField('meetingStartTime', e.target.value)} placeholder="14:00" className="cfg-input" />
+              </ConfigField>
+              <ConfigField label="Default End Time">
+                <input type="text" value={form.meetingEndTime ?? ''} onChange={(e) => setField('meetingEndTime', e.target.value)} placeholder="16:00" className="cfg-input" />
+              </ConfigField>
+              <ConfigField label="Default Meeting Location">
+                <input type="text" value={form.defaultMeetingLocation ?? ''} onChange={(e) => setField('defaultMeetingLocation', e.target.value)} className="cfg-input" />
+              </ConfigField>
+            </div>
+          )}
+
+          {section === 'welfare' && (
+            <div className="space-y-3">
+              <ConfigField label="Default Welfare Contribution (UGX)" hint="Pre-filled when recording a social fund contribution">
+                <input type="number" value={form.welfareContribution ?? 0} onChange={(e) => setField('welfareContribution', +e.target.value)} className="cfg-input" />
+              </ConfigField>
+              <ConfigField label="Max Social Fund Claim (UGX)" hint="0 = no cap. Members cannot claim more than this.">
+                <input type="number" value={form.socialFundMaxClaim ?? 0} onChange={(e) => setField('socialFundMaxClaim', +e.target.value)} className="cfg-input" />
+              </ConfigField>
+            </div>
+          )}
+
+          {section === 'fines' && (
+            <div className="space-y-3">
+              <ConfigField label="Late Attendance Fine (UGX)" hint="Auto-applied when marking attendance as 'late'">
+                <input type="number" value={form.lateAttendanceFine ?? 0} onChange={(e) => setField('lateAttendanceFine', +e.target.value)} className="cfg-input" />
+              </ConfigField>
+              <ConfigField label="Absence Fine (UGX)" hint="Auto-applied when member misses a meeting">
+                <input type="number" value={form.absenceFine ?? 0} onChange={(e) => setField('absenceFine', +e.target.value)} className="cfg-input" />
+              </ConfigField>
+              <ConfigField label="Late Repayment Fine (UGX)" hint="Per-week fine for late loan repayment">
+                <input type="number" value={form.lateRepaymentFine ?? 0} onChange={(e) => setField('lateRepaymentFine', +e.target.value)} className="cfg-input" />
+              </ConfigField>
+            </div>
+          )}
+
+          {section === 'shareout' && (
+            <div className="space-y-3">
+              <ConfigField label="Interest Income Distribution (%)" hint="Percentage of interest income distributed to members. Rest goes to group reserve.">
+                <input type="number" min="0" max="100" value={form.shareOutInterestSplit ?? 100} onChange={(e) => setField('shareOutInterestSplit', +e.target.value)} className="cfg-input" />
+              </ConfigField>
+              <ConfigField label="Reserve Percentage (%)" hint="Percentage of total share-out retained as group reserve">
+                <input type="number" min="0" max="100" value={form.reservePercentage ?? 0} onChange={(e) => setField('reservePercentage', +e.target.value)} className="cfg-input" />
+              </ConfigField>
+              <div className="p-3 bg-slate-50 rounded-md text-xs text-slate-600">
+                <div className="font-semibold text-slate-700 mb-1">Share-out formula</div>
+                distributable = savings + (interest × {form.shareOutInterestSplit ?? 100}%) + fines<br />
+                reserve = distributable × {form.reservePercentage ?? 0}%<br />
+                perShare = (distributable − reserve) / totalShares
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="p-4 border-t border-slate-200 flex justify-end gap-2">
+          <button onClick={onClose} className="px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100 rounded-md">Cancel</button>
+          <button
+            onClick={save}
+            disabled={saving}
+            className="px-3 py-1.5 bg-emerald-600 text-white rounded-md text-sm hover:bg-emerald-700 disabled:opacity-50"
+          >
+            {saving ? 'Saving...' : 'Save Config'}
+          </button>
+        </div>
+      </Card>
+      <style jsx>{`
+        :global(.cfg-input) {
+          width: 100%;
+          padding: 0.5rem 0.75rem;
+          border: 1px solid rgb(203 213 225);
+          border-radius: 0.375rem;
+          font-size: 0.875rem;
+        }
+      `}</style>
+    </div>
+  );
+}
+
+function ConfigField({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <label className="block text-xs font-semibold text-slate-700 mb-1">{label}</label>
+      {children}
+      {hint && <p className="text-xs text-slate-500 mt-1">{hint}</p>}
     </div>
   );
 }
@@ -1974,11 +2203,12 @@ const iconMap: Record<string, any> = {
 // ============================================================
 
 function LoginScreen({ onLogin }: { onLogin: (user: any) => void }) {
-  const [email, setEmail] = useState('eric@mobipay.agrobase');
-  const [password, setPassword] = useState('mobipay2025');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { data: credData } = useApi('/api/auth/login');
+  const [showDemoLogins, setShowDemoLogins] = useState(false);
+  const { data: credData } = useApi(showDemoLogins ? '/api/auth/login' : null);
 
   async function submit(e?: React.FormEvent, quickEmail?: string, quickPassword?: string) {
     e?.preventDefault();
@@ -2020,15 +2250,19 @@ function LoginScreen({ onLogin }: { onLogin: (user: any) => void }) {
             </div>
           </div>
           <h1 className="text-3xl font-bold text-slate-900 mb-3">
-            Test the full VSLA module
+            Full VSLA module — dynamic per group
           </h1>
           <p className="text-slate-700 mb-6">
-            Pick any demo role on the right to log in instantly. Each role sees a different slice of the platform — super admin sees everything, VSLA officer sees the field operations, partner admin sees the Kilimo Trust revenue splits.
+            Each VSLA group runs on its own configuration: custom share values, interest rates, loan products, fine schedules, welfare contributions, and share-out percentages. Built for the real-world diversity of East African savings groups.
           </p>
           <div className="space-y-2 text-sm text-slate-700">
             <div className="flex items-start gap-2">
               <CheckCircle2 className="w-4 h-4 text-emerald-600 mt-0.5" />
-              <span>5 VSLA groups, 42 members, 32 loans, 561 savings records seeded</span>
+              <span>Per-group config: savings limits, loan rates, fine schedules, share-out splits</span>
+            </div>
+            <div className="flex items-start gap-2">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 mt-0.5" />
+              <span>Per-group loan products — each group defines its own products with terms & rates</span>
             </div>
             <div className="flex items-start gap-2">
               <CheckCircle2 className="w-4 h-4 text-emerald-600 mt-0.5" />
@@ -2049,10 +2283,10 @@ function LoginScreen({ onLogin }: { onLogin: (user: any) => void }) {
           </div>
         </div>
 
-        {/* Right: Login form + quick logins */}
+        {/* Right: Login form */}
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
           <h2 className="text-xl font-semibold text-slate-900 mb-1">Sign in</h2>
-          <p className="text-sm text-slate-500 mb-5">Use any demo credential below — or pick one to auto-fill.</p>
+          <p className="text-sm text-slate-500 mb-5">Enter your credentials to access the platform.</p>
 
           <form onSubmit={submit} className="space-y-3">
             <div>
@@ -2061,8 +2295,10 @@ function LoginScreen({ onLogin }: { onLogin: (user: any) => void }) {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@example.com"
                 className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 required
+                autoFocus
               />
             </div>
             <div>
@@ -2071,6 +2307,7 @@ function LoginScreen({ onLogin }: { onLogin: (user: any) => void }) {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
                 className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 required
               />
@@ -2088,35 +2325,43 @@ function LoginScreen({ onLogin }: { onLogin: (user: any) => void }) {
             </button>
           </form>
 
+          {/* Hidden demo logins — toggle to reveal */}
           <div className="mt-6 pt-5 border-t border-slate-200">
-            <div className="text-xs font-semibold text-slate-500 uppercase mb-3">Quick login (one click)</div>
-            <div className="space-y-2">
-              {credData?.credentials?.map((cred: any) => (
-                <button
-                  key={cred.email}
-                  onClick={() => quickLogin(cred)}
-                  disabled={busy}
-                  className="w-full text-left p-3 rounded-md border border-slate-200 hover:border-emerald-300 hover:bg-emerald-50 transition-colors disabled:opacity-50"
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium text-slate-900">{cred.name}</div>
-                      <div className="text-xs text-slate-500">{cred.email}</div>
-                      <div className="text-xs text-slate-600 mt-1">{cred.description}</div>
-                    </div>
-                    <div className="ml-2 flex flex-col items-end gap-1">
-                      <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700">{cred.role}</span>
-                      <span className="text-xs font-mono text-slate-500">{cred.password}</span>
-                    </div>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
+            <button
+              onClick={() => setShowDemoLogins(!showDemoLogins)}
+              className="w-full flex items-center justify-between text-xs font-semibold text-slate-500 hover:text-slate-700 uppercase"
+            >
+              <span>Demo logins {showDemoLogins ? '(hide)' : '(show)'}</span>
+              {showDemoLogins ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+            </button>
 
-          <div className="mt-5 pt-4 border-t border-slate-200 text-xs text-slate-500">
-            <p className="font-semibold text-slate-700 mb-1">Demo only — no real authentication</p>
-            <p>Sessions expire after 8 hours. Use the "Reseed demo data" button in the sidebar to reset all VSLA, NSSF, payment, SMS, USSD, and audit data.</p>
+            {showDemoLogins && (
+              <div className="mt-3 space-y-2">
+                {credData?.credentials?.map((cred: any) => (
+                  <button
+                    key={cred.email}
+                    onClick={() => quickLogin(cred)}
+                    disabled={busy}
+                    className="w-full text-left p-3 rounded-md border border-slate-200 hover:border-emerald-300 hover:bg-emerald-50 transition-colors disabled:opacity-50"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium text-slate-900">{cred.name}</div>
+                        <div className="text-xs text-slate-500">{cred.email}</div>
+                        <div className="text-xs text-slate-600 mt-1">{cred.description}</div>
+                      </div>
+                      <div className="ml-2 flex flex-col items-end gap-1">
+                        <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700">{cred.role}</span>
+                        <span className="text-xs font-mono text-slate-500">{cred.password}</span>
+                      </div>
+                    </div>
+                  </button>
+                ))}
+                <p className="text-xs text-slate-500 mt-2">
+                  Demo only — no real authentication. Sessions expire after 8 hours.
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </div>

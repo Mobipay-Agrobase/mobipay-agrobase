@@ -46,6 +46,9 @@ dependencies:
   uuid: ^4.5.1
   geolocator: ^13.0.2
 
+  # ─── VSLA V2 — KYC photo capture ───
+  image_picker: ^1.1.2
+
   # ─── Security (added V3 — defense in depth) ───
   # Secure storage: stores auth tokens in iOS Keychain / Android Keystore (not plaintext SharedPreferences)
   flutter_secure_storage: ^9.2.2

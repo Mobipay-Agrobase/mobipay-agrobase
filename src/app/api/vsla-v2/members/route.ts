@@ -29,15 +29,46 @@ export async function GET(req: NextRequest) {
     }
     const url = new URL(req.url)
     const groupId = url.searchParams.get('groupId')
+    const search = url.searchParams.get('search')
+    const page = parseInt(url.searchParams.get('page') || '1')
+    const limit = parseInt(url.searchParams.get('limit') || '20')
+    const offset = (page - 1) * limit
+
     const where: Record<string, unknown> = {}
     if (groupId) where.groupId = groupId
-    const members = await db.vslaMemberV2.findMany({
+    if (search) {
+      where.OR = [
+        { fullName: { contains: search, mode: 'insensitive' } },
+        { memberId: { contains: search, mode: 'insensitive' } },
+        { phone: { contains: search, mode: 'insensitive' } },
+      ]
+    }
+    if (!ctx.isSuperAdmin) {
+      where.group = { tenantId: { in: ctx.tenantScope } }
+    }
+
+    const [members, total] = await Promise.all([
+      db.vslaMemberV2.findMany({
+        where,
+        include: { group: { select: { name: true, code: true } } },
+        orderBy: { joinedAt: 'desc' },
+        skip: offset,
+        take: limit,
+      }),
+      db.vslaMemberV2.count({ where }),
+    ])
+
+    const stats = await db.vslaMemberV2.aggregate({
       where,
-      include: { group: { select: { name: true, code: true } } },
-      orderBy: { joinedAt: 'desc' },
-      take: 200,
+      _sum: { totalSavings: true },
+      _count: true,
     })
-    return NextResponse.json({ members })
+
+    return NextResponse.json({
+      members,
+      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+      stats: { totalMembers: stats._count, totalSavings: stats._sum.totalSavings || 0 },
+    })
   } catch (error) {
     return NextResponse.json({ error: 'Failed to fetch members' }, { status: 500 })
   }

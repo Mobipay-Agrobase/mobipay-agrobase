@@ -1,6 +1,3 @@
-/**
- * VSLA V2 — List all loans (with filters)
- */
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getTenantContext } from '@/lib/tenant'
@@ -16,29 +13,50 @@ export async function GET(req: NextRequest) {
     const url = new URL(req.url)
     const groupId = url.searchParams.get('groupId')
     const status = url.searchParams.get('status')
-    const limit = parseInt(url.searchParams.get('limit') || '100')
+    const search = url.searchParams.get('search')
+    const page = parseInt(url.searchParams.get('page') || '1')
+    const limit = parseInt(url.searchParams.get('limit') || '20')
+    const offset = (page - 1) * limit
 
     const where: Record<string, unknown> = {}
     if (groupId) where.groupId = groupId
     if (status) where.status = status
-
-    // Tenant isolation
+    if (search) {
+      where.OR = [
+        { member: { fullName: { contains: search, mode: 'insensitive' } } },
+        { purpose: { contains: search, mode: 'insensitive' } },
+      ]
+    }
     if (!ctx.isSuperAdmin) {
       where.group = { tenantId: { in: ctx.tenantScope } }
     }
 
-    const loans = await db.vslaLoanV2.findMany({
+    const [loans, total] = await Promise.all([
+      db.vslaLoanV2.findMany({
+        where,
+        include: {
+          member: { select: { fullName: true, memberId: true, phone: true } },
+          group: { select: { name: true, code: true } },
+          approvals: { include: { keyHolder: { select: { fullName: true, role: true } } } },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip: offset,
+        take: limit,
+      }),
+      db.vslaLoanV2.count({ where }),
+    ])
+
+    const stats = await db.vslaLoanV2.aggregate({
       where,
-      include: {
-        member: { select: { fullName: true, memberId: true, phone: true } },
-        group: { select: { name: true, code: true } },
-        approvals: { include: { keyHolder: { select: { fullName: true, role: true } } } },
-      },
-      orderBy: { createdAt: 'desc' },
-      take: limit,
+      _sum: { amount: true, outstanding: true },
+      _count: true,
     })
 
-    return NextResponse.json({ loans })
+    return NextResponse.json({
+      loans,
+      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+      stats: { totalLoans: stats._count, totalAmount: stats._sum.amount || 0, totalOutstanding: stats._sum.outstanding || 0 },
+    })
   } catch (error) {
     console.error('[vsla-v2/loans GET] error:', error)
     return NextResponse.json({ error: 'Failed to fetch loans' }, { status: 500 })

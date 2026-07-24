@@ -86,12 +86,12 @@ export default function VslaView() {
   }, [])
 
   const fetchLoans = useCallback(async () => {
-    const data = await safeFetch('/api/vsla-v2/loans')
+    const data = await safeFetch('/api/vsla-v2/loans?limit=50')
     if (data) setLoans(extractArray(data, 'loans', 'data'))
   }, [])
 
   const fetchMeetings = useCallback(async () => {
-    const data = await safeFetch('/api/vsla-v2/meetings')
+    const data = await safeFetch('/api/vsla-v2/meetings?limit=50')
     if (data) setMeetings(extractArray(data, 'meetings', 'data'))
   }, [])
 
@@ -806,17 +806,19 @@ function GroupSettingsDialog({ group, onClose, onSaved }: { group: any; onClose:
   )
 }
 
-// ─── Group Detail Dialog ───
+// ─── Group Detail Dialog (Enhanced with charts + ledger) ───
 function GroupDetailDialog({ group, onClose }: { group: any; onClose: () => void }) {
   const [data, setData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [detailTab, setDetailTab] = useState('overview')
 
   useEffect(() => {
     async function load() {
       try {
-        const res = await fetch(`/api/vsla-v2/groups/${group.id}`)
+        // Load the enhanced report with charts + ledger
+        const res = await fetch(`/api/vsla-v2/groups/${group.id}/report`)
         const d = await res.json()
-        setData(d.group)
+        setData(d)
       } catch {
         toast.error('Failed to load group details')
       } finally {
@@ -830,81 +832,230 @@ function GroupDetailDialog({ group, onClose }: { group: any; onClose: () => void
 
   return (
     <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader><DialogTitle>{data?.name || group.name}</DialogTitle></DialogHeader>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <PiggyBank className="w-4 h-4 text-emerald-600" />
+            {data?.group?.name || group.name}
+          </DialogTitle>
+        </DialogHeader>
 
         {data && (
           <div className="space-y-4">
-            {/* Stats */}
-            <div className="grid grid-cols-4 gap-3">
-              <Card><CardContent className="p-3 text-center"><p className="text-xs text-muted-foreground">Members</p><p className="text-lg font-bold">{data._count?.members || 0}</p></CardContent></Card>
-              <Card><CardContent className="p-3 text-center"><p className="text-xs text-muted-foreground">Key Holders</p><p className="text-lg font-bold">{data._count?.keyHolders || 0}</p></CardContent></Card>
-              <Card><CardContent className="p-3 text-center"><p className="text-xs text-muted-foreground">Loans</p><p className="text-lg font-bold">{data._count?.loans || 0}</p></CardContent></Card>
-              <Card><CardContent className="p-3 text-center"><p className="text-xs text-muted-foreground">Cashbox</p><p className="text-sm font-bold"><MaskedAmount amount={data.cashboxBalance} /></p></CardContent></Card>
-            </div>
+            {/* Tabs */}
+            <Tabs value={detailTab} onValueChange={setDetailTab}>
+              <TabsList className="grid grid-cols-5">
+                <TabsTrigger value="overview">Overview</TabsTrigger>
+                <TabsTrigger value="charts">Charts</TabsTrigger>
+                <TabsTrigger value="ledger">Ledger</TabsTrigger>
+                <TabsTrigger value="members">Top Savers</TabsTrigger>
+                <TabsTrigger value="config">Config</TabsTrigger>
+              </TabsList>
 
-            {/* Settings Summary */}
-            <Card>
-              <CardHeader><CardTitle className="text-sm">Current Configuration</CardTitle></CardHeader>
-              <CardContent className="grid grid-cols-2 gap-3 text-sm">
-                <div className="flex justify-between"><span className="text-muted-foreground">Share Price</span><span className="font-medium">UGX {data.sharePrice?.toLocaleString()}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Loan Multiplier</span><span className="font-medium">{data.loanMultiplier}×</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Welfare</span><span className="font-medium">UGX {data.welfareContribution?.toLocaleString()}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Late Fine</span><span className="font-medium">UGX {data.lateAttendanceFine?.toLocaleString()}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Absence Fine</span><span className="font-medium">UGX {data.absenceFine?.toLocaleString()}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Cycle Length</span><span className="font-medium">{data.cycleLengthDays} days</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Min Key Holders</span><span className="font-medium">{data.minKeyHolders}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Max Key Holders</span><span className="font-medium">{data.maxKeyHolders}</span></div>
-              </CardContent>
-            </Card>
+              {/* OVERVIEW TAB */}
+              <TabsContent value="overview" className="mt-4 space-y-4">
+                <div className="grid grid-cols-4 gap-3">
+                  <Card><CardContent className="p-3 text-center">
+                    <Users className="w-4 h-4 mx-auto text-blue-600 mb-1" />
+                    <p className="text-lg font-bold">{data.stats?.totalMembers || 0}</p>
+                    <p className="text-xs text-muted-foreground">Members</p>
+                  </CardContent></Card>
+                  <Card><CardContent className="p-3 text-center">
+                    <Shield className="w-4 h-4 mx-auto text-purple-600 mb-1" />
+                    <p className="text-lg font-bold">{data.stats?.totalKeyHolders || 0}</p>
+                    <p className="text-xs text-muted-foreground">Key Holders</p>
+                  </CardContent></Card>
+                  <Card><CardContent className="p-3 text-center">
+                    <DollarSign className="w-4 h-4 mx-auto text-amber-600 mb-1" />
+                    <p className="text-lg font-bold">{data.stats?.totalLoans || 0}</p>
+                    <p className="text-xs text-muted-foreground">Loans</p>
+                  </CardContent></Card>
+                  <Card><CardContent className="p-3 text-center">
+                    <PiggyBank className="w-4 h-4 mx-auto text-emerald-600 mb-1" />
+                    <p className="text-sm font-bold"><MaskedAmount amount={data.stats?.cashboxBalance || 0} /></p>
+                    <p className="text-xs text-muted-foreground">Cashbox</p>
+                  </CardContent></Card>
+                </div>
 
-            {/* Key Holders */}
-            {data.keyHolders && data.keyHolders.length > 0 && (
-              <Card>
-                <CardHeader><CardTitle className="text-sm">Key Holders</CardTitle></CardHeader>
-                <CardContent className="space-y-2">
-                  {data.keyHolders.map((kh: any) => (
-                    <div key={kh.id} className="flex items-center justify-between text-sm">
-                      <div className="flex items-center gap-2">
-                        <Shield className="w-3 h-3 text-purple-600" />
-                        <span className="font-medium">{kh.fullName}</span>
-                      </div>
-                      <Badge className="bg-purple-100 text-purple-700">{kh.role}</Badge>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-            )}
+                <div className="grid grid-cols-2 gap-3">
+                  <Card><CardContent className="p-3">
+                    <p className="text-xs text-muted-foreground">Total Savings</p>
+                    <p className="text-lg font-bold text-emerald-700"><MaskedAmount amount={data.stats?.totalSavings || 0} /></p>
+                  </CardContent></Card>
+                  <Card><CardContent className="p-3">
+                    <p className="text-xs text-muted-foreground">Loans Outstanding</p>
+                    <p className="text-lg font-bold text-amber-700"><MaskedAmount amount={data.stats?.totalLoansOutstanding || 0} /></p>
+                  </CardContent></Card>
+                  <Card><CardContent className="p-3">
+                    <p className="text-xs text-muted-foreground">Total Fines</p>
+                    <p className="text-lg font-bold text-red-600"><MaskedAmount amount={data.stats?.totalFines || 0} /></p>
+                  </CardContent></Card>
+                  <Card><CardContent className="p-3">
+                    <p className="text-xs text-muted-foreground">Avg Attendance</p>
+                    <p className="text-lg font-bold text-blue-600">{data.stats?.avgAttendance || 0}%</p>
+                  </CardContent></Card>
+                </div>
 
-            {/* Active Cycle */}
-            {data.activeCycle && (
-              <Card>
-                <CardHeader><CardTitle className="text-sm">Active Cycle</CardTitle></CardHeader>
-                <CardContent className="grid grid-cols-2 gap-3 text-sm">
-                  <div><span className="text-muted-foreground">Name:</span> {data.activeCycle.name}</div>
-                  <div><span className="text-muted-foreground">Status:</span> <Badge className="bg-emerald-100 text-emerald-700">{data.activeCycle.status}</Badge></div>
-                  <div><span className="text-muted-foreground">Start:</span> {new Date(data.activeCycle.startDate).toLocaleDateString()}</div>
-                  <div><span className="text-muted-foreground">End:</span> {new Date(data.activeCycle.endDate).toLocaleDateString()}</div>
-                  <div><span className="text-muted-foreground">Freeze Date:</span> {new Date(data.activeCycle.freezeDate).toLocaleDateString()}</div>
-                </CardContent>
-              </Card>
-            )}
+                {/* Key Holders */}
+                {data.group?.keyHolders && data.group.keyHolders.length > 0 && (
+                  <Card>
+                    <CardHeader><CardTitle className="text-sm">Key Holders</CardTitle></CardHeader>
+                    <CardContent className="space-y-2">
+                      {data.group.keyHolders.map((kh: any) => (
+                        <div key={kh.id} className="flex items-center justify-between text-sm">
+                          <div className="flex items-center gap-2">
+                            <Shield className="w-3 h-3 text-purple-600" />
+                            <span className="font-medium">{kh.fullName}</span>
+                            <span className="text-xs text-muted-foreground">{kh.phone}</span>
+                          </div>
+                          <Badge className="bg-purple-100 text-purple-700">{kh.role}</Badge>
+                        </div>
+                      ))}
+                    </CardContent>
+                  </Card>
+                )}
+              </TabsContent>
 
-            {/* Recent Cashbox Entries */}
-            {data.recentCashboxEntries && data.recentCashboxEntries.length > 0 && (
-              <Card>
-                <CardHeader><CardTitle className="text-sm">Recent Cashbox Entries</CardTitle></CardHeader>
-                <CardContent className="space-y-1">
-                  {data.recentCashboxEntries.slice(0, 5).map((e: any) => (
-                    <div key={e.id} className="flex justify-between text-xs py-1 border-b last:border-0">
-                      <span className="text-muted-foreground">{new Date(e.createdAt).toLocaleDateString()}</span>
-                      <span className="font-medium">{e.type.replace(/_/g, ' ')}</span>
-                      <MaskedAmount amount={e.amount} />
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-            )}
+              {/* CHARTS TAB */}
+              <TabsContent value="charts" className="mt-4 space-y-4">
+                {/* Monthly Savings Chart */}
+                <Card>
+                  <CardHeader><CardTitle className="text-sm">Monthly Savings Trend</CardTitle></CardHeader>
+                  <CardContent>
+                    {data.charts?.monthlySavings && (
+                      <ChartContainer config={{ amount: { label: 'Savings', color: '#059669' } }} className="h-[200px] w-full">
+                        <BarChart data={data.charts.monthlySavings}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+                          <YAxis tick={{ fontSize: 11 }} />
+                          <ChartTooltip content={<ChartTooltipContent />} />
+                          <Bar dataKey="amount" fill="#059669" radius={[4, 4, 0, 0]} />
+                        </BarChart>
+                      </ChartContainer>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Loan Portfolio Pie Chart */}
+                <Card>
+                  <CardHeader><CardTitle className="text-sm">Loan Portfolio Distribution</CardTitle></CardHeader>
+                  <CardContent>
+                    {data.charts?.loanPortfolio && data.charts.loanPortfolio.length > 0 && (
+                      <ChartContainer config={{}} className="h-[200px] w-full">
+                        <PieChart>
+                          <Pie
+                            data={data.charts.loanPortfolio}
+                            dataKey="count"
+                            nameKey="name"
+                            cx="50%"
+                            cy="50%"
+                            outerRadius={80}
+                            label={(entry: any) => `${entry.name}: ${entry.count}`}
+                          >
+                            {data.charts.loanPortfolio.map((_: any, i: number) => (
+                              <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                            ))}
+                          </Pie>
+                          <ChartTooltip content={<ChartTooltipContent />} />
+                        </PieChart>
+                      </ChartContainer>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Attendance Trend */}
+                {data.charts?.attendanceTrend && data.charts.attendanceTrend.length > 0 && (
+                  <Card>
+                    <CardHeader><CardTitle className="text-sm">Meeting Attendance Trend</CardTitle></CardHeader>
+                    <CardContent>
+                      <ChartContainer config={{ attendance: { label: 'Attendance %', color: '#3b82f6' } }} className="h-[150px] w-full">
+                        <BarChart data={data.charts.attendanceTrend}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="title" tick={{ fontSize: 10 }} />
+                          <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} />
+                          <ChartTooltip content={<ChartTooltipContent />} />
+                          <Bar dataKey="attendance" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                        </BarChart>
+                      </ChartContainer>
+                    </CardContent>
+                  </Card>
+                )}
+              </TabsContent>
+
+              {/* LEDGER TAB */}
+              <TabsContent value="ledger" className="mt-4">
+                <Card><CardContent className="p-0">
+                  <Table>
+                    <TableHeader><TableRow>
+                      <TableHead className="text-xs">Date</TableHead>
+                      <TableHead className="text-xs">Type</TableHead>
+                      <TableHead className="text-xs">Member</TableHead>
+                      <TableHead className="text-xs text-right">In</TableHead>
+                      <TableHead className="text-xs text-right">Out</TableHead>
+                      <TableHead className="text-xs">Ref</TableHead>
+                    </TableRow></TableHeader>
+                    <TableBody>
+                      {data.ledger && data.ledger.length > 0 ? data.ledger.slice(0, 50).map((entry: any, i: number) => (
+                        <TableRow key={i}>
+                          <TableCell className="text-xs">{new Date(entry.date).toLocaleDateString()}</TableCell>
+                          <TableCell className="text-xs font-medium">{entry.type}</TableCell>
+                          <TableCell className="text-xs">{entry.member}</TableCell>
+                          <TableCell className="text-xs text-right text-emerald-600">{entry.direction === 'IN' ? <MaskedAmount amount={entry.amount} /> : '—'}</TableCell>
+                          <TableCell className="text-xs text-right text-red-600">{entry.direction === 'OUT' ? <MaskedAmount amount={entry.amount} /> : '—'}</TableCell>
+                          <TableCell className="text-xs font-mono text-muted-foreground">{entry.reference}</TableCell>
+                        </TableRow>
+                      )) : (
+                        <TableRow><TableCell colSpan={6} className="text-center py-6 text-muted-foreground text-sm">No transactions yet</TableCell></TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </CardContent></Card>
+              </TabsContent>
+
+              {/* TOP SAVERS TAB */}
+              <TabsContent value="members" className="mt-4">
+                <Card><CardContent className="p-0">
+                  <Table>
+                    <TableHeader><TableRow>
+                      <TableHead className="text-xs">#</TableHead>
+                      <TableHead className="text-xs">Member</TableHead>
+                      <TableHead className="text-xs">Member ID</TableHead>
+                      <TableHead className="text-xs text-right">Shares</TableHead>
+                      <TableHead className="text-xs text-right">Savings</TableHead>
+                    </TableRow></TableHeader>
+                    <TableBody>
+                      {data.topSavers && data.topSavers.length > 0 ? data.topSavers.map((m: any, i: number) => (
+                        <TableRow key={m.id}>
+                          <TableCell className="text-xs font-bold">{i + 1}</TableCell>
+                          <TableCell className="text-xs font-medium">{m.fullName}</TableCell>
+                          <TableCell className="text-xs font-mono">{m.memberId}</TableCell>
+                          <TableCell className="text-xs text-right">{m.totalShares}</TableCell>
+                          <TableCell className="text-xs text-right"><MaskedAmount amount={m.totalSavings} /></TableCell>
+                        </TableRow>
+                      )) : (
+                        <TableRow><TableCell colSpan={5} className="text-center py-6 text-muted-foreground text-sm">No members yet</TableCell></TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </CardContent></Card>
+              </TabsContent>
+
+              {/* CONFIG TAB */}
+              <TabsContent value="config" className="mt-4">
+                <Card>
+                  <CardContent className="grid grid-cols-2 gap-3 text-sm pt-4">
+                    <div className="flex justify-between"><span className="text-muted-foreground">Share Price</span><span className="font-medium">UGX {data.group?.sharePrice?.toLocaleString()}</span></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">Loan Multiplier</span><span className="font-medium">{data.group?.loanMultiplier}×</span></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">Welfare</span><span className="font-medium">UGX {data.group?.welfareContribution?.toLocaleString()}</span></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">Late Fine</span><span className="font-medium">UGX {data.group?.lateAttendanceFine?.toLocaleString()}</span></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">Absence Fine</span><span className="font-medium">UGX {data.group?.absenceFine?.toLocaleString()}</span></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">Cycle Length</span><span className="font-medium">{data.group?.cycleLengthDays} days</span></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">Min Key Holders</span><span className="font-medium">{data.group?.minKeyHolders}</span></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">Max Key Holders</span><span className="font-medium">{data.group?.maxKeyHolders}</span></div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
           </div>
         )}
 

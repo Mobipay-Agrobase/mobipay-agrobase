@@ -59,7 +59,7 @@ function MaskedAmount({ amount, role }: { amount: number; role?: string }) {
 }
 
 export default function VslaView() {
-  const { activeSubTab, setActiveSubTab } = useAppStore()
+  const { activeSubTab, setActiveSubTab, selectedVslaGroupId, setSelectedVslaGroupId } = useAppStore()
   const [groups, setGroups] = useState<any[]>([])
   const [members, setMembers] = useState<any[]>([])
   const [loans, setLoans] = useState<any[]>([])
@@ -124,10 +124,20 @@ export default function VslaView() {
     )
   }
 
+  // ─── Full-page Group Detail (not a dialog) ───
+  if (selectedVslaGroupId) {
+    return <VslaGroupDetailPage groupId={selectedVslaGroupId} onBack={() => setSelectedVslaGroupId(null)} />
+  }
+
   const totalSavings = members.reduce((s: number, v: any) => s + (v.totalSavings || 0), 0)
   const totalCashbox = groups.reduce((s: number, g: any) => s + (g.cashboxBalance || 0), 0)
   const totalMembers = groups.reduce((s: number, g: any) => s + (g._count?.members || 0), 0)
   const totalKeyHolders = groups.reduce((s: number, g: any) => s + (g._count?.keyHolders || 0), 0)
+
+  // ─── Full-page Group Detail (not a dialog) ───
+  if (selectedVslaGroupId) {
+    return <VslaGroupDetailPage groupId={selectedVslaGroupId} onBack={() => setSelectedVslaGroupId(null)} />
+  }
 
   return (
     <div className="space-y-4">
@@ -200,7 +210,7 @@ export default function VslaView() {
                       <div><p className="text-muted-foreground">Cashbox</p><p className="font-semibold"><MaskedAmount amount={g.cashboxBalance} /></p></div>
                     </div>
                     <div className="mt-3 pt-3 border-t flex gap-2">
-                      <Button variant="outline" size="sm" className="flex-1 gap-1.5 text-xs" onClick={() => { setEditing(g); setShowCreate('groupDetail') }}>
+                      <Button variant="outline" size="sm" className="flex-1 gap-1.5 text-xs" onClick={() => setSelectedVslaGroupId(g.id)}>
                         <Eye className="w-3 h-3" /> View Details
                       </Button>
                       <Button variant="outline" size="sm" className="flex-1 gap-1.5 text-xs" onClick={() => { setEditing(g); setShowCreate('groupSettings') }}>
@@ -336,7 +346,6 @@ export default function VslaView() {
       {showCreate === 'loan' && <ApplyLoanDialog groups={groups} members={members} onClose={() => setShowCreate(null)} onSaved={() => { setShowCreate(null); refreshAll() }} />}
       {showCreate === 'cashbox' && <CashboxEntryDialog group={editing} onClose={() => setShowCreate(null)} onSaved={() => { setShowCreate(null); refreshAll() }} />}
       {showCreate === 'groupSettings' && <GroupSettingsDialog group={editing} onClose={() => setShowCreate(null)} onSaved={() => { setShowCreate(null); refreshAll() }} />}
-      {showCreate === 'groupDetail' && <GroupDetailDialog group={editing} onClose={() => setShowCreate(null)} />}
     </div>
   )
 }
@@ -806,17 +815,17 @@ function GroupSettingsDialog({ group, onClose, onSaved }: { group: any; onClose:
   )
 }
 
-// ─── Group Detail Dialog (Enhanced with charts + ledger) ───
-function GroupDetailDialog({ group, onClose }: { group: any; onClose: () => void }) {
+// ─── Full-Page Group Detail ───
+function VslaGroupDetailPage({ groupId, onBack }: { groupId: string; onBack: () => void }) {
   const [data, setData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [detailTab, setDetailTab] = useState('overview')
+  const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null)
 
   useEffect(() => {
     async function load() {
       try {
-        // Load the enhanced report with charts + ledger
-        const res = await fetch(`/api/vsla-v2/groups/${group.id}/report`)
+        const res = await fetch(`/api/vsla-v2/groups/${groupId}/report`)
         const d = await res.json()
         setData(d)
       } catch {
@@ -826,19 +835,33 @@ function GroupDetailDialog({ group, onClose }: { group: any; onClose: () => void
       }
     }
     load()
-  }, [group.id])
+  }, [groupId])
 
-  if (loading) return <Dialog open onOpenChange={onClose}><DialogContent><div className="flex items-center justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div></DialogContent></Dialog>
+  // If a member is selected, show their passbook
+  if (selectedMemberId) {
+    return <MemberPassbookPage memberId={selectedMemberId} onBack={() => setSelectedMemberId(null)} />
+  }
+
+  if (loading) return (
+    <div className="space-y-4">
+      <Button variant="outline" size="sm" onClick={onBack} className="gap-2"><ChevronLeft className="w-4 h-4" /> Back to Groups</Button>
+      <Skeleton className="h-96 rounded-xl" />
+    </div>
+  )
 
   return (
-    <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <PiggyBank className="w-4 h-4 text-emerald-600" />
-            {data?.group?.name || group.name}
-          </DialogTitle>
-        </DialogHeader>
+    <div className="space-y-4">
+      {/* Back button + Title */}
+      <div className="flex items-center gap-3">
+        <Button variant="outline" size="sm" onClick={onBack} className="gap-2">
+          <ChevronLeft className="w-4 h-4" /> Back to Groups
+        </Button>
+        <div className="flex items-center gap-2">
+          <PiggyBank className="w-5 h-5 text-emerald-600" />
+          <h2 className="text-xl font-bold">{data?.group?.name || 'Group Details'}</h2>
+          {data?.group?.district && <Badge variant="outline">{data.group.district}, {data.group.region}</Badge>}
+        </div>
+      </div>
 
         {data && (
           <div className="space-y-4">
@@ -1025,7 +1048,7 @@ function GroupDetailDialog({ group, onClose }: { group: any; onClose: () => void
                     </TableRow></TableHeader>
                     <TableBody>
                       {data.topSavers && data.topSavers.length > 0 ? data.topSavers.map((m: any, i: number) => (
-                        <TableRow key={m.id}>
+                        <TableRow key={m.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setSelectedMemberId(m.id)}>
                           <TableCell className="text-xs font-bold">{i + 1}</TableCell>
                           <TableCell className="text-xs font-medium">{m.fullName}</TableCell>
                           <TableCell className="text-xs font-mono">{m.memberId}</TableCell>
@@ -1059,10 +1082,194 @@ function GroupDetailDialog({ group, onClose }: { group: any; onClose: () => void
           </div>
         )}
 
-        <DialogFooter>
-          <DialogClose asChild><Button variant="outline">Close</Button></DialogClose>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    </div>
+  )
+}
+
+// ─── Member Passbook Page (Bank-Style Statement) ───
+function MemberPassbookPage({ memberId, onBack }: { memberId: string; onBack: () => void }) {
+  const [data, setData] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const res = await fetch(`/api/vsla-v2/members/${memberId}/passbook`)
+        const d = await res.json()
+        setData(d)
+      } catch {
+        toast.error('Failed to load passbook')
+      } finally {
+        setLoading(false)
+      }
+    }
+    load()
+  }, [memberId])
+
+  if (loading) return (
+    <div className="space-y-4">
+      <Button variant="outline" size="sm" onClick={onBack} className="gap-2"><ChevronLeft className="w-4 h-4" /> Back</Button>
+      <Skeleton className="h-64 rounded-xl" />
+    </div>
+  )
+
+  if (!data) return <div className="text-center py-12 text-muted-foreground">Failed to load passbook</div>
+
+  const m = data.member
+  const s = data.summary
+
+  return (
+    <div className="space-y-4">
+      {/* Back button */}
+      <Button variant="outline" size="sm" onClick={onBack} className="gap-2">
+        <ChevronLeft className="w-4 h-4" /> Back to Group
+      </Button>
+
+      {/* Member Header Card */}
+      <Card>
+        <CardContent className="p-5">
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-full bg-emerald-100 dark:bg-emerald-950/40 flex items-center justify-center">
+                <Users className="w-6 h-6 text-emerald-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold">{m.fullName}</h3>
+                <p className="text-sm text-muted-foreground font-mono">{m.memberId} · {m.phone}</p>
+                <p className="text-xs text-muted-foreground">{m.group?.name} · Joined {new Date(m.joinedAt).toLocaleDateString()}</p>
+              </div>
+            </div>
+            <Badge className={m.status === 'ACTIVE' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}>{m.status}</Badge>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Summary Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+        <Card><CardContent className="p-3">
+          <p className="text-xs text-muted-foreground">Total Savings</p>
+          <p className="text-lg font-bold text-emerald-700"><MaskedAmount amount={s.totalSavings} /></p>
+        </CardContent></Card>
+        <Card><CardContent className="p-3">
+          <p className="text-xs text-muted-foreground">Shares</p>
+          <p className="text-lg font-bold">{s.totalShares}</p>
+        </CardContent></Card>
+        <Card><CardContent className="p-3">
+          <p className="text-xs text-muted-foreground">Share Value</p>
+          <p className="text-lg font-bold">UGX {s.shareValue?.toLocaleString()}</p>
+        </CardContent></Card>
+        <Card><CardContent className="p-3">
+          <p className="text-xs text-muted-foreground">Outstanding Loans</p>
+          <p className="text-lg font-bold text-amber-700"><MaskedAmount amount={s.outstandingLoans} /></p>
+        </CardContent></Card>
+        <Card><CardContent className="p-3">
+          <p className="text-xs text-muted-foreground">Attendance Rate</p>
+          <p className="text-lg font-bold text-blue-600">{s.attendanceRate}%</p>
+          <p className="text-xs text-muted-foreground">{s.meetingsAttended}/{s.totalMeetings} meetings</p>
+        </CardContent></Card>
+      </div>
+
+      {/* Passbook (Bank-Style Statement) */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm flex items-center gap-2">
+            <DollarSign className="w-4 h-4 text-emerald-600" />
+            Passbook — Transaction History
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader><TableRow>
+              <TableHead className="text-xs">Date</TableHead>
+              <TableHead className="text-xs">Type</TableHead>
+              <TableHead className="text-xs">Description</TableHead>
+              <TableHead className="text-xs text-right">Debit (OUT)</TableHead>
+              <TableHead className="text-xs text-right">Credit (IN)</TableHead>
+              <TableHead className="text-xs text-right">Balance</TableHead>
+              <TableHead className="text-xs">Reference</TableHead>
+            </TableRow></TableHeader>
+            <TableBody>
+              {data.passbook && data.passbook.length > 0 ? data.passbook.map((entry: any, i: number) => (
+                <TableRow key={i}>
+                  <TableCell className="text-xs">{new Date(entry.date).toLocaleDateString()}</TableCell>
+                  <TableCell className="text-xs font-medium">{entry.type}</TableCell>
+                  <TableCell className="text-xs">{entry.description}</TableCell>
+                  <TableCell className="text-xs text-right text-red-600">{entry.debit > 0 ? <MaskedAmount amount={entry.debit} /> : '—'}</TableCell>
+                  <TableCell className="text-xs text-right text-emerald-600">{entry.credit > 0 ? <MaskedAmount amount={entry.credit} /> : '—'}</TableCell>
+                  <TableCell className="text-xs text-right font-medium"><MaskedAmount amount={entry.balance} /></TableCell>
+                  <TableCell className="text-xs font-mono text-muted-foreground">{entry.reference}</TableCell>
+                </TableRow>
+              )) : (
+                <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">No transactions yet</TableCell></TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      {/* Loan History */}
+      {data.loans && data.loans.length > 0 && (
+        <Card>
+          <CardHeader><CardTitle className="text-sm flex items-center gap-2"><DollarSign className="w-4 h-4 text-amber-600" /> Loan History</CardTitle></CardHeader>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader><TableRow>
+                <TableHead className="text-xs">Date</TableHead>
+                <TableHead className="text-xs">Amount</TableHead>
+                <TableHead className="text-xs">Purpose</TableHead>
+                <TableHead className="text-xs">Status</TableHead>
+                <TableHead className="text-xs text-right">Repaid</TableHead>
+                <TableHead className="text-xs text-right">Outstanding</TableHead>
+                <TableHead className="text-xs">Approvals</TableHead>
+              </TableRow></TableHeader>
+              <TableBody>
+                {data.loans.map((loan: any) => (
+                  <TableRow key={loan.id}>
+                    <TableCell className="text-xs">{new Date(loan.applicationDate).toLocaleDateString()}</TableCell>
+                    <TableCell className="text-xs"><MaskedAmount amount={loan.amount} /></TableCell>
+                    <TableCell className="text-xs max-w-xs truncate">{loan.purpose}</TableCell>
+                    <TableCell><Badge className={loanStatusColor[loan.status] || 'bg-gray-100'}>{loan.status.replace(/_/g, ' ')}</Badge></TableCell>
+                    <TableCell className="text-xs text-right"><MaskedAmount amount={loan.amountRepaid} /></TableCell>
+                    <TableCell className="text-xs text-right"><MaskedAmount amount={loan.outstanding} /></TableCell>
+                    <TableCell className="text-xs">
+                      {loan.approvals && loan.approvals.length > 0 ? (
+                        <span className="text-emerald-600">{loan.approvals.length} ✓</span>
+                      ) : '—'}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Attendance History */}
+      {data.attendance && data.attendance.length > 0 && (
+        <Card>
+          <CardHeader><CardTitle className="text-sm flex items-center gap-2"><Calendar className="w-4 h-4 text-blue-600" /> Meeting Attendance</CardTitle></CardHeader>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader><TableRow>
+                <TableHead className="text-xs">Meeting</TableHead>
+                <TableHead className="text-xs">Date</TableHead>
+                <TableHead className="text-xs">Present</TableHead>
+                <TableHead className="text-xs">Late</TableHead>
+              </TableRow></TableHeader>
+              <TableBody>
+                {data.attendance.map((a: any, i: number) => (
+                  <TableRow key={i}>
+                    <TableCell className="text-xs font-medium">{a.meetingTitle}</TableCell>
+                    <TableCell className="text-xs">{new Date(a.meetingDate).toLocaleDateString()}</TableCell>
+                    <TableCell>{a.present ? <CheckCircle className="w-4 h-4 text-emerald-600" /> : <XCircle className="w-4 h-4 text-red-500" />}</TableCell>
+                    <TableCell className="text-xs">{a.arrivedLate ? <span className="text-amber-600">Yes</span> : '—'}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
+    </div>
   )
 }

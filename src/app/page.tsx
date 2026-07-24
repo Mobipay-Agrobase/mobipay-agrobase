@@ -1,6 +1,6 @@
 'use client'
 
-import React, { Suspense, lazy, useEffect } from 'react'
+import React, { Suspense, lazy, useEffect, useRef } from 'react'
 import { useSession } from 'next-auth/react'
 import { useAppStore } from '@/lib/store'
 import { Sidebar } from '@/components/layout/Sidebar'
@@ -197,6 +197,8 @@ export default function HomePage() {
   const setActiveModule = useAppStore((s) => s.setActiveModule)
   const activeModule = useAppStore((s) => s.activeModule)
 
+  const hasRedirected = useRef(false)
+
   useEffect(() => {
     if (session?.user) {
       const role = (session.user as { role: string }).role
@@ -206,14 +208,13 @@ export default function HomePage() {
         role,
         name: session.user.name || '',
       })
-      // If SUPER_ADMIN and currently on a non-super-admin module (and not on a billing-allowed module),
-      // switch to super-admin-overview
-      const isAllowedForSuperAdmin =
-        activeModule.startsWith('super-admin') ||
-        activeModule === 'billing-operations' ||
-        activeModule === 'platform-recovery'
-      if (role === 'SUPER_ADMIN' && !isAllowedForSuperAdmin) {
-        setActiveModule('super-admin-overview')
+      // SUPER_ADMIN: redirect to platform overview ONLY on first login.
+      // After that, they can navigate freely to any module (VSLA, farmers, payments, etc.)
+      if (role === 'SUPER_ADMIN' && !hasRedirected.current) {
+        hasRedirected.current = true
+        if (activeModule === 'dashboard') {
+          setActiveModule('super-admin-overview')
+        }
       }
       // MOBIPAY_FINANCE: redirect to billing-operations if on a non-billing module
       const isAllowedForFinance =

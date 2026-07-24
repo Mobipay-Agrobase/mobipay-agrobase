@@ -247,6 +247,33 @@ const ROLE_PERMISSIONS: RolePerms = {
     'profile:read', 'profile:update',
     'training:read',
   ],
+  // ─── VSLA V2 Roles (SRS compliant) ───
+  // VSLA Officer: Company/tenant field agent who manages groups, assigns key holders,
+  // oversees meetings. Can see all VSLA data for their tenant but not other tenants.
+  VSLA_OFFICER: [
+    'dashboard:read',
+    'vsla:*',
+    'farmers:read', 'farmers:create', 'farmers:update',
+    'training:read', 'training:create',
+    'reports:read',
+    'profile:read', 'profile:update',
+  ],
+  // VSLA Key Holder: Group-level officer (Chairperson/Secretary/Treasurer).
+  // Can approve/reject loans, view group financials, manage meetings.
+  // Cannot create new groups or manage members outside their group.
+  VSLA_KEYHOLDER: [
+    'dashboard:read',
+    'vsla:read', 'vsla:create', 'vsla:update',
+    'reports:read',
+    'profile:read', 'profile:update',
+  ],
+  // VSLA E-Teller: Member designated to record transactions at meetings.
+  // Can record savings, loans, welfare, fines. Cannot approve loans or manage groups.
+  VSLA_ETELLER: [
+    'dashboard:read',
+    'vsla:read', 'vsla:create',
+    'profile:read', 'profile:update',
+  ],
 }
 
 /**

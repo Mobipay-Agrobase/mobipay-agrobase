@@ -18,6 +18,7 @@ const PUBLIC_ROUTES = [
   '/api/auth/',
   '/api/health',
   '/api/route', // basic health check
+  '/api/ussd/', // USSD callback — public (members authenticate via Member ID + PIN)
 ]
 
 // Routes that only need auth (no tenant isolation) — system-level

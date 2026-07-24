@@ -26,6 +26,7 @@ import { toast } from 'sonner'
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Cell, PieChart, Pie } from 'recharts'
 import { exportToCSV } from '@/components/ui/empty-state'
+import { UssdSimulatorView } from '@/components/modules/UssdSimulatorView'
 
 const COLORS = ['#059669', '#10b981', '#34d399', '#6ee7b7', '#f59e0b']
 
@@ -168,6 +169,7 @@ export default function VslaView() {
             <TabsTrigger value="loans">Loans</TabsTrigger>
             <TabsTrigger value="cashbox">Cashbox</TabsTrigger>
             <TabsTrigger value="meetings">Meetings</TabsTrigger>
+            <TabsTrigger value="ussd">USSD</TabsTrigger>
           </TabsList>
           {activeTab === 'groups' && <Button onClick={() => { setEditing(null); setShowCreate('group') }} className="gap-2"><Plus className="w-4 h-4" /> New Group</Button>}
           {activeTab === 'members' && <Button onClick={() => { setEditing(null); setShowCreate('member') }} className="gap-2"><Plus className="w-4 h-4" /> Register Member</Button>}
@@ -312,6 +314,11 @@ export default function VslaView() {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* USSD TAB */}
+        <TabsContent value="ussd" className="mt-4">
+          <UssdSimulatorView />
         </TabsContent>
 
         {/* MEETINGS TAB */}

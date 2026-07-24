@@ -7,7 +7,7 @@ import { safeFetch, extractArray } from '@/lib/safe-fetch'
 import {
   PiggyBank, Users, DollarSign, Calendar, CheckCircle, Clock, XCircle,
   Plus, Eye, EyeOff, ChevronLeft, ChevronRight, Search, Filter, X, Loader2,
-  AlertCircle, TrendingUp, CircleDollarSign, Save, Trash2, Pencil, Download,
+  AlertCircle, TrendingUp, CircleDollarSign, Save, Trash2, Pencil, Download, RefreshCw,
   Shield, Handshake, PiggyBankIcon, Settings
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -65,13 +65,19 @@ export default function VslaView() {
   const [loans, setLoans] = useState<any[]>([])
   const [meetings, setMeetings] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState(activeSubTab || 'groups')
   const [showCreate, setShowCreate] = useState<string | null>(null)
   const [editing, setEditing] = useState<any | null>(null)
 
   const fetchGroups = useCallback(async () => {
     const data = await safeFetch('/api/vsla-v2/groups')
-    if (data) setGroups(extractArray(data, 'groups', 'data'))
+    if (data) {
+      setGroups(extractArray(data, 'groups', 'data'))
+      setError(null)
+    } else {
+      setError('Failed to load VSLA groups. Check your permissions or try refreshing.')
+    }
   }, [])
 
   const fetchMembers = useCallback(async () => {
@@ -80,18 +86,13 @@ export default function VslaView() {
   }, [])
 
   const fetchLoans = useCallback(async () => {
-    // V2 doesn't have a dedicated loans list endpoint yet — derive from groups
-    // For now, we'll fetch loans via a simple query
-    const data = await safeFetch('/api/vsla-v2/groups')
-    if (data && data.groups) {
-      // We could add a /api/vsla-v2/loans endpoint, but for now use the group data
-      setLoans([])
-    }
+    const data = await safeFetch('/api/vsla-v2/loans')
+    if (data) setLoans(extractArray(data, 'loans', 'data'))
   }, [])
 
   const fetchMeetings = useCallback(async () => {
-    // Meetings are part of V2 — would need a list endpoint
-    setMeetings([])
+    const data = await safeFetch('/api/vsla-v2/meetings')
+    if (data) setMeetings(extractArray(data, 'meetings', 'data'))
   }, [])
 
   const loadTab = useCallback((tab: string) => {
@@ -108,6 +109,20 @@ export default function VslaView() {
   }, [refreshAll])
 
   if (loading) return <VslaSkeleton />
+
+  if (error && groups.length === 0) {
+    return (
+      <div className="space-y-4">
+        <div className="p-6 rounded-lg border border-red-200 bg-red-50 dark:bg-red-950/30 text-center">
+          <AlertCircle className="w-10 h-10 text-red-500 mx-auto mb-3" />
+          <p className="font-medium text-red-800 dark:text-red-200">{error}</p>
+          <Button variant="outline" size="sm" className="mt-3 gap-2" onClick={() => { setLoading(true); setError(null); refreshAll().finally(() => setLoading(false)) }}>
+            <RefreshCw className="w-4 h-4" /> Retry
+          </Button>
+        </div>
+      </div>
+    )
+  }
 
   const totalSavings = members.reduce((s: number, v: any) => s + (v.totalSavings || 0), 0)
   const totalCashbox = groups.reduce((s: number, g: any) => s + (g.cashboxBalance || 0), 0)

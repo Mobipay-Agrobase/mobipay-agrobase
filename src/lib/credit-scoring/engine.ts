@@ -250,22 +250,62 @@ export class CreditScoringEngine {
     // Loan burden
     let loan = 100
     if (farmer.loanTakenLastYear && farmer.loanAmount) {
-      // Estimate: if loan amount > $500 (rough income threshold for smallholders)
       loan = farmer.loanAmount > 500 ? 60 : 80
     }
 
-    // Repayment timeliness (from VSLA loan history)
-    const vslaLoans = await db.vslaLoan.findMany({
+    // Repayment timeliness (from VSLA V1 + V2 loan history)
+    // V1 loans
+    const vslaLoansV1 = await db.vslaLoan.findMany({
       where: { farmerId },
       select: { status: true, amount: true },
     })
+
+    // V2 loans — match by phone number since V2 members link to farmers by phone
+    const farmerPhone = farmer.phone || farmer.phoneNumber
+    let vslaLoansV2: any[] = []
+    if (farmerPhone) {
+      const v2Member = await db.vslaMemberV2.findFirst({
+        where: { phone: farmerPhone },
+        select: { id: true },
+      })
+      if (v2Member) {
+        vslaLoansV2 = await db.vslaLoanV2.findMany({
+          where: { memberId: v2Member.id },
+          select: { status: true, amount: true, amountRepaid: true, totalRepayable: true, outstanding: true },
+        })
+      }
+    }
+
+    const allLoans = [...vslaLoansV1, ...vslaLoansV2]
     let repayment = 100
-    if (vslaLoans.length > 0) {
-      const defaulted = vslaLoans.filter(l => l.status === 'DEFAULTED').length
-      const overdue = vslaLoans.filter(l => l.status === 'OVERDUE').length
-      if (defaulted > 0) repayment = 50
-      else if (overdue > 0) repayment = 70
-      else repayment = 100
+
+    if (allLoans.length > 0) {
+      const defaulted = allLoans.filter(l => l.status === 'DEFAULTED' || l.status === 'WRITTEN_OFF').length
+      const overdue = allLoans.filter(l => l.status === 'OVERDUE').length
+      const repaid = allLoans.filter(l => l.status === 'REPAID').length
+      const total = allLoans.length
+
+      if (defaulted > 0) {
+        repayment = 30 // Major red flag
+      } else if (overdue > 0) {
+        repayment = 60 // Yellow flag
+      } else if (repaid === total) {
+        // All loans fully repaid — excellent
+        repayment = 100
+      } else {
+        // Some active loans, no defaults — good
+        repayment = 85
+      }
+
+      // V2 bonus: if repayment ratio is high, boost score
+      const totalRepaid = vslaLoansV2.reduce((sum, l) => sum + (l.amountRepaid || 0), 0)
+      const totalRepayable = vslaLoansV2.reduce((sum, l) => sum + (l.totalRepayable || 0), 0)
+      if (totalRepayable > 0) {
+        const repaymentRatio = totalRepaid / totalRepayable
+        if (repaymentRatio > 0.8 && defaulted === 0) {
+          repayment = Math.min(100, repayment + 10) // Boost for good V2 repayment history
+        }
+      }
     }
 
     // Insurance coverage

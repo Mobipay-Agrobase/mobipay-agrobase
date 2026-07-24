@@ -27,6 +27,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { toast } from 'sonner'
 import { QRCodeSVG } from 'qrcode.react'
 import { FarmerTimeline } from '@/components/farmers/FarmerTimeline'
+import { VslaCreditProfile } from '@/components/farmers/VslaCreditProfile'
 import { FarmerLedger } from '@/components/ekbibo/FarmerLedger'
 import { EmptyState, exportToCSV } from '@/components/ui/empty-state'
 
@@ -808,6 +809,10 @@ function FarmerDetail({ farmerId, onBack }: { farmerId: string; onBack: () => vo
                 )}
               </CardContent>
             </Card>
+
+            {/* VSLA Credit Profile */}
+            {farmer?.phone && <VslaCreditProfile phone={farmer.phone} />}
+
             <Card>
               <CardHeader className="pb-2"><CardTitle className="text-base">Impact Baseline</CardTitle></CardHeader>
               <CardContent>

@@ -8,7 +8,7 @@ import {
   PiggyBank, Users, DollarSign, Calendar, CheckCircle, Clock, XCircle,
   Plus, Eye, EyeOff, ChevronLeft, ChevronRight, Search, Filter, X, Loader2,
   AlertCircle, TrendingUp, CircleDollarSign, Save, Trash2, Pencil, Download,
-  Shield, Handshake, PiggyBankIcon
+  Shield, Handshake, PiggyBankIcon, Settings
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -184,6 +184,14 @@ export default function VslaView() {
                       <div><p className="text-muted-foreground">Welfare</p><p className="font-semibold">UGX {g.welfareContribution?.toLocaleString()}</p></div>
                       <div><p className="text-muted-foreground">Cashbox</p><p className="font-semibold"><MaskedAmount amount={g.cashboxBalance} /></p></div>
                     </div>
+                    <div className="mt-3 pt-3 border-t flex gap-2">
+                      <Button variant="outline" size="sm" className="flex-1 gap-1.5 text-xs" onClick={() => { setEditing(g); setShowCreate('groupDetail') }}>
+                        <Eye className="w-3 h-3" /> View Details
+                      </Button>
+                      <Button variant="outline" size="sm" className="flex-1 gap-1.5 text-xs" onClick={() => { setEditing(g); setShowCreate('groupSettings') }}>
+                        <Settings className="w-3 h-3" /> Settings
+                      </Button>
+                    </div>
                   </CardContent>
                 </Card>
               ))}
@@ -312,6 +320,8 @@ export default function VslaView() {
       {showCreate === 'member' && <RegisterMemberDialog groups={groups} onClose={() => setShowCreate(null)} onSaved={() => { setShowCreate(null); refreshAll() }} />}
       {showCreate === 'loan' && <ApplyLoanDialog groups={groups} members={members} onClose={() => setShowCreate(null)} onSaved={() => { setShowCreate(null); refreshAll() }} />}
       {showCreate === 'cashbox' && <CashboxEntryDialog group={editing} onClose={() => setShowCreate(null)} onSaved={() => { setShowCreate(null); refreshAll() }} />}
+      {showCreate === 'groupSettings' && <GroupSettingsDialog group={editing} onClose={() => setShowCreate(null)} onSaved={() => { setShowCreate(null); refreshAll() }} />}
+      {showCreate === 'groupDetail' && <GroupDetailDialog group={editing} onClose={() => setShowCreate(null)} />}
     </div>
   )
 }
@@ -613,5 +623,280 @@ function VslaSkeleton() {
       <Skeleton className="h-10 rounded-lg" />
       <Skeleton className="h-64 rounded-xl" />
     </div>
+  )
+}
+
+// ─── Group Settings Dialog ───
+function GroupSettingsDialog({ group, onClose, onSaved }: { group: any; onClose: () => void; onSaved: () => void }) {
+  const [form, setForm] = useState<any>({})
+  const [saving, setSaving] = useState(false)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function loadGroup() {
+      try {
+        const res = await fetch(`/api/vsla-v2/groups/${group.id}`)
+        const data = await res.json()
+        if (data.group) {
+          setForm({
+            name: data.group.name || '',
+            region: data.group.region || '',
+            district: data.group.district || '',
+            description: data.group.description || '',
+            sharePrice: data.group.sharePrice || 5000,
+            loanMultiplier: data.group.loanMultiplier || 3,
+            welfareContribution: data.group.welfareContribution || 0,
+            lateAttendanceFine: data.group.lateAttendanceFine || 0,
+            absenceFine: data.group.absenceFine || 0,
+            cycleLengthDays: data.group.cycleLengthDays || 365,
+            minKeyHolders: data.group.minKeyHolders || 3,
+            maxKeyHolders: data.group.maxKeyHolders || 6,
+            status: data.group.status || 'ACTIVE',
+          })
+        }
+      } catch {
+        toast.error('Failed to load group settings')
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadGroup()
+  }, [group.id])
+
+  const handleSave = async () => {
+    setSaving(true)
+    try {
+      const res = await fetch(`/api/vsla-v2/groups/${group.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      })
+      const data = await res.json()
+      if (res.ok) {
+        const changedFields = Object.keys(data.changes || {})
+        toast.success(`Settings updated — ${changedFields.length} field(s) changed`)
+        onSaved()
+      } else {
+        toast.error(data.error || 'Failed to update settings')
+      }
+    } catch {
+      toast.error('Network error')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (loading) return <Dialog open onOpenChange={onClose}><DialogContent><div className="flex items-center justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div></DialogContent></Dialog>
+
+  return (
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2"><Settings className="w-4 h-4" /> Group Settings — {form.name}</DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          {/* Basic Info */}
+          <div className="space-y-2">
+            <p className="text-xs font-semibold text-muted-foreground uppercase">Basic Information</p>
+            <div><Label>Name</Label><Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} /></div>
+            <div className="grid grid-cols-2 gap-3">
+              <div><Label>District</Label><Input value={form.district} onChange={e => setForm({ ...form, district: e.target.value })} /></div>
+              <div><Label>Region</Label><Input value={form.region} onChange={e => setForm({ ...form, region: e.target.value })} /></div>
+            </div>
+          </div>
+
+          {/* Savings Config */}
+          <div className="space-y-2">
+            <p className="text-xs font-semibold text-muted-foreground uppercase">Savings Configuration</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Share Price (UGX)</Label>
+                <Input type="number" value={form.sharePrice} onChange={e => setForm({ ...form, sharePrice: +e.target.value })} />
+                <p className="text-xs text-muted-foreground mt-1">Price per share — drives sharesBought calculation</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Loan Config */}
+          <div className="space-y-2">
+            <p className="text-xs font-semibold text-muted-foreground uppercase">Loan Configuration</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Loan Multiplier</Label>
+                <Input type="number" step="0.1" value={form.loanMultiplier} onChange={e => setForm({ ...form, loanMultiplier: +e.target.value })} />
+                <p className="text-xs text-muted-foreground mt-1">Max loan = member savings × this multiplier</p>
+              </div>
+              <div>
+                <Label>Cycle Length (days)</Label>
+                <Input type="number" value={form.cycleLengthDays} onChange={e => setForm({ ...form, cycleLengthDays: +e.target.value })} />
+              </div>
+            </div>
+          </div>
+
+          {/* Welfare & Fines */}
+          <div className="space-y-2">
+            <p className="text-xs font-semibold text-muted-foreground uppercase">Welfare & Fines</p>
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <Label>Welfare (UGX)</Label>
+                <Input type="number" value={form.welfareContribution} onChange={e => setForm({ ...form, welfareContribution: +e.target.value })} />
+              </div>
+              <div>
+                <Label>Late Fine (UGX)</Label>
+                <Input type="number" value={form.lateAttendanceFine} onChange={e => setForm({ ...form, lateAttendanceFine: +e.target.value })} />
+              </div>
+              <div>
+                <Label>Absence Fine (UGX)</Label>
+                <Input type="number" value={form.absenceFine} onChange={e => setForm({ ...form, absenceFine: +e.target.value })} />
+              </div>
+            </div>
+          </div>
+
+          {/* Key Holder Config */}
+          <div className="space-y-2">
+            <p className="text-xs font-semibold text-muted-foreground uppercase">Key Holder Configuration</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Min Key Holders</Label>
+                <Input type="number" min={3} max={6} value={form.minKeyHolders} onChange={e => setForm({ ...form, minKeyHolders: +e.target.value })} />
+              </div>
+              <div>
+                <Label>Max Key Holders</Label>
+                <Input type="number" min={3} max={6} value={form.maxKeyHolders} onChange={e => setForm({ ...form, maxKeyHolders: +e.target.value })} />
+              </div>
+            </div>
+          </div>
+
+          {/* Status */}
+          <div className="space-y-2">
+            <p className="text-xs font-semibold text-muted-foreground uppercase">Status</p>
+            <Select value={form.status} onValueChange={v => setForm({ ...form, status: v })}>
+              <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ACTIVE">Active</SelectItem>
+                <SelectItem value="SUSPENDED">Suspended</SelectItem>
+                <SelectItem value="CLOSED">Closed</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <DialogFooter>
+          <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
+          <Button onClick={handleSave} disabled={saving}>{saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}Save Settings</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+// ─── Group Detail Dialog ───
+function GroupDetailDialog({ group, onClose }: { group: any; onClose: () => void }) {
+  const [data, setData] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const res = await fetch(`/api/vsla-v2/groups/${group.id}`)
+        const d = await res.json()
+        setData(d.group)
+      } catch {
+        toast.error('Failed to load group details')
+      } finally {
+        setLoading(false)
+      }
+    }
+    load()
+  }, [group.id])
+
+  if (loading) return <Dialog open onOpenChange={onClose}><DialogContent><div className="flex items-center justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div></DialogContent></Dialog>
+
+  return (
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader><DialogTitle>{data?.name || group.name}</DialogTitle></DialogHeader>
+
+        {data && (
+          <div className="space-y-4">
+            {/* Stats */}
+            <div className="grid grid-cols-4 gap-3">
+              <Card><CardContent className="p-3 text-center"><p className="text-xs text-muted-foreground">Members</p><p className="text-lg font-bold">{data._count?.members || 0}</p></CardContent></Card>
+              <Card><CardContent className="p-3 text-center"><p className="text-xs text-muted-foreground">Key Holders</p><p className="text-lg font-bold">{data._count?.keyHolders || 0}</p></CardContent></Card>
+              <Card><CardContent className="p-3 text-center"><p className="text-xs text-muted-foreground">Loans</p><p className="text-lg font-bold">{data._count?.loans || 0}</p></CardContent></Card>
+              <Card><CardContent className="p-3 text-center"><p className="text-xs text-muted-foreground">Cashbox</p><p className="text-sm font-bold"><MaskedAmount amount={data.cashboxBalance} /></p></CardContent></Card>
+            </div>
+
+            {/* Settings Summary */}
+            <Card>
+              <CardHeader><CardTitle className="text-sm">Current Configuration</CardTitle></CardHeader>
+              <CardContent className="grid grid-cols-2 gap-3 text-sm">
+                <div className="flex justify-between"><span className="text-muted-foreground">Share Price</span><span className="font-medium">UGX {data.sharePrice?.toLocaleString()}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Loan Multiplier</span><span className="font-medium">{data.loanMultiplier}×</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Welfare</span><span className="font-medium">UGX {data.welfareContribution?.toLocaleString()}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Late Fine</span><span className="font-medium">UGX {data.lateAttendanceFine?.toLocaleString()}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Absence Fine</span><span className="font-medium">UGX {data.absenceFine?.toLocaleString()}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Cycle Length</span><span className="font-medium">{data.cycleLengthDays} days</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Min Key Holders</span><span className="font-medium">{data.minKeyHolders}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Max Key Holders</span><span className="font-medium">{data.maxKeyHolders}</span></div>
+              </CardContent>
+            </Card>
+
+            {/* Key Holders */}
+            {data.keyHolders && data.keyHolders.length > 0 && (
+              <Card>
+                <CardHeader><CardTitle className="text-sm">Key Holders</CardTitle></CardHeader>
+                <CardContent className="space-y-2">
+                  {data.keyHolders.map((kh: any) => (
+                    <div key={kh.id} className="flex items-center justify-between text-sm">
+                      <div className="flex items-center gap-2">
+                        <Shield className="w-3 h-3 text-purple-600" />
+                        <span className="font-medium">{kh.fullName}</span>
+                      </div>
+                      <Badge className="bg-purple-100 text-purple-700">{kh.role}</Badge>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Active Cycle */}
+            {data.activeCycle && (
+              <Card>
+                <CardHeader><CardTitle className="text-sm">Active Cycle</CardTitle></CardHeader>
+                <CardContent className="grid grid-cols-2 gap-3 text-sm">
+                  <div><span className="text-muted-foreground">Name:</span> {data.activeCycle.name}</div>
+                  <div><span className="text-muted-foreground">Status:</span> <Badge className="bg-emerald-100 text-emerald-700">{data.activeCycle.status}</Badge></div>
+                  <div><span className="text-muted-foreground">Start:</span> {new Date(data.activeCycle.startDate).toLocaleDateString()}</div>
+                  <div><span className="text-muted-foreground">End:</span> {new Date(data.activeCycle.endDate).toLocaleDateString()}</div>
+                  <div><span className="text-muted-foreground">Freeze Date:</span> {new Date(data.activeCycle.freezeDate).toLocaleDateString()}</div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Recent Cashbox Entries */}
+            {data.recentCashboxEntries && data.recentCashboxEntries.length > 0 && (
+              <Card>
+                <CardHeader><CardTitle className="text-sm">Recent Cashbox Entries</CardTitle></CardHeader>
+                <CardContent className="space-y-1">
+                  {data.recentCashboxEntries.slice(0, 5).map((e: any) => (
+                    <div key={e.id} className="flex justify-between text-xs py-1 border-b last:border-0">
+                      <span className="text-muted-foreground">{new Date(e.createdAt).toLocaleDateString()}</span>
+                      <span className="font-medium">{e.type.replace(/_/g, ' ')}</span>
+                      <MaskedAmount amount={e.amount} />
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        )}
+
+        <DialogFooter>
+          <DialogClose asChild><Button variant="outline">Close</Button></DialogClose>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }

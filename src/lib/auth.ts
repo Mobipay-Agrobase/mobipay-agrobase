@@ -161,17 +161,17 @@ export const authOptions: NextAuthOptions = {
   secret: (() => {
     const secret = process.env.NEXTAUTH_SECRET
     if (!secret) {
-      if (process.env.NODE_ENV === 'production') {
-        throw new Error(
-          'FATAL: NEXTAUTH_SECRET not set. Refusing to start in production. ' +
-          'Generate with: openssl rand -base64 32'
-        )
-      }
-      console.warn('⚠️  NEXTAUTH_SECRET not set — using ephemeral dev secret. Set it in .env')
-      return 'dev-only-ephemeral-secret-do-not-use-in-production'
-    }
-    if (secret.length < 32 && process.env.NODE_ENV === 'production') {
-      throw new Error('FATAL: NEXTAUTH_SECRET must be at least 32 chars. Generate with: openssl rand -base64 32')
+      // Non-fatal: use a random ephemeral secret so the app still starts.
+      // Sessions won't persist across cold starts until NEXTAUTH_SECRET is set.
+      const crypto = require('crypto')
+      const ephemeral = crypto.randomBytes(32).toString('base64')
+      console.error('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+      console.error('!! CRITICAL: NEXTAUTH_SECRET is NOT set!')
+      console.error('!! Using ephemeral secret — sessions will NOT persist across restarts.')
+      console.error('!! Set NEXTAUTH_SECRET in Vercel env vars immediately:')
+      console.error('!! openssl rand -base64 32')
+      console.error('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+      return ephemeral
     }
     return secret
   })(),

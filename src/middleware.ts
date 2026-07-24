@@ -191,7 +191,13 @@ export async function middleware(request: NextRequest) {
   // ─── 2. PERMISSION CHECK (basic module access) ───────────────────────────
   const moduleMatch = pathname.match(/^\/api\/([a-z_-]+)/)
   if (moduleMatch) {
-    const moduleName = moduleMatch[1]
+    // Map URL module names to permission module names (aliases)
+    const MODULE_ALIASES: Record<string, string> = {
+      'vsla-v2': 'vsla',       // /api/vsla-v2/* uses same permissions as /api/vsla/*
+      'nssf-contributions': 'nssf',
+      'nssf-settlement': 'nssf',
+    }
+    const moduleName = MODULE_ALIASES[moduleMatch[1]] || moduleMatch[1]
     if (!matchesRoute(pathname, SYSTEM_ROUTES)) {
       const { hasPermission } = await import('@/lib/permissions')
       const canRead = hasPermission(role || '', `${moduleName}:read`)

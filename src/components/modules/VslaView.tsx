@@ -8,7 +8,7 @@ import {
   PiggyBank, Users, DollarSign, Calendar, CheckCircle, Clock, XCircle,
   Plus, Eye, EyeOff, ChevronLeft, ChevronRight, Search, Filter, X, Loader2,
   AlertCircle, TrendingUp, CircleDollarSign, Save, Trash2, Pencil, Download, RefreshCw,
-  Shield, Handshake, PiggyBankIcon, Settings
+  Shield, Handshake, PiggyBankIcon, Settings, Package, Receipt, Store, Leaf, Landmark
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -169,6 +169,7 @@ export default function VslaView() {
             <TabsTrigger value="loans">Loans</TabsTrigger>
             <TabsTrigger value="cashbox">Cashbox</TabsTrigger>
             <TabsTrigger value="meetings">Meetings</TabsTrigger>
+            <TabsTrigger value="integrations">Integrations</TabsTrigger>
             <TabsTrigger value="ussd">USSD</TabsTrigger>
           </TabsList>
           {activeTab === 'groups' && <Button onClick={() => { setEditing(null); setShowCreate('group') }} className="gap-2"><Plus className="w-4 h-4" /> New Group</Button>}
@@ -314,6 +315,11 @@ export default function VslaView() {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* INTEGRATIONS TAB */}
+        <TabsContent value="integrations" className="mt-4">
+          <VslaIntegrationsTab groups={groups} />
         </TabsContent>
 
         {/* USSD TAB */}
@@ -1278,5 +1284,205 @@ function MemberPassbookPage({ memberId, onBack }: { memberId: string; onBack: ()
         </Card>
       )}
     </div>
+  )
+}
+
+// ─── VSLA Integrations Tab (Phase 5 + 6) ───
+function VslaIntegrationsTab({ groups }: { groups: any[] }) {
+  const [data, setData] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const [showCreate, setShowCreate] = useState(false)
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    try {
+      const res = await fetch('/api/vsla-v2/integrations?limit=50')
+      if (res.ok) {
+        const d = await res.json()
+        setData(d)
+      }
+    } catch {
+      // ignore
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => { load() }, [load])
+
+  if (loading) return <Skeleton className="h-64 rounded-xl" />
+
+  const entries = data?.entries || []
+  const summary = data?.summary || {}
+
+  const integrationTypes: Array<{ type: string; label: string; icon: any; color: string; phase: string }> = [
+    { type: 'INPUT_PURCHASE', label: 'Input Purchase', icon: Package, color: 'text-amber-600', phase: 'Phase 5' },
+    { type: 'PRODUCT_SALE', label: 'Product Sale', icon: Receipt, color: 'text-emerald-600', phase: 'Phase 5' },
+    { type: 'MARKETPLACE_SALE', label: 'Marketplace Sale', icon: Store, color: 'text-blue-600', phase: 'Phase 5' },
+    { type: 'INSURANCE_PREMIUM', label: 'Insurance Premium', icon: Shield, color: 'text-purple-600', phase: 'Phase 6' },
+    { type: 'INSURANCE_CLAIM', label: 'Insurance Claim', icon: Shield, color: 'text-purple-600', phase: 'Phase 6' },
+    { type: 'NSSF_CONTRIBUTION', label: 'NSSF Contribution', icon: Landmark, color: 'text-indigo-600', phase: 'Phase 6' },
+    { type: 'CARBON_CREDIT', label: 'Carbon Credit', icon: Leaf, color: 'text-green-600', phase: 'Phase 6' },
+    { type: 'MFI_LOAN_DISBURSEMENT', label: 'MFI Loan', icon: DollarSign, color: 'text-cyan-600', phase: 'Phase 4' },
+    { type: 'MFI_LOAN_REPAYMENT', label: 'MFI Repayment', icon: DollarSign, color: 'text-cyan-600', phase: 'Phase 4' },
+  ]
+
+  return (
+    <div className="space-y-4">
+      {/* Summary cards by integration type */}
+      <div className="grid grid-cols-3 md:grid-cols-5 gap-3">
+        {integrationTypes.map(it => {
+          const s = summary[it.type]
+          const Icon = it.icon
+          return (
+            <Card key={it.type}>
+              <CardContent className="p-3">
+                <div className="flex items-center gap-2 mb-1">
+                  <Icon className={`w-3.5 h-3.5 ${it.color}`} />
+                  <span className="text-xs font-medium truncate">{it.label}</span>
+                </div>
+                <p className="text-sm font-bold">{s?.count || 0}</p>
+                <p className="text-xs text-muted-foreground">
+                  {s ? `In: ${s.totalIn.toLocaleString()} | Out: ${s.totalOut.toLocaleString()}` : 'No transactions'}
+                </p>
+              </CardContent>
+            </Card>
+          )
+        })}
+      </div>
+
+      {/* Integration transaction history */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm flex items-center gap-2">
+            <TrendingUp className="w-4 h-4 text-emerald-600" />
+            Cross-Module Transactions
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader><TableRow>
+              <TableHead className="text-xs">Date</TableHead>
+              <TableHead className="text-xs">Type</TableHead>
+              <TableHead className="text-xs">Group</TableHead>
+              <TableHead className="text-xs">Description</TableHead>
+              <TableHead className="text-xs text-right">Amount</TableHead>
+              <TableHead className="text-xs">Direction</TableHead>
+              <TableHead className="text-xs text-right">Cashbox After</TableHead>
+            </TableRow></TableHeader>
+            <TableBody>
+              {entries.length === 0 ? (
+                <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                  No cross-module transactions yet. When VSLA groups buy inputs, sell produce,
+                  pay insurance, or receive carbon credits, they'll appear here.
+                </TableCell></TableRow>
+              ) : entries.map((e: any) => {
+                const isIn = e.balanceAfter > e.balanceBefore
+                return (
+                  <TableRow key={e.id}>
+                    <TableCell className="text-xs">{new Date(e.createdAt).toLocaleDateString()}</TableCell>
+                    <TableCell className="text-xs font-medium">
+                      {integrationTypes.find(t => e.description.includes(t.type))?.label || e.type.replace(/_/g, ' ')}
+                    </TableCell>
+                    <TableCell className="text-xs">{e.group?.name || '—'}</TableCell>
+                    <TableCell className="text-xs max-w-xs truncate">{e.description}</TableCell>
+                    <TableCell className="text-xs text-right"><MaskedAmount amount={e.amount} /></TableCell>
+                    <TableCell><Badge className={isIn ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}>{isIn ? 'IN' : 'OUT'}</Badge></TableCell>
+                    <TableCell className="text-xs text-right"><MaskedAmount amount={e.balanceAfter} /></TableCell>
+                  </TableRow>
+                )
+              })}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      {/* Manual integration entry (for testing) */}
+      <Card>
+        <CardHeader><CardTitle className="text-sm">Record Cross-Module Transaction</CardTitle></CardHeader>
+        <CardContent>
+          <Button onClick={() => setShowCreate(true)} className="gap-2">
+            <Plus className="w-4 h-4" /> New Integration Entry
+          </Button>
+        </CardContent>
+      </Card>
+
+      {showCreate && <IntegrationEntryDialog groups={groups} onClose={() => setShowCreate(false)} onSaved={() => { setShowCreate(false); load() }} />}
+    </div>
+  )
+}
+
+// ─── Integration Entry Dialog ───
+function IntegrationEntryDialog({ groups, onClose, onSaved }: { groups: any[]; onClose: () => void; onSaved: () => void }) {
+  const [form, setForm] = useState({
+    groupId: '', type: 'PRODUCT_SALE', amount: '', description: '', recordedByName: 'Admin',
+  })
+  const [saving, setSaving] = useState(false)
+
+  const handleSave = async () => {
+    setSaving(true)
+    try {
+      const res = await fetch('/api/vsla-v2/integrations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...form,
+          amount: parseFloat(form.amount),
+        }),
+      })
+      const data = await res.json()
+      if (res.ok) {
+        toast.success('Integration recorded — cashbox updated')
+        onSaved()
+      } else {
+        toast.error(data.error || 'Failed')
+      }
+    } catch {
+      toast.error('Network error')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const types = [
+    { value: 'INPUT_PURCHASE', label: 'Input Purchase (OUT)', phase: 'Phase 5' },
+    { value: 'PRODUCT_SALE', label: 'Product Sale (IN)', phase: 'Phase 5' },
+    { value: 'MARKETPLACE_SALE', label: 'Marketplace Sale (IN)', phase: 'Phase 5' },
+    { value: 'INSURANCE_PREMIUM', label: 'Insurance Premium (OUT)', phase: 'Phase 6' },
+    { value: 'INSURANCE_CLAIM', label: 'Insurance Claim (IN)', phase: 'Phase 6' },
+    { value: 'NSSF_CONTRIBUTION', label: 'NSSF Contribution (OUT)', phase: 'Phase 6' },
+    { value: 'CARBON_CREDIT', label: 'Carbon Credit (IN)', phase: 'Phase 6' },
+  ]
+
+  return (
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent className="max-w-md">
+        <DialogHeader><DialogTitle>Record Cross-Module Transaction</DialogTitle></DialogHeader>
+        <div className="space-y-3">
+          <div>
+            <Label>Group</Label>
+            <Select value={form.groupId} onValueChange={v => setForm({ ...form, groupId: v })}>
+              <SelectTrigger><SelectValue placeholder="Select group..." /></SelectTrigger>
+              <SelectContent>{groups.map(g => <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>)}</SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label>Transaction Type</Label>
+            <Select value={form.type} onValueChange={v => setForm({ ...form, type: v })}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {types.map(t => <SelectItem key={t.value} value={t.value}>{t.label} ({t.phase})</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div><Label>Amount (UGX)</Label><Input type="number" value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })} /></div>
+          <div><Label>Description</Label><Input value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="e.g. Bulk purchase of seeds for 12 members" /></div>
+        </div>
+        <DialogFooter>
+          <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
+          <Button onClick={handleSave} disabled={saving || !form.groupId || !form.amount || !form.description}>{saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}Record</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }

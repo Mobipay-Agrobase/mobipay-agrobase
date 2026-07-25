@@ -12,6 +12,7 @@ import '../../features/loans/presentation/pages/loans_page.dart';
 import '../../features/vsla/presentation/pages/vsla_page.dart';
 import '../../features/vsla_v2/presentation/pages/member_login_page.dart';
 import '../../features/vsla_v2/presentation/pages/member_dashboard_page.dart';
+import '../../features/vsla_v2/presentation/pages/integrations_page.dart';
 import '../../features/mfi/presentation/pages/mfi_page.dart';
 import '../../features/carbon/presentation/pages/carbon_page.dart';
 import '../../features/compliance/presentation/pages/compliance_page.dart';
@@ -49,6 +50,11 @@ class AppRouter {
           GoRoute(
             path: '/vsla-member-dashboard',
             builder: (_, __) => const MemberDashboardPage(),
+          ),
+          // VSLA V2 — Cross-module integrations
+          GoRoute(
+            path: '/vsla-integrations',
+            builder: (_, __) => const IntegrationsPage(groupId: ''),
           ),
           GoRoute(
             path: '/login',

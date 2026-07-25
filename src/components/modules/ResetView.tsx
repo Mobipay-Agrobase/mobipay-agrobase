@@ -13,7 +13,10 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from 'sonner'
-import { Users, Receipt, Store, DollarSign, Target, BarChart3, Plus, CheckCircle, Loader2, Eye, EyeOff } from 'lucide-react'
+import { Users, Receipt, Store, DollarSign, Target, BarChart3, Plus, CheckCircle, Loader2, Eye, EyeOff, Download, Filter, TrendingUp, FileText } from 'lucide-react'
+import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Cell, PieChart, Pie, LineChart, Line, Legend, ResponsiveContainer } from 'recharts'
+import { exportToCSV } from '@/components/ui/empty-state'
 
 function formatUGX(n: number) { return `UGX ${(n || 0).toLocaleString()}` }
 function formatDate(d: any) { return d ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—' }
@@ -393,13 +396,327 @@ function CashTab() {
 }
 
 function ReportsTab() {
+  const [data, setData] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const [filters, setFilters] = useState({ settlement: '', partner: '' })
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    const params = new URLSearchParams()
+    if (filters.settlement) params.set('settlement', filters.settlement)
+    if (filters.partner) params.set('partner', filters.partner)
+    const res = await fetch(`/api/reset/reports?${params.toString()}`)
+    if (res.ok) setData(await res.json())
+    setLoading(false)
+  }, [filters])
+
+  useEffect(() => { load() }, [load])
+
+  if (loading) return <Skeleton className="h-96 rounded-xl" />
+  if (!data) return <Card><CardContent className="p-6 text-center text-muted-foreground">Failed to load report data</CardContent></Card>
+
+  const m = data.unitMetrics
+  const COLORS = ['#059669', '#3b82f6', '#f59e0b', '#8b5cf6', '#ef4444', '#06b6d4']
+  const chartConfig: ChartConfig = {
+    count: { label: 'Count', color: '#059669' },
+    amount: { label: 'Amount (UGX)', color: '#3b82f6' },
+  }
+
   return (
-    <Card><CardContent className="p-6 text-center">
-      <BarChart3 className="w-10 h-10 mx-auto mb-3 text-muted-foreground opacity-40" />
-      <p className="font-medium">Consortium Reports</p>
-      <p className="text-sm text-muted-foreground mt-1">FCDO-format consolidated reports across all consortium partners.</p>
-      <p className="text-sm text-muted-foreground mt-2">Reports will include: beneficiary demographics, voucher redemption rates, cash disbursement status, merchant performance, and settlement-level breakdowns.</p>
-    </CardContent></Card>
+    <div className="space-y-4">
+      {/* Filters */}
+      <Card>
+        <CardContent className="p-4 flex items-end gap-3 flex-wrap">
+          <div className="flex items-center gap-2 text-sm font-medium"><Filter className="w-4 h-4" /> Filters:</div>
+          <div>
+            <Label className="text-xs">Settlement</Label>
+            <Select value={filters.settlement} onValueChange={v => setFilters({ ...filters, settlement: v === 'ALL' ? '' : v })}>
+              <SelectTrigger className="w-40"><SelectValue placeholder="All" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">All Settlements</SelectItem>
+                {SETTLEMENTS.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label className="text-xs">Partner</Label>
+            <Select value={filters.partner} onValueChange={v => setFilters({ ...filters, partner: v === 'ALL' ? '' : v })}>
+              <SelectTrigger className="w-40"><SelectValue placeholder="All" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">All Partners</SelectItem>
+                {PARTNER_KEYS.map((p, i) => <SelectItem key={p} value={p}>{PARTNERS[i]}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <Button variant="outline" size="sm" className="gap-2" onClick={() => {
+            const csvData = [
+              { Metric: 'Total Beneficiaries', Value: m.totalBeneficiaries },
+              { Metric: 'Total Households', Value: m.totalHouseholds },
+              { Metric: 'Total Vouchers', Value: m.totalVouchers },
+              { Metric: 'Total Voucher Amount', Value: m.totalVoucherAmount },
+              { Metric: 'Redeemed Vouchers', Value: m.redeemedVouchers },
+              { Metric: 'Redeemed Amount', Value: m.redeemedAmount },
+              { Metric: 'Redemption Rate (%)', Value: m.redemptionRate },
+              { Metric: 'Total Cash Disbursed', Value: m.totalCashDisbursed },
+              { Metric: 'Total Cash Confirmed', Value: m.totalCashConfirmed },
+              { Metric: 'Confirmation Rate (%)', Value: m.confirmationRate },
+              { Metric: 'Total Merchants', Value: m.totalMerchants },
+              { Metric: 'Approved Merchants', Value: m.approvedMerchants },
+              { Metric: 'Pending Merchants', Value: m.pendingMerchants },
+              { Metric: 'Pending Payouts', Value: m.totalPendingPayouts },
+              { Metric: 'Total Agents', Value: m.totalAgents },
+              { Metric: 'Avg Beneficiaries per Agent', Value: m.avgBeneficiariesPerAgent },
+            ]
+            exportToCSV(csvData, 'reset-consortium-report')
+          }}>
+            <Download className="w-3.5 h-3.5" /> Export CSV
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Unit Metrics Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+        <Card><CardContent className="p-3 text-center">
+          <Users className="w-4 h-4 mx-auto text-emerald-600 mb-1" />
+          <p className="text-lg font-bold">{m.totalBeneficiaries}</p>
+          <p className="text-xs text-muted-foreground">Beneficiaries</p>
+        </CardContent></Card>
+        <Card><CardContent className="p-3 text-center">
+          <Users className="w-4 h-4 mx-auto text-blue-600 mb-1" />
+          <p className="text-lg font-bold">{m.totalHouseholds}</p>
+          <p className="text-xs text-muted-foreground">Households</p>
+        </CardContent></Card>
+        <Card><CardContent className="p-3 text-center">
+          <Receipt className="w-4 h-4 mx-auto text-amber-600 mb-1" />
+          <p className="text-lg font-bold">{m.totalVouchers}</p>
+          <p className="text-xs text-muted-foreground">Vouchers</p>
+        </CardContent></Card>
+        <Card><CardContent className="p-3 text-center">
+          <TrendingUp className="w-4 h-4 mx-auto text-emerald-600 mb-1" />
+          <p className="text-lg font-bold">{m.redemptionRate}%</p>
+          <p className="text-xs text-muted-foreground">Redemption Rate</p>
+        </CardContent></Card>
+        <Card><CardContent className="p-3 text-center">
+          <DollarSign className="w-4 h-4 mx-auto text-purple-600 mb-1" />
+          <p className="text-lg font-bold">{m.confirmationRate}%</p>
+          <p className="text-xs text-muted-foreground">Cash Confirmed</p>
+        </CardContent></Card>
+        <Card><CardContent className="p-3 text-center">
+          <Store className="w-4 h-4 mx-auto text-cyan-600 mb-1" />
+          <p className="text-lg font-bold">{m.totalMerchants}</p>
+          <p className="text-xs text-muted-foreground">Merchants</p>
+        </CardContent></Card>
+      </div>
+
+      {/* Charts Row 1: Beneficiaries by Settlement + by Partner */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <Card>
+          <CardHeader><CardTitle className="text-sm">Beneficiaries by Settlement</CardTitle></CardHeader>
+          <CardContent>
+            <ChartContainer config={chartConfig} className="h-[200px] w-full">
+              <BarChart data={data.demographics.bySettlement}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" tick={{ fontSize: 11 }} angle={-15} textAnchor="end" height={50} />
+                <YAxis tick={{ fontSize: 11 }} />
+                <ChartTooltip content={<ChartTooltipContent />} />
+                <Bar dataKey="count" fill="#059669" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ChartContainer>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader><CardTitle className="text-sm">Beneficiaries by Partner</CardTitle></CardHeader>
+          <CardContent>
+            <ChartContainer config={chartConfig} className="h-[200px] w-full">
+              <PieChart>
+                <Pie data={data.demographics.byPartner.map((p: any) => ({ name: p.name === 'SWISS_CONTACT' ? 'Swiss Contact' : p.name, value: p.count }))} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={70} label={(e: any) => `${e.name}: ${e.value}`}>
+                  {data.demographics.byPartner.map((_: any, i: number) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                </Pie>
+                <ChartTooltip content={<ChartTooltipContent />} />
+              </PieChart>
+            </ChartContainer>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Charts Row 2: Voucher Status + Voucher Type */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <Card>
+          <CardHeader><CardTitle className="text-sm">Voucher Status Distribution</CardTitle></CardHeader>
+          <CardContent>
+            <ChartContainer config={chartConfig} className="h-[200px] w-full">
+              <PieChart>
+                <Pie data={data.vouchers.byStatus.map((v: any) => ({ name: v.name.charAt(0) + v.name.slice(1).toLowerCase(), value: v.count, amount: v.amount }))} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={70} label={(e: any) => `${e.name}: ${e.value}`}>
+                  {data.vouchers.byStatus.map((_: any, i: number) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                </Pie>
+                <ChartTooltip content={<ChartTooltipContent />} />
+              </PieChart>
+            </ChartContainer>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader><CardTitle className="text-sm">Vouchers by Type</CardTitle></CardHeader>
+          <CardContent>
+            <ChartContainer config={chartConfig} className="h-[200px] w-full">
+              <BarChart data={data.vouchers.byType.map((v: any) => ({ name: v.name.charAt(0) + v.name.slice(1).toLowerCase(), count: v.count, amount: v.amount }))}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                <YAxis tick={{ fontSize: 11 }} />
+                <ChartTooltip content={<ChartTooltipContent />} />
+                <Bar dataKey="count" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ChartContainer>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Charts Row 3: Cash by Status + Cash by Partner */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <Card>
+          <CardHeader><CardTitle className="text-sm">Cash Disbursement by Status</CardTitle></CardHeader>
+          <CardContent>
+            <ChartContainer config={chartConfig} className="h-[200px] w-full">
+              <BarChart data={data.cash.byStatus.map((c: any) => ({ name: c.name.charAt(0) + c.name.slice(1).toLowerCase(), count: c.count, amount: c.amount }))}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                <YAxis tick={{ fontSize: 11 }} />
+                <ChartTooltip content={<ChartTooltipContent />} />
+                <Bar dataKey="count" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ChartContainer>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader><CardTitle className="text-sm">Cash by Partner</CardTitle></CardHeader>
+          <CardContent>
+            <ChartContainer config={chartConfig} className="h-[200px] w-full">
+              <PieChart>
+                <Pie data={data.cash.byPartner.map((c: any) => ({ name: c.name === 'SWISS_CONTACT' ? 'Swiss Contact' : c.name, value: c.count, amount: c.amount }))} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={70} label={(e: any) => `${e.name}: ${e.value}`}>
+                  {data.cash.byPartner.map((_: any, i: number) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                </Pie>
+                <ChartTooltip content={<ChartTooltipContent />} />
+              </PieChart>
+            </ChartContainer>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Charts Row 4: Merchants by Settlement + by Type */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <Card>
+          <CardHeader><CardTitle className="text-sm">Merchants by Settlement</CardTitle></CardHeader>
+          <CardContent>
+            <ChartContainer config={chartConfig} className="h-[200px] w-full">
+              <BarChart data={data.merchants.bySettlement.map((m: any) => ({ name: m.name, count: m.count, payout: m.payout }))}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" tick={{ fontSize: 11 }} angle={-15} textAnchor="end" height={50} />
+                <YAxis tick={{ fontSize: 11 }} />
+                <ChartTooltip content={<ChartTooltipContent />} />
+                <Bar dataKey="count" fill="#06b6d4" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ChartContainer>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader><CardTitle className="text-sm">Merchants by Business Type</CardTitle></CardHeader>
+          <CardContent>
+            <ChartContainer config={chartConfig} className="h-[200px] w-full">
+              <PieChart>
+                <Pie data={data.merchants.byType.map((m: any) => ({ name: m.name.charAt(0) + m.name.slice(1).toLowerCase(), value: m.count }))} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={70} label={(e: any) => `${e.name}: ${e.value}`}>
+                  {data.merchants.byType.map((_: any, i: number) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                </Pie>
+                <ChartTooltip content={<ChartTooltipContent />} />
+              </PieChart>
+            </ChartContainer>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Agent Performance Table */}
+      <Card>
+        <CardHeader><CardTitle className="text-sm flex items-center gap-2"><Users className="w-4 h-4 text-emerald-600" /> Field Agent Performance</CardTitle></CardHeader>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader><TableRow>
+              <TableHead className="text-xs">Agent</TableHead><TableHead className="text-xs">Type</TableHead>
+              <TableHead className="text-xs">Settlement</TableHead>
+              <TableHead className="text-xs text-right">Beneficiaries Enrolled</TableHead>
+              <TableHead className="text-xs text-right">Merchants Onboarded</TableHead>
+              <TableHead className="text-xs text-right">Vouchers Distributed</TableHead>
+            </TableRow></TableHeader>
+            <TableBody>
+              {data.agents.length > 0 ? data.agents.map((a: any, i: number) => (
+                <TableRow key={i}>
+                  <TableCell className="text-xs font-medium">{a.fullName}</TableCell>
+                  <TableCell className="text-xs">{a.agentType === 'SWISS_CONTACT' ? 'Swiss Contact' : a.agentType === 'MOBIPAY' ? 'MobiPay' : 'E-Teller'}</TableCell>
+                  <TableCell className="text-xs">{a.settlement}</TableCell>
+                  <TableCell className="text-xs text-right font-bold">{a.beneficiariesEnrolled}</TableCell>
+                  <TableCell className="text-xs text-right">{a.merchantsOnboarded}</TableCell>
+                  <TableCell className="text-xs text-right">{a.vouchersDistributed}</TableCell>
+                </TableRow>
+              )) : <TableRow><TableCell colSpan={6} className="text-center py-4 text-muted-foreground text-sm">No agent data</TableCell></TableRow>}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      {/* Detailed Metrics Table with Export */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm flex items-center gap-2"><FileText className="w-4 h-4 text-emerald-600" /> Unit Metrics Summary
+            <Button variant="outline" size="sm" className="ml-auto gap-2 text-xs" onClick={() => {
+              const csvData = [
+                { Metric: 'Total Beneficiaries', Value: m.totalBeneficiaries },
+                { Metric: 'Total Households', Value: m.totalHouseholds },
+                { Metric: 'Total Vouchers Issued', Value: m.totalVouchers },
+                { Metric: 'Total Voucher Amount (UGX)', Value: m.totalVoucherAmount },
+                { Metric: 'Vouchers Redeemed', Value: m.redeemedVouchers },
+                { Metric: 'Redeemed Amount (UGX)', Value: m.redeemedAmount },
+                { Metric: 'Redemption Rate (%)', Value: m.redemptionRate },
+                { Metric: 'Total Cash Disbursed (UGX)', Value: m.totalCashDisbursed },
+                { Metric: 'Total Cash Confirmed (UGX)', Value: m.totalCashConfirmed },
+                { Metric: 'Cash Confirmation Rate (%)', Value: m.confirmationRate },
+                { Metric: 'Total Merchants', Value: m.totalMerchants },
+                { Metric: 'Approved Merchants', Value: m.approvedMerchants },
+                { Metric: 'Pending Merchants', Value: m.pendingMerchants },
+                { Metric: 'Pending Merchant Payouts (UGX)', Value: m.totalPendingPayouts },
+                { Metric: 'Total Field Agents', Value: m.totalAgents },
+                { Metric: 'Avg Beneficiaries per Agent', Value: m.avgBeneficiariesPerAgent },
+              ]
+              exportToCSV(csvData, 'reset-unit-metrics')
+            }}>
+              <Download className="w-3 h-3" /> Export
+            </Button>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader><TableRow>
+              <TableHead className="text-xs">Metric</TableHead>
+              <TableHead className="text-xs text-right">Value</TableHead>
+            </TableRow></TableHeader>
+            <TableBody>
+              <TableRow><TableCell className="text-xs">Total Beneficiaries</TableCell><TableCell className="text-xs text-right font-bold">{m.totalBeneficiaries}</TableCell></TableRow>
+              <TableRow><TableCell className="text-xs">Total Households</TableCell><TableCell className="text-xs text-right font-bold">{m.totalHouseholds}</TableCell></TableRow>
+              <TableRow><TableCell className="text-xs">Total Vouchers Issued</TableCell><TableCell className="text-xs text-right font-bold">{m.totalVouchers}</TableCell></TableRow>
+              <TableRow><TableCell className="text-xs">Total Voucher Amount</TableCell><TableCell className="text-xs text-right"><MaskedAmount amount={m.totalVoucherAmount} /></TableCell></TableRow>
+              <TableRow><TableCell className="text-xs">Vouchers Redeemed</TableCell><TableCell className="text-xs text-right font-bold">{m.redeemedVouchers}</TableCell></TableRow>
+              <TableRow><TableCell className="text-xs">Redeemed Amount</TableCell><TableCell className="text-xs text-right"><MaskedAmount amount={m.redeemedAmount} /></TableCell></TableRow>
+              <TableRow><TableCell className="text-xs">Redemption Rate</TableCell><TableCell className="text-xs text-right font-bold text-emerald-600">{m.redemptionRate}%</TableCell></TableRow>
+              <TableRow><TableCell className="text-xs">Total Cash Disbursed</TableCell><TableCell className="text-xs text-right"><MaskedAmount amount={m.totalCashDisbursed} /></TableCell></TableRow>
+              <TableRow><TableCell className="text-xs">Total Cash Confirmed</TableCell><TableCell className="text-xs text-right"><MaskedAmount amount={m.totalCashConfirmed} /></TableCell></TableRow>
+              <TableRow><TableCell className="text-xs">Cash Confirmation Rate</TableCell><TableCell className="text-xs text-right font-bold text-purple-600">{m.confirmationRate}%</TableCell></TableRow>
+              <TableRow><TableCell className="text-xs">Total Merchants</TableCell><TableCell className="text-xs text-right font-bold">{m.totalMerchants}</TableCell></TableRow>
+              <TableRow><TableCell className="text-xs">Approved Merchants</TableCell><TableCell className="text-xs text-right font-bold text-emerald-600">{m.approvedMerchants}</TableCell></TableRow>
+              <TableRow><TableCell className="text-xs">Pending Merchants</TableCell><TableCell className="text-xs text-right font-bold text-amber-600">{m.pendingMerchants}</TableCell></TableRow>
+              <TableRow><TableCell className="text-xs">Pending Merchant Payouts</TableCell><TableCell className="text-xs text-right"><MaskedAmount amount={m.totalPendingPayouts} /></TableCell></TableRow>
+              <TableRow><TableCell className="text-xs">Total Field Agents</TableCell><TableCell className="text-xs text-right font-bold">{m.totalAgents}</TableCell></TableRow>
+              <TableRow><TableCell className="text-xs">Avg Beneficiaries per Agent</TableCell><TableCell className="text-xs text-right font-bold">{m.avgBeneficiariesPerAgent}</TableCell></TableRow>
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+    </div>
   )
 }
 

@@ -55,7 +55,7 @@ dependencies:
   # Biometric auth: fingerprint / Face ID for app access + financial operations
   local_auth: ^2.3.0
   # Certificate pinning: prevents MITM attacks on dev networks
-  http_certificate_pinning: ^0.0.1
+  http_certificate_pinning: ^3.0.2
   # Root/jailbreak detection: refuse to run on compromised devices
   root_jailbreak_sniffer: ^1.0.1
   # Crypto for local DB encryption (drift uses sqlite3_flutter_libs — add SQLCipher for encryption at rest)

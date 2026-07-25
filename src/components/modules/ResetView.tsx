@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useAppStore } from '@/lib/store'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -385,13 +385,185 @@ function MerchantsTab() {
 }
 
 function CashTab() {
+  const [batches, setBatches] = useState<any[]>([])
+  const [disbursements, setDisbursements] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [uploading, setUploading] = useState(false)
+  const [uploadResult, setUploadResult] = useState<any>(null)
+  const [selectedPartner, setSelectedPartner] = useState('CARE')
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    try {
+      const [batchRes, disbRes] = await Promise.all([
+        fetch('/api/reset/cash/batch'),
+        fetch('/api/reset/beneficiaries?limit=5'),
+      ])
+      if (batchRes.ok) {
+        const batchData = await batchRes.json()
+        setBatches(batchData.batches || [])
+      }
+    } catch {}
+    setLoading(false)
+  }, [])
+
+  useEffect(() => { load() }, [load])
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    setUploading(true)
+    setUploadResult(null)
+
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('partner', selectedPartner)
+
+      const res = await fetch('/api/reset/cash/batch', {
+        method: 'POST',
+        body: formData,
+      })
+      const data = await res.json()
+
+      if (res.ok) {
+        setUploadResult(data)
+        toast.success(`Batch processed: ${data.summary.created} successful, ${data.summary.failed} failed`)
+        load()
+      } else {
+        toast.error(data.error || 'Upload failed')
+      }
+    } catch {
+      toast.error('Network error')
+    } finally {
+      setUploading(false)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+  }
+
+  const downloadTemplate = () => {
+    window.open('/api/reset/cash/template', '_blank')
+  }
+
+  if (loading) return <Skeleton className="h-64 rounded-xl" />
+
   return (
-    <Card><CardContent className="p-6 text-center">
-      <DollarSign className="w-10 h-10 mx-auto mb-3 text-muted-foreground opacity-40" />
-      <p className="font-medium">Cash Disbursement</p>
-      <p className="text-sm text-muted-foreground mt-1">Upload a CSV with beneficiary phones and amounts to send bulk MTN/Airtel MoMo payments.</p>
-      <p className="text-sm text-muted-foreground mt-2">Feature ready — CSV upload and bulk disbursement API pending integration with MTN/Airtel merchant credentials.</p>
-    </CardContent></Card>
+    <div className="space-y-4">
+      {/* Upload Card */}
+      <Card>
+        <CardHeader><CardTitle className="text-sm flex items-center gap-2"><DollarSign className="w-4 h-4 text-purple-600" /> Bulk Cash Disbursement</CardTitle></CardHeader>
+        <CardContent className="space-y-4">
+          {/* Instructions */}
+          <div className="p-4 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800">
+            <p className="text-sm font-medium text-blue-800 dark:text-blue-200 mb-2">How to upload:</p>
+            <ol className="list-decimal list-inside space-y-1 text-xs text-blue-700 dark:text-blue-300">
+              <li>Download the CSV template below</li>
+              <li>Fill in beneficiary ID, phone, amount, partner, and payment method</li>
+              <li>Select the partner (CARE, SCI, or Swiss Contact)</li>
+              <li>Upload the filled CSV — system creates disbursements + sends SMS</li>
+              <li>Beneficiaries receive money via MTN MoMo or Airtel Money</li>
+            </ol>
+          </div>
+
+          {/* Template download */}
+          <div className="flex items-center gap-3">
+            <Button variant="outline" size="sm" onClick={downloadTemplate} className="gap-2">
+              <Download className="w-3.5 h-3.5" /> Download CSV Template
+            </Button>
+            <span className="text-xs text-muted-foreground">Sample file with correct column headers</span>
+          </div>
+
+          {/* Partner selection */}
+          <div className="flex items-center gap-3">
+            <Label className="text-xs">Partner:</Label>
+            <Select value={selectedPartner} onValueChange={setSelectedPartner}>
+              <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {PARTNER_KEYS.map((p, i) => <SelectItem key={p} value={p}>{PARTNERS[i]}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* File upload */}
+          <div className="flex items-center gap-3">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".csv"
+              onChange={handleFileUpload}
+              className="hidden"
+            />
+            <Button onClick={() => fileInputRef.current?.click()} disabled={uploading} className="gap-2">
+              {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+              {uploading ? 'Processing...' : 'Upload CSV'}
+            </Button>
+            <span className="text-xs text-muted-foreground">Max 10,000 rows per batch</span>
+          </div>
+
+          {/* Upload result */}
+          {uploadResult && (
+            <div className="p-4 rounded-lg border" style={{
+              borderColor: uploadResult.summary.failed > 0 ? '#f59e0b' : '#10b981',
+              background: uploadResult.summary.failed > 0 ? '#fffbeb' : '#ecfdf5',
+            }}>
+              <p className="text-sm font-medium mb-2">Batch: {uploadResult.batch.batchCode}</p>
+              <div className="grid grid-cols-3 gap-3 text-sm">
+                <div><span className="text-muted-foreground">Total:</span> <span className="font-bold">{uploadResult.summary.total}</span></div>
+                <div><span className="text-muted-foreground">Created:</span> <span className="font-bold text-emerald-600">{uploadResult.summary.created}</span></div>
+                <div><span className="text-muted-foreground">Failed:</span> <span className="font-bold text-red-600">{uploadResult.summary.failed}</span></div>
+              </div>
+              <div className="mt-2 text-sm">
+                <span className="text-muted-foreground">Total Amount:</span> <MaskedAmount amount={uploadResult.summary.totalAmount} />
+              </div>
+              {uploadResult.errors?.length > 0 && (
+                <div className="mt-3">
+                  <p className="text-xs font-medium text-amber-700 mb-1">Errors ({uploadResult.errors.length}):</p>
+                  <div className="max-h-32 overflow-y-auto space-y-1">
+                    {uploadResult.errors.slice(0, 20).map((e: any, i: number) => (
+                      <p key={i} className="text-xs text-red-600">
+                        {e.row ? `Row ${e.row}: ` : ''}{e.beneficiaryId ? `${e.beneficiaryId}: ` : ''}{e.error}
+                      </p>
+                    ))}
+                    {uploadResult.errors.length > 20 && <p className="text-xs text-muted-foreground">...and {uploadResult.errors.length - 20} more</p>}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Batch History */}
+      <Card>
+        <CardHeader><CardTitle className="text-sm">Batch History</CardTitle></CardHeader>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader><TableRow>
+              <TableHead className="text-xs">Batch Code</TableHead>
+              <TableHead className="text-xs">Partner</TableHead>
+              <TableHead className="text-xs text-right">Beneficiaries</TableHead>
+              <TableHead className="text-xs text-right">Total Amount</TableHead>
+              <TableHead className="text-xs">Uploaded</TableHead>
+              <TableHead className="text-xs">Status</TableHead>
+            </TableRow></TableHeader>
+            <TableBody>
+              {batches.length > 0 ? batches.map((b: any) => (
+                <TableRow key={b.id}>
+                  <TableCell className="text-xs font-mono">{b.batchCode}</TableCell>
+                  <TableCell className="text-xs">{b.partner === 'SWISS_CONTACT' ? 'Swiss Contact' : b.partner === 'CARE' ? 'CARE' : b.partner === 'SCI' ? 'SCI' : b.partner}</TableCell>
+                  <TableCell className="text-xs text-right">{b.totalBeneficiaries}</TableCell>
+                  <TableCell className="text-xs text-right"><MaskedAmount amount={b.totalAmount} /></TableCell>
+                  <TableCell className="text-xs">{formatDate(b.uploadedAt)}</TableCell>
+                  <TableCell><Badge className={b.status === 'COMPLETED' ? 'bg-emerald-100 text-emerald-700' : b.status === 'PROCESSING' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}>{b.status.charAt(0) + b.status.slice(1).toLowerCase()}</Badge></TableCell>
+                </TableRow>
+              )) : <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground text-sm">No batches yet. Upload a CSV to get started.</TableCell></TableRow>}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+    </div>
   )
 }
 

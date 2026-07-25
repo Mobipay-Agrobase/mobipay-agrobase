@@ -13,6 +13,11 @@ import '../../features/vsla/presentation/pages/vsla_page.dart';
 import '../../features/vsla_v2/presentation/pages/member_login_page.dart';
 import '../../features/vsla_v2/presentation/pages/member_dashboard_page.dart';
 import '../../features/vsla_v2/presentation/pages/integrations_page.dart';
+import '../../features/reset/presentation/pages/reset_dashboard_page.dart';
+import '../../features/reset/presentation/pages/beneficiaries_page.dart';
+import '../../features/reset/presentation/pages/vouchers_page.dart';
+import '../../features/reset/presentation/pages/merchants_page.dart';
+import '../../features/reset/presentation/pages/reports_page.dart';
 import '../../features/mfi/presentation/pages/mfi_page.dart';
 import '../../features/carbon/presentation/pages/carbon_page.dart';
 import '../../features/compliance/presentation/pages/compliance_page.dart';
@@ -56,6 +61,12 @@ class AppRouter {
             path: '/vsla-integrations',
             builder: (_, __) => const IntegrationsPage(groupId: ''),
           ),
+          // ReSET MarketLink
+          GoRoute(path: '/reset-dashboard', builder: (_, __) => const ResetDashboardPage()),
+          GoRoute(path: '/reset-beneficiaries', builder: (_, __) => const BeneficiariesPage()),
+          GoRoute(path: '/reset-vouchers', builder: (_, __) => const VouchersPage()),
+          GoRoute(path: '/reset-merchants', builder: (_, __) => const MerchantsPage()),
+          GoRoute(path: '/reset-reports', builder: (_, __) => const ReportsPage()),
           GoRoute(
             path: '/login',
             builder: (_, __) => const LoginPage(),

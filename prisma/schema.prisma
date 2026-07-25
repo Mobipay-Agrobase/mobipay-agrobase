@@ -4521,3 +4521,255 @@ model VslaSmsOtpV2 {
   attempts        Int      @default(0)  // wrong attempts
   createdAt       DateTime @default(now())
 }
+
+// ============================================================
+// ReSET MARKETLINK — Humanitarian Voucher + Cash Platform
+// 15 new models for FCDO ReSET Programme
+// All tenant-scoped — isolated from EKIBBO/Kilimo tenants
+// ============================================================
+
+model ResetBeneficiary {
+  id              String   @id @default(cuid())
+  tenantId        String
+  beneficiaryId   String   @unique
+  householdId     String
+  fullName        String
+  phone           String
+  nationalId      String?
+  refugeeId       String?
+  gender          String?
+  dateOfBirth     DateTime?
+  settlement      String
+  village         String?
+  enrolledBy      String
+  agentId         String?
+  photoUrl        String?
+  idPhotoUrl      String?
+  biometricHash   String?
+  walletBalance   Float    @default(0)
+  voucherBalance  Float    @default(0)
+  status          String   @default("ACTIVE")
+  pinHash         String?
+  enrolledAt      DateTime @default(now())
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  vouchers        ResetVoucher[]
+  cashDisbursements ResetCashDisbursement[]
+  redemptions     ResetVoucherRedemption[]
+  householdMembers ResetHouseholdMember[]
+}
+
+model ResetHouseholdMember {
+  id              String   @id @default(cuid())
+  beneficiaryId   String
+  beneficiary     ResetBeneficiary @relation(fields: [beneficiaryId], references: [id], onDelete: Cascade)
+  fullName        String
+  relationship    String
+  gender          String?
+  age             Int?
+  createdAt       DateTime @default(now())
+}
+
+model ResetVoucher {
+  id              String   @id @default(cuid())
+  voucherCode     String   @unique
+  beneficiaryId   String
+  beneficiary     ResetBeneficiary @relation(fields: [beneficiaryId], references: [id], onDelete: Cascade)
+  issuedBy        String
+  agentId         String?
+  type            String
+  amount          Float
+  currency        String   @default("UGX")
+  allowedItems    String?
+  allowedMerchants String?
+  allowedLocations String?
+  expiryDate      DateTime
+  status          String   @default("ISSUED")
+  issuedAt        DateTime @default(now())
+  redeemedAt      DateTime?
+  redeemedAtMerchantId String?
+  createdAt       DateTime @default(now())
+
+  redemptions     ResetVoucherRedemption[]
+}
+
+model ResetVoucherRedemption {
+  id              String   @id @default(cuid())
+  voucherId       String
+  voucher         ResetVoucher @relation(fields: [voucherId], references: [id], onDelete: Cascade)
+  beneficiaryId   String
+  beneficiary     ResetBeneficiary @relation(fields: [beneficiaryId], references: [id], onDelete: Cascade)
+  merchantId      String
+  merchant        ResetMerchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  amount          Float
+  items           String?
+  qrCode          String?
+  pinVerified     Boolean  @default(false)
+  agentVerified   Boolean  @default(false)
+  status          String   @default("COMPLETED")
+  ipAddress       String?
+  userAgent       String?
+  redeemedAt      DateTime @default(now())
+  createdAt       DateTime @default(now())
+}
+
+model ResetMerchant {
+  id              String   @id @default(cuid())
+  merchantCode    String   @unique
+  tenantId        String
+  businessName    String
+  ownerName       String
+  phone           String
+  settlement      String
+  location        String?
+  businessType    String
+  itemsSold       String?
+  momoNumber      String?
+  payoutFrequency String   @default("WEEKLY")
+  payoutAmount    Float    @default(0)
+  lastPayoutAt    DateTime?
+  status          String   @default("PENDING")
+  approvedAt      DateTime?
+  approvedBy      String?
+  onboardedAt     DateTime @default(now())
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  redemptions     ResetVoucherRedemption[]
+  payouts         ResetMerchantPayout[]
+}
+
+model ResetMerchantPayout {
+  id              String   @id @default(cuid())
+  merchantId      String
+  merchant        ResetMerchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  period          String
+  totalRedemptions Int
+  totalAmount     Float
+  payoutAmount    Float
+  feeAmount       Float
+  status          String   @default("PENDING")
+  paymentMethod   String
+  paymentRef      String?
+  paidAt          DateTime?
+  createdAt       DateTime @default(now())
+}
+
+model ResetCashDisbursement {
+  id              String   @id @default(cuid())
+  batchId         String
+  beneficiaryId   String
+  beneficiary     ResetBeneficiary @relation(fields: [beneficiaryId], references: [id], onDelete: Cascade)
+  partner         String
+  amount          Float
+  currency        String   @default("UGX")
+  paymentMethod   String
+  status          String   @default("PENDING")
+  sentAt          DateTime?
+  confirmedAt     DateTime?
+  failureReason   String?
+  momoRef         String?
+  initiatedBy     String
+  createdAt       DateTime @default(now())
+}
+
+model ResetDisbursementBatch {
+  id              String   @id @default(cuid())
+  batchCode       String   @unique
+  tenantId        String
+  partner         String
+  totalBeneficiaries Int
+  totalAmount     Float
+  currency        String   @default("UGX")
+  status          String   @default("UPLOADED")
+  uploadedBy      String
+  uploadedAt      DateTime @default(now())
+  completedAt     DateTime?
+  createdAt       DateTime @default(now())
+}
+
+model ResetFieldAgent {
+  id              String   @id @default(cuid())
+  agentCode       String   @unique
+  tenantId        String
+  fullName        String
+  phone           String
+  email           String?
+  agentType       String
+  settlement      String
+  village         String?
+  beneficiariesEnrolled Int @default(0)
+  merchantsOnboarded Int @default(0)
+  vouchersDistributed Int @default(0)
+  status          String   @default("ACTIVE")
+  trainedAt       DateTime?
+  activatedAt     DateTime @default(now())
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model ResetSettlement {
+  id              String   @id @default(cuid())
+  name            String   @unique
+  district        String
+  region          String
+  country         String   @default("Uganda")
+  totalHouseholds Int      @default(0)
+  totalMerchants  Int      @default(0)
+  totalAgents     Int      @default(0)
+  latitude        Float?
+  longitude       Float?
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+}
+
+model ResetDuplicateFlag {
+  id              String   @id @default(cuid())
+  beneficiary1Id  String
+  beneficiary2Id  String
+  matchType       String
+  matchValue      String
+  partners        String
+  status          String   @default("FLAGGED")
+  resolvedBy      String?
+  resolvedAt      DateTime?
+  notes           String?
+  createdAt       DateTime @default(now())
+}
+
+model ResetConsortiumReport {
+  id              String   @id @default(cuid())
+  tenantId        String
+  period          String
+  partner         String
+  settlement      String?
+  totalBeneficiaries Int
+  totalHouseholds    Int
+  totalVouchers      Int
+  totalVoucherAmount Float
+  totalRedemptions   Int
+  totalRedeemedAmount Float
+  totalCashDisbursed Float
+  totalCashConfirmed Float
+  totalMerchants     Int
+  totalAgents        Int
+  maleBeneficiaries  Int
+  femaleBeneficiaries Int
+  bySettlement       String?
+  status             String   @default("GENERATED")
+  generatedAt        DateTime @default(now())
+  submittedAt        DateTime?
+  createdAt          DateTime @default(now())
+}
+
+model ResetVslaLinkage {
+  id              String   @id @default(cuid())
+  tenantId        String
+  beneficiaryId   String
+  vslaMemberId    String?
+  vslaGroupId     String?
+  linkedAt        DateTime @default(now())
+  linkedBy        String?
+  status          String   @default("LINKED")
+}

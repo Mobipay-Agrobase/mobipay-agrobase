@@ -16,7 +16,7 @@ export const MODULES = [
   'input_aggregation', 'purchases', 'approvals', 'processing', 'sales',
   'deliveries', 'consignments', 'companies', 'users', 'settings',
   'agritrack', 'feedback', 'farm_visits', 'impact_assessment',
-  'channel_sim', 'carbon', 'mfi', 'transport', 'profile',
+  'channel_sim', 'carbon', 'mfi', 'transport', 'profile', 'reset',
 ] as const
 
 export type ModuleKey = (typeof MODULES)[number]
@@ -273,6 +273,40 @@ const ROLE_PERMISSIONS: RolePerms = {
     'dashboard:read',
     'vsla:read', 'vsla:create',
     'profile:read', 'profile:update',
+  ],
+  // ─── ReSET MarketLink Roles ───
+  // Consortium Admin: SCI oversight — sees all partners, all settlements
+  CONSORTIUM_ADMIN: [
+    'dashboard:*', 'reset:*',
+    'vsla:read', 'reports:read',
+    'users:*', 'profile:read', 'profile:update',
+  ],
+  // Partner Admin: Swiss Contact / CARE — sees only their partner's data
+  PARTNER_ADMIN: [
+    'dashboard:read',
+    'reset:read', 'reset:create', 'reset:update',
+    'vsla:read',
+    'reports:read',
+    'profile:read', 'profile:update',
+  ],
+  // Field Agent: enrolls beneficiaries, onboards merchants, distributes vouchers
+  RESET_FIELD_AGENT: [
+    'dashboard:read',
+    'reset:read', 'reset:create',
+    'profile:read', 'profile:update',
+  ],
+  // Merchant: vendor who accepts vouchers
+  RESET_MERCHANT: [
+    'dashboard:read',
+    'reset:read',
+    'profile:read', 'profile:update',
+  ],
+  // M&E Officer: read-only monitoring
+  RESET_ME_OFFICER: [
+    'dashboard:read',
+    'reset:read',
+    'reports:read',
+    'profile:read',
   ],
 }
 

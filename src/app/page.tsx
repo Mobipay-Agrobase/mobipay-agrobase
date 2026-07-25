@@ -78,6 +78,7 @@ const SupportTicketsView = lazy(() => import('@/components/billing/SupportTicket
 const QuotesView = lazy(() => import('@/components/billing/QuotesView'))
 const NssfContributionsView = lazy(() => import('@/components/nssf/NssfContributionsView'))
 const NssfSettlementView = lazy(() => import('@/components/nssf/NssfSettlementView'))
+const ResetView = lazy(() => import('@/components/modules/ResetView'))
 
 function ModuleLoader() {
   return (
@@ -127,6 +128,13 @@ function ModuleRouter() {
     case 'deliveries': return <DeliveriesView />
     case 'consignments': return <ConsignmentsView />
     case 'trace': return <TraceabilityView />
+    // ReSET MarketLink
+    case 'reset-dashboard': return <ResetView />
+    case 'reset-beneficiaries': return <ResetView />
+    case 'reset-vouchers': return <ResetView />
+    case 'reset-merchants': return <ResetView />
+    case 'reset-cash': return <ResetView />
+    case 'reset-reports': return <ResetView />
     // Engagement
     case 'surveys': return <SurveysView />
     case 'feedback': return <FeedbackView />

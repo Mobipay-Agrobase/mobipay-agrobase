@@ -212,26 +212,27 @@ export default function ProfileView() {
               </CardContent>
             </Card>
 
-            {/* QR Code Card */}
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <QrCode className="w-4 h-4" /> EKIBBO Farmer ID
-                </CardTitle>
-                <CardDescription>Your unique QR code for identification</CardDescription>
-              </CardHeader>
-              <CardContent className="flex flex-col items-center py-4">
-                {/* QR Code Placeholder */}
-                <div className="w-40 h-40 bg-white border-2 border-dashed border-emerald-300 dark:border-emerald-700 rounded-lg flex flex-col items-center justify-center gap-2">
-                  <QrCode className="w-16 h-16 text-emerald-300 dark:text-emerald-700" />
-                  <span className="text-xs text-muted-foreground">QR Code</span>
-                </div>
-                <p className="text-xs text-muted-foreground mt-3 text-center">ID: {user?.userId || 'AGB-00000'}</p>
-                <Button variant="outline" size="sm" className="mt-2 gap-2" onClick={() => toast.info('QR Code download coming soon')}>
-                  <Smartphone className="w-3.5 h-3.5" /> Download QR
-                </Button>
-              </CardContent>
-            </Card>
+            {/* QR Code Card — only for EKIBBO roles */}
+            {user?.role?.startsWith('EKB_') && (
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <QrCode className="w-4 h-4" /> EKIBBO Farmer ID
+                  </CardTitle>
+                  <CardDescription>Your unique QR code for identification</CardDescription>
+                </CardHeader>
+                <CardContent className="flex flex-col items-center py-4">
+                  <div className="w-40 h-40 bg-white border-2 border-dashed border-emerald-300 dark:border-emerald-700 rounded-lg flex flex-col items-center justify-center gap-2">
+                    <QrCode className="w-16 h-16 text-emerald-300 dark:border-emerald-700" />
+                    <span className="text-xs text-muted-foreground">QR Code</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-3 text-center">ID: {user?.userId || 'AGB-00000'}</p>
+                  <Button variant="outline" size="sm" className="mt-2 gap-2" onClick={() => toast.info('QR Code download coming soon')}>
+                    <Smartphone className="w-3.5 h-3.5" /> Download QR
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
           </div>
 
           {/* Account Info Cards */}

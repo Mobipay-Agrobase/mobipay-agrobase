@@ -263,6 +263,8 @@ export function Sidebar() {
                 if (role === 'MOBIPAY_FINANCE' && !['Overview', 'Admin', 'NSSF'].includes(groupLabel)) return null
                 // MOBIPAY_SUPPORT: only show Overview + Admin
                 if (role === 'MOBIPAY_SUPPORT' && !['Overview', 'Admin'].includes(groupLabel)) return null
+                // ReSET roles: only show Overview + ReSET MarketLink + Admin
+                if (['CONSORTIUM_ADMIN', 'PARTNER_ADMIN', 'RESET_FIELD_AGENT', 'RESET_MERCHANT', 'RESET_ME_OFFICER'].includes(role) && !['Overview', 'ReSET MarketLink', 'Admin'].includes(groupLabel)) return null
 
                 // Filter items by role permission + module entitlement
                 const visibleItems = items.filter(item => {
@@ -293,7 +295,7 @@ export function Sidebar() {
 
                   // Check module entitlement (if entitlements are loaded)
                   // Skip for admin roles — they see everything EXCEPT NSSF
-                  const isAdminRole = role === 'SUPER_ADMIN' || role === 'TENANT_ADMIN' || role === 'EKB_MD'
+                  const isAdminRole = role === 'SUPER_ADMIN' || role === 'TENANT_ADMIN' || role === 'EKB_MD' || role === 'CONSORTIUM_ADMIN' || role === 'PARTNER_ADMIN'
                   if (entitlementsLoaded && item.permModule) {
                     const entitlementCode = PERM_TO_ENTITLEMENT[item.permModule]
                     if (entitlementCode) {

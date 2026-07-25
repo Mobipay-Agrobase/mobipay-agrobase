@@ -6,9 +6,14 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class VslaV2Api {
+  // For Android emulator: use http://10.0.2.2:3000 (maps to host's localhost)
+  // For iOS simulator: use http://localhost:3000
+  // For physical device: use your computer's LAN IP (e.g. http://192.168.1.100:3000)
+  // For production: use your Vercel URL (e.g. https://mobipay-agrobase.vercel.app)
+  // Override with: flutter run --dart-define=API_BASE_URL=https://your-url.com
   static const baseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://10.0.2.2:3000', // Android emulator → host localhost
+    defaultValue: 'http://10.0.2.2:3000',
   );
 
   static String? _memberToken;

@@ -10,6 +10,8 @@ import '../../features/sales/presentation/pages/sales_page.dart';
 import '../../features/payments/presentation/pages/payments_page.dart';
 import '../../features/loans/presentation/pages/loans_page.dart';
 import '../../features/vsla/presentation/pages/vsla_page.dart';
+import '../../features/vsla_v2/presentation/pages/member_login_page.dart';
+import '../../features/vsla_v2/presentation/pages/member_dashboard_page.dart';
 import '../../features/mfi/presentation/pages/mfi_page.dart';
 import '../../features/carbon/presentation/pages/carbon_page.dart';
 import '../../features/compliance/presentation/pages/compliance_page.dart';
@@ -37,6 +39,16 @@ class AppRouter {
           GoRoute(
             path: '/splash',
             builder: (_, __) => const SplashPage(),
+          ),
+          // VSLA V2 — Member login via SMS OTP
+          GoRoute(
+            path: '/vsla-member-login',
+            builder: (_, __) => const MemberLoginPage(),
+          ),
+          // VSLA V2 — Member dashboard
+          GoRoute(
+            path: '/vsla-member-dashboard',
+            builder: (_, __) => const MemberDashboardPage(),
           ),
           GoRoute(
             path: '/login',

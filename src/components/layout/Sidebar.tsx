@@ -124,12 +124,12 @@ const ALL_MODULES: NavItem[] = [
   { key: 'nssf-settlement', label: 'NSSF Settlement', icon: Receipt, group: 'NSSF',
     restrictToRoles: ['SUPER_ADMIN', 'MOBIPAY_FINANCE'] },
   // ReSET MarketLink (humanitarian voucher + cash platform)
-  { key: 'reset-dashboard', label: 'ReSET Dashboard', icon: Target, group: 'ReSET MarketLink', permModule: 'reset' },
+  { key: 'reset-dashboard', label: 'Dashboard', icon: Target, group: 'ReSET MarketLink', permModule: 'reset' },
   { key: 'reset-beneficiaries', label: 'Beneficiaries', icon: Users, group: 'ReSET MarketLink', permModule: 'reset' },
   { key: 'reset-vouchers', label: 'Vouchers', icon: Receipt, group: 'ReSET MarketLink', permModule: 'reset' },
   { key: 'reset-merchants', label: 'Merchants', icon: Store, group: 'ReSET MarketLink', permModule: 'reset' },
   { key: 'reset-cash', label: 'Cash Disbursement', icon: DollarSign, group: 'ReSET MarketLink', permModule: 'reset' },
-  { key: 'reset-reports', label: 'Consortium Reports', icon: BarChart3, group: 'ReSET MarketLink', permModule: 'reset' },
+  { key: 'reset-reports', label: 'Reports', icon: BarChart3, group: 'ReSET MarketLink', permModule: 'reset' },
   // Super Admin (only visible to SUPER_ADMIN role)
   { key: 'super-admin-overview', label: 'Platform Overview', icon: LayoutDashboard, group: 'Super Admin' },
   { key: 'super-admin-tenants', label: 'Tenants', icon: Building2, group: 'Super Admin' },

@@ -101,15 +101,15 @@ const ALL_MODULES: NavItem[] = [
   // Billing — only visible to roles with billing:read permission OR admins.
   // Field roles (extension, finance assistant, MEC, agent, farmer, vsla) must NOT see billing.
   { key: 'billing', label: 'Billing & Usage', icon: DollarSign, group: 'Admin', permModule: 'billing',
-    restrictToRoles: ['SUPER_ADMIN', 'COUNTRY_ADMIN', 'TENANT_ADMIN'] },
+    restrictToRoles: ['SUPER_ADMIN', 'COUNTRY_ADMIN'] },
   // Settings — admin-only. Field/finance/MEC staff should not configure tenants.
   { key: 'settings', label: 'Settings', icon: Settings, group: 'Admin',
-    restrictToRoles: ['SUPER_ADMIN', 'COUNTRY_ADMIN', 'TENANT_ADMIN'] },
+    restrictToRoles: ['SUPER_ADMIN', 'COUNTRY_ADMIN'] },
   // Profile — everyone gets this.
   { key: 'profile', label: 'Profile', icon: Stethoscope, group: 'Admin', alwaysVisible: true },
   // Roles & Permissions — admin-only reference page.
   { key: 'roles-permissions', label: 'Roles & Permissions', icon: KeyRound, group: 'Admin',
-    restrictToRoles: ['SUPER_ADMIN', 'COUNTRY_ADMIN', 'TENANT_ADMIN'] },
+    restrictToRoles: ['SUPER_ADMIN', 'COUNTRY_ADMIN'] },
   // Platform Recovery — visible to tenants with billing:read (EKIBBO MD, Finance)
   { key: 'platform-recovery', label: 'Platform Recovery', icon: TrendingUp, group: 'Admin', permModule: 'billing',
     hideFromRoles: ['EKB_MD', 'EKB_OPS_MANAGER', 'EKB_FINANCE', 'EKB_FIN_ASSISTANT', 'EKB_MEC', 'EKB_EXTENSION'] },
@@ -295,7 +295,7 @@ export function Sidebar() {
 
                   // Check module entitlement (if entitlements are loaded)
                   // Skip for admin roles — they see everything EXCEPT NSSF
-                  const isAdminRole = role === 'SUPER_ADMIN' || role === 'TENANT_ADMIN' || role === 'EKB_MD' || role === 'CONSORTIUM_ADMIN' || role === 'PARTNER_ADMIN'
+                  const isAdminRole = role === 'SUPER_ADMIN' // Only SUPER_ADMIN bypasses entitlement checks
                   if (entitlementsLoaded && item.permModule) {
                     const entitlementCode = PERM_TO_ENTITLEMENT[item.permModule]
                     if (entitlementCode) {

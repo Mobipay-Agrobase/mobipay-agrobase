@@ -32,11 +32,21 @@ export async function GET() {
           status: 'COMPLETED',
         },
       }),
-      // Monthly farmer registrations (simulated)
-      Promise.resolve([
-        { month: 'Jan', count: 45 }, { month: 'Feb', count: 62 }, { month: 'Mar', count: 78 },
-        { month: 'Apr', count: 95 }, { month: 'May', count: 110 }, { month: 'Jun', count: 50 },
-      ]),
+      // Monthly farmer registrations — REAL data from database
+      db.farmerProfile.groupBy({
+        by: ['enrollmentDate'],
+        where: tenantWhere,
+        _count: true,
+      }).then(groups => {
+        // Group by month
+        const monthly: Record<string, number> = {}
+        for (const g of groups) {
+          const d = new Date(g.enrollmentDate)
+          const key = d.toLocaleDateString('en', { month: 'short' })
+          monthly[key] = (monthly[key] || 0) + g._count
+        }
+        return Object.entries(monthly).map(([month, count]) => ({ month, count }))
+      }).catch(() => []),
       // VSLA savings by group
       db.vslaGroup.findMany({
         where: { ...tenantWhere, isActive: true },

@@ -98,15 +98,10 @@ export async function GET() {
     total: n(r.total)
   }))
 
-  // Use simulated monthly data if real data only has one entry or null months
-  const hasRealMonthlyData = safeMonthlyRegs.length > 1 && safeMonthlyRegs.every(r => r.month)
-  const finalMonthlyRegs = hasRealMonthlyData
+  // Use REAL monthly data — no more simulated/fake data
+  const finalMonthlyRegs = safeMonthlyRegs.length > 0
     ? safeMonthlyRegs
-    : [
-        { month: '2026-01', count: 12 }, { month: '2026-02', count: 18 },
-        { month: '2026-03', count: 25 }, { month: '2026-04', count: 35 },
-        { month: '2026-05', count: 42 }, { month: '2026-06', count: n(farmerCount) },
-      ]
+    : [{ month: new Date().toISOString().slice(0, 7), count: n(farmerCount) }]
 
   // Use recent payments as transactions if no VSLA transactions
   // Payment has no tenantId — filter through paymentAccount relation (or fetch all for super admin)

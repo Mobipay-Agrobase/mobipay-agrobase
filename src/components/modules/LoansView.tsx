@@ -4,7 +4,7 @@ import React, { useEffect, useState, useCallback } from 'react'
 import { cn } from '@/lib/utils'
 import {
   DollarSign, Calculator, Plus, CheckCircle, Clock, XCircle, AlertTriangle,
-  TrendingUp, FileText, Users, ArrowRight, Loader2
+  TrendingUp, FileText, Users, ArrowRight, Loader2, ChevronLeft, ChevronRight
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -40,6 +40,8 @@ const COLORS = ['#f59e0b', '#3b82f6', '#6366f1', '#059669', '#10b981', '#ef4444'
 export default function LoansView() {
   const { activeSubTab, setActiveSubTab } = useAppStore()
   const [loans, setLoans] = useState<any[]>([])
+  const [loanPage, setLoanPage] = useState(1)
+  const loanPageSize = 10
   const [products, setProducts] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [showCalc, setShowCalc] = useState(false)
@@ -135,7 +137,7 @@ export default function LoansView() {
                 {loans.length === 0 ? (
                   <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">No loan applications</TableCell></TableRow>
                 ) : (
-                  loans.map((l: any) => (
+                  loans.slice((loanPage - 1) * loanPageSize, loanPage * loanPageSize).map((l: any) => (
                     <TableRow key={l.id}>
                       <TableCell className="font-medium text-sm">{l.applicantName}</TableCell>
                       <TableCell className="hidden sm:table-cell text-sm text-muted-foreground">{l.applicantPhone}</TableCell>
@@ -199,6 +201,23 @@ export default function LoansView() {
       </Dialog>
 
       {activeTab === 'flow' && <LoanFlowGuide />}
+
+      {/* Pagination */}
+      {loans.length > loanPageSize && (
+        <div className="flex items-center justify-between mt-4">
+          <p className="text-xs text-muted-foreground">
+            Showing {Math.min((loanPage - 1) * loanPageSize + 1, loans.length)} to {Math.min(loanPage * loanPageSize, loans.length)} of {loans.length}
+          </p>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => setLoanPage(p => Math.max(1, p - 1))} disabled={loanPage === 1} className="gap-1">
+              <ChevronLeft className="w-3.5 h-3.5" /> Prev
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setLoanPage(p => Math.min(Math.ceil(loans.length / loanPageSize), p + 1))} disabled={loanPage >= Math.ceil(loans.length / loanPageSize)} className="gap-1">
+              Next <ChevronRight className="w-3.5 h-3.5" />
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -340,6 +359,7 @@ function LoanCalculator() {
         <div className="flex justify-between text-sm"><span className="text-muted-foreground">Total Repayable</span><span className="font-semibold">UGX {Math.round(totalRepayable).toLocaleString()}</span></div>
         <div className="flex justify-between text-sm"><span className="text-muted-foreground">Total Interest</span><span className="font-semibold text-amber-600">UGX {Math.round(totalInterest).toLocaleString()}</span></div>
       </div>
+
     </div>
   )
 }
@@ -351,6 +371,7 @@ function LoansSkeleton() {
         {Array.from({ length: 4 }).map((_, i) => <Card key={i}><CardContent className="p-4"><Skeleton className="h-10 w-full rounded" /></CardContent></Card>)}
       </div>
       <Skeleton className="h-[400px] w-full rounded-xl" />
+
     </div>
   )
 }

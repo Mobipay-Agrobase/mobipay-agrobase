@@ -198,7 +198,15 @@ export function Sidebar() {
         setEntitlementsLoaded(true)
       })
       .catch(() => {
-        setEntitlementsLoaded(true) // fail open — show all menus
+        // FAIL CLOSED: On error, disable all non-core modules for security.
+        // Only show dashboard + profile (alwaysVisible items) if we can't verify entitlements.
+        const allModules = ['FARMERS', 'VSLA', 'MARKETPLACE', 'PAYMENTS', 'LOANS', 'TRAINING',
+          'TRACE', 'COMPLIANCE', 'COMMUNICATION', 'INVENTORY', 'COOPERATIVE', 'EXPORT',
+          'REPORTS', 'BILLING', 'API_ACCESS', 'CREDIT_SCORING', 'SURVEYS', 'CARBON',
+          'SATELLITE', 'CONTRACTS', 'LOGISTICS', 'QUALITY', 'MFI', 'NSSF',
+          'RESET_MARKETLINK', 'SUPPORT']
+        setDisabledModules(new Set(allModules))
+        setEntitlementsLoaded(true)
       })
   }, [user?.tenantId])
 

@@ -1,5 +1,6 @@
 'use client'
 import { safeFetch, extractArray } from '@/lib/safe-fetch'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 import React, { useEffect, useState, useCallback } from 'react'
 import { cn } from '@/lib/utils'
@@ -43,6 +44,8 @@ const COLORS = ['#059669', '#f59e0b', '#3b82f6', '#8b5cf6', '#ef4444', '#06b6d4'
 export default function PaymentsView() {
   const { activeSubTab, setActiveSubTab } = useAppStore()
   const [payments, setPayments] = useState<any[]>([])
+  const [payPage, setPayPage] = useState(1)
+  const payPageSize = 10
   const [loading, setLoading] = useState(true)
   const [showSend, setShowSend] = useState(false)
   const [activeTab, setActiveTab] = useState(activeSubTab || 'history')
@@ -132,7 +135,7 @@ export default function PaymentsView() {
                   {payments.length === 0 ? (
                     <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">No payments found</TableCell></TableRow>
                   ) : (
-                    payments.map((p: any) => (
+                    payments.slice((payPage - 1) * payPageSize, payPage * payPageSize).map((p: any) => (
                       <TableRow key={p.id}>
                         <TableCell><Badge className={cn('text-[10px]', typeColor[p.type] || '')}>{p.type?.replace(/_/g, ' ')}</Badge></TableCell>
                         <TableCell className="font-medium text-sm">{p.recipientName}</TableCell>
@@ -195,6 +198,23 @@ export default function PaymentsView() {
           <SendPaymentForm onClose={() => { setShowSend(false); fetchPayments() }} />
         </DialogContent>
       </Dialog>
+
+      {/* Pagination */}
+      {payments.length > payPageSize && (
+        <div className="flex items-center justify-between mt-4">
+          <p className="text-xs text-muted-foreground">
+            Showing {Math.min((payPage - 1) * payPageSize + 1, payments.length)} to {Math.min(payPage * payPageSize, payments.length)} of {payments.length}
+          </p>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => setPayPage(p => Math.max(1, p - 1))} disabled={payPage === 1} className="gap-1">
+              <ChevronLeft className="w-3.5 h-3.5" /> Prev
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setPayPage(p => Math.min(Math.ceil(payments.length / payPageSize), p + 1))} disabled={payPage >= Math.ceil(payments.length / payPageSize)} className="gap-1">
+              Next <ChevronRight className="w-3.5 h-3.5" />
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -258,6 +278,7 @@ function PaymentsSkeleton() {
         {Array.from({ length: 4 }).map((_, i) => <Card key={i}><CardContent className="p-4"><Skeleton className="h-10 w-full rounded" /></CardContent></Card>)}
       </div>
       <Skeleton className="h-[400px] w-full rounded-xl" />
+
     </div>
   )
 }

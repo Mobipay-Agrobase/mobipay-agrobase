@@ -16,7 +16,7 @@ export const MODULES = [
   'input_aggregation', 'purchases', 'approvals', 'processing', 'sales',
   'deliveries', 'consignments', 'companies', 'users', 'settings',
   'agritrack', 'feedback', 'farm_visits', 'impact_assessment',
-  'channel_sim', 'carbon', 'mfi', 'transport', 'profile', 'reset',
+  'channel_sim', 'carbon', 'mfi', 'transport', 'profile', 'reset', 'entitlements', 'modules',
 ] as const
 
 export type ModuleKey = (typeof MODULES)[number]

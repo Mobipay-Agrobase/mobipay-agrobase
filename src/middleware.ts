@@ -25,6 +25,9 @@ const PUBLIC_ROUTES = [
 const SYSTEM_ROUTES = [
   '/api/settings/geo/',
   '/api/seed',
+  '/api/entitlements',   // system route — every authenticated user needs this to load sidebar menus
+  '/api/modules',        // system route — module list
+  '/api/settings/entitlements', // system route — admin config
   '/api/plots',          // plots API — permission checked via 'trace:read' in sidebar, not 'plots:read'
   '/api/plots/stats',    // same
   '/api/plots/geojson',  // same

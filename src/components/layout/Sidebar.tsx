@@ -190,24 +190,33 @@ export function Sidebar() {
   const [entitlementsLoaded, setEntitlementsLoaded] = useState(false)
 
   // Fetch tenant's enabled modules on mount
+  const failClosed = () => {
+    // FAIL CLOSED: On error, disable all non-core modules for security.
+    const allModules = ['FARMERS', 'VSLA', 'MARKETPLACE', 'PAYMENTS', 'LOANS', 'TRAINING',
+      'TRACE', 'COMPLIANCE', 'COMMUNICATION', 'INVENTORY', 'COOPERATIVE', 'EXPORT',
+      'REPORTS', 'BILLING', 'API_ACCESS', 'CREDIT_SCORING', 'SURVEYS', 'CARBON',
+      'SATELLITE', 'CONTRACTS', 'LOGISTICS', 'QUALITY', 'MFI', 'NSSF',
+      'RESET_MARKETLINK', 'SUPPORT']
+    setDisabledModules(new Set(allModules))
+    setEntitlementsLoaded(true)
+  }
+
   useEffect(() => {
     fetch('/api/entitlements')
-      .then(r => r.ok ? r.json() : { modules: [] })
+      .then(r => {
+        if (!r.ok) {
+          // HTTP error (401, 403, 500) — fail closed
+          failClosed()
+          return null
+        }
+        return r.json()
+      })
       .then(data => {
+        if (!data) return // already handled by failClosed
         setDisabledModules(new Set(data.disabledModules || []))
         setEntitlementsLoaded(true)
       })
-      .catch(() => {
-        // FAIL CLOSED: On error, disable all non-core modules for security.
-        // Only show dashboard + profile (alwaysVisible items) if we can't verify entitlements.
-        const allModules = ['FARMERS', 'VSLA', 'MARKETPLACE', 'PAYMENTS', 'LOANS', 'TRAINING',
-          'TRACE', 'COMPLIANCE', 'COMMUNICATION', 'INVENTORY', 'COOPERATIVE', 'EXPORT',
-          'REPORTS', 'BILLING', 'API_ACCESS', 'CREDIT_SCORING', 'SURVEYS', 'CARBON',
-          'SATELLITE', 'CONTRACTS', 'LOGISTICS', 'QUALITY', 'MFI', 'NSSF',
-          'RESET_MARKETLINK', 'SUPPORT']
-        setDisabledModules(new Set(allModules))
-        setEntitlementsLoaded(true)
-      })
+      .catch(() => failClosed())
   }, [user?.tenantId])
 
   const handleNav = (key: ModuleKey) => {

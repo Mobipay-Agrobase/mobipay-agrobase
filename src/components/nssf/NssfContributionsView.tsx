@@ -22,7 +22,7 @@ const STATUS_COLORS: Record<string, string> = {
   REFUNDED: 'bg-gray-100 text-gray-700',
 }
 
-function formatUGX(n: number) { return `UGX ${(n || 0).toLocaleString()}` }
+function formatUGX(n: any) { const num = typeof n === 'number' ? n : Number(n) || 0; return `UGX ${num.toLocaleString()}` }
 function formatDate(d: any) { return d ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—' }
 
 export default function NssfContributionsView() {
@@ -101,7 +101,7 @@ export default function NssfContributionsView() {
       Date: formatDate(c.contributionDate || c.createdAt),
       Farmer: c.farmer ? `${c.farmer.firstName} ${c.farmer.lastName}` : '—',
       Phone: c.farmer?.phone || '—',
-      Amount: c.amount,
+      Amount: Number(c.amount),
       Currency: c.currency || 'UGX',
       Method: c.paymentMethod || '—',
       Status: c.status,
@@ -111,7 +111,7 @@ export default function NssfContributionsView() {
     toast.success('Exported to CSV')
   }
 
-  const completedTotal = filtered.filter(c => c.status === 'COMPLETED').reduce((s, c) => s + (c.amount || 0), 0)
+  const completedTotal = filtered.filter(c => c.status === 'COMPLETED').reduce((s, c) => s + (Number(c.amount) || 0), 0)
 
   if (loading && contributions.length === 0) {
     return (
@@ -193,7 +193,7 @@ export default function NssfContributionsView() {
                   {c.farmer ? `${c.farmer.firstName} ${c.farmer.lastName}` : '—'}
                 </TableCell>
                 <TableCell className="text-xs">{c.farmer?.phone || '—'}</TableCell>
-                <TableCell className="text-xs text-right font-medium">{formatUGX(c.amount)}</TableCell>
+                <TableCell className="text-xs text-right font-medium">{formatUGX(Number(c.amount))}</TableCell>
                 <TableCell className="text-xs">{c.paymentMethod || '—'}</TableCell>
                 <TableCell className="text-xs font-mono text-muted-foreground">{c.paymentReference || '—'}</TableCell>
                 <TableCell><Badge className={STATUS_COLORS[c.status] || 'bg-gray-100'}>{c.status}</Badge></TableCell>

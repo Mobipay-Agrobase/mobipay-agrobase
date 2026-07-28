@@ -80,24 +80,24 @@ const ALL_MODULES: NavItem[] = [
   { key: 'channel-sim', label: 'Channel Simulator', icon: Smartphone, group: 'Engagement', permModule: 'communication' },
   // Programs
   { key: 'ccrp', label: 'CCRP', icon: TreePine, group: 'Programs', permModule: 'training',
-    hideFromRoles: ['EKB_MD', 'EKB_OPS_MANAGER', 'EKB_FINANCE', 'EKB_FIN_ASSISTANT', 'EKB_MEC', 'EKB_EXTENSION'] },
+    hideFromRoles: ['EKB_MD', 'EKB_OPS_MANAGER', 'EKB_FINANCE', 'EKB_FIN_ASSISTANT', 'EKB_MEC', 'EKB_EXTENSION', 'TENANT_ADMIN', 'COUNTRY_ADMIN', 'CONSORTIUM_ADMIN', 'PARTNER_ADMIN', 'AGENT', 'EXTENSION_OFFICER', 'CBT', 'CASUAL', 'FARMER', 'VSLA_MEMBER', 'VSLA_OFFICER', 'VSLA_KEYHOLDER', 'VSLA_ETELLER', 'RESET_FIELD_AGENT', 'RESET_MERCHANT', 'RESET_ME_OFFICER'] },
   { key: 'cohort1', label: 'COHORT1', icon: Users, group: 'Programs', permModule: 'training',
-    hideFromRoles: ['EKB_MD', 'EKB_OPS_MANAGER', 'EKB_FINANCE', 'EKB_FIN_ASSISTANT', 'EKB_MEC', 'EKB_EXTENSION'] },
+    hideFromRoles: ['EKB_MD', 'EKB_OPS_MANAGER', 'EKB_FINANCE', 'EKB_FIN_ASSISTANT', 'EKB_MEC', 'EKB_EXTENSION', 'TENANT_ADMIN', 'COUNTRY_ADMIN', 'CONSORTIUM_ADMIN', 'PARTNER_ADMIN', 'AGENT', 'EXTENSION_OFFICER', 'CBT', 'CASUAL', 'FARMER', 'VSLA_MEMBER', 'VSLA_OFFICER', 'VSLA_KEYHOLDER', 'VSLA_ETELLER', 'RESET_FIELD_AGENT', 'RESET_MERCHANT', 'RESET_ME_OFFICER'] },
   { key: 'cohort2', label: 'COHORT2', icon: Users, group: 'Programs', permModule: 'training',
-    hideFromRoles: ['EKB_MD', 'EKB_OPS_MANAGER', 'EKB_FINANCE', 'EKB_FIN_ASSISTANT', 'EKB_MEC', 'EKB_EXTENSION'] },
+    hideFromRoles: ['EKB_MD', 'EKB_OPS_MANAGER', 'EKB_FINANCE', 'EKB_FIN_ASSISTANT', 'EKB_MEC', 'EKB_EXTENSION', 'TENANT_ADMIN', 'COUNTRY_ADMIN', 'CONSORTIUM_ADMIN', 'PARTNER_ADMIN', 'AGENT', 'EXTENSION_OFFICER', 'CBT', 'CASUAL', 'FARMER', 'VSLA_MEMBER', 'VSLA_OFFICER', 'VSLA_KEYHOLDER', 'VSLA_ETELLER', 'RESET_FIELD_AGENT', 'RESET_MERCHANT', 'RESET_ME_OFFICER'] },
   { key: 'smile', label: 'SMILE', icon: TrendingUp, group: 'Programs', permModule: 'training',
-    hideFromRoles: ['EKB_MD', 'EKB_OPS_MANAGER', 'EKB_FINANCE', 'EKB_FIN_ASSISTANT', 'EKB_MEC', 'EKB_EXTENSION'] },
+    hideFromRoles: ['EKB_MD', 'EKB_OPS_MANAGER', 'EKB_FINANCE', 'EKB_FIN_ASSISTANT', 'EKB_MEC', 'EKB_EXTENSION', 'TENANT_ADMIN', 'COUNTRY_ADMIN', 'CONSORTIUM_ADMIN', 'PARTNER_ADMIN', 'AGENT', 'EXTENSION_OFFICER', 'CBT', 'CASUAL', 'FARMER', 'VSLA_MEMBER', 'VSLA_OFFICER', 'VSLA_KEYHOLDER', 'VSLA_ETELLER', 'RESET_FIELD_AGENT', 'RESET_MERCHANT', 'RESET_ME_OFFICER'] },
   { key: 'nakivaale', label: 'NAKIVAALE', icon: Map, group: 'Programs', permModule: 'training',
-    hideFromRoles: ['EKB_MD', 'EKB_OPS_MANAGER', 'EKB_FINANCE', 'EKB_FIN_ASSISTANT', 'EKB_MEC', 'EKB_EXTENSION'] },
+    hideFromRoles: ['EKB_MD', 'EKB_OPS_MANAGER', 'EKB_FINANCE', 'EKB_FIN_ASSISTANT', 'EKB_MEC', 'EKB_EXTENSION', 'TENANT_ADMIN', 'COUNTRY_ADMIN', 'CONSORTIUM_ADMIN', 'PARTNER_ADMIN', 'AGENT', 'EXTENSION_OFFICER', 'CBT', 'CASUAL', 'FARMER', 'VSLA_MEMBER', 'VSLA_OFFICER', 'VSLA_KEYHOLDER', 'VSLA_ETELLER', 'RESET_FIELD_AGENT', 'RESET_MERCHANT', 'RESET_ME_OFFICER'] },
   // Admin
   { key: 'mfi', label: 'MFI / Bank Portal', icon: Landmark, group: 'Finance', permModule: 'mfi' },
   { key: 'transport', label: 'Transport & Logistics', icon: Truck, group: 'Supply Chain', permModule: 'transport' },
   { key: 'compliance', label: 'Compliance Hub', icon: Shield, group: 'Admin', permModule: 'compliance',
-    hideFromRoles: ['EKB_MD', 'EKB_OPS_MANAGER', 'EKB_FINANCE', 'EKB_FIN_ASSISTANT', 'EKB_MEC', 'EKB_EXTENSION'] },
+    hideFromRoles: ['EKB_MD', 'EKB_OPS_MANAGER', 'EKB_FINANCE', 'EKB_FIN_ASSISTANT', 'EKB_MEC', 'EKB_EXTENSION', 'TENANT_ADMIN', 'COUNTRY_ADMIN', 'CONSORTIUM_ADMIN', 'PARTNER_ADMIN', 'AGENT', 'EXTENSION_OFFICER', 'CBT', 'CASUAL', 'FARMER', 'VSLA_MEMBER', 'VSLA_OFFICER', 'VSLA_KEYHOLDER', 'VSLA_ETELLER', 'RESET_FIELD_AGENT', 'RESET_MERCHANT', 'RESET_ME_OFFICER'] },
   { key: 'companies', label: 'Companies', icon: Building2, group: 'Admin', permModule: 'companies',
-    hideFromRoles: ['EKB_MD', 'EKB_OPS_MANAGER', 'EKB_FINANCE', 'EKB_FIN_ASSISTANT', 'EKB_MEC', 'EKB_EXTENSION'] },
+    hideFromRoles: ['EKB_MD', 'EKB_OPS_MANAGER', 'EKB_FINANCE', 'EKB_FIN_ASSISTANT', 'EKB_MEC', 'EKB_EXTENSION', 'TENANT_ADMIN', 'COUNTRY_ADMIN', 'CONSORTIUM_ADMIN', 'PARTNER_ADMIN', 'AGENT', 'EXTENSION_OFFICER', 'CBT', 'CASUAL', 'FARMER', 'VSLA_MEMBER', 'VSLA_OFFICER', 'VSLA_KEYHOLDER', 'VSLA_ETELLER', 'RESET_FIELD_AGENT', 'RESET_MERCHANT', 'RESET_ME_OFFICER'] },
   { key: 'users', label: 'User Management', icon: UserCheck, group: 'Admin', permModule: 'users',
-    hideFromRoles: ['EKB_MD', 'EKB_OPS_MANAGER', 'EKB_FINANCE', 'EKB_FIN_ASSISTANT', 'EKB_MEC', 'EKB_EXTENSION'] },
+    hideFromRoles: ['EKB_MD', 'EKB_OPS_MANAGER', 'EKB_FINANCE', 'EKB_FIN_ASSISTANT', 'EKB_MEC', 'EKB_EXTENSION', 'TENANT_ADMIN', 'COUNTRY_ADMIN', 'CONSORTIUM_ADMIN', 'PARTNER_ADMIN', 'AGENT', 'EXTENSION_OFFICER', 'CBT', 'CASUAL', 'FARMER', 'VSLA_MEMBER', 'VSLA_OFFICER', 'VSLA_KEYHOLDER', 'VSLA_ETELLER', 'RESET_FIELD_AGENT', 'RESET_MERCHANT', 'RESET_ME_OFFICER'] },
   // Billing — only visible to roles with billing:read permission OR admins.
   // Field roles (extension, finance assistant, MEC, agent, farmer, vsla) must NOT see billing.
   { key: 'billing', label: 'Billing & Usage', icon: DollarSign, group: 'Admin', permModule: 'billing',
@@ -112,7 +112,7 @@ const ALL_MODULES: NavItem[] = [
     restrictToRoles: ['SUPER_ADMIN', 'COUNTRY_ADMIN'] },
   // Platform Recovery — visible to tenants with billing:read (EKIBBO MD, Finance)
   { key: 'platform-recovery', label: 'Platform Recovery', icon: TrendingUp, group: 'Admin', permModule: 'billing',
-    hideFromRoles: ['EKB_MD', 'EKB_OPS_MANAGER', 'EKB_FINANCE', 'EKB_FIN_ASSISTANT', 'EKB_MEC', 'EKB_EXTENSION'] },
+    hideFromRoles: ['EKB_MD', 'EKB_OPS_MANAGER', 'EKB_FINANCE', 'EKB_FIN_ASSISTANT', 'EKB_MEC', 'EKB_EXTENSION', 'TENANT_ADMIN', 'COUNTRY_ADMIN', 'CONSORTIUM_ADMIN', 'PARTNER_ADMIN', 'AGENT', 'EXTENSION_OFFICER', 'CBT', 'CASUAL', 'FARMER', 'VSLA_MEMBER', 'VSLA_OFFICER', 'VSLA_KEYHOLDER', 'VSLA_ETELLER', 'RESET_FIELD_AGENT', 'RESET_MERCHANT', 'RESET_ME_OFFICER'] },
   // Support Tickets — visible to billing:read (tenants) + MOBIPAY_FINANCE + SUPER_ADMIN
   { key: 'support-tickets', label: 'Support Tickets', icon: MessageSquare, group: 'Admin', permModule: 'support' },
   // Quotes — SUPER_ADMIN + MOBIPAY_FINANCE only (in Admin group so finance can see it)
@@ -273,6 +273,8 @@ export function Sidebar() {
                 if (role === 'MOBIPAY_SUPPORT' && !['Overview', 'Admin'].includes(groupLabel)) return null
                 // ReSET roles: only show Overview + ReSET MarketLink + Admin
                 if (['CONSORTIUM_ADMIN', 'PARTNER_ADMIN', 'RESET_FIELD_AGENT', 'RESET_MERCHANT', 'RESET_ME_OFFICER'].includes(role) && !['Overview', 'ReSET MarketLink', 'Admin'].includes(groupLabel)) return null
+                // Programs group: only for SUPER_ADMIN
+                if (groupLabel === 'Programs' && role !== 'SUPER_ADMIN') return null
 
                 // Filter items by role permission + module entitlement
                 const visibleItems = items.filter(item => {

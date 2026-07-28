@@ -266,7 +266,7 @@ export function Sidebar() {
                 // Hide Super Admin group for non-super-admin users
                 if (groupLabel === 'Super Admin' && !isSuperAdmin) return null
                 // For SUPER_ADMIN role: show Super Admin group + Core Operations (VSLA, etc.) + NSSF
-                if (isSuperAdmin && !['Super Admin', 'Core Operations', 'NSSF'].includes(groupLabel)) return null
+                if (isSuperAdmin && !['Super Admin', 'NSSF'].includes(groupLabel)) return null
                 // MOBIPAY_FINANCE: hide most groups, only show Admin + Overview
                 if (role === 'MOBIPAY_FINANCE' && !['Overview', 'Admin', 'NSSF'].includes(groupLabel)) return null
                 // MOBIPAY_SUPPORT: only show Overview + Admin

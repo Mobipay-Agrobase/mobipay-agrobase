@@ -11,7 +11,7 @@ import {
   Receipt, TrendingUp, Phone, Map, Radio, ShoppingCart,
   Sprout, PiggyBank, DollarSign, FileText, Leaf,
   Stethoscope, Activity, Smartphone, TreePine, UsersRound, Landmark, MapPin,
-  Cloud, Calculator, BookOpen, KeyRound
+  Cloud, Calculator, BookOpen, KeyRound, Boxes
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
@@ -28,9 +28,7 @@ interface NavItem {
   /** Restrict to specific roles only (overrides permModule). Use to exclude
    *  a menu from roles even if they technically have the underlying perm —
    *  e.g. finance should not see Plot-Level Trace. */
-  restrictToRoles?: string[]
   /** Explicitly hide this menu from these roles (blocklist). */
-  hideFromRoles?: string[]
 }
 
 const ALL_MODULES: NavItem[] = [
@@ -38,11 +36,8 @@ const ALL_MODULES: NavItem[] = [
   { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, group: 'Overview', permModule: 'dashboard', alwaysVisible: true },
   // Core Operations
   { key: 'farmers', label: 'Farmer Profiling', icon: Users, group: 'Core Operations', permModule: 'farmers' },
-  { key: 'farm-lands', label: 'Farm Land Registry', icon: MapPin, group: 'Core Operations', permModule: 'farmers',
-    // Finance/MEC roles do not manage land — hide from them
-    hideFromRoles: ['EKB_FINANCE', 'EKB_FIN_ASSISTANT', 'EKB_MEC'] },
-  { key: 'cultivations', label: 'Cultivations', icon: Sprout, group: 'Core Operations', permModule: 'farmers',
-    hideFromRoles: ['EKB_FINANCE', 'EKB_FIN_ASSISTANT', 'EKB_MEC'] },
+  { key: 'farm-lands', label: 'Farm Land Registry', icon: MapPin, group: 'Core Operations', permModule: 'farmers' },
+  { key: 'cultivations', label: 'Cultivations', icon: Sprout, group: 'Core Operations', permModule: 'farmers' },
   { key: 'vsla', label: 'VSLA Management', icon: PiggyBank, group: 'Core Operations', permModule: 'vsla' },
   { key: 'marketplace', label: 'Marketplace', icon: Store, group: 'Core Operations', permModule: 'marketplace' },
   { key: 'payments', label: 'Payments', icon: CreditCard, group: 'Core Operations', permModule: 'payments' },
@@ -67,8 +62,7 @@ const ALL_MODULES: NavItem[] = [
   { key: 'trace', label: 'Traceability', icon: Map, group: 'Supply Chain', permModule: 'trace' },
   // Plot-Level Traceability is a heavy operational tool — restrict to admins,
   // ops managers and field officers. Finance / finance-assistant / MEC should NOT see it.
-  { key: 'plots', label: 'Plot-Level Trace', icon: MapPin, group: 'Supply Chain', permModule: 'trace',
-    restrictToRoles: ['SUPER_ADMIN', 'COUNTRY_ADMIN', 'TENANT_ADMIN', 'EKB_MD', 'EKB_OPS_MANAGER', 'EKB_EXTENSION', 'EXTENSION_OFFICER', 'AGENT'] },
+  { key: 'plots', label: 'Plot-Level Trace', icon: MapPin, group: 'Supply Chain', permModule: 'trace'},
   // Intelligence
   { key: 'reports', label: 'Reports & Analytics', icon: BarChart3, group: 'Intelligence', permModule: 'reports' },
   { key: 'agritrack', label: 'AgriTrack', icon: Target, group: 'Intelligence', permModule: 'agritrack' },
@@ -79,50 +73,36 @@ const ALL_MODULES: NavItem[] = [
   { key: 'feedback', label: 'Feedback', icon: Radio, group: 'Engagement', permModule: 'feedback' },
   { key: 'channel-sim', label: 'Channel Simulator', icon: Smartphone, group: 'Engagement', permModule: 'communication' },
   // Programs
-  { key: 'ccrp', label: 'CCRP', icon: TreePine, group: 'Programs', permModule: 'training',
-    hideFromRoles: ['EKB_MD', 'EKB_OPS_MANAGER', 'EKB_FINANCE', 'EKB_FIN_ASSISTANT', 'EKB_MEC', 'EKB_EXTENSION', 'TENANT_ADMIN', 'COUNTRY_ADMIN', 'CONSORTIUM_ADMIN', 'PARTNER_ADMIN', 'AGENT', 'EXTENSION_OFFICER', 'CBT', 'CASUAL', 'FARMER', 'VSLA_MEMBER', 'VSLA_OFFICER', 'VSLA_KEYHOLDER', 'VSLA_ETELLER', 'RESET_FIELD_AGENT', 'RESET_MERCHANT', 'RESET_ME_OFFICER'] },
-  { key: 'cohort1', label: 'COHORT1', icon: Users, group: 'Programs', permModule: 'training',
-    hideFromRoles: ['EKB_MD', 'EKB_OPS_MANAGER', 'EKB_FINANCE', 'EKB_FIN_ASSISTANT', 'EKB_MEC', 'EKB_EXTENSION', 'TENANT_ADMIN', 'COUNTRY_ADMIN', 'CONSORTIUM_ADMIN', 'PARTNER_ADMIN', 'AGENT', 'EXTENSION_OFFICER', 'CBT', 'CASUAL', 'FARMER', 'VSLA_MEMBER', 'VSLA_OFFICER', 'VSLA_KEYHOLDER', 'VSLA_ETELLER', 'RESET_FIELD_AGENT', 'RESET_MERCHANT', 'RESET_ME_OFFICER'] },
-  { key: 'cohort2', label: 'COHORT2', icon: Users, group: 'Programs', permModule: 'training',
-    hideFromRoles: ['EKB_MD', 'EKB_OPS_MANAGER', 'EKB_FINANCE', 'EKB_FIN_ASSISTANT', 'EKB_MEC', 'EKB_EXTENSION', 'TENANT_ADMIN', 'COUNTRY_ADMIN', 'CONSORTIUM_ADMIN', 'PARTNER_ADMIN', 'AGENT', 'EXTENSION_OFFICER', 'CBT', 'CASUAL', 'FARMER', 'VSLA_MEMBER', 'VSLA_OFFICER', 'VSLA_KEYHOLDER', 'VSLA_ETELLER', 'RESET_FIELD_AGENT', 'RESET_MERCHANT', 'RESET_ME_OFFICER'] },
-  { key: 'smile', label: 'SMILE', icon: TrendingUp, group: 'Programs', permModule: 'training',
-    hideFromRoles: ['EKB_MD', 'EKB_OPS_MANAGER', 'EKB_FINANCE', 'EKB_FIN_ASSISTANT', 'EKB_MEC', 'EKB_EXTENSION', 'TENANT_ADMIN', 'COUNTRY_ADMIN', 'CONSORTIUM_ADMIN', 'PARTNER_ADMIN', 'AGENT', 'EXTENSION_OFFICER', 'CBT', 'CASUAL', 'FARMER', 'VSLA_MEMBER', 'VSLA_OFFICER', 'VSLA_KEYHOLDER', 'VSLA_ETELLER', 'RESET_FIELD_AGENT', 'RESET_MERCHANT', 'RESET_ME_OFFICER'] },
-  { key: 'nakivaale', label: 'NAKIVAALE', icon: Map, group: 'Programs', permModule: 'training',
-    hideFromRoles: ['EKB_MD', 'EKB_OPS_MANAGER', 'EKB_FINANCE', 'EKB_FIN_ASSISTANT', 'EKB_MEC', 'EKB_EXTENSION', 'TENANT_ADMIN', 'COUNTRY_ADMIN', 'CONSORTIUM_ADMIN', 'PARTNER_ADMIN', 'AGENT', 'EXTENSION_OFFICER', 'CBT', 'CASUAL', 'FARMER', 'VSLA_MEMBER', 'VSLA_OFFICER', 'VSLA_KEYHOLDER', 'VSLA_ETELLER', 'RESET_FIELD_AGENT', 'RESET_MERCHANT', 'RESET_ME_OFFICER'] },
+  { key: 'ccrp', label: 'CCRP', icon: TreePine, group: 'Programs', permModule: 'training'},
+  { key: 'cohort1', label: 'COHORT1', icon: Users, group: 'Programs', permModule: 'training'},
+  { key: 'cohort2', label: 'COHORT2', icon: Users, group: 'Programs', permModule: 'training'},
+  { key: 'smile', label: 'SMILE', icon: TrendingUp, group: 'Programs', permModule: 'training'},
+  { key: 'nakivaale', label: 'NAKIVAALE', icon: Map, group: 'Programs', permModule: 'training'},
   // Admin
   { key: 'mfi', label: 'MFI / Bank Portal', icon: Landmark, group: 'Finance', permModule: 'mfi' },
   { key: 'transport', label: 'Transport & Logistics', icon: Truck, group: 'Supply Chain', permModule: 'transport' },
-  { key: 'compliance', label: 'Compliance Hub', icon: Shield, group: 'Admin', permModule: 'compliance',
-    hideFromRoles: ['EKB_MD', 'EKB_OPS_MANAGER', 'EKB_FINANCE', 'EKB_FIN_ASSISTANT', 'EKB_MEC', 'EKB_EXTENSION', 'TENANT_ADMIN', 'COUNTRY_ADMIN', 'CONSORTIUM_ADMIN', 'PARTNER_ADMIN', 'AGENT', 'EXTENSION_OFFICER', 'CBT', 'CASUAL', 'FARMER', 'VSLA_MEMBER', 'VSLA_OFFICER', 'VSLA_KEYHOLDER', 'VSLA_ETELLER', 'RESET_FIELD_AGENT', 'RESET_MERCHANT', 'RESET_ME_OFFICER'] },
-  { key: 'companies', label: 'Companies', icon: Building2, group: 'Admin', permModule: 'companies',
-    hideFromRoles: ['EKB_MD', 'EKB_OPS_MANAGER', 'EKB_FINANCE', 'EKB_FIN_ASSISTANT', 'EKB_MEC', 'EKB_EXTENSION', 'TENANT_ADMIN', 'COUNTRY_ADMIN', 'CONSORTIUM_ADMIN', 'PARTNER_ADMIN', 'AGENT', 'EXTENSION_OFFICER', 'CBT', 'CASUAL', 'FARMER', 'VSLA_MEMBER', 'VSLA_OFFICER', 'VSLA_KEYHOLDER', 'VSLA_ETELLER', 'RESET_FIELD_AGENT', 'RESET_MERCHANT', 'RESET_ME_OFFICER'] },
-  { key: 'users', label: 'User Management', icon: UserCheck, group: 'Admin', permModule: 'users',
-    hideFromRoles: ['EKB_MD', 'EKB_OPS_MANAGER', 'EKB_FINANCE', 'EKB_FIN_ASSISTANT', 'EKB_MEC', 'EKB_EXTENSION', 'TENANT_ADMIN', 'COUNTRY_ADMIN', 'CONSORTIUM_ADMIN', 'PARTNER_ADMIN', 'AGENT', 'EXTENSION_OFFICER', 'CBT', 'CASUAL', 'FARMER', 'VSLA_MEMBER', 'VSLA_OFFICER', 'VSLA_KEYHOLDER', 'VSLA_ETELLER', 'RESET_FIELD_AGENT', 'RESET_MERCHANT', 'RESET_ME_OFFICER'] },
+  { key: 'compliance', label: 'Compliance Hub', icon: Shield, group: 'Admin', permModule: 'compliance'},
+  { key: 'companies', label: 'Companies', icon: Building2, group: 'Admin', permModule: 'companies'},
+  { key: 'users', label: 'User Management', icon: UserCheck, group: 'Admin', permModule: 'users'},
   // Billing — only visible to roles with billing:read permission OR admins.
   // Field roles (extension, finance assistant, MEC, agent, farmer, vsla) must NOT see billing.
-  { key: 'billing', label: 'Billing & Usage', icon: DollarSign, group: 'Admin', permModule: 'billing',
-    restrictToRoles: ['SUPER_ADMIN', 'COUNTRY_ADMIN'] },
+  { key: 'billing', label: 'Billing & Usage', icon: DollarSign, group: 'Admin', permModule: 'billing'},
   // Settings — admin-only. Field/finance/MEC staff should not configure tenants.
-  { key: 'settings', label: 'Settings', icon: Settings, group: 'Admin',
-    restrictToRoles: ['SUPER_ADMIN', 'COUNTRY_ADMIN'] },
+  { key: 'settings', label: 'Settings', icon: Settings, group: 'Admin'},
   // Profile — everyone gets this.
   { key: 'profile', label: 'Profile', icon: Stethoscope, group: 'Admin', alwaysVisible: true },
   // Roles & Permissions — admin-only reference page.
-  { key: 'roles-permissions', label: 'Roles & Permissions', icon: KeyRound, group: 'Admin',
-    restrictToRoles: ['SUPER_ADMIN', 'COUNTRY_ADMIN'] },
+  { key: 'roles-permissions', label: 'Roles & Permissions', icon: KeyRound, group: 'Admin'},
   // Platform Recovery — visible to tenants with billing:read (EKIBBO MD, Finance)
-  { key: 'platform-recovery', label: 'Platform Recovery', icon: TrendingUp, group: 'Admin', permModule: 'billing',
-    hideFromRoles: ['EKB_MD', 'EKB_OPS_MANAGER', 'EKB_FINANCE', 'EKB_FIN_ASSISTANT', 'EKB_MEC', 'EKB_EXTENSION', 'TENANT_ADMIN', 'COUNTRY_ADMIN', 'CONSORTIUM_ADMIN', 'PARTNER_ADMIN', 'AGENT', 'EXTENSION_OFFICER', 'CBT', 'CASUAL', 'FARMER', 'VSLA_MEMBER', 'VSLA_OFFICER', 'VSLA_KEYHOLDER', 'VSLA_ETELLER', 'RESET_FIELD_AGENT', 'RESET_MERCHANT', 'RESET_ME_OFFICER'] },
+  { key: 'platform-recovery', label: 'Platform Recovery', icon: TrendingUp, group: 'Admin', permModule: 'billing'},
   // Support Tickets — visible to billing:read (tenants) + MOBIPAY_FINANCE + SUPER_ADMIN
   { key: 'support-tickets', label: 'Support Tickets', icon: MessageSquare, group: 'Admin', permModule: 'support' },
   // Quotes — SUPER_ADMIN + MOBIPAY_FINANCE only (in Admin group so finance can see it)
-  { key: 'quotes', label: 'Quotes', icon: FileText, group: 'Admin',
-    restrictToRoles: ['SUPER_ADMIN', 'MOBIPAY_FINANCE'] },
+  { key: 'quotes', label: 'Quotes', icon: FileText, group: 'Admin'},
   // ─── NSSF Voluntary Savings (Klimotrust tenants) ───
   // NSSF Registration is now a section on the Farmer Profile page (not a separate menu)
   { key: 'nssf-contributions', label: 'NSSF Contributions', icon: PiggyBank, group: 'NSSF', permModule: 'nssf' },
-  { key: 'nssf-settlement', label: 'NSSF Settlement', icon: Receipt, group: 'NSSF',
-    restrictToRoles: ['SUPER_ADMIN', 'MOBIPAY_FINANCE'] },
+  { key: 'nssf-settlement', label: 'NSSF Settlement', icon: Receipt, group: 'NSSF'},
   // ReSET MarketLink (humanitarian voucher + cash platform)
   { key: 'reset-dashboard', label: 'Dashboard', icon: Target, group: 'ReSET MarketLink', permModule: 'reset' },
   { key: 'reset-beneficiaries', label: 'Beneficiaries', icon: Users, group: 'ReSET MarketLink', permModule: 'reset' },
@@ -138,9 +118,9 @@ const ALL_MODULES: NavItem[] = [
   { key: 'super-admin-users', label: 'All Users', icon: UserCheck, group: 'Super Admin' },
   { key: 'super-admin-mobile', label: 'Mobile App', icon: Smartphone, group: 'Super Admin' },
   { key: 'super-admin-config', label: 'Configuration', icon: Settings, group: 'Super Admin' },
+  { key: 'super-admin-module-store', label: 'Module Store', icon: Boxes, group: 'Super Admin' },
   // Billing Operations — SUPER_ADMIN only (MobiPay-internal view across all tenants)
-  { key: 'billing-operations', label: 'Billing Operations', icon: DollarSign, group: 'Super Admin',
-    restrictToRoles: ['SUPER_ADMIN'] },
+  { key: 'billing-operations', label: 'Billing Operations', icon: DollarSign, group: 'Super Admin'},
 ]
 
 const MODULE_GROUPS: Record<string, NavItem[]> = {}
@@ -303,10 +283,6 @@ export function Sidebar() {
                     return allowedKeys.includes(item.key)
                   }
 
-                  // Explicit role allowlist (whitelist)
-                  if (item.restrictToRoles && !item.restrictToRoles.includes(role)) return false
-                  // Explicit role blocklist (blacklist)
-                  if (item.hideFromRoles && item.hideFromRoles.includes(role)) return false
                   if (item.alwaysVisible) return true
 
                   // Check role permission

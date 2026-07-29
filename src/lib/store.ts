@@ -21,7 +21,7 @@ export type ModuleKey =
   'nssf-contributions' | 'nssf-settlement' |
   // Reference
   'roles-permissions' |
-  'super-admin-overview' | 'super-admin-tenants' | 'super-admin-revenue' | 'super-admin-impact' | 'super-admin-users' | 'super-admin-mobile' | 'super-admin-config' | 'reset-dashboard' | 'reset-beneficiaries' | 'reset-vouchers' | 'reset-merchants' | 'reset-cash' | 'reset-reports'
+  'super-admin-overview' | 'super-admin-tenants' | 'super-admin-revenue' | 'super-admin-impact' | 'super-admin-users' | 'super-admin-mobile' | 'super-admin-config' | 'super-admin-module-store' | 'reset-dashboard' | 'reset-beneficiaries' | 'reset-vouchers' | 'reset-merchants' | 'reset-cash' | 'reset-reports'
 
 interface AuthUser {
   userId: string

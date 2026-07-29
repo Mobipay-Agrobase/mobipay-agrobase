@@ -28,6 +28,7 @@ const SYSTEM_ROUTES = [
   '/api/entitlements',   // system route — every authenticated user needs this to load sidebar menus
   '/api/modules',        // system route — module list
   '/api/settings/entitlements', // system route — admin config
+  '/api/admin/module-store', // system route — Super Admin module management
   '/api/plots',          // plots API — permission checked via 'trace:read' in sidebar, not 'plots:read'
   '/api/plots/stats',    // same
   '/api/plots/geojson',  // same

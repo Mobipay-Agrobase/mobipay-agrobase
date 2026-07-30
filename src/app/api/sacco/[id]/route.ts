@@ -47,12 +47,12 @@ export async function GET(
         members: {
           orderBy: { joinedAt: 'desc' },
           take: 50,
-          select: { id: true, memberNumber: true, fullName: true, phone: true, sharesOwned: true, totalSavings: true, status: true, joinedAt: true },
+          select: { id: true, memberNumber: true, fullName: true, phone: true, gender: true, occupation: true, sharesOwned: true, totalSavings: true, totalBorrowed: true, totalRepaid: true, status: true, joinedAt: true },
         },
         loans: {
           orderBy: { createdAt: 'desc' },
-          take: 20,
-          select: { id: true, loanNumber: true, principal: true, totalRepayable: true, amountRepaid: true, status: true, createdAt: true },
+          take: 50,
+          select: { id: true, loanNumber: true, principal: true, interestRate: true, interestAmount: true, totalRepayable: true, amountRepaid: true, purpose: true, status: true, disbursedAt: true, dueDate: true, createdAt: true },
         },
         _count: { select: { members: true, loans: true, sharePurchases: true, meetings: true, dividends: true } },
       },

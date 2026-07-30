@@ -254,8 +254,6 @@ export function Sidebar() {
               return Object.entries(MODULE_GROUPS).map(([groupLabel, items]) => {
                 // Hide Super Admin group for non-super-admin users
                 if (groupLabel === 'Super Admin' && !isSuperAdmin) return null
-                // For SUPER_ADMIN role: show Super Admin group + Core Operations (VSLA, etc.) + NSSF
-                if (isSuperAdmin && !['Super Admin', 'NSSF'].includes(groupLabel)) return null
                 // MOBIPAY_FINANCE: hide most groups, only show Admin + Overview
                 if (role === 'MOBIPAY_FINANCE' && !['Overview', 'Admin', 'NSSF'].includes(groupLabel)) return null
                 // MOBIPAY_SUPPORT: only show Overview + Admin
@@ -265,9 +263,22 @@ export function Sidebar() {
                 // Programs group: only for SUPER_ADMIN
                 if (groupLabel === 'Programs' && role !== 'SUPER_ADMIN') return null
 
+                // For SUPER_ADMIN: show the Super Admin group PLUS the small set of
+                // always-accessible admin items (Profile, Settings, Roles & Permissions,
+                // Billing, Platform Recovery). Previously the sidebar hard-locked
+                // SUPER_ADMIN to ONLY the Super Admin + NSSF groups, which made the
+                // TopBar dropdown items unreachable.
+                const isAlwaysAccessibleForSuperAdmin = (item: NavItem) =>
+                  isSuperAdmin &&
+                  ['profile', 'settings', 'roles-permissions', 'billing', 'platform-recovery'].includes(item.key)
+
                 // Filter items by role permission + module entitlement
                 const visibleItems = items.filter(item => {
-                  if (isSuperAdmin) return true
+                  if (isSuperAdmin) {
+                    // In non-Super-Admin groups, only show items explicitly allow-listed above
+                    if (groupLabel !== 'Super Admin' && !isAlwaysAccessibleForSuperAdmin(item)) return false
+                    return true
+                  }
 
                   // MOBIPAY_FINANCE: only see billing-related menus + profile
                   if (role === 'MOBIPAY_FINANCE') {

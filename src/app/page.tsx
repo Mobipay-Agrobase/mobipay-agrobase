@@ -1,6 +1,6 @@
 'use client'
 
-import React, { Suspense, lazy, useEffect, useRef } from 'react'
+import React, { Suspense, lazy, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { useAppStore } from '@/lib/store'
 import { Sidebar } from '@/components/layout/Sidebar'
@@ -9,6 +9,8 @@ import { LoginPage } from '@/components/auth/LoginPage'
 import { Skeleton } from '@/components/ui/skeleton'
 import { OnboardingWizard } from '@/components/onboarding/OnboardingWizard'
 import { CommandPalette } from '@/components/layout/CommandPalette'
+import { SimulationBanner } from '@/components/layout/SimulationBanner'
+import { useSimulationStatus } from '@/hooks/use-simulation-status'
 
 // Core modules
 const DashboardView = lazy(() => import('@/components/modules/DashboardView'))
@@ -182,20 +184,28 @@ function ModuleRouter() {
 }
 
 function AuthenticatedApp() {
+  const { status: simStatus, refresh: refreshSim } = useSimulationStatus()
+  const user = useAppStore((s) => s.user)
+  const isSuperAdmin = user?.role === 'SUPER_ADMIN'
+
   return (
-    <div className="flex h-screen overflow-hidden bg-background">
-      <Sidebar />
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <TopBar />
-        <main className="flex-1 overflow-y-auto">
-          <div className="p-4 lg:p-6 max-w-[1600px] mx-auto">
-            <Suspense fallback={<ModuleLoader />}>
-              <ModuleRouter />
-            </Suspense>
-          </div>
-        </main>
+    <div className="flex h-screen overflow-hidden bg-background flex-col">
+      {isSuperAdmin && <SimulationBanner status={simStatus} onExited={refreshSim} />}
+      <div className="flex flex-1 overflow-hidden">
+        <Sidebar />
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+          <TopBar simulationStatus={simStatus} onSimulationChange={refreshSim} />
+          <main className="flex-1 overflow-y-auto">
+            <div className="p-4 lg:p-6 max-w-[1600px] mx-auto">
+              <Suspense fallback={<ModuleLoader />}>
+                <ModuleRouter />
+              </Suspense>
+            </div>
+          </main>
+        </div>
       </div>
-      <OnboardingWizard />
+      {/* Onboarding wizard is tenant-admin scoped — hide for SUPER_ADMIN */}
+      {!isSuperAdmin && <OnboardingWizard />}
       <CommandPalette />
     </div>
   )
@@ -207,8 +217,6 @@ export default function HomePage() {
   const setActiveModule = useAppStore((s) => s.setActiveModule)
   const activeModule = useAppStore((s) => s.activeModule)
 
-  const hasRedirected = useRef(false)
-
   useEffect(() => {
     if (session?.user) {
       const role = (session.user as { role: string }).role
@@ -218,13 +226,20 @@ export default function HomePage() {
         role,
         name: session.user.name || '',
       })
-      // SUPER_ADMIN: redirect to platform overview ONLY on first login.
-      // After that, they can navigate freely to any module (VSLA, farmers, payments, etc.)
-      if (role === 'SUPER_ADMIN' && !hasRedirected.current) {
-        hasRedirected.current = true
-        if (activeModule === 'dashboard') {
-          setActiveModule('super-admin-overview')
-        }
+      // If SUPER_ADMIN and currently on a tenant-only module (e.g. farmers, vsla),
+      // bounce them to the platform overview. We deliberately ALLOW Profile,
+      // Settings, Roles & Permissions, and Billing so the TopBar dropdown and
+      // sidebar links continue to work for SUPER_ADMIN.
+      const adminAllowedForSuperAdmin = new Set([
+        'profile', 'settings', 'roles-permissions', 'billing',
+        'platform-recovery',
+      ])
+      const isAllowedForSuperAdmin =
+        activeModule.startsWith('super-admin') ||
+        activeModule === 'billing-operations' ||
+        adminAllowedForSuperAdmin.has(activeModule)
+      if (role === 'SUPER_ADMIN' && !isAllowedForSuperAdmin) {
+        setActiveModule('super-admin-overview')
       }
       // MOBIPAY_FINANCE: redirect to billing-operations if on a non-billing module
       const isAllowedForFinance =

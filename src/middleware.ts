@@ -148,16 +148,44 @@ export async function middleware(request: NextRequest) {
   const role = token.role as string | undefined
   const userTenantId = token.tenantId as string | undefined
 
+  // ─── 1a. SIMULATION CONTEXT (SUPER_ADMIN only) ──────────────────────────
+  // Decode the `simulate_tenant` cookie early so we can use the simulated
+  // tenant ID for kill-switch + entitlement checks. We DO NOT apply the
+  // simulation override on /api/admin/* paths (the SUPER_ADMIN needs to call
+  // /api/admin/simulate/stop while simulating).
+  let simulatedTenantId: string | undefined
+  let simulatedTenantName: string | undefined
+  let simulatedTenantType: string | undefined
+  if (role === 'SUPER_ADMIN' && !pathname.startsWith('/api/admin/')) {
+    const simulateCookie = request.cookies.get('simulate_tenant')?.value
+    if (simulateCookie) {
+      try {
+        const decoded = JSON.parse(
+          Buffer.from(simulateCookie, 'base64url').toString('utf-8'),
+        ) as { tenantId: string; tenantName: string; tenantType: string; expiresAt: number }
+        if (Date.now() < decoded.expiresAt && decoded.tenantId) {
+          simulatedTenantId = decoded.tenantId
+          simulatedTenantName = decoded.tenantName
+          simulatedTenantType = decoded.tenantType
+        }
+      } catch {
+        // Malformed cookie — ignore
+      }
+    }
+  }
+  const isSimulating = !!simulatedTenantId
+  // The effective tenant ID is the simulated tenant when simulating, otherwise the user's home tenant.
+  const effectiveTenantId = isSimulating ? simulatedTenantId! : userTenantId
+
   // ─── 1c. TENANT KILL SWITCH ──────────────────────────────────────────────
   // If the tenant is suspended (isActive = false), block all API access
   // except for SUPER_ADMIN who can still manage the platform.
-  // The tenant active status is cached in the token (refreshed on each login).
-  // For real-time suspension, we check a lightweight header set by the
-  // edge-entitlements cache (warmed by the Super Admin dashboard).
-  if (role !== 'SUPER_ADMIN' && userTenantId) {
+  // When simulating, the SUPER_ADMIN is treated as a tenant user and is
+  // subject to the kill-switch on the simulated tenant.
+  if ((role !== 'SUPER_ADMIN' || isSimulating) && effectiveTenantId) {
     // Check cached tenant status from edge-entitlements
     // The cache is warmed on login and on Super Admin actions
-    const tenantActive = getTenantActiveStatus(userTenantId)
+    const tenantActive = getTenantActiveStatus(effectiveTenantId)
     if (tenantActive === false) {
       logPermissionDenied({ ...reqCtx, userId: token.userId as string, role })
       logRequest({ ...reqCtx, userId: token.userId as string }, { status: 403 })
@@ -221,16 +249,18 @@ export async function middleware(request: NextRequest) {
   // ─── 2b. ENTITLEMENT CHECK (module access based on tenant's plan) ──────
   // Resolves /api/vsla/* → VSLA module, then checks the in-memory entitlement cache.
   // Core routes (dashboard, users, settings, etc.) are not mapped → always allowed.
-  // SUPER_ADMIN bypasses entitlement checks. Fail-open on cache miss/stale.
-  if (userTenantId && moduleMatch && role !== 'SUPER_ADMIN') {
+  // SUPER_ADMIN bypasses entitlement checks — EXCEPT when simulating a tenant,
+  // in which case the simulated tenant's entitlements apply. Fail-open on cache miss/stale.
+  const runEntitlementCheck = effectiveTenantId && moduleMatch && (role !== 'SUPER_ADMIN' || isSimulating)
+  if (runEntitlementCheck) {
     const entitlementModule = resolveModuleForPath(pathname)
     if (entitlementModule) {
-      const hasEntitlement = checkEntitlement(userTenantId, entitlementModule)
+      const hasEntitlement = checkEntitlement(effectiveTenantId!, entitlementModule)
       if (!hasEntitlement) {
         logEntitlementDenied(
           { ...reqCtx, userId: token.userId as string },
           entitlementModule,
-          userTenantId,
+          effectiveTenantId!,
         )
         logRequest({ ...reqCtx, userId: token.userId as string }, { status: 403 })
 
@@ -247,13 +277,25 @@ export async function middleware(request: NextRequest) {
   }
 
   // ─── 3. TENANT ISOLATION HEADER ─────────────────────────────────────────
+  // When simulating, the effective tenant scope is just the simulated tenant.
+  // Otherwise, SUPER_ADMIN sees all tenants; COUNTRY_ADMIN sees their descendant set;
+  // everyone else sees only their home tenant.
   const tokenTenantScope = token.tenantScope as string[] | undefined
-  const allowedTenantIds = getAllowedTenantIds(role, userTenantId, tokenTenantScope)
+  const allowedTenantIds = isSimulating
+    ? [simulatedTenantId!]
+    : getAllowedTenantIds(role, userTenantId, tokenTenantScope)
 
   const requestHeaders = new Headers(request.headers)
   requestHeaders.set('x-user-id', (token.userId as string) || '')
   requestHeaders.set('x-user-role', role || '')
-  requestHeaders.set('x-tenant-id', userTenantId || '')
+  requestHeaders.set('x-tenant-id', effectiveTenantId || '')
+
+  if (isSimulating) {
+    // Flag the simulation so tenant.ts can expose it
+    requestHeaders.set('x-simulated-tenant-id', simulatedTenantId!)
+    if (simulatedTenantName) requestHeaders.set('x-simulated-tenant-name', simulatedTenantName)
+    if (simulatedTenantType) requestHeaders.set('x-simulated-tenant-type', simulatedTenantType)
+  }
 
   if (allowedTenantIds === null) {
     requestHeaders.set('x-tenant-scope', 'all')

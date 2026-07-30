@@ -12,11 +12,29 @@ export interface TenantContext {
   tenantId: string
   tenantScope: string[]  // list of allowed tenant IDs (empty array = no filter for SUPER_ADMIN)
   isSuperAdmin: boolean
+  /** True when a SUPER_ADMIN is currently simulating a tenant context.
+   *  Set by middleware when the `simulate_tenant` cookie is present and valid. */
+  isSimulating: boolean
+  /** The tenant ID being simulated, if `isSimulating` is true. */
+  simulatedTenantId?: string
+  /** The display name of the simulated tenant, if `isSimulating` is true. */
+  simulatedTenantName?: string
+  /** The type of the simulated tenant (COOPERATIVE, NGO, etc.). */
+  simulatedTenantType?: string
 }
 
 /**
  * Get the current user's tenant context from the request headers.
  * Reads from Next.js headers() API (set by middleware).
+ *
+ * When a SUPER_ADMIN is simulating a tenant (via /api/admin/simulate/start),
+ * the middleware narrows `x-tenant-scope` and `x-tenant-id` to the simulated
+ * tenant, and sets `x-simulated-tenant-id` / `x-simulated-tenant-name` /
+ * `x-simulated-tenant-type`. This function exposes both:
+ *   - `tenantId` / `tenantScope` reflect the SIMULATED tenant (so all
+ *     Prisma queries are correctly scoped via `buildTenantFilter`),
+ *   - `isSimulating` / `simulatedTenantId` / etc. expose the simulation
+ *     metadata for audit logging and UI affordances.
  *
  * Accepts an optional NextRequest for backward compatibility — it is NOT used
  * since Next.js 13+ Route Handlers can access headers via the `headers()` API.
@@ -37,8 +55,15 @@ export async function getTenantContext(_req?: NextRequest | Request): Promise<Te
   const role = headersList.get('x-user-role') || ''
   const tenantId = headersList.get('x-tenant-id') || ''
   const tenantScope = headersList.get('x-tenant-scope') || ''
+  const simulatedTenantId = headersList.get('x-simulated-tenant-id') || ''
+  const simulatedTenantName = headersList.get('x-simulated-tenant-name') || undefined
+  const simulatedTenantType = headersList.get('x-simulated-tenant-type') || undefined
 
-  const isSuperAdmin = tenantScope === 'all'
+  // isSuperAdmin is true iff the user's role is SUPER_ADMIN AND no simulation cookie is active.
+  // When simulating, the user effectively becomes a tenant-scoped user (isSuperAdmin=false)
+  // so that admin-only routes are not callable from within the simulation.
+  const isSimulating = role === 'SUPER_ADMIN' && simulatedTenantId.length > 0
+  const isSuperAdmin = role === 'SUPER_ADMIN' && !isSimulating
 
   // Validate: non-super-admin must have a tenantId
   if (!isSuperAdmin && !tenantId) {
@@ -51,6 +76,10 @@ export async function getTenantContext(_req?: NextRequest | Request): Promise<Te
     tenantId,
     tenantScope: isSuperAdmin ? [] : tenantScope.split(',').filter(Boolean),
     isSuperAdmin,
+    isSimulating,
+    simulatedTenantId: isSimulating ? simulatedTenantId : undefined,
+    simulatedTenantName: isSimulating ? simulatedTenantName : undefined,
+    simulatedTenantType: isSimulating ? simulatedTenantType : undefined,
   }
 }
 

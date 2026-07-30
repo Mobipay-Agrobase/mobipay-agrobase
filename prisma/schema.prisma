@@ -18,7 +18,7 @@ datasource db {
 model Tenant {
   id          String   @id @default(cuid())
   name        String
-  type        String   // SUPER_ADMIN, COUNTRY, NGO, COOPERATIVE, AGRIBUSINESS, EXPORTER, MFI, BANK, INPUT_SUPPLIER, PROCESSING
+  type        String   // SUPER_ADMIN, COUNTRY, NGO, COOPERATIVE, AGRIBUSINESS, EXPORTER, MFI, BANK, INPUT_SUPPLIER, PROCESSING, VSLA_PROVIDER
   country         String?             // Uganda, Ghana, Kenya
   defaultCurrency String   @default("UGX") // UGX, GHS, KES — derived from country, overridable
   parentId        String?
@@ -155,7 +155,7 @@ model User {
   id            String   @id @default(cuid())
   tenantId      String
   tenant        Tenant   @relation(fields: [tenantId], references: [id])
-  role          String   // SUPER_ADMIN, COUNTRY_ADMIN, TENANT_ADMIN, AGENT, EXTENSION_OFFICER, CBT, CASUAL, FARMER, VSLA_MEMBER
+  role          String   // SUPER_ADMIN, COUNTRY_ADMIN, TENANT_ADMIN, AGENT, EXTENSION_OFFICER, CBT, CASUAL, FARMER, VSLA_MEMBER, VSLA_PROVIDER_ADMIN
   email         String?
   phone         String   @unique
   passwordHash  String?

@@ -1,6 +1,34 @@
 import { db } from '@/lib/db'
 import { NextResponse } from 'next/server'
 import { getTenantContext } from '@/lib/tenant'
+import { headers } from 'next/headers'
+
+/**
+ * Helper: write an AuditLog entry for a SUPER_ADMIN action.
+ */
+async function writeAudit(args: {
+  userId: string
+  action: string
+  entityType?: string
+  entityId?: string
+  details?: Record<string, unknown>
+}) {
+  const headersList = await headers()
+  const ipAddress = headersList.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+    headersList.get('x-real-ip') || undefined
+  await db.auditLog.create({
+    data: {
+      userId: args.userId,
+      action: args.action,
+      entityType: args.entityType,
+      entityId: args.entityId,
+      details: args.details ? JSON.stringify(args.details) : undefined,
+      ipAddress,
+    },
+  }).catch(err => {
+    console.error('[AuditLog]', err)
+  })
+}
 
 /**
  * PATCH /api/admin/tenants/[id]
@@ -67,6 +95,23 @@ export async function PATCH(
         })
       }
     }
+
+    // Audit log
+    await writeAudit({
+      userId: ctx.userId,
+      action: 'TENANT_UPDATE',
+      entityType: 'Tenant',
+      entityId: id,
+      details: {
+        name: name !== undefined ? name : undefined,
+        isActive: isActive !== undefined ? isActive : undefined,
+        plan: plan || undefined,
+        defaultCurrency: defaultCurrency !== undefined ? defaultCurrency : undefined,
+        country: country !== undefined ? country : undefined,
+        previousName: tenant.name,
+        previousIsActive: tenant.isActive,
+      },
+    })
 
     return NextResponse.json({ tenant: updated })
   } catch (error) {

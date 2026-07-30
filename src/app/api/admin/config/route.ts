@@ -1,6 +1,34 @@
 import { db } from '@/lib/db'
 import { NextResponse } from 'next/server'
 import { getTenantContext } from '@/lib/tenant'
+import { headers } from 'next/headers'
+
+/**
+ * Helper: write an AuditLog entry for a SUPER_ADMIN config action.
+ */
+async function writeAudit(args: {
+  userId: string
+  action: string
+  entityType?: string
+  entityId?: string
+  details?: Record<string, unknown>
+}) {
+  const headersList = await headers()
+  const ipAddress = headersList.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+    headersList.get('x-real-ip') || undefined
+  await db.auditLog.create({
+    data: {
+      userId: args.userId,
+      action: args.action,
+      entityType: args.entityType,
+      entityId: args.entityId,
+      details: args.details ? JSON.stringify(args.details) : undefined,
+      ipAddress,
+    },
+  }).catch(err => {
+    console.error('[AuditLog]', err)
+  })
+}
 
 /**
  * GET /api/admin/config
@@ -104,6 +132,15 @@ export async function PATCH(request: Request) {
       },
       update: { isEnabled },
       create: { tenantId, moduleCode, isEnabled },
+    })
+
+    // Audit log
+    await writeAudit({
+      userId: ctx.userId,
+      action: isEnabled ? 'MODULE_ENABLE' : 'MODULE_DISABLE',
+      entityType: 'ModuleEntitlement',
+      entityId: updated.id,
+      details: { tenantId, moduleCode, isEnabled },
     })
 
     return NextResponse.json({ entitlement: updated })

@@ -21,6 +21,36 @@ import {
   clearEntitlementCache,
   getCacheStats,
 } from '@/middleware/edge-entitlements'
+import { db } from '@/lib/db'
+import { headers } from 'next/headers'
+
+/**
+ * Helper: write an AuditLog entry for an entitlement change.
+ * Audit failures must never break the primary operation.
+ */
+async function writeAudit(args: {
+  userId: string
+  action: string
+  entityType?: string
+  entityId?: string
+  details?: Record<string, unknown>
+}) {
+  const headersList = await headers()
+  const ipAddress = headersList.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+    headersList.get('x-real-ip') || undefined
+  await db.auditLog.create({
+    data: {
+      userId: args.userId,
+      action: args.action,
+      entityType: args.entityType,
+      entityId: args.entityId,
+      details: args.details ? JSON.stringify(args.details) : undefined,
+      ipAddress,
+    },
+  }).catch(err => {
+    console.error('[AuditLog]', err)
+  })
+}
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // GET — List entitlements or cache stats
@@ -130,7 +160,6 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      const { db } = await import('@/lib/db')
       const tenants = await db.tenant.findMany({
         where: { isActive: true },
         select: { id: true },
@@ -179,6 +208,15 @@ export async function POST(request: NextRequest) {
       // Invalidate Edge cache for this tenant
       invalidateTenant(tenantId)
 
+      // Audit log
+      await writeAudit({
+        userId: ctx.userId,
+        action: 'ENTITLEMENT_GRANT',
+        entityType: 'ModuleEntitlement',
+        entityId: tenantId,
+        details: { tenantId, module, features: features || [] },
+      })
+
       return NextResponse.json({ success: true, data: record })
     }
 
@@ -203,6 +241,15 @@ export async function POST(request: NextRequest) {
 
       // Invalidate Edge cache for this tenant
       invalidateTenant(tenantId)
+
+      // Audit log
+      await writeAudit({
+        userId: ctx.userId,
+        action: 'ENTITLEMENT_REVOKE',
+        entityType: 'ModuleEntitlement',
+        entityId: tenantId,
+        details: { tenantId, module },
+      })
 
       return NextResponse.json({
         success: true,
@@ -248,7 +295,6 @@ export async function DELETE(request: NextRequest) {
       )
     }
 
-    const { db } = await import('@/lib/db')
     const record = await db.moduleEntitlement.findUnique({ where: { id } })
 
     if (!record) {
@@ -262,6 +308,15 @@ export async function DELETE(request: NextRequest) {
 
     // Invalidate Edge cache for this tenant
     invalidateTenant(record.tenantId)
+
+    // Audit log
+    await writeAudit({
+      userId: ctx.userId,
+      action: 'ENTITLEMENT_DELETE',
+      entityType: 'ModuleEntitlement',
+      entityId: id,
+      details: { tenantId: record.tenantId, moduleCode: record.moduleCode },
+    })
 
     return NextResponse.json({
       success: true,

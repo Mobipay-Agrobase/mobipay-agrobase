@@ -15,6 +15,8 @@ import {
   DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { TenantSwitcher } from '@/components/layout/TenantSwitcher'
+import type { SimulationStatus } from '@/hooks/use-simulation-status'
 
 const MODULE_TITLES: Record<string, string> = {
   dashboard: 'Dashboard',
@@ -53,13 +55,20 @@ const MODULE_TITLES: Record<string, string> = {
   companies: 'Companies',
 }
 
-export function TopBar() {
+interface TopBarProps {
+  simulationStatus?: SimulationStatus
+  onSimulationChange?: () => void
+}
+
+export function TopBar({ simulationStatus, onSimulationChange }: TopBarProps) {
   const { activeModule, setSidebarOpen, user } = useAppStore()
   const { theme, setTheme } = useTheme()
   const { data: session } = useSession()
 
   const userName = user?.name || session?.user?.name || 'Super Admin'
   const userInitials = userName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+  const isSuperAdmin = user?.role === 'SUPER_ADMIN'
+  const isSimulating = !!simulationStatus?.simulating
 
   return (
     <header className="h-16 border-b border-border bg-card/80 backdrop-blur-md flex items-center px-4 lg:px-6 gap-4 shrink-0 sticky top-0 z-30">
@@ -80,6 +89,13 @@ export function TopBar() {
       </div>
 
       <div className="flex-1" />
+
+      {/* Tenant Switcher — shown only for SUPER_ADMIN when NOT simulating.
+          When simulating, the SimulationBanner (rendered above the TopBar) carries the
+          Exit button + tenant name, so we hide the switcher to avoid double affordance. */}
+      {isSuperAdmin && !isSimulating && (
+        <TenantSwitcher onStarted={() => onSimulationChange?.()} />
+      )}
 
       <div className="hidden md:flex items-center relative max-w-xs w-full">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />

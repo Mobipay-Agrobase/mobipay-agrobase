@@ -9,7 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter
 } from '@/components/ui/dialog'
-import { Building2, Plus, Search, MoreVertical, Power } from 'lucide-react'
+import { Building2, Plus, Search, MoreVertical, Power, Eye, ArrowRightLeft, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 
 interface Tenant {
@@ -29,6 +29,13 @@ export default function SuperAdminTenantsView() {
   const [search, setSearch] = useState('')
   const [filterType, setFilterType] = useState('')
   const [createOpen, setCreateOpen] = useState(false)
+  const [simulatingId, setSimulatingId] = useState<string | null>(null)
+  const [migrating, setMigrating] = useState(false)
+  const [migrationPreview, setMigrationPreview] = useState<{
+    targetTenant: { id: string; name: string } | null
+    sourceTenants: Array<{ id: string; name: string; type: string; groupCount: number }>
+    counts: { groups: number; loans: number; repayments: number; meetings: number; attendance: number }
+  } | null>(null)
 
   const load = () => {
     setLoading(true)
@@ -60,6 +67,103 @@ export default function SuperAdminTenantsView() {
     }
   }
 
+  const simulateTenant = async (t: Tenant) => {
+    if (t.type === 'SUPER_ADMIN') {
+      toast.error('Cannot simulate the platform root tenant')
+      return
+    }
+    if (!t.isActive) {
+      toast.error('Cannot simulate a suspended tenant')
+      return
+    }
+    setSimulatingId(t.id)
+    try {
+      const res = await fetch('/api/admin/simulate/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tenantId: t.id }),
+      })
+      const data = await res.json()
+      if (res.ok && data.success) {
+        toast.success(`Now viewing platform as ${t.name}`)
+        // Reload the page so the SimulationBanner appears at the top and the
+        // middleware picks up the new cookie on every subsequent request.
+        setTimeout(() => window.location.reload(), 400)
+      } else {
+        toast.error(data.error || 'Failed to start simulation')
+      }
+    } catch {
+      toast.error('Network error')
+    } finally {
+      setSimulatingId(null)
+    }
+  }
+
+  const previewMigration = async () => {
+    setMigrating(true)
+    try {
+      const res = await fetch('/api/admin/migrate-vsla')
+      const data = await res.json()
+      if (res.ok && data.success) {
+        setMigrationPreview(data.data)
+        if (data.data.counts.groups === 0) {
+          toast.info('No VSLA groups need migration — all groups are already on a VSLA_PROVIDER tenant.')
+        } else if (!data.data.targetTenant) {
+          toast.info('No VSLA_PROVIDER tenant exists yet. Click "Migrate VSLA" to auto-create one and run the migration.')
+        } else {
+          toast.info(`Preview ready: ${data.data.counts.groups} group(s) across ${data.data.sourceTenants.length} source tenant(s).`)
+        }
+      } else {
+        toast.error(data.error || 'Failed to preview migration')
+      }
+    } catch {
+      toast.error('Network error')
+    } finally {
+      setMigrating(false)
+    }
+  }
+
+  const executeMigration = async () => {
+    if (!migrationPreview) {
+      toast.error('Load the preview first')
+      return
+    }
+    const totalRecords = migrationPreview.counts.groups +
+      migrationPreview.counts.loans + migrationPreview.counts.repayments +
+      migrationPreview.counts.meetings + migrationPreview.counts.attendance
+    const confirmed = window.confirm(
+      `Migrate ${migrationPreview.counts.groups} VSLA group(s) ` +
+      `(${totalRecords} total records across groups/loans/repayments/meetings/attendance) ` +
+      `to ${migrationPreview.targetTenant?.name || 'a new VSLA_PROVIDER tenant'}?\n\n` +
+      `This action is irreversible and audit-logged.`,
+    )
+    if (!confirmed) return
+
+    setMigrating(true)
+    try {
+      const res = await fetch('/api/admin/migrate-vsla', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      })
+      const data = await res.json()
+      if (res.ok && data.success) {
+        const c = data.data.counts
+        toast.success(
+          `Migrated ${c.groups} group(s), ${c.loans} loan(s), ${c.repayments} repayment(s), ${c.meetings} meeting(s), ${c.attendance} attendance record(s)`,
+        )
+        setMigrationPreview(null)
+        load()
+      } else {
+        toast.error(data.error || 'Migration failed')
+      }
+    } catch {
+      toast.error('Network error')
+    } finally {
+      setMigrating(false)
+    }
+  }
+
   if (loading) return <div className="space-y-4"><Skeleton className="h-10 w-full" /><Skeleton className="h-96" /></div>
 
   return (
@@ -70,8 +174,100 @@ export default function SuperAdminTenantsView() {
           <h1 className="text-2xl font-bold tracking-tight">Tenant Management</h1>
           <p className="text-sm text-muted-foreground">{tenants.length} tenants · {tenants.filter(t => t.isActive).length} active</p>
         </div>
-        <CreateTenantDialog open={createOpen} onOpenChange={setCreateOpen} onCreated={load} />
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={previewMigration}
+            disabled={migrating}
+            className="gap-2"
+            title="Preview VSLA → standalone tenant migration"
+          >
+            {migrating ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRightLeft className="w-4 h-4" />}
+            Migrate VSLA
+          </Button>
+          <CreateTenantDialog open={createOpen} onOpenChange={setCreateOpen} onCreated={load} />
+        </div>
       </div>
+
+      {/* Migration Preview Card */}
+      {migrationPreview && (
+        <Card className="border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-900">
+          <div className="p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-semibold text-amber-900 dark:text-amber-100">
+                  VSLA Migration Preview
+                </h3>
+                <p className="text-xs text-amber-700 dark:text-amber-300">
+                  Target: {migrationPreview.targetTenant?.name || 'NEW VSLA_PROVIDER tenant (will be auto-created)'}
+                  {migrationPreview.targetTenant && ` (${migrationPreview.targetTenant.id})`}
+                </p>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                className="bg-amber-100 hover:bg-amber-200 border-amber-300 text-amber-900 dark:bg-amber-900/60 dark:hover:bg-amber-900 dark:border-amber-800 dark:text-amber-100"
+                onClick={() => setMigrationPreview(null)}
+              >
+                Dismiss
+              </Button>
+            </div>
+            {migrationPreview.counts.groups === 0 ? (
+              <p className="text-xs text-amber-800 dark:text-amber-200">
+                No VSLA groups need migration — every group is already on a VSLA_PROVIDER tenant (or no groups exist).
+              </p>
+            ) : (
+              <>
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-xs">
+                  <div className="p-2 rounded bg-white/60 dark:bg-amber-900/30">
+                    <div className="text-muted-foreground">Groups</div>
+                    <div className="text-lg font-semibold">{migrationPreview.counts.groups}</div>
+                  </div>
+                  <div className="p-2 rounded bg-white/60 dark:bg-amber-900/30">
+                    <div className="text-muted-foreground">Loans</div>
+                    <div className="text-lg font-semibold">{migrationPreview.counts.loans}</div>
+                  </div>
+                  <div className="p-2 rounded bg-white/60 dark:bg-amber-900/30">
+                    <div className="text-muted-foreground">Repayments</div>
+                    <div className="text-lg font-semibold">{migrationPreview.counts.repayments}</div>
+                  </div>
+                  <div className="p-2 rounded bg-white/60 dark:bg-amber-900/30">
+                    <div className="text-muted-foreground">Meetings</div>
+                    <div className="text-lg font-semibold">{migrationPreview.counts.meetings}</div>
+                  </div>
+                  <div className="p-2 rounded bg-white/60 dark:bg-amber-900/30">
+                    <div className="text-muted-foreground">Attendance</div>
+                    <div className="text-lg font-semibold">{migrationPreview.counts.attendance}</div>
+                  </div>
+                </div>
+                <div className="text-xs">
+                  <span className="text-muted-foreground">Source tenants: </span>
+                  {migrationPreview.sourceTenants.length === 0 ? (
+                    <span className="text-muted-foreground">none</span>
+                  ) : (
+                    migrationPreview.sourceTenants.map(s => (
+                      <span key={s.id} className="inline-block mr-2 mb-1 px-2 py-0.5 rounded bg-white/60 dark:bg-amber-900/40">
+                        {s.name} ({s.type}) — {s.groupCount} group(s)
+                      </span>
+                    ))
+                  )}
+                </div>
+                <div className="flex justify-end">
+                  <Button
+                    size="sm"
+                    onClick={executeMigration}
+                    disabled={migrating}
+                    className="gap-2"
+                  >
+                    {migrating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ArrowRightLeft className="w-3.5 h-3.5" />}
+                    Execute Migration
+                  </Button>
+                </div>
+              </>
+            )}
+          </div>
+        </Card>
+      )}
 
       {/* Filters */}
       <div className="flex gap-3">
@@ -90,6 +286,7 @@ export default function SuperAdminTenantsView() {
           className="px-3 py-2 text-sm border rounded-md bg-background"
         >
           <option value="">All types</option>
+          <option value="VSLA_PROVIDER">VSLA Provider</option>
           <option value="COOPERATIVE">Cooperative</option>
           <option value="EXPORTER">Exporter</option>
           <option value="NGO">NGO</option>
@@ -114,7 +311,7 @@ export default function SuperAdminTenantsView() {
                 <th className="text-left py-3 px-4 text-xs uppercase text-muted-foreground font-semibold">Plan</th>
                 <th className="text-right py-3 px-4 text-xs uppercase text-muted-foreground font-semibold">MRR</th>
                 <th className="text-center py-3 px-4 text-xs uppercase text-muted-foreground font-semibold">Status</th>
-                <th className="py-3 px-4"></th>
+                <th className="text-right py-3 px-4 text-xs uppercase text-muted-foreground font-semibold">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -151,15 +348,30 @@ export default function SuperAdminTenantsView() {
                     </Badge>
                   </td>
                   <td className="py-3 px-4">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => toggleActive(t)}
-                      title={t.isActive ? 'Suspend' : 'Activate'}
-                    >
-                      <Power className={`w-4 h-4 ${t.isActive ? 'text-red-500' : 'text-green-500'}`} />
-                    </Button>
+                    <div className="flex items-center justify-end gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 gap-1.5 text-xs"
+                        onClick={() => simulateTenant(t)}
+                        disabled={simulatingId === t.id || t.type === 'SUPER_ADMIN' || !t.isActive}
+                        title={t.type === 'SUPER_ADMIN' ? 'Cannot simulate the platform root tenant' :
+                               !t.isActive ? 'Cannot simulate a suspended tenant' :
+                               'View platform as this tenant'}
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                        View as
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => toggleActive(t)}
+                        title={t.isActive ? 'Suspend' : 'Activate'}
+                      >
+                        <Power className={`w-4 h-4 ${t.isActive ? 'text-red-500' : 'text-green-500'}`} />
+                      </Button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -214,6 +426,7 @@ function CreateTenantDialog({ open, onOpenChange, onCreated }: { open: boolean; 
           <div className="space-y-2">
             <label className="text-sm font-medium">Type</label>
             <select value={type} onChange={e => setType(e.target.value)} className="w-full px-3 py-2 border rounded-md bg-background text-sm">
+              <option value="VSLA_PROVIDER">VSLA Provider (standalone VSLA tenant)</option>
               <option value="COOPERATIVE">Cooperative</option>
               <option value="EXPORTER">Exporter</option>
               <option value="NGO">NGO</option>

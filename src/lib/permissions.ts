@@ -247,6 +247,17 @@ const ROLE_PERMISSIONS: RolePerms = {
     'profile:read', 'profile:update',
     'training:read',
   ],
+  // ─── VSLA Provider Admin: full VSLA management on a VSLA_PROVIDER tenant ───
+  VSLA_PROVIDER_ADMIN: [
+    'dashboard:read',
+    'vsla:*',
+    'farmers:read', 'farmers:create', 'farmers:update',
+    'reports:read', 'reports:export',
+    'communication:read', 'communication:create',
+    'training:read', 'training:create',
+    'surveys:read', 'surveys:create',
+    'profile:read', 'profile:update',
+  ],
   // ─── VSLA V2 Roles (SRS compliant) ───
   // VSLA Officer: Company/tenant field agent who manages groups, assigns key holders,
   // oversees meetings. Can see all VSLA data for their tenant but not other tenants.

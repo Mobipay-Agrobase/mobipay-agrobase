@@ -1,6 +1,36 @@
 import { db } from '@/lib/db'
 import { NextResponse } from 'next/server'
 import { getTenantContext } from '@/lib/tenant'
+import { headers } from 'next/headers'
+
+/**
+ * Helper: write an AuditLog entry for a SUPER_ADMIN action.
+ * The AuditLog model is defined at prisma/schema.prisma:1202.
+ */
+async function writeAudit(args: {
+  userId: string
+  action: string
+  entityType?: string
+  entityId?: string
+  details?: Record<string, unknown>
+}) {
+  const headersList = await headers()
+  const ipAddress = headersList.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+    headersList.get('x-real-ip') || undefined
+  await db.auditLog.create({
+    data: {
+      userId: args.userId,
+      action: args.action,
+      entityType: args.entityType,
+      entityId: args.entityId,
+      details: args.details ? JSON.stringify(args.details) : undefined,
+      ipAddress,
+    },
+  }).catch(err => {
+    // Audit log failures must never break the primary operation.
+    console.error('[AuditLog]', err)
+  })
+}
 
 /**
  * GET /api/admin/tenants
@@ -93,7 +123,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'name and type are required' }, { status: 400 })
     }
 
-    const validTypes = ['SUPER_ADMIN', 'COUNTRY', 'NGO', 'COOPERATIVE', 'AGRIBUSINESS', 'EXPORTER', 'MFI', 'BANK', 'INPUT_SUPPLIER', 'PROCESSING']
+    const validTypes = ['SUPER_ADMIN', 'COUNTRY', 'NGO', 'COOPERATIVE', 'AGRIBUSINESS', 'EXPORTER', 'MFI', 'BANK', 'INPUT_SUPPLIER', 'PROCESSING', 'VSLA_PROVIDER']
     if (!validTypes.includes(type!)) {
       return NextResponse.json({ error: `Invalid type. Must be one of: ${validTypes.join(', ')}` }, { status: 400 })
     }
@@ -146,6 +176,22 @@ export async function POST(request: Request) {
         startDate: now,
         trialStartsAt,
         trialEndsAt,
+      },
+    })
+
+    // Audit log
+    await writeAudit({
+      userId: ctx.userId,
+      action: 'TENANT_CREATE',
+      entityType: 'Tenant',
+      entityId: tenant.id,
+      details: {
+        name: tenant.name,
+        type: tenant.type,
+        country: tenant.country,
+        defaultCurrency: tenant.defaultCurrency,
+        trialDays: trial,
+        parentId: tenant.parentId,
       },
     })
 

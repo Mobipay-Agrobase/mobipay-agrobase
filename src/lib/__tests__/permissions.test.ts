@@ -78,6 +78,35 @@ describe('Permission System', () => {
     })
   })
 
+  describe('VSLA_PROVIDER_ADMIN (P3)', () => {
+    it('should have full VSLA CRUD via wildcard', () => {
+      expect(hasPermission('VSLA_PROVIDER_ADMIN', 'vsla:read')).toBe(true)
+      expect(hasPermission('VSLA_PROVIDER_ADMIN', 'vsla:create')).toBe(true)
+      expect(hasPermission('VSLA_PROVIDER_ADMIN', 'vsla:update')).toBe(true)
+      expect(hasPermission('VSLA_PROVIDER_ADMIN', 'vsla:delete')).toBe(true)
+      expect(hasPermission('VSLA_PROVIDER_ADMIN', 'vsla:approve')).toBe(true)
+      expect(hasPermission('VSLA_PROVIDER_ADMIN', 'vsla:export')).toBe(true)
+    })
+
+    it('should have farmer read/create/update but not delete', () => {
+      expect(hasPermission('VSLA_PROVIDER_ADMIN', 'farmers:read')).toBe(true)
+      expect(hasPermission('VSLA_PROVIDER_ADMIN', 'farmers:create')).toBe(true)
+      expect(hasPermission('VSLA_PROVIDER_ADMIN', 'farmers:update')).toBe(true)
+      expect(hasPermission('VSLA_PROVIDER_ADMIN', 'farmers:delete')).toBe(false)
+    })
+
+    it('should NOT have billing or settings admin', () => {
+      expect(hasPermission('VSLA_PROVIDER_ADMIN', 'billing:read')).toBe(false)
+      expect(hasPermission('VSLA_PROVIDER_ADMIN', 'settings:admin')).toBe(false)
+      expect(hasPermission('VSLA_PROVIDER_ADMIN', 'users:admin')).toBe(false)
+    })
+
+    it('should have reports read + export', () => {
+      expect(hasPermission('VSLA_PROVIDER_ADMIN', 'reports:read')).toBe(true)
+      expect(hasPermission('VSLA_PROVIDER_ADMIN', 'reports:export')).toBe(true)
+    })
+  })
+
   describe('EXTENSION_OFFICER', () => {
     it('should have training full CRUD', () => {
       expect(hasPermission('EXTENSION_OFFICER', 'training:read')).toBe(true)

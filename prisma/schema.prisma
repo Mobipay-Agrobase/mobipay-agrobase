@@ -147,6 +147,8 @@ model Tenant {
   nssfContributions      NssfContribution[]
   fundSettlements        FundSettlement[]
   nssfCommissions        NssfCommission[]
+  // ─── P4: Dynamic Billing ───
+  planOverrides          TenantPlanOverride[]
 }
 
 // --- USERS & AUTH ---
@@ -1683,6 +1685,63 @@ model UsageRecord {
   count       Int      @default(1)
   period      String   // "2026-06" (YYYY-MM format)
   recordedAt  DateTime @default(now())
+
+  @@unique([tenantId, eventType, period])
+}
+
+// --- BILLING: DYNAMIC PLANS (P4) ---
+
+/// A configurable billing plan. Replaces the 5 hardcoded price tables.
+/// Super-admins can create/edit/deactivate plans via /api/admin/billing/plans.
+model BillingPlan {
+  id              String   @id @default(cuid())
+  code            String   @unique // BASIC, STANDARD, ENTERPRISE, CUSTOM-001, etc.
+  name            String   // Display name
+  description     String?
+  /// JSON array of module codes included in this plan
+  modules         String   @default("[]")
+  priceMonthly    Decimal  @db.Decimal(18, 2)
+  priceAnnual     Decimal  @db.Decimal(18, 2)
+  currency        String   @default("USD")
+  maxUsers        Int      @default(10)
+  maxFarmers      Int      @default(500)
+  /// JSON: { sms: bool, api: bool, whiteLabel: bool, multiCurrency: bool, ... }
+  features        String   @default("{}")
+  isActive        Boolean  @default(true)
+  isCustom        Boolean  @default(false) // true = created for a specific tenant
+  sortOrder       Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  tenantOverrides TenantPlanOverride[]
+
+  @@index([isActive])
+  @@index([isCustom])
+}
+
+/// Per-tenant custom pricing override. When present, the tenant's subscription
+/// uses this price instead of the BillingPlan's default price.
+model TenantPlanOverride {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation(fields: [tenantId], references: [id])
+  planId          String
+  plan            BillingPlan @relation(fields: [planId], references: [id])
+  /// Override price (if null, uses BillingPlan default)
+  priceMonthly    Decimal? @db.Decimal(18, 2)
+  priceAnnual     Decimal? @db.Decimal(18, 2)
+  /// Override limits (if null, uses BillingPlan default)
+  maxUsers        Int?
+  maxFarmers      Int?
+  /// Free-text reason for the override (audit trail)
+  reason          String?
+  /// When this override expires (null = never)
+  expiresAt       DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([tenantId, planId])
+  @@index([tenantId])
 }
 
 // --- PAYMENT TRANSACTIONS (Enhanced) ---

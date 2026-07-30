@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 import { getTenantContext, buildTenantFilter } from '@/lib/tenant'
 import { hashPassword } from '@/lib/password'
 import { appendImpactEvent } from '@/lib/impact/hash-chain'
+import { UsageTracker } from '@/lib/billing/usage'
 
 /**
  * GET /api/farmers — List farmers with search, filter, pagination
@@ -204,6 +205,9 @@ export async function POST(request: Request) {
     } catch {
       // Impact event is non-critical — don't fail the registration
     }
+
+    // P4: Track usage for billing — fire-and-forget, non-blocking
+    UsageTracker.track(ctx.tenantId, 'FARMER_CREATED').catch(() => { /* non-blocking */ })
 
     return NextResponse.json(farmer, { status: 201 })
   } catch (error) {

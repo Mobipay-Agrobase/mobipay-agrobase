@@ -42,12 +42,13 @@ export class UsageTracker {
   ): Promise<void> {
     const period = UsageTracker.getPeriodKey()
 
+    // P4: Use the compound unique constraint @@unique([tenantId, eventType, period])
+    // instead of a synthetic ID. This is cleaner and enforced at the DB level.
     await db.usageRecord.upsert({
       where: {
-        id: `${tenantId}-${eventType}-${period}`,
+        tenantId_eventType_period: { tenantId, eventType, period },
       },
       create: {
-        id: `${tenantId}-${eventType}-${period}`,
         tenantId,
         eventType,
         count,
@@ -57,11 +58,6 @@ export class UsageTracker {
         count: { increment: count },
       },
     })
-
-    // Also log for monitoring
-    if (eventType === 'API_CALL' || eventType === 'SMS_SENT') {
-      console.log(`[UsageTracker] ${tenantId}: +${count} ${eventType} (${period})`)
-    }
   }
 
   /**

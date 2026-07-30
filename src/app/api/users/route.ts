@@ -4,6 +4,7 @@ import { getTenantContext, buildTenantFilter } from '@/lib/tenant'
 import { hashPassword } from '@/lib/password'
 import { hasPermission } from '@/lib/permissions'
 import { z } from 'zod/v4'
+import { UsageTracker } from '@/lib/billing/usage'
 
 const createUserSchema = z.object({
   role: z.string().min(1, 'Role is required'),
@@ -98,6 +99,10 @@ export async function POST(request: Request) {
       },
       include: { tenant: true },
     })
+
+    // P4: Track usage for billing — fire-and-forget, non-blocking
+    UsageTracker.track(ctx.tenantId, 'USER_CREATED').catch(() => { /* non-blocking */ })
+
     return NextResponse.json(user, { status: 201 })
   } catch (error) {
     return NextResponse.json({ error: 'Failed to create user' }, { status: 500 })

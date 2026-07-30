@@ -263,24 +263,16 @@ export function Sidebar() {
                 if (role === 'MOBIPAY_FINANCE' && !['Overview', 'Admin', 'NSSF'].includes(groupLabel)) return null
                 // MOBIPAY_SUPPORT: only show Overview + Admin
                 if (role === 'MOBIPAY_SUPPORT' && !['Overview', 'Admin'].includes(groupLabel)) return null
-                // ReSET roles: only show Overview + ReSET MarketLink + specific Admin items
-                if (['CONSORTIUM_ADMIN', 'PARTNER_ADMIN', 'RESET_FIELD_AGENT', 'RESET_MERCHANT', 'RESET_ME_OFFICER'].includes(role)) {
-                  if (!['Overview', 'ReSET MarketLink', 'Admin'].includes(groupLabel)) return null
-                  // Within Admin group, only allow Profile + Support Tickets (NOT Settings, Users, Companies, Billing, etc.)
-                  if (groupLabel === 'Admin') {
-                    const allowedAdminKeys = ['profile', 'support-tickets', 'quotes']
-                    if (!allowedAdminKeys.includes(item.key)) return false
-                  }
-                }
+                // ReSET roles: only show Overview + ReSET MarketLink + Admin (specific items only)
+                // The item-level filtering is done inside visibleItems.filter below
+                const isResetRole = ['CONSORTIUM_ADMIN', 'PARTNER_ADMIN', 'RESET_FIELD_AGENT', 'RESET_MERCHANT', 'RESET_ME_OFFICER'].includes(role)
+                if (isResetRole && !['Overview', 'ReSET MarketLink', 'Admin'].includes(groupLabel)) return null
 
-                // EKIBBO roles: only show Overview + Core Operations (relevant items) + Supply Chain + Admin (Profile only)
-                if (role.startsWith('EKB_')) {
+                // EKIBBO roles: only show specific groups
+                const isEkbRole = role.startsWith('EKB_')
+                if (isEkbRole) {
                   const ekbAllowedGroups = ['Overview', 'Core Operations', 'Supply Chain', 'Farm Management', 'Admin']
                   if (!ekbAllowedGroups.includes(groupLabel)) return null
-                  // Within Admin group, only Profile
-                  if (groupLabel === 'Admin' && !['profile', 'support-tickets'].includes(item.key)) return false
-                  // Within Core Operations, hide VSLA and SACCO (EKIBBO is a coffee exporter, not a VSLA provider)
-                  if (groupLabel === 'Core Operations' && ['vsla', 'sacco', 'loans', 'payments'].includes(item.key)) return false
                 }
 
                 // Kilimo Trust TENANT_ADMIN: only show Overview + Core Operations (VSLA, Farmers) + Admin (Profile + Settings)
@@ -343,6 +335,19 @@ export function Sidebar() {
                   }
 
                   if (item.alwaysVisible) return true
+
+                  // ReSET roles: within Admin group, only allow Profile + Support Tickets + Quotes
+                  if (isResetRole && groupLabel === 'Admin') {
+                    const allowedAdminKeys = ['profile', 'support-tickets', 'quotes']
+                    if (!allowedAdminKeys.includes(item.key)) return false
+                  }
+
+                  // EKIBBO roles: within Admin group, only Profile + Support Tickets
+                  if (isEkbRole && groupLabel === 'Admin') {
+                    if (!['profile', 'support-tickets'].includes(item.key)) return false
+                  }
+                  // EKIBBO roles: within Core Operations, hide VSLA + SACCO + Loans + Payments
+                  if (isEkbRole && groupLabel === 'Core Operations' && ['vsla', 'sacco', 'loans', 'payments'].includes(item.key)) return false
 
                   // Check role permission
                   if (item.permModule && !hasPermission(role, `${item.permModule}:read`)) return false

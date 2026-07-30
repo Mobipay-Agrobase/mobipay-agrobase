@@ -39,6 +39,8 @@ const ALL_MODULES: NavItem[] = [
   { key: 'farm-lands', label: 'Farm Land Registry', icon: MapPin, group: 'Core Operations', permModule: 'farmers' },
   { key: 'cultivations', label: 'Cultivations', icon: Sprout, group: 'Core Operations', permModule: 'farmers' },
   { key: 'vsla', label: 'VSLA Management', icon: PiggyBank, group: 'Core Operations', permModule: 'vsla' },
+  { key: 'sacco', label: 'SACCO Management', icon: Landmark, group: 'Core Operations', permModule: 'sacco',
+    restrictToRoles: ['SUPER_ADMIN', 'COUNTRY_ADMIN', 'TENANT_ADMIN', 'SACCO_ADMIN', 'SACCO_OFFICER'] },
   { key: 'marketplace', label: 'Marketplace', icon: Store, group: 'Core Operations', permModule: 'marketplace' },
   { key: 'payments', label: 'Payments', icon: CreditCard, group: 'Core Operations', permModule: 'payments' },
   { key: 'loans', label: 'Loan Management', icon: DollarSign, group: 'Core Operations', permModule: 'loans' },

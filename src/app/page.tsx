@@ -18,6 +18,7 @@ const FarmersView = lazy(() => import('@/components/modules/FarmersView'))
 const FarmLandsView = lazy(() => import('@/components/modules/FarmLandsView'))
 const CultivationsView = lazy(() => import('@/components/modules/CultivationsView'))
 const VslaView = lazy(() => import('@/components/modules/VslaView'))
+const SaccoView = lazy(() => import('@/components/modules/SaccoView'))
 const MarketplaceView = lazy(() => import('@/components/modules/MarketplaceView'))
 const PaymentsView = lazy(() => import('@/components/modules/PaymentsView'))
 const LoansView = lazy(() => import('@/components/modules/LoansView'))
@@ -106,6 +107,7 @@ function ModuleRouter() {
     case 'farm-lands': return <FarmLandsView />
     case 'cultivations': return <CultivationsView />
     case 'vsla': return <VslaView />
+    case 'sacco': return <SaccoView />
     case 'marketplace': return <MarketplaceView />
     case 'payments': return <PaymentsView />
     case 'loans': return <LoansView />

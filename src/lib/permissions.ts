@@ -11,7 +11,7 @@ export type PermissionAction =
 
 // ─── All permission names ──────────────────────────────────────────────────
 export const MODULES = [
-  'dashboard', 'farmers', 'vsla', 'marketplace', 'payments', 'loans',
+  'dashboard', 'farmers', 'vsla', 'sacco', 'marketplace', 'payments', 'loans',
   'reports', 'training', 'surveys', 'trace', 'compliance', 'communication',
   'input_aggregation', 'purchases', 'approvals', 'processing', 'sales',
   'deliveries', 'consignments', 'companies', 'users', 'settings',
@@ -283,6 +283,25 @@ const ROLE_PERMISSIONS: RolePerms = {
   VSLA_ETELLER: [
     'dashboard:read',
     'vsla:read', 'vsla:create',
+    'profile:read', 'profile:update',
+  ],
+  // ─── SACCO Roles (SAA/WFP AMS Project) ───
+  SACCO_ADMIN: [
+    'dashboard:read',
+    'sacco:*',
+    'vsla:read',
+    'farmers:read', 'farmers:create', 'farmers:update',
+    'reports:read', 'reports:export',
+    'communication:read', 'communication:create',
+    'training:read', 'training:create',
+    'profile:read', 'profile:update',
+  ],
+  SACCO_OFFICER: [
+    'dashboard:read',
+    'sacco:read', 'sacco:create', 'sacco:update',
+    'farmers:read', 'farmers:create', 'farmers:update',
+    'reports:read',
+    'training:read', 'training:create',
     'profile:read', 'profile:update',
   ],
   // ─── ReSET MarketLink Roles ───

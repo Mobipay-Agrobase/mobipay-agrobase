@@ -2,7 +2,7 @@ import { create } from 'zustand'
 
 export type ModuleKey =
   'dashboard' | 'farmers' | 'farm-lands' | 'cultivations' |
-  'vsla' | 'marketplace' | 'payments' | 'loans' |
+  'vsla' | 'sacco' | 'marketplace' | 'payments' | 'loans' |
   'reports' | 'training' | 'settings' | 'communication' | 'agritrack' |
   'profile' | 'companies' | 'input-aggregation' | 'purchases' | 'approvals' |
   'sales' | 'deliveries' | 'consignments' | 'processing' |

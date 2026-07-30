@@ -18,7 +18,7 @@ datasource db {
 model Tenant {
   id          String   @id @default(cuid())
   name        String
-  type        String   // SUPER_ADMIN, COUNTRY, NGO, COOPERATIVE, AGRIBUSINESS, EXPORTER, MFI, BANK, INPUT_SUPPLIER, PROCESSING, VSLA_PROVIDER
+  type        String   // SUPER_ADMIN, COUNTRY, NGO, COOPERATIVE, AGRIBUSINESS, EXPORTER, MFI, BANK, INPUT_SUPPLIER, PROCESSING, VSLA_PROVIDER, SACCO
   country         String?             // Uganda, Ghana, Kenya
   defaultCurrency String   @default("UGX") // UGX, GHS, KES — derived from country, overridable
   parentId        String?
@@ -149,6 +149,11 @@ model Tenant {
   nssfCommissions        NssfCommission[]
   // ─── P4: Dynamic Billing ───
   planOverrides          TenantPlanOverride[]
+  // ─── P7-SAA: SACCO Management ───
+  saccos                 Sacco[]
+  saccoLoans             SaccoLoan[]
+  saccoLoanRepayments    SaccoLoanRepayment[]
+  saccoMeetings          SaccoMeeting[]
 }
 
 // --- USERS & AUTH ---
@@ -157,7 +162,7 @@ model User {
   id            String   @id @default(cuid())
   tenantId      String
   tenant        Tenant   @relation(fields: [tenantId], references: [id])
-  role          String   // SUPER_ADMIN, COUNTRY_ADMIN, TENANT_ADMIN, AGENT, EXTENSION_OFFICER, CBT, CASUAL, FARMER, VSLA_MEMBER, VSLA_PROVIDER_ADMIN
+  role          String   // SUPER_ADMIN, COUNTRY_ADMIN, TENANT_ADMIN, AGENT, EXTENSION_OFFICER, CBT, CASUAL, FARMER, VSLA_MEMBER, VSLA_PROVIDER_ADMIN, SACCO_ADMIN, SACCO_OFFICER
   email         String?
   phone         String   @unique
   passwordHash  String?
@@ -717,6 +722,173 @@ model WelfarePayment {
   reason      String?
   createdAt   DateTime @default(now())
 }
+
+// --- SACCO MANAGEMENT (P7-SAA-WFP-AMS) ---
+
+model Sacco {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation(fields: [tenantId], references: [id])
+  name            String
+  registrationNo  String?  @unique
+  district        String?
+  county          String?
+  subCounty       String?
+  parish          String?
+  village         String?
+  meetingFrequency String?
+  shareValue      Float    @default(10000)
+  minShares       Int      @default(5)
+  interestRate    Float    @default(12)
+  maxLoanMultiplier Int    @default(3)
+  isActive        Boolean  @default(true)
+  establishedAt   DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  members         SaccoMember[]
+  loans           SaccoLoan[]
+  sharePurchases  SaccoSharePurchase[]
+  dividends       SaccoDividend[]
+  meetings        SaccoMeeting[]
+  @@index([tenantId])
+  @@index([district])
+}
+
+model SaccoMember {
+  id              String   @id @default(cuid())
+  saccoId         String
+  sacco           Sacco    @relation(fields: [saccoId], references: [id], onDelete: Cascade)
+  farmerId        String?
+  memberNumber    String   @unique
+  fullName        String
+  phone           String
+  email           String?
+  nationalIdNo    String?
+  gender          String?
+  occupation      String?
+  sharesOwned     Int      @default(0)
+  totalSavings    Float    @default(0)
+  totalBorrowed   Float    @default(0)
+  totalRepaid     Float    @default(0)
+  status          String   @default("ACTIVE")
+  joinedAt        DateTime @default(now())
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  loans           SaccoLoan[]
+  sharePurchases  SaccoSharePurchase[]
+  dividends       SaccoDividend[]
+  attendances     SaccoAttendance[]
+  @@index([saccoId])
+  @@index([memberNumber])
+}
+
+model SaccoSharePurchase {
+  id              String   @id @default(cuid())
+  saccoId         String
+  sacco           Sacco    @relation(fields: [saccoId], references: [id])
+  memberId        String
+  member          SaccoMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  sharesBought    Int
+  amountPaid      Float
+  paymentMethod   String?
+  transactionRef  String?
+  recordedById    String?
+  createdAt       DateTime @default(now())
+  @@index([saccoId])
+  @@index([memberId])
+}
+
+model SaccoLoan {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation(fields: [tenantId], references: [id])
+  saccoId         String
+  sacco           Sacco    @relation(fields: [saccoId], references: [id])
+  memberId        String
+  member          SaccoMember @relation(fields: [memberId], references: [id])
+  loanNumber      String   @unique
+  principal       Float
+  interestRate    Float
+  interestAmount  Float
+  totalRepayable  Float
+  amountRepaid    Float    @default(0)
+  purpose         String?
+  status          String   @default("PENDING")
+  disbursementMethod String?
+  disbursementRef String?
+  approvedById    String?
+  approvedAt      DateTime?
+  disbursedAt     DateTime?
+  dueDate         DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  repayments      SaccoLoanRepayment[]
+  @@index([saccoId])
+  @@index([memberId])
+  @@index([status])
+}
+
+model SaccoLoanRepayment {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation(fields: [tenantId], references: [id])
+  loanId          String
+  loan            SaccoLoan @relation(fields: [loanId], references: [id], onDelete: Cascade)
+  amount          Float
+  paymentMethod   String?
+  transactionRef  String?
+  recordedById    String?
+  createdAt       DateTime @default(now())
+  @@index([loanId])
+}
+
+model SaccoDividend {
+  id              String   @id @default(cuid())
+  saccoId         String
+  sacco           Sacco    @relation(fields: [saccoId], references: [id])
+  memberId        String
+  member          SaccoMember @relation(fields: [memberId], references: [id])
+  financialYear   String
+  totalShares     Int
+  dividendPerShare Float
+  totalDividend   Float
+  status          String   @default("DECLARED")
+  paidAt          DateTime?
+  createdAt       DateTime @default(now())
+  @@unique([saccoId, memberId, financialYear])
+  @@index([saccoId])
+}
+
+model SaccoMeeting {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation(fields: [tenantId], references: [id])
+  saccoId         String
+  sacco           Sacco    @relation(fields: [saccoId], references: [id])
+  meetingDate     DateTime
+  agenda          String?
+  meetingType     String?
+  attendanceCount Int      @default(0)
+  notes           String?
+  status          String   @default("SCHEDULED")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  attendances     SaccoAttendance[]
+  @@index([saccoId])
+}
+
+model SaccoAttendance {
+  id              String   @id @default(cuid())
+  meetingId       String
+  meeting         SaccoMeeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  memberId        String
+  member          SaccoMember @relation(fields: [memberId], references: [id])
+  present         Boolean  @default(false)
+  arrivedAt       DateTime?
+  createdAt       DateTime @default(now())
+  @@unique([meetingId, memberId])
+}
+
 
 // --- LOAN MANAGEMENT (Institutional) ---
 

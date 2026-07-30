@@ -10,6 +10,7 @@ import '../../features/sales/presentation/pages/sales_page.dart';
 import '../../features/payments/presentation/pages/payments_page.dart';
 import '../../features/loans/presentation/pages/loans_page.dart';
 import '../../features/vsla/presentation/pages/vsla_page.dart';
+import '../../features/sacco/presentation/pages/sacco_page.dart';
 import '../../features/vsla_v2/presentation/pages/member_login_page.dart';
 import '../../features/vsla_v2/presentation/pages/member_dashboard_page.dart';
 import '../../features/vsla_v2/presentation/pages/integrations_page.dart';
@@ -84,6 +85,15 @@ class AppRouter {
           GoRoute(
             path: '/recovery',
             builder: (_, __) => const RecoveryPage(),
+          ),
+          // ─── SACCO Management (SAA/WFP AMS) ───
+          GoRoute(
+            path: '/sacco',
+            builder: (_, __) => const SaccoPage(),
+          ),
+          GoRoute(
+            path: '/sacco/new',
+            builder: (_, __) => const SaccoPage(),
           ),
           // ─── Impact Engine routes (6-week sprint) ───
           GoRoute(

@@ -19,6 +19,7 @@ const FarmLandsView = lazy(() => import('@/components/modules/FarmLandsView'))
 const CultivationsView = lazy(() => import('@/components/modules/CultivationsView'))
 const VslaView = lazy(() => import('@/components/modules/VslaView'))
 const SaccoView = lazy(() => import('@/components/modules/SaccoView'))
+const SaccoDashboard = lazy(() => import('@/components/modules/SaccoDashboard'))
 const MarketplaceView = lazy(() => import('@/components/modules/MarketplaceView'))
 const PaymentsView = lazy(() => import('@/components/modules/PaymentsView'))
 const LoansView = lazy(() => import('@/components/modules/LoansView'))
@@ -98,11 +99,18 @@ function ModuleLoader() {
 }
 
 function ModuleRouter() {
-  const { activeModule } = useAppStore()
+  const { activeModule, user } = useAppStore()
+  const role = user?.role || ''
+
+  // Tenant-specific dashboard routing
+  if (activeModule === 'dashboard') {
+    if (role === 'SACCO_ADMIN' || role === 'SACCO_OFFICER') {
+      return <SaccoDashboard />
+    }
+    return <DashboardView />
+  }
 
   switch (activeModule) {
-    // Core
-    case 'dashboard': return <DashboardView />
     case 'farmers': return <FarmersView />
     case 'farm-lands': return <FarmLandsView />
     case 'cultivations': return <CultivationsView />
@@ -263,6 +271,24 @@ export default function HomePage() {
         activeModule === 'dashboard'
       if (role === 'MOBIPAY_SUPPORT' && !isAllowedForSupport) {
         setActiveModule('support-tickets')
+      }
+
+      // SACCO_ADMIN / SACCO_OFFICER: redirect to dashboard if on an irrelevant module
+      const saccoAllowed = new Set([
+        'dashboard', 'sacco', 'farmers', 'farm-lands', 'cultivations',
+        'reports', 'training', 'profile',
+      ])
+      if ((role === 'SACCO_ADMIN' || role === 'SACCO_OFFICER') && !saccoAllowed.has(activeModule)) {
+        setActiveModule('dashboard')
+      }
+
+      // VSLA_PROVIDER_ADMIN: redirect to dashboard if on an irrelevant module
+      const vslaProviderAllowed = new Set([
+        'dashboard', 'vsla', 'farmers', 'farm-lands',
+        'reports', 'training', 'profile',
+      ])
+      if (role === 'VSLA_PROVIDER_ADMIN' && !vslaProviderAllowed.has(activeModule)) {
+        setActiveModule('dashboard')
       }
     } else {
       setUser(null)

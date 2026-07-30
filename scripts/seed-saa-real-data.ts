@@ -127,6 +127,7 @@ async function main() {
       }
 
       // Create farmer
+      const farmSizeHa = 0.5 + (i % 3) * 0.5 // 0.5, 1.0, or 1.5 hectares — MUST match the FarmLand below
       const farmer = await db.farmerProfile.create({
         data: {
           tenantId: tenant.id,
@@ -149,18 +150,18 @@ async function main() {
           country: 'Uganda',
           gpsLatitude: farmerGps.lat,
           gpsLongitude: farmerGps.lng,
-          farmSize: 1 + (i % 5), // 1-5 acres
+          farmSize: farmSizeHa, // MUST match farmLand.sizeHectares below
           farmOwnership: 'Own',
         },
       })
       farmerCount++
 
-      // Create farm land with polygon
+      // Create farm land — sizeHectares MUST match farmer.farmSize above
       const farmLand = await db.farmLand.create({
         data: {
           farmerId: farmer.id,
           name: `${firstName}'s Farm`,
-          sizeHectares: 0.5 + (i % 3) * 0.5,
+          sizeHectares: farmSizeHa, // SAME as farmer.farmSize — no mismatch
           latitude: farmerGps.lat,
           longitude: farmerGps.lng,
           landOwnership: 'Own',

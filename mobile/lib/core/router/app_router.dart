@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/dashboard/presentation/pages/dashboard_page.dart';
 import '../../features/farmers/presentation/pages/farmers_page.dart';
@@ -35,6 +36,7 @@ import '../../features/impact/presentation/pages/my_passport_page.dart';
 import '../../features/purchases/presentation/pages/produce_purchase_page.dart';
 import '../../features/input_distribution/presentation/pages/input_distribution_page.dart';
 import '../../features/farmer_ledger/presentation/pages/farmer_ledger_page.dart';
+import '../../core/navigation/dynamic_navigation_service.dart';
 
 class AppRouter {
   static final _rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -201,6 +203,20 @@ class AppRouter {
                   builder: (_, __) => const VslaPage(),
                 ),
               ]),
+              // P7-SAA: SACCO branch (index 8)
+              StatefulShellBranch(routes: [
+                GoRoute(
+                  path: '/sacco-tab',
+                  builder: (_, __) => const SaccoPage(),
+                ),
+              ]),
+              // ReSET branch (index 9)
+              StatefulShellBranch(routes: [
+                GoRoute(
+                  path: '/reset-tab',
+                  builder: (_, __) => const ResetDashboardPage(),
+                ),
+              ]),
               StatefulShellBranch(routes: [
                 GoRoute(
                   path: '/mfi',
@@ -237,85 +253,81 @@ class AppRouter {
       );
 }
 
-class ScaffoldWithNavBar extends StatelessWidget {
+/// Map from destination key (from /api/mobile/navigation) to branch index.
+/// The branch indices correspond to the order of StatefulShellBranch entries
+/// in the StatefulShellRoute above.
+const _keyToBranchIndex = <String, int>{
+  'dashboard': 0,    // / (DashboardPage)
+  'plots': 1,        // /plots
+  'farmers': 2,      // /farmers
+  'farm_lands': 3,   // /farm-lands
+  'purchases': 4,    // /sales (ProducePurchasePage)
+  'payments': 5,     // /payments
+  'loans': 6,        // /loans
+  'vsla': 7,         // /vsla
+  'sacco': 8,        // /sacco-tab (SaccoPage)
+  'reset': 9,        // /reset-tab (ResetDashboardPage)
+  'mfi': 10,         // /mfi
+  'carbon': 11,      // /carbon
+  'compliance': 12,  // /compliance
+  'impact': 13,      // /impact
+  'profile': 14,     // /profile
+};
+
+class ScaffoldWithNavBar extends StatefulWidget {
   final StatefulNavigationShell navigationShell;
   const ScaffoldWithNavBar({super.key, required this.navigationShell});
 
   @override
+  State<ScaffoldWithNavBar> createState() => _ScaffoldWithNavBarState();
+}
+
+class _ScaffoldWithNavBarState extends State<ScaffoldWithNavBar> {
+  @override
   Widget build(BuildContext context) {
+    final navService = context.watch<DynamicNavigationService>();
+    final destinations = navService.destinations;
+
+    // If no destinations loaded yet, use a default set
+    final visibleDestinations = destinations.isNotEmpty
+        ? destinations
+        : [
+            NavDestination(key: 'dashboard', label: 'Home', icon: 'dashboard', route: '/'),
+            NavDestination(key: 'farmers', label: 'Farmers', icon: 'people', route: '/farmers'),
+            NavDestination(key: 'profile', label: 'Profile', icon: 'person', route: '/profile'),
+          ];
+
+    // Build NavigationDestinations from the dynamic config
+    final navDestinations = visibleDestinations.map((d) {
+      return NavigationDestination(
+        icon: Icon(d.iconData, color: Colors.grey),
+        selectedIcon: Icon(d.iconData),
+        label: d.label,
+      );
+    }).toList();
+
+    // Map the current navigationShell branch to the visible destination index
+    // Find which visible destination corresponds to the current branch
+    int selectedDestIndex = 0;
+    for (int i = 0; i < visibleDestinations.length; i++) {
+      final branchIndex = _keyToBranchIndex[visibleDestinations[i].key] ?? 0;
+      if (branchIndex == widget.navigationShell.currentIndex) {
+        selectedDestIndex = i;
+        break;
+      }
+    }
+
     return Scaffold(
-      body: navigationShell,
+      body: widget.navigationShell,
       bottomNavigationBar: NavigationBar(
-        selectedIndex: navigationShell.currentIndex,
-        onDestinationSelected: (index) => navigationShell.goBranch(index),
+        selectedIndex: selectedDestIndex,
+        onDestinationSelected: (index) {
+          final dest = visibleDestinations[index];
+          final branchIndex = _keyToBranchIndex[dest.key] ?? 0;
+          widget.navigationShell.goBranch(branchIndex);
+        },
         height: 68,
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.dashboard_outlined),
-            selectedIcon: Icon(Icons.dashboard),
-            label: 'Home',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.map_outlined),
-            selectedIcon: Icon(Icons.map),
-            label: 'Plots',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.people_outline),
-            selectedIcon: Icon(Icons.people),
-            label: 'Farmers',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.landscape_outlined),
-            selectedIcon: Icon(Icons.landscape),
-            label: 'Farms',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.shopping_cart_outlined),
-            selectedIcon: Icon(Icons.shopping_cart),
-            label: 'Purchase',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.payment_outlined),
-            selectedIcon: Icon(Icons.payment),
-            label: 'Pay',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.account_balance_wallet_outlined),
-            selectedIcon: Icon(Icons.account_balance_wallet),
-            label: 'Loans',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.savings_outlined),
-            selectedIcon: Icon(Icons.savings),
-            label: 'VSLA',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.account_balance_outlined),
-            selectedIcon: Icon(Icons.account_balance),
-            label: 'MFI',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.eco_outlined),
-            selectedIcon: Icon(Icons.eco),
-            label: 'Carbon',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.verified_user_outlined),
-            selectedIcon: Icon(Icons.verified_user),
-            label: 'Comply',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.insights_outlined),
-            selectedIcon: Icon(Icons.insights),
-            label: 'Impact',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.person_outline),
-            selectedIcon: Icon(Icons.person),
-            label: 'Profile',
-          ),
-        ],
+        destinations: navDestinations,
       ),
     );
   }

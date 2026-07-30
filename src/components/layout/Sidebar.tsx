@@ -299,6 +299,26 @@ export function Sidebar() {
                     return allowedKeys.includes(item.key)
                   }
 
+                  // SACCO_ADMIN / SACCO_OFFICER: only see SACCO + Farmers + Dashboard + Reports + Training + Profile
+                  if (role === 'SACCO_ADMIN' || role === 'SACCO_OFFICER') {
+                    if (groupLabel === 'Super Admin') return false
+                    const allowedKeys = [
+                      'dashboard', 'sacco', 'farmers', 'farm-lands', 'cultivations',
+                      'reports', 'training', 'profile',
+                    ]
+                    return allowedKeys.includes(item.key)
+                  }
+
+                  // VSLA_PROVIDER_ADMIN: only see VSLA + Farmers + Dashboard + Reports + Training + Profile
+                  if (role === 'VSLA_PROVIDER_ADMIN') {
+                    if (groupLabel === 'Super Admin') return false
+                    const allowedKeys = [
+                      'dashboard', 'vsla', 'farmers', 'farm-lands',
+                      'reports', 'training', 'profile',
+                    ]
+                    return allowedKeys.includes(item.key)
+                  }
+
                   if (item.alwaysVisible) return true
 
                   // Check role permission

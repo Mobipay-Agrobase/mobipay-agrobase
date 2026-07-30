@@ -32,6 +32,20 @@ const SYSTEM_ROUTES = [
   '/api/plots',          // plots API — permission checked via 'trace:read' in sidebar, not 'plots:read'
   '/api/plots/stats',    // same
   '/api/plots/geojson',  // same
+  '/api/audit-logs',     // every authenticated user can read their own audit logs
+  '/api/admin/simulate/', // simulation status check runs on every page load — auth-only, not module-gated
+  '/api/mobile/',        // mobile API routes — permission checked inside each route handler
+  '/api/channel/',       // USSD/IVR/SMS channel routes — permission checked inside each route handler
+  '/api/notifications',  // notification routes — auth-only
+  '/api/support/',       // support ticket routes — auth-only
+  '/api/branding',       // branding config — auth-only
+  '/api/i18n',           // i18n translations — auth-only
+  '/api/credit-score/',  // credit scoring — auth-only (tenant-scoped inside)
+  '/api/credit-scores',  // same
+  '/api/dashboard',      // dashboard stats — auth-only (tenant-scoped inside)
+  '/api/reports/',       // reports — permission checked via 'reports:read' but route prefix differs
+  '/api/impact/',        // impact routes — auth-only
+  '/api/satellite/',     // satellite routes — auth-only
 ]
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -227,8 +241,42 @@ export async function middleware(request: NextRequest) {
     // Map URL module names to permission module names (aliases)
     const MODULE_ALIASES: Record<string, string> = {
       'vsla-v2': 'vsla',       // /api/vsla-v2/* uses same permissions as /api/vsla/*
+      'vsla-v3': 'vsla',
       'nssf-contributions': 'nssf',
       'nssf-settlement': 'nssf',
+      'ivr-campaigns': 'communication',
+      'sms-broadcasts': 'communication',
+      'ussd-sessions': 'communication',
+      'messages': 'communication',
+      'farm-visits': 'farm_visits',
+      'impact-assessments': 'impact_assessment',
+      'crop-stages': 'farmers',
+      'crop-calendars': 'farmers',
+      'input-products': 'input_aggregation',
+      'input-dealers': 'input_aggregation',
+      'input-requests': 'input_aggregation',
+      'input-distribution': 'input_aggregation',
+      'market': 'marketplace',
+      'cooperative': 'marketplace',
+      'logistics': 'transport',
+      'quality': 'trace',
+      'inventory': 'trace',
+      'escrow': 'payments',
+      'settlements': 'payments',
+      'api-keys': 'settings',
+      'companies': 'companies',
+      'cultivations': 'farmers',
+      'farm-lands': 'farmers',
+      'farm-polygons': 'farmers',
+      'trainings': 'training',
+      'practices': 'farm_visits',
+      'feedback': 'feedback',
+      'surveys': 'surveys',
+      'webhooks': 'settings',
+      'exports': 'reports',
+      'bulk': 'settings',
+      'attachments': 'farmers',
+      'sacco': 'sacco',
     }
     const moduleName = MODULE_ALIASES[moduleMatch[1]] || moduleMatch[1]
     if (!matchesRoute(pathname, SYSTEM_ROUTES)) {

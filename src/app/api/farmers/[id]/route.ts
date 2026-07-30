@@ -1,6 +1,7 @@
 import { db } from '@/lib/db'
 import { NextRequest, NextResponse } from 'next/server'
 import { getTenantContext, buildTenantFilter } from '@/lib/tenant'
+import { decryptField } from '@/lib/security/field-crypto'
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -20,7 +21,17 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     }
   })
   if (!farmer) return NextResponse.json({ error: 'Farmer not found' }, { status: 404 })
-  return NextResponse.json({ data: farmer })
+
+  // P7: Decrypt PII fields for the response
+  const farmerDecrypted = {
+    ...farmer,
+    phone: decryptField(farmer.phone),
+    nationalIdNo: farmer.nationalIdNo ? decryptField(farmer.nationalIdNo) : null,
+    bankAccountNo: farmer.bankAccountNo ? decryptField(farmer.bankAccountNo) : null,
+    email: farmer.email ? decryptField(farmer.email) : null,
+  }
+
+  return NextResponse.json({ data: farmerDecrypted })
 }
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {

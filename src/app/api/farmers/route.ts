@@ -4,6 +4,7 @@ import { getTenantContext, buildTenantFilter } from '@/lib/tenant'
 import { hashPassword } from '@/lib/password'
 import { appendImpactEvent } from '@/lib/impact/hash-chain'
 import { UsageTracker } from '@/lib/billing/usage'
+import { encryptField, decryptField } from '@/lib/security/field-crypto'
 
 /**
  * GET /api/farmers — List farmers with search, filter, pagination
@@ -65,6 +66,11 @@ export async function GET(request: Request) {
       farmEquipment: f.farmEquipment ? JSON.parse(f.farmEquipment) : [],
       mainCrops: f.mainCrops ? JSON.parse(f.mainCrops) : [],
       livestockTypes: f.livestockTypes ? JSON.parse(f.livestockTypes) : [],
+      // P7: Decrypt PII fields for the response
+      phone: decryptField(f.phone),
+      nationalIdNo: f.nationalIdNo ? decryptField(f.nationalIdNo) : null,
+      bankAccountNo: f.bankAccountNo ? decryptField(f.bankAccountNo) : null,
+      email: f.email ? decryptField(f.email) : null,
     }))
 
     return NextResponse.json({ farmers: farmersParsed, total, page, totalPages: Math.ceil(total / limit) })
@@ -100,13 +106,14 @@ export async function POST(request: Request) {
         farmerCode,
         firstName: body.firstName,
         lastName: body.lastName,
-        phone: body.phone,
+        // P7: Encrypt PII fields at rest
+        phone: encryptField(body.phone) || body.phone,
         gender: body.gender,
         dateOfBirth: body.dateOfBirth ? new Date(body.dateOfBirth) : null,
         education: body.education,
         maritalStatus: body.maritalStatus,
         nationalIdType: body.nationalIdType,
-        nationalIdNo: body.nationalIdNo,
+        nationalIdNo: body.nationalIdNo ? encryptField(body.nationalIdNo) : null,
         photoUrl: body.photoUrl,
         isCertified: body.isCertified || false,
         certificationType: body.certificationType,
@@ -122,7 +129,8 @@ export async function POST(request: Request) {
         // ID Proof
         idProofPhotoUrl: body.idProofPhotoUrl,
         guardianName: body.guardianName,
-        email: body.email,
+        // P7: Encrypt email at rest
+        email: body.email ? encryptField(body.email) : null,
 
         // Location
         gpsLatitude: body.gpsLatitude,
@@ -151,7 +159,8 @@ export async function POST(request: Request) {
 
         // Finance
         bankName: body.bankName,
-        bankAccountNo: body.bankAccountNo,
+        // P7: Encrypt bank account number at rest
+        bankAccountNo: body.bankAccountNo ? encryptField(body.bankAccountNo) : null,
         bankBranch: body.bankBranch,
         loanTakenLastYear: body.loanTakenLastYear || false,
         loanTakenFrom: body.loanTakenFrom,

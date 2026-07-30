@@ -1,9 +1,12 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- P7: INTERNET permission required for release builds (debug/profile have it automatically) -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
     <application
         android:allowBackup="false"
         android:usesCleartextTraffic="false"
         android:debuggable="false"
-        android:label="agrobase_mobile"
+        android:label="Agrobase V3"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

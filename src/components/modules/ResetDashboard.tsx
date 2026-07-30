@@ -16,6 +16,9 @@ import { useAppStore } from '@/lib/store'
 
 const CHART_COLORS = ['#D4875A', '#5B8DB8', '#3CB4A0', '#E6A838', '#9B6B9E', '#6B8040']
 
+const safeNum = (v: unknown): number => (typeof v === 'number' && !isNaN(v) ? v : 0)
+const fmt = (v: unknown): string => (typeof v === 'number' && !isNaN(v) ? v.toLocaleString() : '0')
+
 export function ResetDashboard() {
   const [data, setData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
@@ -40,22 +43,41 @@ export function ResetDashboard() {
     )
   }
 
-  const stats = data?.stats || data?.data?.stats || {}
-  const beneficiaries = stats.beneficiaries || 0
-  const vouchers = stats.vouchers || 0
-  const merchants = stats.merchants || 0
-  const cashDisbursed = stats.cashDisbursed || 0
-  const vouchersRedeemed = stats.vouchersRedeemed || 0
-  const settlements = stats.settlements || 0
+  // API returns: { counts: { beneficiaries, vouchers, merchants, redemptions }, financials: { cashDisbursed }, breakdowns: { bySettlement, byPartner, byGender, voucherStatus } }
+  const counts = data?.counts || {}
+  const financials = data?.financials || {}
+  const breakdowns = data?.breakdowns || {}
+
+  const beneficiaries = safeNum(counts.beneficiaries)
+  const vouchers = safeNum(counts.vouchers)
+  const merchants = safeNum(counts.merchants)
+  const redemptions = safeNum(counts.redemptions)
+  const cashDisbursed = safeNum(financials.cashDisbursed)
 
   // Chart data
-  const voucherStatusData = [
-    { name: 'Issued', value: vouchers, color: '#5B8DB8' },
-    { name: 'Redeemed', value: vouchersRedeemed, color: '#3CB4A0' },
-    { name: 'Pending', value: Math.max(0, vouchers - vouchersRedeemed), color: '#E6A838' },
-  ].filter(d => d.value > 0)
+  const voucherStatusData = (breakdowns.voucherStatus || []).map((v: any, i: number) => ({
+    name: v.name || v.status || 'Unknown',
+    value: safeNum(v.count),
+    color: CHART_COLORS[i % CHART_COLORS.length],
+  })).filter((d: any) => d.value > 0)
 
-  const settlementData = data?.settlements || data?.data?.settlements || []
+  const settlementData = (breakdowns.bySettlement || []).map((s: any, i: number) => ({
+    name: s.name || s.settlement || 'Unknown',
+    count: safeNum(s.count),
+    color: CHART_COLORS[i % CHART_COLORS.length],
+  }))
+
+  const genderData = (breakdowns.byGender || []).map((g: any, i: number) => ({
+    name: g.name || g.gender || 'Unknown',
+    value: safeNum(g.count),
+    color: g.name === 'Male' ? '#5B8DB8' : g.name === 'Female' ? '#D45D5D' : CHART_COLORS[i % CHART_COLORS.length],
+  })).filter((d: any) => d.value > 0)
+
+  const partnerData = (breakdowns.byPartner || []).map((p: any, i: number) => ({
+    name: p.name || p.enrolledBy || 'Unknown',
+    value: safeNum(p.count),
+    color: CHART_COLORS[i % CHART_COLORS.length],
+  })).filter((d: any) => d.value > 0)
 
   return (
     <div className="space-y-6">
@@ -63,7 +85,7 @@ export function ResetDashboard() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">ReSET MarketLink Dashboard</h1>
           <p className="text-sm text-muted-foreground">
-            {beneficiaries} beneficiaries · {merchants} merchants · {vouchers} vouchers
+            {fmt(beneficiaries)} beneficiaries · {fmt(merchants)} merchants · {fmt(vouchers)} vouchers
           </p>
         </div>
         <Button onClick={() => setActiveModule('reset-dashboard' as any)}>
@@ -73,45 +95,87 @@ export function ResetDashboard() {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-        <KpiCard label="Beneficiaries" value={beneficiaries.toString()} icon={Users} color="#5B8DB8" />
-        <KpiCard label="Vouchers" value={vouchers.toString()} icon={Ticket} color="#E6A838" />
-        <KpiCard label="Merchants" value={merchants.toString()} icon={Store} color="#3CB4A0" />
+        <KpiCard label="Beneficiaries" value={fmt(beneficiaries)} icon={Users} color="#5B8DB8" />
+        <KpiCard label="Vouchers" value={fmt(vouchers)} icon={Ticket} color="#E6A838" />
+        <KpiCard label="Merchants" value={fmt(merchants)} icon={Store} color="#3CB4A0" />
         <KpiCard label="Cash Disbursed" value={`UGX ${(cashDisbursed / 1000000).toFixed(1)}M`} icon={Wallet} color="#D4875A" />
-        <KpiCard label="Vouchers Redeemed" value={vouchersRedeemed.toString()} icon={TrendingUp} color="#6B8040" />
-        <KpiCard label="Settlements" value={settlements.toString()} icon={DollarSign} color="#9B6B9E" />
+        <KpiCard label="Redemptions" value={fmt(redemptions)} icon={TrendingUp} color="#6B8040" />
+        <KpiCard label="Settlements" value={fmt(settlementData.length)} icon={MapPin} color="#9B6B9E" />
       </div>
 
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <Card>
-          <CardHeader><CardTitle className="text-sm">Voucher Status Distribution</CardTitle></CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie data={voucherStatusData} cx="50%" cy="50%" outerRadius={100} innerRadius={60} paddingAngle={3} dataKey="value" label={({ name, value }: { name: string; value: number }) => `${name}: ${value}`} labelLine={false} style={{ fontSize: 12 }}>
-                  {voucherStatusData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
-                </Pie>
-                <Tooltip />
-                <Legend wrapperStyle={{ fontSize: 12 }} />
-              </PieChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
+        {/* Voucher Status */}
+        {voucherStatusData.length > 0 && (
+          <Card>
+            <CardHeader><CardTitle className="text-sm">Voucher Status Distribution</CardTitle></CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={280}>
+                <PieChart>
+                  <Pie data={voucherStatusData} cx="50%" cy="50%" outerRadius={100} innerRadius={60} paddingAngle={3} dataKey="value" label={({ name, value }: { name: string; value: number }) => `${name}: ${value}`} labelLine={false} style={{ fontSize: 12 }}>
+                    {voucherStatusData.map((entry: any, i: number) => <Cell key={i} fill={entry.color} />)}
+                  </Pie>
+                  <Tooltip />
+                  <Legend wrapperStyle={{ fontSize: 12 }} />
+                </PieChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        )}
 
-        <Card>
-          <CardHeader><CardTitle className="text-sm">Cash Disbursements by Settlement</CardTitle></CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={Array.isArray(settlementData) ? settlementData.slice(0, 10).map((s: any) => ({ name: s.settlementName || s.id?.substring(0, 8) || 'N/A', amount: s.amount || 0 })) : []}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis dataKey="name" tick={{ fontSize: 10 }} angle={-20} textAnchor="end" height={60} />
-                <YAxis tick={{ fontSize: 11 }} />
-                <Tooltip />
-                <Bar dataKey="amount" name="Amount (UGX)" fill="#D4875A" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
+        {/* Beneficiaries by Settlement */}
+        {settlementData.length > 0 && (
+          <Card>
+            <CardHeader><CardTitle className="text-sm">Beneficiaries by Settlement</CardTitle></CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={280}>
+                <BarChart data={settlementData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis dataKey="name" tick={{ fontSize: 10 }} angle={-20} textAnchor="end" height={60} />
+                  <YAxis tick={{ fontSize: 11 }} />
+                  <Tooltip />
+                  <Bar dataKey="count" name="Beneficiaries" fill="#5B8DB8" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Gender Distribution */}
+        {genderData.length > 0 && (
+          <Card>
+            <CardHeader><CardTitle className="text-sm">Gender Distribution</CardTitle></CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={280}>
+                <PieChart>
+                  <Pie data={genderData} cx="50%" cy="50%" outerRadius={100} innerRadius={60} paddingAngle={3} dataKey="value" label={({ name, value }: { name: string; value: number }) => `${name}: ${value}`} labelLine={false} style={{ fontSize: 12 }}>
+                    {genderData.map((entry: any, i: number) => <Cell key={i} fill={entry.color} />)}
+                  </Pie>
+                  <Tooltip />
+                  <Legend wrapperStyle={{ fontSize: 12 }} />
+                </PieChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Beneficiaries by Partner */}
+        {partnerData.length > 0 && (
+          <Card>
+            <CardHeader><CardTitle className="text-sm">Beneficiaries by Partner</CardTitle></CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={280}>
+                <BarChart data={partnerData} layout="vertical">
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis type="number" tick={{ fontSize: 11 }} />
+                  <YAxis type="category" dataKey="name" width={120} tick={{ fontSize: 10 }} />
+                  <Tooltip />
+                  <Bar dataKey="value" name="Beneficiaries" fill="#D4875A" radius={[0, 4, 4, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Quick Actions */}

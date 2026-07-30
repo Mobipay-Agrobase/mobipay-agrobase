@@ -90,6 +90,8 @@ const MODULE_TO_DESTINATION: Record<string, string> = {
   dashboard: 'dashboard',
   farmers: 'farmers',
   vsla: 'vsla',
+  sacco: 'sacco',
+  reset: 'reset',
   marketplace: 'purchases',
   payments: 'payments',
   loans: 'loans',

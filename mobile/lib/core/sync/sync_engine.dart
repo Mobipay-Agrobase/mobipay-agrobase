@@ -291,6 +291,95 @@ class SyncEngine extends ChangeNotifier {
     } catch (e) {
       debugPrint('[SyncEngine] Failed to pull trainings: $e');
     }
+
+    // P6: Pull farm lands
+    try {
+      final res = await _api.get('/api/farm-lands?limit=500');
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        final farmLands = data['farmLands'] as List<dynamic>? ??
+            data['data'] as List<dynamic>? ??
+            data as List? ??
+            [];
+        for (final fl in farmLands) {
+          if (fl['id'] == null) continue;
+          await _db.upsertFarmLand(FarmLandCacheCompanion.insert(
+            id: fl['id'],
+            farmerId: fl['farmerId'] ?? '',
+            name: fl['name'] ?? fl['farmName'] ?? '',
+            farmSize: Value(fl['farmSize']?.toDouble()),
+            gpsLatitude: Value(fl['gpsLatitude']?.toDouble()),
+            gpsLongitude: Value(fl['gpsLongitude']?.toDouble()),
+            country: Value(fl['country']),
+            district: Value(fl['district']),
+            villageName: Value(fl['villageName']),
+            syncStatus: const Value('synced'),
+            lastSyncedAt: Value(DateTime.now()),
+          ));
+        }
+        debugPrint('[SyncEngine] Pulled ${farmLands.length} farm lands');
+      }
+    } catch (e) {
+      debugPrint('[SyncEngine] Failed to pull farm lands: $e');
+    }
+
+    // P6: Pull cultivations
+    try {
+      final res = await _api.get('/api/cultivations?limit=500');
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        final cultivations = data['cultivations'] as List<dynamic>? ??
+            data['data'] as List<dynamic>? ??
+            data as List? ??
+            [];
+        for (final c in cultivations) {
+          if (c['id'] == null) continue;
+          await _db.upsertCultivation(CultivationCacheCompanion.insert(
+            id: c['id'],
+            farmId: c['farmId'] ?? '',
+            cropName: c['cropName'] ?? '',
+            variety: Value(c['variety']),
+            season: Value(c['season']),
+            status: Value(c['status'] ?? 'ACTIVE'),
+            sowingDate: Value(c['sowingDate'] != null ? DateTime.tryParse(c['sowingDate']) : null),
+            syncStatus: const Value('synced'),
+            lastSyncedAt: Value(DateTime.now()),
+          ));
+        }
+        debugPrint('[SyncEngine] Pulled ${cultivations.length} cultivations');
+      }
+    } catch (e) {
+      debugPrint('[SyncEngine] Failed to pull cultivations: $e');
+    }
+
+    // P6: Pull sales (metadata only — SaleCache is push-only)
+    try {
+      final res = await _api.get('/api/sales?limit=200');
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        final sales = data['sales'] as List<dynamic>? ??
+            data['data'] as List<dynamic>? ??
+            data as List? ??
+            [];
+        debugPrint('[SyncEngine] Pulled ${sales.length} sales (metadata only)');
+      }
+    } catch (e) {
+      debugPrint('[SyncEngine] Failed to pull sales: $e');
+    }
+
+    // P6: Pull crop stage events (for DREAM pipeline)
+    try {
+      final res = await _api.get('/api/crop-stages?limit=500');
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        final events = data['events'] as List<dynamic>? ??
+            data['data'] as List<dynamic>? ??
+            [];
+        debugPrint('[SyncEngine] Pulled ${events.length} crop stage events (metadata only)');
+      }
+    } catch (e) {
+      debugPrint('[SyncEngine] Failed to pull crop stage events: $e');
+    }
   }
 
   // ─── Helpers ────────────────────────────────────────────────

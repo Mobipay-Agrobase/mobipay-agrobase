@@ -6,13 +6,9 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter,
-} from '@/components/ui/dialog'
-import { Label } from '@/components/ui/label'
 import { Landmark, Plus, Users, DollarSign, TrendingUp, Download, MapPin } from 'lucide-react'
 import { toast } from 'sonner'
+import { SaccoDetail } from './SaccoDetail'
 
 interface Sacco {
   id: string
@@ -46,6 +42,11 @@ export default function SaccoView() {
   }, [])
 
   useEffect(() => { load() }, [load])
+
+  // Show detail view when a SACCO is selected
+  if (selectedSacco) {
+    return <SaccoDetail saccoId={selectedSacco} onBack={() => { setSelectedSacco(null); load() }} />
+  }
 
   if (loading) {
     return (
@@ -162,7 +163,7 @@ export default function SaccoView() {
                   size="sm"
                   variant="outline"
                   className="flex-1"
-                  onClick={() => toast.info('SACCO detail view — use the API directly for now')}
+                  onClick={() => setSelectedSacco(sacco.id)}
                 >
                   <TrendingUp className="w-3.5 h-3.5 mr-1" /> Details
                 </Button>

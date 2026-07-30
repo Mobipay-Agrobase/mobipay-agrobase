@@ -312,6 +312,29 @@ export default function HomePage() {
       if (role === 'VSLA_PROVIDER_ADMIN' && !vslaProviderAllowed.has(activeModule)) {
         setActiveModule('dashboard')
       }
+
+      // ReSET roles: redirect to dashboard if on a non-ReSET module
+      const resetRoles = ['CONSORTIUM_ADMIN', 'PARTNER_ADMIN', 'RESET_FIELD_AGENT', 'RESET_ME_OFFICER']
+      const resetAllowed = new Set([
+        'dashboard', 'reset-dashboard', 'reset-beneficiaries', 'reset-vouchers',
+        'reset-merchants', 'reset-cash', 'reset-reports', 'profile', 'support-tickets', 'quotes',
+      ])
+      if (resetRoles.includes(role) && !resetAllowed.has(activeModule)) {
+        setActiveModule('dashboard')
+      }
+
+      // EKIBBO roles: redirect to dashboard if on an irrelevant module
+      const ekbRoles = ['EKB_MD', 'EKB_OPS_MANAGER', 'EKB_FINANCE', 'EKB_FIN_ASSISTANT', 'EKB_MEC', 'EKB_EXTENSION']
+      const ekbAllowed = new Set([
+        'dashboard', 'farmers', 'farm-lands', 'cultivations', 'purchases', 'sales',
+        'input-aggregation', 'input-distribution', 'approvals', 'processing', 'deliveries',
+        'consignments', 'trace', 'reports', 'training', 'farm-visits', 'surveys', 'feedback',
+        'impact-assessment', 'compliance', 'cost-of-cultivation', 'farmer-ledger',
+        'profile', 'support-tickets',
+      ])
+      if (ekbRoles.includes(role) && !ekbAllowed.has(activeModule)) {
+        setActiveModule('dashboard')
+      }
     } else {
       setUser(null)
     }

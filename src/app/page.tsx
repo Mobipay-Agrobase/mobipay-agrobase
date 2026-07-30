@@ -11,6 +11,10 @@ import { OnboardingWizard } from '@/components/onboarding/OnboardingWizard'
 import { CommandPalette } from '@/components/layout/CommandPalette'
 import { SimulationBanner } from '@/components/layout/SimulationBanner'
 import { useSimulationStatus } from '@/hooks/use-simulation-status'
+import {
+  EkbMdDashboard, EkbOpsManagerDashboard, EkbFinanceDashboard,
+  EkbFinAssistantDashboard, EkbMecDashboard, EkbExtensionDashboard,
+} from '@/components/dashboard/EkbiboDashboards'
 
 // Core modules
 const DashboardView = lazy(() => import('@/components/modules/DashboardView'))
@@ -20,6 +24,9 @@ const CultivationsView = lazy(() => import('@/components/modules/CultivationsVie
 const VslaView = lazy(() => import('@/components/modules/VslaView'))
 const SaccoView = lazy(() => import('@/components/modules/SaccoView'))
 const SaccoDashboard = lazy(() => import('@/components/modules/SaccoDashboard'))
+const VslaProviderDashboard = lazy(() => import('@/components/modules/VslaProviderDashboard'))
+const KilimoDashboard = lazy(() => import('@/components/modules/KilimoDashboard'))
+const ResetDashboardComponent = lazy(() => import('@/components/modules/ResetDashboard'))
 const MarketplaceView = lazy(() => import('@/components/modules/MarketplaceView'))
 const PaymentsView = lazy(() => import('@/components/modules/PaymentsView'))
 const LoansView = lazy(() => import('@/components/modules/LoansView'))
@@ -107,6 +114,21 @@ function ModuleRouter() {
     if (role === 'SACCO_ADMIN' || role === 'SACCO_OFFICER') {
       return <SaccoDashboard />
     }
+    if (role === 'VSLA_PROVIDER_ADMIN') {
+      return <VslaProviderDashboard />
+    }
+    // EKIBBO roles — each gets their own role-specific dashboard
+    if (role === 'EKB_MD') return <EkbMdDashboard />
+    if (role === 'EKB_OPS_MANAGER') return <EkbOpsManagerDashboard />
+    if (role === 'EKB_FINANCE') return <EkbFinanceDashboard />
+    if (role === 'EKB_FIN_ASSISTANT') return <EkbFinAssistantDashboard />
+    if (role === 'EKB_MEC') return <EkbMecDashboard />
+    if (role === 'EKB_EXTENSION') return <EkbExtensionDashboard />
+    // ReSET roles
+    if (['CONSORTIUM_ADMIN', 'PARTNER_ADMIN', 'RESET_FIELD_AGENT', 'RESET_ME_OFFICER'].includes(role)) {
+      return <ResetDashboardComponent />
+    }
+    // Default: generic dashboard (covers TENANT_ADMIN, COUNTRY_ADMIN, etc.)
     return <DashboardView />
   }
 

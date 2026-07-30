@@ -28,7 +28,9 @@ interface NavItem {
   /** Restrict to specific roles only (overrides permModule). Use to exclude
    *  a menu from roles even if they technically have the underlying perm —
    *  e.g. finance should not see Plot-Level Trace. */
+  restrictToRoles?: string[]
   /** Explicitly hide this menu from these roles (blocklist). */
+  hideFromRoles?: string[]
 }
 
 const ALL_MODULES: NavItem[] = [

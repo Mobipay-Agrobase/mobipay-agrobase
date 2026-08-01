@@ -97,8 +97,8 @@ class AuthState extends ChangeNotifier {
     }
   }
 
-  /// Step 1 of 2FA login: verify email + password, check if 2FA is required
-  /// Returns true if login is complete, false if 2FA challenge is needed
+  /// Login with email + password via the custom mobile-login endpoint.
+  /// Bypasses NextAuth's CSRF/cookie flow which doesn't work with Flutter.
   Future<bool> login(String email, String password) async {
     _isLoading = true;
     _error = null;
@@ -106,34 +106,47 @@ class AuthState extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // Step 1: Check credentials + 2FA status
-      final checkRes = await _api.post('/api/auth/2fa/login-check', body: {
+      // Use the custom mobile-login endpoint (returns JSON, not cookies)
+      final res = await _api.post('/api/auth/mobile-login', body: {
         'email': email,
         'password': password,
       });
 
-      if (checkRes.statusCode != 200) {
-        final data = jsonDecode(checkRes.body);
+      if (res.statusCode != 200) {
+        final data = jsonDecode(res.body);
         _error = data['error'] ?? 'Invalid email or password';
         notifyListeners();
         return false;
       }
 
-      final checkData = jsonDecode(checkRes.body);
-      final twoFactorRequired = checkData['twoFactorRequired'] == true;
+      final data = jsonDecode(res.body);
+      _token = data['token'];
+      _userId = data['user']?['id'];
+      _tenantId = data['user']?['tenantId'];
+      _role = data['user']?['role'];
+      _userName = data['user']?['name'];
 
-      if (twoFactorRequired) {
-        // 2FA is enabled — store challenge token, wait for TOTP code
-        _challengeToken = checkData['challengeToken'];
-        _twoFactorRequired = true;
+      if (_token == null || _userId == null) {
+        _error = 'Login succeeded but no token returned';
         notifyListeners();
-        return false; // Login not complete — needs 2FA code
+        return false;
       }
 
-      // No 2FA — proceed with normal NextAuth signin
-      return await _completeLogin(email, password);
+      // Save to secure storage
+      await _storage.saveAuthToken(_token!);
+      await _storage.saveUserInfo({
+        'user_id': _userId,
+        'tenant_id': _tenantId,
+        'user_role': _role,
+        'user_name': _userName,
+      });
+
+      _api.setAuth(_token!, _tenantId ?? '');
+      _isAuthenticated = true;
+      notifyListeners();
+      return true;
     } catch (e) {
-      _error = 'Connection error. Please try again.';
+      _error = 'Connection error. Check your internet and try again.';
       notifyListeners();
       return false;
     } finally {

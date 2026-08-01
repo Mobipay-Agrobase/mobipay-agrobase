@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import '../../../../core/api/api_client.dart';
-import '../../../../core/theme/app_theme.dart';
-import '../../../shared/widgets/status_badge.dart';
+import 'package:agrobase_mobile/core/api/api_client.dart';
+import 'package:agrobase_mobile/core/theme/app_theme.dart';
+import 'package:agrobase_mobile/features/shared/widgets/status_badge.dart';
 
 /// Practice Logger — log a Farm5x practice adoption in 30 seconds.
 ///
@@ -24,7 +24,7 @@ class _PracticeLoggerPageState extends State<PracticeLoggerPage> {
   bool _submitting = false;
 
   // Farm5x variants by crop
-  static const Map<String, Map<String, Map<String, dynamic>>> FARM5X = {
+  static const Map<String, Map<String, dynamic>> FARM5X = {
     'COFFEE': {
       'variant': '1M5C',
       'practices': [
@@ -100,133 +100,151 @@ class _PracticeLoggerPageState extends State<PracticeLoggerPage> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // Step 1: Select crop
-          _buildSection('1. Select crop', Icons.grain),
-          const SizedBox(height: 8),
-          _buildCropSelector(),
-          const SizedBox(height: 24),
-
-          // Step 2: Select practice (only if crop selected)
+          if (_selectedCrop == null) _buildCropSelector(),
           if (_selectedCrop != null) ...[
-            _buildSection('2. Select practice ($_selectedVariant)', Icons.eco),
-            const SizedBox(height: 8),
+            _buildSelectedCropHeader(),
+            const SizedBox(height: 16),
             _buildPracticeSelector(),
-            const SizedBox(height: 24),
-          ],
-
-          // Step 3: Notes (optional)
-          if (_selectedPractice != null) ...[
-            _buildSection('3. Notes (optional)', Icons.note),
-            const SizedBox(height: 8),
+            const SizedBox(height: 16),
             TextField(
               controller: _notesController,
-              maxLines: 3,
               decoration: const InputDecoration(
+                labelText: 'Notes (optional)',
                 border: OutlineInputBorder(),
-                hintText: 'e.g. Planted 12 banana shade trees on the north border...',
               ),
+              maxLines: 2,
             ),
-            const SizedBox(height: 24),
-          ],
-
-          // Submit button
-          if (_selectedPractice != null)
+            const SizedBox(height: 16),
             SizedBox(
-              height: 50,
-              child: ElevatedButton(
-                onPressed: _submitting ? null : _submit,
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: _submitting || _selectedPractice == null ? null : _submit,
+                icon: _submitting
+                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Icon(Icons.check_circle),
+                label: Text(_submitting ? 'Submitting...' : 'Submit Practice'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.primaryGreen,
                   foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
                 ),
-                child: _submitting
-                    ? const SizedBox(
-                        width: 20, height: 20,
-                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                      )
-                    : const Text('Submit Practice Adoption'),
               ),
             ),
-          const SizedBox(height: 32),
+          ],
         ],
       ),
     );
   }
 
-  Widget _buildSection(String title, IconData icon) {
-    return Row(
+  Widget _buildCropSelector() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, size: 18, color: AppTheme.primaryGreen),
-        const SizedBox(width: 8),
-        Text(title,
-            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+        const Text('Select Crop', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: FARM5X.keys.map((crop) {
+            return ChoiceChip(
+              label: Text(crop),
+              selected: _selectedCrop == crop,
+              onSelected: (selected) {
+                if (selected) {
+                  setState(() {
+                    _selectedCrop = crop;
+                    _selectedVariant = FARM5X[crop]!['variant'] as String;
+                    _selectedPractice = null;
+                  });
+                }
+              },
+              selectedColor: AppTheme.primaryGreen,
+              labelStyle: TextStyle(color: _selectedCrop == crop ? Colors.white : Colors.black87),
+            );
+          }).toList(),
+        ),
       ],
     );
   }
 
-  Widget _buildCropSelector() {
-    return Wrap(
-      spacing: 8,
-      children: FARM5X.keys.map((crop) {
-        final selected = _selectedCrop == crop;
-        final emoji = crop == 'COFFEE' ? '☕' : crop == 'MAIZE' ? '🌽' : crop == 'COCOA' ? '🍫' : crop == 'TEA' ? '🍵' : '🐄';
-        return ChoiceChip(
-          label: Text('$emoji $crop'),
-          selected: selected,
-          onSelected: (_) {
-            setState(() {
-              _selectedCrop = crop;
-              _selectedVariant = FARM5X[crop]!['variant'] as String;
-              _selectedPractice = null;
-            });
-          },
-          selectedColor: AppTheme.primaryGreen,
-          labelStyle: TextStyle(color: selected ? Colors.white : Colors.black87),
-        );
-      }).toList(),
+  Widget _buildSelectedCropHeader() {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppTheme.primaryGreen.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.eco, color: AppTheme.primaryGreen),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('$_selectedCrop', style: const TextStyle(fontWeight: FontWeight.bold)),
+                Text('Variant: $_selectedVariant', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+              ],
+            ),
+          ),
+          TextButton(
+            onPressed: () {
+              setState(() {
+                _selectedCrop = null;
+                _selectedVariant = null;
+                _selectedPractice = null;
+              });
+            },
+            child: const Text('Change'),
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildPracticeSelector() {
-    final practices = FARM5X[_selectedCrop]!['practices'] as Map<String, dynamic>;
+    final practices = FARM5X[_selectedCrop]!['practices'] as List<dynamic>;
     return Column(
-      children: practices.map((p) {
-        final selected = _selectedPractice == p['code'];
-        final isMust = p['mandatory'] == 'true';
-        return Card(
-          margin: const EdgeInsets.only(bottom: 6),
-          color: selected ? AppTheme.primaryGreen.withOpacity(0.1) : null,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-            side: selected
-                ? BorderSide(color: AppTheme.primaryGreen, width: 2)
-                : BorderSide.none,
-          ),
-          child: ListTile(
-            leading: Icon(
-              isMust ? Icons.star : Icons.check_circle_outline,
-              color: isMust ? Colors.amber : AppTheme.primaryGreen,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Select Practice', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 8),
+        ...practices.map((p) {
+          final practice = p as Map<String, dynamic>;
+          final selected = _selectedPractice == practice['code'];
+          final isMust = practice['mandatory'] == 'true';
+          return Card(
+            margin: const EdgeInsets.only(bottom: 6),
+            color: selected ? AppTheme.primaryGreen.withOpacity(0.1) : null,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+              side: selected
+                  ? BorderSide(color: AppTheme.primaryGreen, width: 2)
+                  : BorderSide.none,
             ),
-            title: Text(p['label']!,
-                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
-            subtitle: isMust
-                ? const Text('Mandatory (1 Must)', style: TextStyle(fontSize: 11, color: Colors.amber))
-                : const Text('Reduce practice', style: TextStyle(fontSize: 11)),
-            trailing: selected
-                ? Icon(Icons.check_circle, color: AppTheme.primaryGreen)
-                : null,
-            onTap: () {
-              setState(() {
-                _selectedPractice = p['code'];
-                _isMandatory = isMust;
-              });
-            },
-          ),
-        );
-      }).toList(),
+            child: ListTile(
+              leading: Icon(
+                isMust ? Icons.star : Icons.check_circle_outline,
+                color: isMust ? Colors.amber : AppTheme.primaryGreen,
+              ),
+              title: Text(practice['label'] as String,
+                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+              subtitle: isMust
+                  ? const Text('Mandatory (1 Must)', style: TextStyle(fontSize: 11, color: Colors.amber))
+                  : const Text('Reduce practice', style: TextStyle(fontSize: 11)),
+              trailing: selected
+                  ? Icon(Icons.check_circle, color: AppTheme.primaryGreen)
+                  : null,
+              onTap: () {
+                setState(() {
+                  _selectedPractice = practice['code'] as String;
+                  _isMandatory = isMust;
+                });
+              },
+            ),
+          );
+        }),
+      ],
     );
   }
 
@@ -234,7 +252,7 @@ class _PracticeLoggerPageState extends State<PracticeLoggerPage> {
     setState(() => _submitting = true);
     try {
       final res = await ApiClient().post('/api/practices/adopt', body: {
-        'farmerId': 'me', // server resolves from auth context
+        'farmerId': 'me',
         'practiceCode': _selectedPractice,
         'cropType': _selectedCrop,
         'frameworkVariant': _selectedVariant,
@@ -245,7 +263,7 @@ class _PracticeLoggerPageState extends State<PracticeLoggerPage> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('✓ Practice adopted! Impact score will update tonight.'),
+              content: Text('Practice adopted! Impact score will update tonight.'),
               backgroundColor: Colors.green,
             ),
           );
@@ -258,10 +276,7 @@ class _PracticeLoggerPageState extends State<PracticeLoggerPage> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed: $e'),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
         );
       }
     } finally {

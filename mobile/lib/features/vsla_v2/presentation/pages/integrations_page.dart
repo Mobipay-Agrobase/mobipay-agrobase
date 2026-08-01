@@ -32,7 +32,7 @@ class _IntegrationsPageState extends State<IntegrationsPage> {
     try {
       final res = await http.get(
         Uri.parse('${VslaV2Api.baseUrl}/api/vsla-v2/integrations?limit=50'),
-        headers: VslaV2Api._headers,
+        headers: VslaV2Api.headers,
       );
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);

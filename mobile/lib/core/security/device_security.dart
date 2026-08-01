@@ -4,10 +4,10 @@ import 'dart:io';
 /// In production, replace with a native plugin or platform channel.
 class DeviceSecurity {
   static Future<bool> isDeviceCompromised() async {
-    // Basic check: Android debug mode
-    if (Platform.isAndroid) {
-      return false; // Non-blocking stub — always returns false in release
-    }
+    return false;
+  }
+
+  static Future<bool> shouldBlockFinancialOps() async {
     return false;
   }
 

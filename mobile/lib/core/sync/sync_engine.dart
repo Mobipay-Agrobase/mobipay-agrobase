@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:drift/drift.dart' show Value;
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import '../database/app_database.dart';
@@ -254,8 +255,7 @@ class SyncEngine extends ChangeNotifier {
               shareValue: Value(g['shareValue']?.toDouble()),
               loanRate: Value(g['loanRate']?.toDouble()),
               maxLoanAmount: Value(g['maxLoanAmount']?.toDouble()),
-              isActive: Value(g['isActive'] ?? true),
-              syncStatus: const Value('synced'),
+                            syncStatus: const Value('synced'),
               lastSyncedAt: Value(DateTime.now()),
             ),
           ]);
@@ -307,8 +307,7 @@ class SyncEngine extends ChangeNotifier {
             id: fl['id'],
             farmerId: fl['farmerId'] ?? '',
             name: fl['name'] ?? fl['farmName'] ?? '',
-            farmSize: Value(fl['farmSize']?.toDouble()),
-            gpsLatitude: Value(fl['gpsLatitude']?.toDouble()),
+                        gpsLatitude: Value(fl['gpsLatitude']?.toDouble()),
             gpsLongitude: Value(fl['gpsLongitude']?.toDouble()),
             country: Value(fl['country']),
             district: Value(fl['district']),

@@ -10,14 +10,14 @@ class ResetApi {
   static String? _token;
   static void setToken(String token) => _token = token;
 
-  static Map<String, String> get _headers => {
+  static Map<String, String> get headers => {
     'Content-Type': 'application/json',
     if (_token != null) 'Authorization': 'Bearer $_token',
   };
 
   /// Get dashboard stats
   static Future<Map<String, dynamic>> getDashboard() async {
-    final res = await http.get(Uri.parse('$baseUrl/api/reset/dashboard'), headers: _headers);
+    final res = await http.get(Uri.parse('$baseUrl/api/reset/dashboard'), headers: headers);
     return jsonDecode(res.body);
   }
 
@@ -25,7 +25,7 @@ class ResetApi {
   static Future<Map<String, dynamic>> getBeneficiaries({int page = 1, int limit = 20}) async {
     final res = await http.get(
       Uri.parse('$baseUrl/api/reset/beneficiaries?page=$page&limit=$limit'),
-      headers: _headers,
+      headers: headers,
     );
     return jsonDecode(res.body);
   }
@@ -34,7 +34,7 @@ class ResetApi {
   static Future<Map<String, dynamic>> enrollBeneficiary(Map<String, dynamic> data) async {
     final res = await http.post(
       Uri.parse('$baseUrl/api/reset/beneficiaries'),
-      headers: _headers,
+      headers: headers,
       body: jsonEncode(data),
     );
     return jsonDecode(res.body);
@@ -44,7 +44,7 @@ class ResetApi {
   static Future<Map<String, dynamic>> getVouchers({int page = 1}) async {
     final res = await http.get(
       Uri.parse('$baseUrl/api/reset/vouchers?page=$page&limit=20'),
-      headers: _headers,
+      headers: headers,
     );
     return jsonDecode(res.body);
   }
@@ -53,7 +53,7 @@ class ResetApi {
   static Future<Map<String, dynamic>> issueVoucher(Map<String, dynamic> data) async {
     final res = await http.post(
       Uri.parse('$baseUrl/api/reset/vouchers'),
-      headers: _headers,
+      headers: headers,
       body: jsonEncode(data),
     );
     return jsonDecode(res.body);
@@ -63,7 +63,7 @@ class ResetApi {
   static Future<Map<String, dynamic>> getMerchants({int page = 1}) async {
     final res = await http.get(
       Uri.parse('$baseUrl/api/reset/merchants?page=$page&limit=20'),
-      headers: _headers,
+      headers: headers,
     );
     return jsonDecode(res.body);
   }
@@ -73,16 +73,17 @@ class ResetApi {
     final params = <String>[];
     if (settlement != null) params.add('settlement=$settlement');
     if (partner != null) params.add('partner=$partner');
+    final queryString = params.isNotEmpty ? '?${params.join('&')}' : '';
     final res = await http.get(
-      Uri.parse('$baseUrl/api/reset/reports?${params.join('&")}'),
-      headers: _headers,
+      Uri.parse('$baseUrl/api/reset/reports$queryString'),
+      headers: headers,
     );
     return jsonDecode(res.body);
   }
 
   /// Get batch history
   static Future<Map<String, dynamic>> getBatches() async {
-    final res = await http.get(Uri.parse('$baseUrl/api/reset/cash/batch'), headers: _headers);
+    final res = await http.get(Uri.parse('$baseUrl/api/reset/cash/batch'), headers: headers);
     return jsonDecode(res.body);
   }
 }

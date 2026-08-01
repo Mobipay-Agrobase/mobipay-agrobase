@@ -85,7 +85,7 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
                     const SizedBox(height: 8),
                     Card(
                       child: ListTile(
-                        leading: const Icon(Icons.savings, color: Colors.emerald),
+                        leading: const Icon(Icons.savings, color: Colors.green),
                         title: const Text('Cashbox Balance', style: TextStyle(fontSize: 12)),
                         subtitle: Text('UGX ${_group!['cashboxBalance']?.toString() ?? '0'}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                       ),

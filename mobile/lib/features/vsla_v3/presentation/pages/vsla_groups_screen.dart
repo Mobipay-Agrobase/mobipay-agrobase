@@ -125,7 +125,7 @@ class _VslaGroupsScreenState extends State<VslaGroupsScreen> {
   }
 
   Widget _statusBadge(String status) {
-    final color = status == 'ACTIVE' ? Colors.emerald : status == 'CLOSED' ? Colors.red : Colors.amber;
+    final color = status == 'ACTIVE' ? Colors.green : status == 'CLOSED' ? Colors.red : Colors.amber;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(

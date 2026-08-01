@@ -85,7 +85,7 @@ class _NssfScreenState extends State<NssfScreen> {
                         Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(c['smsSent'] == true ? Icons.check_circle : Icons.access_time, size: 12, color: c['smsSent'] == true ? Colors.emerald : Colors.amber),
+                            Icon(c['smsSent'] == true ? Icons.check_circle : Icons.access_time, size: 12, color: c['smsSent'] == true ? Colors.green : Colors.amber),
                             const SizedBox(width: 4),
                             _statusBadge(c['status'] as String? ?? ''),
                           ],
@@ -104,7 +104,7 @@ class _NssfScreenState extends State<NssfScreen> {
   }
 
   Widget _statusBadge(String status) {
-    final color = status == 'CONFIRMED' ? Colors.emerald : status == 'FAILED' ? Colors.red : Colors.amber;
+    final color = status == 'CONFIRMED' ? Colors.green : status == 'FAILED' ? Colors.red : Colors.amber;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
       decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),

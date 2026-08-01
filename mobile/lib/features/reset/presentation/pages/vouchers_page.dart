@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../data/services/reset_api.dart';
+import 'package:agrobase_mobile/features/reset/data/services/reset_api.dart';
 
 class VouchersPage extends StatefulWidget {
   const VouchersPage({super.key});
@@ -18,12 +18,12 @@ class _VouchersPageState extends State<VouchersPage> {
     try {
       final data = await ResetApi.getVouchers();
       setState(() { _vouchers = data['vouchers'] ?? []; _loading = false; });
-    } catch { setState(() => _loading = false); }
+    } catch (e) { setState(() => _loading = false); }
   }
 
   Color _statusColor(String status) {
     if (status == 'ISSUED') return Colors.amber;
-    if (status == 'REDEEMED') return Colors.emerald;
+    if (status == 'REDEEMED') return Colors.green;
     return Colors.red;
   }
 
@@ -42,7 +42,7 @@ class _VouchersPageState extends State<VouchersPage> {
                   return Card(
                     margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                     child: ListTile(
-                      leading: CircleAvatar(backgroundColor: _statusColor(v['status'] ?? '').shade50, child: Icon(Icons.receipt, color: _statusColor(v['status'] ?? ''))),
+                      leading: CircleAvatar(backgroundColor: _statusColor(v['status'] ?? '').withOpacity(0.1), child: Icon(Icons.receipt, color: _statusColor(v['status'] ?? ''))),
                       title: Text(v['voucherCode'] ?? '', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, fontFamily: 'monospace')),
                       subtitle: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -53,8 +53,8 @@ class _VouchersPageState extends State<VouchersPage> {
                       ),
                       trailing: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                        decoration: BoxDecoration(color: _statusColor(v['status'] ?? '').shade100, borderRadius: BorderRadius.circular(8)),
-                        child: Text(v['status'] ?? '', style: TextStyle(fontSize: 9, color: _statusColor(v['status'] ?? '').shade800, fontWeight: FontWeight.w600)),
+                        decoration: BoxDecoration(color: _statusColor(v['status'] ?? '').withOpacity(0.2), borderRadius: BorderRadius.circular(8)),
+                        child: Text(v['status'] ?? '', style: TextStyle(fontSize: 9, color: _statusColor(v['status'] ?? '').withOpacity(0.8), fontWeight: FontWeight.w600)),
                       ),
                     ),
                   );

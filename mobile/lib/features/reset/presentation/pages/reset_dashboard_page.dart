@@ -46,7 +46,7 @@ class _ResetDashboardPageState extends State<ResetDashboardPage> {
                     crossAxisSpacing: 8,
                     childAspectRatio: 1.3,
                     children: [
-                      _kpiCard('Beneficiaries', '${_data?['counts']?['beneficiaries'] ?? 0}', Icons.people, Colors.emerald),
+                      _kpiCard('Beneficiaries', '${_data?['counts']?['beneficiaries'] ?? 0}', Icons.people, Colors.green),
                       _kpiCard('Vouchers', '${_data?['counts']?['vouchers'] ?? 0}', Icons.receipt, Colors.amber),
                       _kpiCard('Merchants', '${_data?['counts']?['merchants'] ?? 0}', Icons.store, Colors.blue),
                       _kpiCard('Redemptions', '${_data?['counts']?['redemptions'] ?? 0}', Icons.check_circle, Colors.purple),

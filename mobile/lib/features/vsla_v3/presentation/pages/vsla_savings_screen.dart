@@ -82,7 +82,7 @@ class _VslaSavingsScreenState extends State<VslaSavingsScreen> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
-                        Text(formatUGX(s.amount), style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.emerald, fontSize: 13)),
+                        Text(formatUGX(s.amount), style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green, fontSize: 13)),
                         Text('${s.sharesBought} shares', style: const TextStyle(fontSize: 10, color: Colors.grey)),
                       ],
                     ),

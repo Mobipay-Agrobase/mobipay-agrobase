@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../data/services/reset_api.dart';
+import 'package:agrobase_mobile/features/reset/data/services/reset_api.dart';
 
 class BeneficiariesPage extends StatefulWidget {
   const BeneficiariesPage({super.key});
@@ -25,7 +25,7 @@ class _BeneficiariesPageState extends State<BeneficiariesPage> {
         _beneficiaries = data['beneficiaries'] ?? [];
         _loading = false;
       });
-    } catch { setState(() => _loading = false); }
+    } catch (e) { setState(() => _loading = false); }
   }
 
   @override
@@ -43,7 +43,7 @@ class _BeneficiariesPageState extends State<BeneficiariesPage> {
                   return Card(
                     margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                     child: ListTile(
-                      leading: CircleAvatar(backgroundColor: Colors.emerald.shade50, child: Text(b['fullName']?[0] ?? '?')),
+                      leading: CircleAvatar(backgroundColor: Colors.green.withOpacity(0.1), child: Text(b['fullName']?[0] ?? '?')),
                       title: Text(b['fullName'] ?? '', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
                       subtitle: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -54,8 +54,8 @@ class _BeneficiariesPageState extends State<BeneficiariesPage> {
                       ),
                       trailing: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                        decoration: BoxDecoration(color: Colors.emerald.shade100, borderRadius: BorderRadius.circular(8)),
-                        child: Text(b['status'] ?? '', style: TextStyle(fontSize: 10, color: Colors.emerald.shade800)),
+                        decoration: BoxDecoration(color: Colors.green.withOpacity(0.2), borderRadius: BorderRadius.circular(8)),
+                        child: Text(b['status'] ?? '', style: TextStyle(fontSize: 10, color: Colors.green.withOpacity(0.8))),
                       ),
                     ),
                   );

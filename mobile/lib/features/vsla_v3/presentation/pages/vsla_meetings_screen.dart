@@ -79,7 +79,7 @@ class _VslaMeetingsScreenState extends State<VslaMeetingsScreen> {
                       const SizedBox(width: 16),
                       Icon(Icons.savings, size: 14, color: Colors.grey.shade600),
                       const SizedBox(width: 4),
-                      Text(formatUGX(m.totalSavings), style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.emerald)),
+                      Text(formatUGX(m.totalSavings), style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.green)),
                     ],
                   ),
                 ],
@@ -92,7 +92,7 @@ class _VslaMeetingsScreenState extends State<VslaMeetingsScreen> {
   }
 
   Widget _badge(String status) {
-    final color = status == 'CONCLUDED' ? Colors.emerald : status == 'CANCELLED' ? Colors.red : Colors.amber;
+    final color = status == 'CONCLUDED' ? Colors.green : status == 'CANCELLED' ? Colors.red : Colors.amber;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),

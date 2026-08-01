@@ -129,7 +129,7 @@ class _VslaSocialFundScreenState extends State<VslaSocialFundScreen> {
   }
 
   Widget _badge(String status) {
-    final color = status == 'DISBURSED' ? Colors.emerald : status == 'PENDING' ? Colors.amber : status == 'REJECTED' ? Colors.red : Colors.blue;
+    final color = status == 'DISBURSED' ? Colors.green : status == 'PENDING' ? Colors.amber : status == 'REJECTED' ? Colors.red : Colors.blue;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),

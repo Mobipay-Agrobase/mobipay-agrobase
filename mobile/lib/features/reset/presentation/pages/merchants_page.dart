@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../data/services/reset_api.dart';
+import 'package:agrobase_mobile/features/reset/data/services/reset_api.dart';
 
 class MerchantsPage extends StatefulWidget {
   const MerchantsPage({super.key});
@@ -18,7 +18,7 @@ class _MerchantsPageState extends State<MerchantsPage> {
     try {
       final data = await ResetApi.getMerchants();
       setState(() { _merchants = data['merchants'] ?? []; _loading = false; });
-    } catch { setState(() => _loading = false); }
+    } catch (e) { setState(() => _loading = false); }
   }
 
   @override
@@ -48,14 +48,14 @@ class _MerchantsPageState extends State<MerchantsPage> {
                       trailing: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                         decoration: BoxDecoration(
-                          color: m['status'] == 'APPROVED' ? Colors.emerald.shade100 : Colors.amber.shade100,
+                          color: m['status'] == 'APPROVED' ? Colors.green.withOpacity(0.2) : Colors.amber.withOpacity(0.2),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
                           m['status'] ?? '',
                           style: TextStyle(
                             fontSize: 9,
-                            color: m['status'] == 'APPROVED' ? Colors.emerald.shade800 : Colors.amber.shade800,
+                            color: m['status'] == 'APPROVED' ? Colors.green.withOpacity(0.8) : Colors.amber.withOpacity(0.8),
                             fontWeight: FontWeight.w600,
                           ),
                         ),

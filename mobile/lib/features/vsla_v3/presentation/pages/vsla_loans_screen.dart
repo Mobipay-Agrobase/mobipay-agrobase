@@ -114,7 +114,7 @@ class _VslaLoansScreenState extends State<VslaLoansScreen> {
 
   Widget _badge(String status) {
     final color = ['REPAID', 'COMPLETED'].contains(status)
-        ? Colors.emerald
+        ? Colors.green
         : ['PENDING', 'SCHEDULED'].contains(status)
             ? Colors.amber
             : ['OVERDUE', 'DEFAULTED', 'REJECTED'].contains(status)

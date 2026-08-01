@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../data/services/reset_api.dart';
+import 'package:agrobase_mobile/features/reset/data/services/reset_api.dart';
 
 class ReportsPage extends StatefulWidget {
   const ReportsPage({super.key});
@@ -20,7 +20,7 @@ class _ReportsPageState extends State<ReportsPage> {
     try {
       final data = await ResetApi.getReports(settlement: _settlementFilter, partner: _partnerFilter);
       setState(() { _data = data; _loading = false; });
-    } catch { setState(() => _loading = false); }
+    } catch (e) { setState(() => _loading = false); }
   }
 
   @override

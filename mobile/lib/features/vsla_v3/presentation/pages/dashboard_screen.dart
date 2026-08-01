@@ -98,7 +98,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             mainAxisSpacing: 12,
             childAspectRatio: 1.1,
             children: [
-              _kpi('VSLA Groups', '${counts['vslaGroups']}', Icons.groups, Colors.emerald),
+              _kpi('VSLA Groups', '${counts['vslaGroups']}', Icons.groups, Colors.green),
               _kpi('Total Savings', formatUGX((fin['totalSavings'] as num).toDouble()), Icons.savings, Colors.blue),
               _kpi('Outstanding Loans', formatUGX((fin['outstandingLoans'] as num).toDouble()), Icons.account_balance_wallet, Colors.amber),
               _kpi('Disbursed', formatUGX((fin['disbursedLoans'] as num).toDouble()), Icons.trending_up, Colors.purple),
@@ -143,7 +143,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             mainAxisSpacing: 8,
             childAspectRatio: 1,
             children: [
-              _action(Icons.add_circle, 'New Saving', Colors.emerald),
+              _action(Icons.add_circle, 'New Saving', Colors.green),
               _action(Icons.attach_money, 'New Loan', Colors.amber),
               _action(Icons.event, 'Meeting', Colors.blue),
               _action(Icons.volunteer_activism, 'Welfare', Colors.purple),

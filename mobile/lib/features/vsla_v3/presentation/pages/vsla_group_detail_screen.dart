@@ -114,7 +114,7 @@ class _VslaGroupDetailScreenState extends State<VslaGroupDetailScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Text(formatUGX(m.totalSavings), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.emerald)),
+                Text(formatUGX(m.totalSavings), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.green)),
                 Text('${m.totalShares} shares', style: const TextStyle(fontSize: 10, color: Colors.grey)),
                 if (m.officerRole != null)
                   Container(
@@ -188,7 +188,7 @@ class _VslaGroupDetailScreenState extends State<VslaGroupDetailScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Text(formatUGX(s.amount), style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.emerald)),
+                Text(formatUGX(s.amount), style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
                 Text('${s.sharesBought} shares', style: const TextStyle(fontSize: 10, color: Colors.grey)),
               ],
             ),
@@ -383,7 +383,7 @@ class _VslaGroupDetailScreenState extends State<VslaGroupDetailScreen> {
                 dense: true,
                 contentPadding: EdgeInsets.zero,
                 title: Text(formatDate(r.createdAt)),
-                trailing: Text(formatUGX(r.amount), style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.emerald)),
+                trailing: Text(formatUGX(r.amount), style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.green)),
               )),
               const SizedBox(height: 16),
             ],
@@ -394,7 +394,7 @@ class _VslaGroupDetailScreenState extends State<VslaGroupDetailScreen> {
                   Expanded(
                     child: ElevatedButton(
                       onPressed: () => _actOnLoan(ctx, loan.id, 'approve'),
-                      style: ElevatedButton.styleFrom(backgroundColor: Colors.emerald),
+                      style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
                       child: const Text('Approve'),
                     ),
                   ),
@@ -514,7 +514,7 @@ class _VslaGroupDetailScreenState extends State<VslaGroupDetailScreen> {
 
   Widget _statusBadge(String status) {
     final color = ['ACTIVE', 'COMPLETED', 'REPAID', 'PAID', 'CONFIRMED', 'CONCLUDED'].contains(status)
-        ? Colors.emerald
+        ? Colors.green
         : ['PENDING', 'SCHEDULED'].contains(status)
             ? Colors.amber
             : ['FAILED', 'REJECTED', 'OVERDUE', 'CANCELLED', 'DEFAULTED'].contains(status)

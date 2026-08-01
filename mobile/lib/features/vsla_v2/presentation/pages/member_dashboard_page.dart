@@ -27,7 +27,7 @@ class MemberDashboardPage extends StatelessWidget {
           // KPI Cards
           Row(
             children: [
-              Expanded(child: _kpiCard('Total Savings', 'UGX ••••••', Icons.savings, Colors.emerald)),
+              Expanded(child: _kpiCard('Total Savings', 'UGX ••••••', Icons.savings, Colors.green)),
               const SizedBox(width: 12),
               Expanded(child: _kpiCard('Shares', '12', Icons.pie_chart, Colors.blue)),
             ],
@@ -45,7 +45,7 @@ class MemberDashboardPage extends StatelessWidget {
           // Actions
           const Text('Actions', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           const SizedBox(height: 12),
-          _actionCard(context, 'Check Loan Eligibility', 'See if you qualify for a loan', Icons.check_circle, Colors.emerald, () {}),
+          _actionCard(context, 'Check Loan Eligibility', 'See if you qualify for a loan', Icons.check_circle, Colors.green, () {}),
           _actionCard(context, 'Apply for Loan', 'Submit a loan application', Icons.account_balance, Colors.amber, () {}),
           _actionCard(context, 'View My Loans', 'See loan history and status', Icons.receipt_long, Colors.blue, () {}),
           _actionCard(context, 'Meeting Attendance', 'View upcoming meetings', Icons.event, Colors.purple, () {}),

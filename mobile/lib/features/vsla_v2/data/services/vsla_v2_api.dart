@@ -22,7 +22,7 @@ class VslaV2Api {
     _memberToken = token;
   }
 
-  static Map<String, String> get _headers => {
+  static Map<String, String> get headers => {
     'Content-Type': 'application/json',
     if (_memberToken != null) 'Authorization': 'Bearer $_memberToken',
   };
@@ -31,7 +31,7 @@ class VslaV2Api {
   static Future<Map<String, dynamic>> loginOtp(String memberId, String pin) async {
     final res = await http.post(
       Uri.parse('$baseUrl/api/vsla-v2/members/login-otp'),
-      headers: _headers,
+      headers: headers,
       body: jsonEncode({'memberId': memberId, 'pin': pin}),
     );
     final data = jsonDecode(res.body);
@@ -45,7 +45,7 @@ class VslaV2Api {
   static Future<Map<String, dynamic>> verifyOtp(String memberId, String otp) async {
     final res = await http.post(
       Uri.parse('$baseUrl/api/vsla-v2/members/verify-otp'),
-      headers: _headers,
+      headers: headers,
       body: jsonEncode({'memberId': memberId, 'otp': otp}),
     );
     final data = jsonDecode(res.body);
@@ -60,7 +60,7 @@ class VslaV2Api {
   static Future<Map<String, dynamic>> getMemberInfo(String memberId) async {
     final res = await http.get(
       Uri.parse('$baseUrl/api/vsla-v2/members?memberId=$memberId'),
-      headers: _headers,
+      headers: headers,
     );
     return jsonDecode(res.body);
   }
@@ -69,7 +69,7 @@ class VslaV2Api {
   static Future<Map<String, dynamic>> checkEligibility(String groupId, String memberId, double amount) async {
     final res = await http.post(
       Uri.parse('$baseUrl/api/vsla-v2/loan/eligibility-check'),
-      headers: _headers,
+      headers: headers,
       body: jsonEncode({'groupId': groupId, 'memberId': memberId, 'amount': amount}),
     );
     return jsonDecode(res.body);
@@ -79,7 +79,7 @@ class VslaV2Api {
   static Future<Map<String, dynamic>> applyForLoan(String groupId, String memberId, double amount, String purpose, {int termDays = 90}) async {
     final res = await http.post(
       Uri.parse('$baseUrl/api/vsla-v2/loan/apply'),
-      headers: _headers,
+      headers: headers,
       body: jsonEncode({'groupId': groupId, 'memberId': memberId, 'amount': amount, 'purpose': purpose, 'termDays': termDays}),
     );
     return jsonDecode(res.body);
@@ -89,7 +89,7 @@ class VslaV2Api {
   static Future<Map<String, dynamic>> recordCashboxEntry(String groupId, String type, double amount, {String? memberId, String? meetingId, String? description, required String recordedByName}) async {
     final res = await http.post(
       Uri.parse('$baseUrl/api/vsla-v2/cashbox/$groupId/entry'),
-      headers: _headers,
+      headers: headers,
       body: jsonEncode({
         'type': type,
         'amount': amount,

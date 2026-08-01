@@ -307,12 +307,9 @@ class SyncEngine extends ChangeNotifier {
             id: fl['id'],
             farmerId: fl['farmerId'] ?? '',
             name: fl['name'] ?? fl['farmName'] ?? '',
-                        gpsLatitude: Value(fl['gpsLatitude']?.toDouble()),
-            gpsLongitude: Value(fl['gpsLongitude']?.toDouble()),
-            country: Value(fl['country']),
-            district: Value(fl['district']),
-            villageName: Value(fl['villageName']),
-            syncStatus: const Value('synced'),
+                        latitude: Value(fl['gpsLatitude']?.toDouble() ?? fl['latitude']?.toDouble()),
+            longitude: Value(fl['gpsLongitude']?.toDouble() ?? fl['longitude']?.toDouble()),
+                                                syncStatus: const Value('synced'),
             lastSyncedAt: Value(DateTime.now()),
           ));
         }

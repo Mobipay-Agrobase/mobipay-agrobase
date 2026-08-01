@@ -1,51 +1,23 @@
-# ProGuard rules for Agrobase V3 mobile app
-# Optimizes APK size and protects against reverse engineering
+# R8 missing class rules — Play Core SplitCompat (not used, but referenced by Flutter engine)
 
-# ─── Flutter / Dart ───────────────────────────────────────────
-# Keep Flutter engine
--keep class io.flutter.app.** { *; }
--keep class io.flutter.plugin.**  { *; }
--keep class io.flutter.util.**  { *; }
--keep class io.flutter.view.**  { *; }
--keep class io.flutter.**  { *; }
--keep class io.flutter.plugins.**  { *; }
+# Play Core SplitInstall (deferred components downloads — not used in this app)
+-dontwarn com.google.android.play.core.splitcompat.**
+-dontwarn com.google.android.play.core.splitinstall.**
+-dontwarn com.google.android.play.core.tasks.**
 
-# ─── SQLite (drift database) ──────────────────────────────────
--keep class * extends androidx.sqlite.db.SupportSQLiteOpenHelper { *; }
--keep class androidx.sqlite.db.** { *; }
--keep class com.squareup.sqldelight.** { *; }
--keep class drift.** { *; }
--keep class sqlite3.** { *; }
--keep class * extends drift.DatabaseConnection { *; }
--keepclassmembernames class * {
-    @drift.* <methods>;
-}
+# Flutter deferred components (not used)
+-dontwarn io.flutter.embedding.android.FlutterPlayStoreSplitApplication
+-dontwarn io.flutter.embedding.engine.deferredcomponents.PlayStoreDeferredComponentManager
+-dontwarn io.flutter.embedding.engine.deferredcomponents.PlayStoreDeferredComponentManager$*
 
-# ─── Connectivity Plus ────────────────────────────────────────
--keep class com.lynxal.connectivity_plus.** { *; }
+# HTTP certificate pinning
+-keep class com.certifi.c2mapi.** { *; }
+-dontwarn com.certifi.c2mapi.**
 
-# ─── WorkManager (background sync) ────────────────────────────
--keep class androidx.work.** { *; }
--keep class dev.fluttercommunity.workmanager.** { *; }
+# flutter_secure_storage
+-keep class com.it_nomad.fluttersecurestorage.** { *; }
+-dontwarn com.it_nomad.fluttersecurestorage.**
 
-# ─── Shared Preferences ───────────────────────────────────────
--keep class io.flutter.plugins.sharedpreferences.** { *; }
-
-# ─── HTTP ─────────────────────────────────────────────────────
--keep class okhttp3.** { *; }
--keep class okio.** { *; }
--dontwarn okhttp3.**
--dontwarn okio.**
-
-# ─── UUID ─────────────────────────────────────────────────────
--keep class uuid.** { *; }
-
-# ─── Share Plus ───────────────────────────────────────────────
--keep class io.flutter.plugins.share.** { *; }
-
-# ─── General Flutter protection ───────────────────────────────
--dontwarn android.**
--keepattributes Signature
--keepattributes *Annotation*
--keepattributes EnclosingMethod
--keepattributes InnerClasses
+# share_plus
+-keep class dev.fluttercommunity.plus_share.** { *; }
+-dontwarn dev.fluttercommunity.plus_share.**

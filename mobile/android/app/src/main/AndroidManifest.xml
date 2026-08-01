@@ -5,7 +5,6 @@
     <application
         android:allowBackup="false"
         android:usesCleartextTraffic="false"
-        android:debuggable="false"
         android:label="Agrobase V3"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">

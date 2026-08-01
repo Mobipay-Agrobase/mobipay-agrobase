@@ -3,8 +3,8 @@
  * SRS 4: Members log in with SMS credentials (member ID + PIN → OTP)
  */
 import 'package:flutter/material.dart';
-import '../data/services/vsla_v2_api.dart';
-import '../../../core/security/secure_storage.dart';
+import 'package:agrobase_mobile/features/vsla_v2/data/services/vsla_v2_api.dart';
+import 'package:agrobase_mobile/core/security/secure_storage.dart';
 import 'member_dashboard_page.dart';
 
 class MemberLoginPage extends StatefulWidget {

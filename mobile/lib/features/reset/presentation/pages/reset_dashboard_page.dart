@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../data/services/reset_api.dart';
+import 'package:agrobase_mobile/features/reset/data/services/reset_api.dart';
 
 class ResetDashboardPage extends StatefulWidget {
   const ResetDashboardPage({super.key});

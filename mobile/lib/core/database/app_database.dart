@@ -20,8 +20,8 @@ class SyncQueueEntries extends Table {
   TextColumn get entityId => text()(); // local ID
   TextColumn get operation => text()(); // 'create', 'update', 'delete'
   TextColumn get payload => text()(); // JSON body to send
-  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime);
-  IntColumn get retryCount => integer().withDefault(const Constant(0));
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+  IntColumn get retryCount => integer().withDefault(const Constant(0))();
   TextColumn get lastError => text().nullable()();
 
   @override
@@ -43,7 +43,7 @@ class FarmerCache extends Table {
   TextColumn get country => text().nullable()();
   BoolColumn get isCertified => boolean().withDefault(const Constant(false))();
   TextColumn get certificationType => text().nullable()();
-  TextColumn get farmSize => real().nullable()();
+  RealColumn get farmSize => real().nullable()();
   TextColumn get status => text().withDefault(const Constant('ACTIVE'))();
   TextColumn get photoUrl => text().nullable()();
   TextColumn get syncStatus => text().withDefault(const Constant('synced'))(); // synced | pending | conflict
@@ -103,7 +103,7 @@ class VslaGroupCache extends Table {
   RealColumn get shareValue => real().nullable()();
   RealColumn get loanRate => real().nullable()();
   RealColumn get maxLoanAmount => real().nullable()();
-  BooleanColumn get isActive => boolean().withDefault(const Constant(true))();
+  BoolColumn get isActive => boolean().withDefault(const Constant(true))();
   TextColumn get syncStatus => text().withDefault(const Constant('synced'))();
   DateTimeColumn get lastSyncedAt => dateTime().nullable()();
 
@@ -161,7 +161,7 @@ class TrainingAttendanceCache extends Table {
   TextColumn get id => text()();
   TextColumn get trainingId => text()();
   TextColumn get farmerId => text()();
-  BooleanColumn get attended => boolean().withDefault(const Constant(false))();
+  BoolColumn get attended => boolean().withDefault(const Constant(false))();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
   TextColumn get syncStatus => text().withDefault(const Constant('pending'))();
 
@@ -233,7 +233,7 @@ class PracticeAdoptionCache extends Table {
   TextColumn get practiceCode => text()();
   TextColumn get cropType => text()();
   TextColumn get frameworkVariant => text()();
-  BooleanColumn get isMandatory => boolean().withDefault(const Constant(false))();
+  BoolColumn get isMandatory => boolean().withDefault(const Constant(false))();
   DateTimeColumn get adoptedAt => dateTime().withDefault(currentDateAndTime)();
   TextColumn get verificationStatus => text().withDefault(const Constant('PENDING'))();
   TextColumn get syncStatus => text().withDefault(const Constant('pending'))();

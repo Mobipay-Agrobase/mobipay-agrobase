@@ -36,8 +36,9 @@ class AuthState extends ChangeNotifier {
   bool get isLoading => _isLoading;
   bool get isAuthenticated => _isAuthenticated;
   bool get twoFactorRequired => _twoFactorRequired;
-  bool get error => _error != null;
+  bool get hasError => _error != null;
   String? get error => _error;
+  String? get errorString => _error;
   String? get userName => _userName;
   String? get role => _role;
   String? get userId => _userId;

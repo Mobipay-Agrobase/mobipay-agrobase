@@ -24,7 +24,7 @@ class _PracticeLoggerPageState extends State<PracticeLoggerPage> {
   bool _submitting = false;
 
   // Farm5x variants by crop
-  static const Map<String, Map<String, List<Map<String, String>>>> FARM5X = {
+  static const Map<String, Map<String, Map<String, dynamic>>> FARM5X = {
     'COFFEE': {
       'variant': '1M5C',
       'practices': [
@@ -191,7 +191,7 @@ class _PracticeLoggerPageState extends State<PracticeLoggerPage> {
   }
 
   Widget _buildPracticeSelector() {
-    final practices = FARM5X[_selectedCrop]!['practices'] as List<Map<String, String>>;
+    final practices = FARM5X[_selectedCrop]!['practices'] as Map<String, dynamic>;
     return Column(
       children: practices.map((p) {
         final selected = _selectedPractice == p['code'];

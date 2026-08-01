@@ -5,7 +5,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import '../data/services/vsla_v2_api.dart';
+import 'package:agrobase_mobile/features/vsla_v2/data/services/vsla_v2_api.dart';
 
 class GroupSettingsPage extends StatefulWidget {
   final String groupId;

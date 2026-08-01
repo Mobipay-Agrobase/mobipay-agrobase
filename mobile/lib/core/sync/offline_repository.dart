@@ -94,7 +94,7 @@ class OfflineRepository {
       results = results.where((f) {
         final name = '${f['firstName']} ${f['lastName']}'.toLowerCase();
         return name.contains(search.toLowerCase()) ||
-            (f['phone'] ?? '').contains(search) ||
+            (f['phone']?.toString() ?? '').contains(search) ||
             (f['farmerCode'] ?? '').toString().toLowerCase().contains(search.toLowerCase());
       }).toList();
     }
@@ -309,8 +309,7 @@ class OfflineRepository {
                 shareValue: Value(g['shareValue']?.toDouble()),
                 loanRate: Value(g['loanRate']?.toDouble()),
                 maxLoanAmount: Value(g['maxLoanAmount']?.toDouble()),
-                isActive: Value(g['isActive'] ?? true),
-                syncStatus: Value('synced'),
+                                syncStatus: Value('synced'),
                 lastSyncedAt: Value(DateTime.now()),
               ),
             ]);
@@ -330,7 +329,7 @@ class OfflineRepository {
       'shareValue': g.shareValue,
       'loanRate': g.loanRate,
       'maxLoanAmount': g.maxLoanAmount,
-      'isActive': g.isActive,
+      'isActive': g.isActive ?? false,
     }).toList();
   }
 

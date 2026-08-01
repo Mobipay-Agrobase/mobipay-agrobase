@@ -85,7 +85,7 @@ class SecureStorage {
 
   // ─── Biometric ───
   Future<void> setBiometricEnabled(bool enabled) async {
-    await _storage.write(key: _biometricEnabledKey, enabled.toString());
+    await _storage.write(key: _biometricEnabledKey, value: enabled.toString());
   }
 
   Future<bool> isBiometricEnabled() async {

@@ -1,6 +1,6 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:workmanager/workmanager.dart';
 import 'core/api/api_client.dart';
 import 'core/auth/auth_provider.dart';
 import 'core/router/app_router.dart';
@@ -11,44 +11,6 @@ import 'core/connectivity/connectivity_manager.dart';
 import 'core/sync/sync_engine.dart';
 import 'core/sync/offline_repository.dart';
 import 'core/navigation/dynamic_navigation_service.dart';
-
-/// Background sync task name — must match the uniqueName registered in
-/// Workmanager().initialize() and Workmanager().registerPeriodicTask().
-const kBackgroundSyncTask = 'agrobase-background-sync';
-
-/// Callback dispatcher for workmanager — runs in a background isolate.
-/// This function must be top-level (not a class method) and must be
-/// resolvable by the workmanager plugin.
-@pragma('vm:entry-point')
-void callbackDispatcher() {
-  Workmanager().executeTask((task, inputData) async {
-    debugPrint('[Workmanager] Background task: $task');
-
-    if (task == kBackgroundSyncTask) {
-      // Initialize the same infrastructure as the main app, but in the
-      // background isolate. We only need the sync engine — no UI.
-      final db = AppDatabase();
-      final apiClient = ApiClient();
-      await apiClient.init();
-      final connectivityManager = ConnectivityManager();
-      await connectivityManager.initialize();
-
-      // Only sync if online
-      if (connectivityManager.isOnline) {
-        final syncEngine = SyncEngine(db, apiClient, connectivityManager);
-        await syncEngine.initialize();
-        await syncEngine.syncNow();
-        debugPrint('[Workmanager] Background sync complete: '
-            'synced=${syncEngine.syncedCount}, failed=${syncEngine.failedCount}, '
-            'pending=${syncEngine.pendingCount}');
-      } else {
-        debugPrint('[Workmanager] Offline — skipping sync');
-      }
-    }
-
-    return true;
-  });
-}
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -70,20 +32,16 @@ void main() async {
   final navService = DynamicNavigationService(api: apiClient);
   await navService.initialize();
 
-  // ─── P6: Initialize workmanager for background sync ─────────
-  // Runs every 15 minutes (the minimum interval allowed by Android's
-  // WorkManager). The task is rescheduled automatically by the OS.
-  // On iOS, background fetch is less predictable but still works.
-  await Workmanager().initialize(callbackDispatcher, isInDebugMode: false);
-  await Workmanager().registerPeriodicTask(
-    kBackgroundSyncTask,
-    kBackgroundSyncTask,
-    frequency: const Duration(minutes: 15),
-    constraints: Constraints(
-      networkType: NetworkType.connected,
-    ),
-    existingWorkPolicy: ExistingWorkPolicy.keep,
-  );
+  // ─── Background sync via Timer (replaces workmanager plugin) ──
+  // Runs a sync check every 15 minutes when the app is in foreground.
+  // Native background sync requires workmanager plugin which is
+  // incompatible with current Flutter version — will be re-added
+  // when the plugin is updated.
+  Timer.periodic(const Duration(minutes: 15), (timer) {
+    if (connectivityManager.isOnline && syncEngine.status != SyncStatus.syncing) {
+      syncEngine.syncNow();
+    }
+  });
 
   // ─── Initialize lightweight mode (for low-end phones) ───────
   final lightweightMode = LightweightMode();

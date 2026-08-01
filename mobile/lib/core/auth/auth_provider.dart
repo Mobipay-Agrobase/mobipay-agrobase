@@ -134,12 +134,12 @@ class AuthState extends ChangeNotifier {
 
       // Save to secure storage
       await _storage.saveAuthToken(_token!);
-      await _storage.saveUserInfo({
-        'user_id': _userId,
-        'tenant_id': _tenantId,
-        'user_role': _role,
-        'user_name': _userName,
-      });
+      await _storage.saveUserInfo(
+        userId: _userId!,
+        tenantId: _tenantId ?? '',
+        userRole: _role ?? '',
+        userName: _userName ?? '',
+      );
 
       _api.setAuth(_token!, _tenantId ?? '');
       _isAuthenticated = true;

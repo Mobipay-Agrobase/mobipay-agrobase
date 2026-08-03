@@ -26,12 +26,12 @@ import path from 'path'
 
 const db = new PrismaClient()
 
-const CSV_DIR = '/home/z/my-project/upload'
+const CSV_DIR = path.join(__dirname, '..', 'data', 'ekibbo-csv')
 const FILES = [
   { name: 'CLEAN_DATA_494_STANDARDIZED.csv', encoding: 'utf-8-sig', type: 'demographic' },
   { name: 'Enabel_502.csv', encoding: 'latin-1', type: 'demographic' },
   { name: 'Enable_306.csv', encoding: 'latin-1', type: 'demographic+crop' },
-  { name: 'Registration Cycle 1.csv', encoding: 'utf-8-sig', type: 'crop' },
+  { name: 'Registration_Cycle_1.csv', encoding: 'utf-8-sig', type: 'crop' },
 ]
 
 function parseNum(val: string | undefined): number | null {

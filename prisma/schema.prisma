@@ -403,6 +403,25 @@ model FarmerProfile {
   // ─── EKIBBO Farmer Extensions (nullable) ───
   shadeTreeVarieties String?  // JSON: [{variety: "Banana", count: 5}, {variety: " Albizia", count: 3}]
 
+  // ─── EKIBBO Real Data Import (from CSV — 1985 farmers) ───
+  gpsAltitude          Float?
+  monthlyHouseholdIncome Float?
+  annualHouseholdIncome Float?
+  monthlyFarmIncome    Float?
+  annualFarmIncome     Float?
+  primaryIncomeSource  String?
+  secondaryIncomeSource String?
+  extensionOfficer     String?
+  orgMembership        String?
+  orgNames             String?
+  livingConditions     String?
+  fuelType             String?
+  fuelCostMonthly      Float?
+  mealsPerDay          String?
+  dailyCostOfLiving    String?
+  hasUnusedLand        Boolean?
+  unusedLandSize       Float?
+
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -416,6 +435,7 @@ model FarmerProfile {
   trainings       TrainingAttendance[]
   purchases       Purchase[]
   sales           Sale[]     @relation("FarmerSales")
+  cropProductions CropProduction[]
   vslaMemberships VslaMember[]
   farmVisits      FarmVisit[]      @relation("FarmerVisits")
   impactAssessments ImpactAssessment[] @relation("FarmerImpact")
@@ -569,6 +589,31 @@ model Cultivation {
 
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+}
+
+// --- CROP PRODUCTION (EKIBBO real data — crop-specific per farmer) ---
+
+model CropProduction {
+  id                      String   @id @default(cuid())
+  farmerId                String
+  farmer                  FarmerProfile @relation(fields: [farmerId], references: [id], onDelete: Cascade)
+  cropName                String   // Coffee, Cocoa, Avocado, Vanilla, Cassava, etc.
+  variety                 String?
+  landPercentage          Float?   // % of land dedicated to this crop
+  yearsInFarming          Int?
+  treeCount               Int?     // productive trees
+  yieldPerTreeKg          Float?   // estimated yield kg per tree
+  majorBuyers             String?
+  pricePerKg              Float?
+  priceDetermination      String?  // how prices are determined
+  paymentMethod           String?  // cash, mobile money, bank, etc.
+  incomeContributionPct   Float?   // % of household income from this crop
+  challenges              String?
+  homeConsumption         Boolean?
+  createdAt               DateTime @default(now())
+
+  @@index([farmerId])
+  @@index([cropName])
 }
 
 // --- VSLA MANAGEMENT ---

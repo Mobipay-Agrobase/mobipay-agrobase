@@ -17,7 +17,12 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
       savings: { take: 10, orderBy: { createdAt: 'desc' } },
       vslaLoans: { take: 10, orderBy: { createdAt: 'desc' } },
       farms: { include: { cultivations: true } },
-      trainings: { include: { training: true } }
+      trainings: { include: { training: true } },
+      farmerBankAccounts: { orderBy: { createdAt: 'desc' } },
+      farmerInsurances: { orderBy: { createdAt: 'desc' } },
+      farmerAnimals: { orderBy: { createdAt: 'desc' } },
+      farmerEquipment: { orderBy: { createdAt: 'desc' } },
+      cropProductions: { orderBy: { createdAt: 'desc' } },
     }
   })
   if (!farmer) return NextResponse.json({ error: 'Farmer not found' }, { status: 404 })

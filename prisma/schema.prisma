@@ -275,6 +275,11 @@ model Company {
   email       String?
   address     String?
   isActive    Boolean  @default(true)
+  // ─── Cooperative Extension (from Excel spec) ───
+  cooperativeCode String?
+  dateOfFormation DateTime?
+  services    String?  // JSON array: ["fertilizer","harvester","soil preparation","seeds","plant protection","compost"]
+  allowFarmerSell Boolean @default(false) // Allow Farmer to Sell their Produce
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -436,6 +441,10 @@ model FarmerProfile {
   purchases       Purchase[]
   sales           Sale[]     @relation("FarmerSales")
   cropProductions CropProduction[]
+  farmerBankAccounts FarmerBankAccount[]
+  farmerInsurances   FarmerInsurance[]
+  farmerAnimals      FarmerAnimalHusbandry[]
+  farmerEquipment    FarmerFarmEquipment[]
   vslaMemberships VslaMember[]
   farmVisits      FarmVisit[]      @relation("FarmerVisits")
   impactAssessments ImpactAssessment[] @relation("FarmerImpact")
@@ -616,7 +625,242 @@ model CropProduction {
   @@index([cropName])
 }
 
-// --- VSLA MANAGEMENT ---
+// --- FARM CATALOG MASTER (global, shared across all tenants) ---
+// Tenant admins can add/edit dropdown values from the web panel.
+// These are the "Catalogue Value" dropdowns referenced in the Excel spec.
+
+model CatalogMaster {
+  id          String   @id @default(cuid())
+  category    String   // education_level, marital_status, gender, house_type, housing_ownership, consumer_electronics, vehicle_type, land_ownership, land_topology, land_gradient, water_source, power_source, irrigation_source, irrigation_type, soil_fertility, certification_type, conversion_status, soil_criteria, loan_source, loan_purpose, employment_type, income_source, fuel_type, etc.
+  value       String   // the dropdown value
+  label       String?  // display label (if different from value)
+  sortOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
+  isGlobal    Boolean  @default(true) // true = available to all tenants; false = tenant-specific
+  tenantId    String?  // if isGlobal=false, which tenant created this
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([category, value, tenantId])
+  @@index([category])
+  @@index([tenantId])
+}
+
+// --- MASTER DATA MODELS (global reference tables) ---
+
+model CropMaster {
+  id              String   @id @default(cuid())
+  name            String   @unique
+  image           String?
+  category        String?  // Field Crop, Oil Seed, Spices, Fruits, Vegetables, Fiber
+  durationValue   Int?     // duration value
+  durationUnit    String?  // Day(s), Week(s), Month(s)
+  expectedExpense Float?
+  expectedIncome  Float?
+  expectedYield   Float?
+  yieldUnit       String?  // Hectare, Acre
+  status          String   @default("ACTIVE")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  varieties       CropVariety[]
+  stages          CropStageMaster[]
+}
+
+model CropVariety {
+  id              String   @id @default(cuid())
+  cropId          String
+  crop            CropMaster @relation(fields: [cropId], references: [id], onDelete: Cascade)
+  name            String
+  cropCycleDays   Int?
+  initialHarvestDays Int?
+  createdAt       DateTime @default(now())
+
+  @@index([cropId])
+}
+
+model CropStageMaster {
+  id              String   @id @default(cuid())
+  cropId          String
+  crop            CropMaster @relation(fields: [cropId], references: [id], onDelete: Cascade)
+  stageName       String
+  startDay        Int?
+  endDay          Int?
+  sortOrder       Int      @default(0)
+  createdAt       DateTime @default(now())
+
+  @@index([cropId])
+}
+
+model SeasonMaster {
+  id              String   @id @default(cuid())
+  name            String   @unique
+  fromDate        DateTime
+  toDate          DateTime
+  status          String   @default("ACTIVE")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model EquipmentMaster {
+  id              String   @id @default(cuid())
+  name            String   @unique
+  uom             String?  // pieces, units, etc.
+  parentId        String?  // for hierarchical equipment
+  description     String?
+  status          String   @default("ACTIVE")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model PesticideMaster {
+  id              String   @id @default(cuid())
+  name            String   @unique
+  uom             String?  // Kg, Gram, ml
+  chemicalName    String?
+  biologicalName  String?
+  description     String?
+  manufacturer    String?
+  status          String   @default("ACTIVE")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model FertilizerMaster {
+  id              String   @id @default(cuid())
+  name            String   @unique
+  uom             String?  // Kg, Tonnes, Quintal, Gram, ml
+  chemicalName    String?
+  biologicalName  String?
+  nutrition       String?
+  description     String?
+  status          String   @default("ACTIVE")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model WeedMaster {
+  id              String   @id @default(cuid())
+  name            String   @unique
+  uom             String?
+  parentId        String?
+  description     String?
+  status          String   @default("ACTIVE")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model DiseaseMaster {
+  id              String   @id @default(cuid())
+  name            String   @unique
+  description     String?
+  affectedTypes   String?  // flower, fruit, leaf, soil, grain, tree, other
+  affectedUom     String?  // tree, area, bed
+  status          String   @default("ACTIVE")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model PestMaster {
+  id              String   @id @default(cuid())
+  name            String   @unique
+  description     String?
+  affectedTypes   String?  // flower, fruit, leaf, soil, grain, tree, other
+  affectedUom     String?  // tree, area, bed
+  affectedStage   String?  // sowing, young tree, flowering, graining
+  status          String   @default("ACTIVE")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model SeedMaster {
+  id              String   @id @default(cuid())
+  name            String   @unique
+  uom             String?  // Kg, Tonnes, Quintal, Gram, seedlings
+  parentId        String?
+  description     String?
+  status          String   @default("ACTIVE")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model SoilTypeMaster {
+  id              String   @id @default(cuid())
+  name            String   @unique
+  description     String?
+  status          String   @default("ACTIVE")
+  createdAt       DateTime @default(now())
+}
+
+// --- MULTI-ENTRY FARMER MODELS (one farmer → many records) ---
+
+model FarmerBankAccount {
+  id              String   @id @default(cuid())
+  farmerId        String
+  farmer          FarmerProfile @relation(fields: [farmerId], references: [id], onDelete: Cascade)
+  accountType     String?  // Savings, Current, Fixed
+  accountNo       String
+  bankName        String
+  branchDetails   String?
+  sortCode        String?
+  isPrimary       Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([farmerId])
+}
+
+model FarmerInsurance {
+  id              String   @id @default(cuid())
+  farmerId        String
+  farmer          FarmerProfile @relation(fields: [farmerId], references: [id], onDelete: Cascade)
+  insuranceType   String   // Life, Health, Crop, Social, Other
+  provider        String?
+  amount          Float?
+  enrolledDate    DateTime?
+  endDate         DateTime?
+  cropInsured     String?  // for Crop insurance — which crop
+  areaInsured     Float?   // for Crop insurance — how much area
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([farmerId])
+  @@index([insuranceType])
+}
+
+model FarmerAnimalHusbandry {
+  id              String   @id @default(cuid())
+  farmerId        String
+  farmer          FarmerProfile @relation(fields: [farmerId], references: [id], onDelete: Cascade)
+  animalType      String   // Cattle, Goat, Sheep, Poultry, Pigs, etc.
+  count           Int
+  breedName       String?
+  fodder          String?
+  animalHousing   String?
+  revenue         Float?
+  animalForGrowth String?  // Meat, Milk, Eggs, Draught, etc.
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([farmerId])
+}
+
+model FarmerFarmEquipment {
+  id              String   @id @default(cuid())
+  farmerId        String
+  farmer          FarmerProfile @relation(fields: [farmerId], references: [id], onDelete: Cascade)
+  equipmentName   String
+  count           Int      @default(1)
+  yearOfManufacture Int?
+  yearOfPurchase  Int?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([farmerId])
+}
+
+// --- COOPERATIVE EXTENSION (add fields to Company model) ---
 
 model VslaGroup {
   id              String   @id @default(cuid())

@@ -268,11 +268,12 @@ export default function HomePage() {
       })
       // If SUPER_ADMIN and currently on a tenant-only module (e.g. farmers, vsla),
       // bounce them to the platform overview. We deliberately ALLOW Profile,
-      // Settings, Roles & Permissions, and Billing so the TopBar dropdown and
-      // sidebar links continue to work for SUPER_ADMIN.
+      // Settings, Roles & Permissions, Billing, Catalog Master, and Farmer Detail
+      // (when a farmer is selected) so the TopBar dropdown and sidebar links
+      // continue to work for SUPER_ADMIN.
       const adminAllowedForSuperAdmin = new Set([
         'profile', 'settings', 'roles-permissions', 'billing',
-        'platform-recovery',
+        'platform-recovery', 'catalog-manager', 'farmer-detail',
       ])
       const isAllowedForSuperAdmin =
         activeModule.startsWith('super-admin') ||
@@ -306,7 +307,7 @@ export default function HomePage() {
       // SACCO_ADMIN / SACCO_OFFICER: redirect to dashboard if on an irrelevant module
       const saccoAllowed = new Set([
         'dashboard', 'sacco', 'farmers', 'farm-lands', 'cultivations',
-        'reports', 'training', 'profile',
+        'reports', 'training', 'profile', 'catalog-manager', 'farmer-detail',
       ])
       if ((role === 'SACCO_ADMIN' || role === 'SACCO_OFFICER') && !saccoAllowed.has(activeModule)) {
         setActiveModule('dashboard')
@@ -315,7 +316,7 @@ export default function HomePage() {
       // VSLA_PROVIDER_ADMIN: redirect to dashboard if on an irrelevant module
       const vslaProviderAllowed = new Set([
         'dashboard', 'vsla', 'farmers', 'farm-lands',
-        'reports', 'training', 'profile',
+        'reports', 'training', 'profile', 'catalog-manager', 'farmer-detail',
       ])
       if (role === 'VSLA_PROVIDER_ADMIN' && !vslaProviderAllowed.has(activeModule)) {
         setActiveModule('dashboard')
@@ -338,7 +339,7 @@ export default function HomePage() {
         'input-aggregation', 'input-distribution', 'approvals', 'processing', 'deliveries',
         'consignments', 'trace', 'reports', 'training', 'farm-visits', 'surveys', 'feedback',
         'impact-assessment', 'compliance', 'cost-of-cultivation', 'farmer-ledger',
-        'profile', 'support-tickets',
+        'profile', 'support-tickets', 'farmer-detail',
       ])
       if (ekbRoles.includes(role) && !ekbAllowed.has(activeModule)) {
         setActiveModule('dashboard')

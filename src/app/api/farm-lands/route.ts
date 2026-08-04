@@ -79,6 +79,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Farmer not found or access denied' }, { status: 404 })
     }
 
+    // Helper: accept either a string or an array. Arrays are JSON.stringified;
+    // strings are stored as-is so the catalog-driven single-select dropdowns work.
+    const toJsonOrString = (v: any): string | null => {
+      if (v == null || v === '') return null
+      if (Array.isArray(v)) return JSON.stringify(v)
+      return String(v)
+    }
+
     // Create the farm land
     const farm = await db.farmLand.create({
       data: {
@@ -91,13 +99,13 @@ export async function POST(request: Request) {
         waterSource,
         soilFertility,
         landSurveyNo,
-        approachRoad: approachRoad ? JSON.stringify(approachRoad) : null,
+        approachRoad: toJsonOrString(approachRoad),
         landTopology,
-        landGradient: landGradient ? JSON.stringify(landGradient) : null,
+        landGradient: toJsonOrString(landGradient),
         landDocumentUrl,
         powerSource,
         farmPhotoUrl,
-        irrigationSource: irrigationSource ? JSON.stringify(irrigationSource) : null,
+        irrigationSource: toJsonOrString(irrigationSource),
         irrigationType,
         fullTimeWorkers: fullTimeWorkers ? parseInt(fullTimeWorkers) : null,
         partTimeWorkers: partTimeWorkers ? parseInt(partTimeWorkers) : null,
@@ -119,7 +127,7 @@ export async function POST(request: Request) {
         soilResultDate: soilResultDate ? new Date(soilResultDate) : null,
         soilReportUrl,
         soilSamplesInfo,
-        soilCriteria: soilCriteria ? JSON.stringify(soilCriteria) : null,
+        soilCriteria: toJsonOrString(soilCriteria),
       },
     })
 

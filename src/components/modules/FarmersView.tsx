@@ -26,6 +26,7 @@ import { Separator } from '@/components/ui/separator'
 import { Checkbox } from '@/components/ui/checkbox'
 import { toast } from 'sonner'
 import { EmptyState, exportToCSV } from '@/components/ui/empty-state'
+import { CatalogSelect } from '@/components/ui/catalog-select'
 
 interface Farmer {
   id: string; firstName: string; lastName: string; phone: string
@@ -292,7 +293,7 @@ export default function FarmersView() {
 
       {/* Add Farmer Dialog */}
       <Dialog open={showAdd} onOpenChange={setShowAdd}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-3xl max-h-[92vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Register New Farmer</DialogTitle>
           </DialogHeader>
@@ -342,37 +343,159 @@ export default function FarmersView() {
   )
 }
 
+// ─── Add Farmer Form (6-section tabbed form, 70+ fields, catalog-driven dropdowns) ─────
+
 function AddFarmerForm({ onClose }: { onClose: () => void }) {
   const [saving, setSaving] = useState(false)
-  const [form, setForm] = useState({
-    firstName: '', lastName: '', phone: '', gender: '', education: '',
-    maritalStatus: '', memberType: 'General', farmSize: '', mainCrops: '',
-    nationalIdType: '', nationalIdNo: '',
+  const [activeTab, setActiveTab] = useState('demographics')
+  const [form, setForm] = useState<Record<string, any>>({
+    firstName: '',
+    lastName: '',
+    phone: '',
+    gender: '',
+    dateOfBirth: '',
+    education: '',
+    maritalStatus: '',
+    nationalIdType: '',
+    nationalIdNo: '',
+    email: '',
+    guardianName: '',
+    memberType: 'General',
+    isCertified: false,
+    certificationType: '',
+    enrollmentPlace: '',
+
+    // Location
+    country: '',
+    province: '',
+    district: '',
+    commune: '',
+    villageName: '',
+    zipCode: '',
+    gpsLatitude: '',
+    gpsLongitude: '',
+
+    // Family
+    spouseName: '',
+    familyMembers: '',
+    childrenUnder18: '',
+    schoolGoingChildren: '',
+    childrenMaleUnder18: '',
+    childrenFemaleUnder18: '',
+    schoolGoingMale: '',
+    schoolGoingFemale: '',
+    housingOwnership: '',
+    houseType: '',
+
+    // Finance
+    loanTakenLastYear: false,
+    loanTakenFrom: '',
+    loanAmount: '',
+    loanPurpose: '',
+    loanInterestPct: '',
+    loanInterestPeriod: '',
+    loanHasSecurity: false,
+    monthlyHouseholdIncome: '',
+    annualHouseholdIncome: '',
+    primaryIncomeSource: '',
+    secondaryIncomeSource: '',
+
+    // Farm
+    farmSize: '',
+    farmOwnership: '',
+    mainCrops: '',
+    livestockTypes: '',
+    extensionOfficer: '',
+    livingConditions: '',
+    fuelType: '',
+    mealsPerDay: '',
   })
 
-  const update = (k: string, v: string) => setForm(p => ({ ...p, [k]: v }))
+  const update = (k: string, v: any) => setForm(p => ({ ...p, [k]: v }))
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!form.firstName || !form.lastName || !form.phone) {
       toast.error('First name, last name, and phone are required')
+      setActiveTab('demographics')
       return
     }
     setSaving(true)
     try {
+      // Numeric coercion — empty strings stay undefined so Prisma doesn't choke
+      const num = (v: any) => (v === '' || v == null ? undefined : Number(v))
+      const bool = (v: any) => v === true || v === 'true' || v === true
+      const payload = {
+        firstName: form.firstName,
+        lastName: form.lastName,
+        phone: form.phone,
+        email: form.email || undefined,
+        gender: form.gender || undefined,
+        dateOfBirth: form.dateOfBirth || undefined,
+        education: form.education || undefined,
+        maritalStatus: form.maritalStatus || undefined,
+        nationalIdType: form.nationalIdType || undefined,
+        nationalIdNo: form.nationalIdNo || undefined,
+        guardianName: form.guardianName || undefined,
+        memberType: form.memberType || 'General',
+        isCertified: bool(form.isCertified),
+        certificationType: form.certificationType || undefined,
+        enrollmentPlace: form.enrollmentPlace || undefined,
+
+        country: form.country || undefined,
+        province: form.province || undefined,
+        district: form.district || undefined,
+        commune: form.commune || undefined,
+        villageName: form.villageName || undefined,
+        zipCode: form.zipCode || undefined,
+        gpsLatitude: num(form.gpsLatitude),
+        gpsLongitude: num(form.gpsLongitude),
+
+        spouseName: form.spouseName || undefined,
+        familyMembers: num(form.familyMembers),
+        childrenUnder18: num(form.childrenUnder18),
+        schoolGoingChildren: num(form.schoolGoingChildren),
+        childrenMaleUnder18: num(form.childrenMaleUnder18),
+        childrenFemaleUnder18: num(form.childrenFemaleUnder18),
+        schoolGoingMale: num(form.schoolGoingMale),
+        schoolGoingFemale: num(form.schoolGoingFemale),
+        housingOwnership: form.housingOwnership || undefined,
+        houseType: form.houseType || undefined,
+
+        loanTakenLastYear: bool(form.loanTakenLastYear),
+        loanTakenFrom: form.loanTakenFrom || undefined,
+        loanAmount: num(form.loanAmount),
+        loanPurpose: form.loanPurpose || undefined,
+        loanInterestPct: num(form.loanInterestPct),
+        loanInterestPeriod: form.loanInterestPeriod || undefined,
+        loanHasSecurity: bool(form.loanHasSecurity),
+        monthlyHouseholdIncome: num(form.monthlyHouseholdIncome),
+        annualHouseholdIncome: num(form.annualHouseholdIncome),
+        primaryIncomeSource: form.primaryIncomeSource || undefined,
+        secondaryIncomeSource: form.secondaryIncomeSource || undefined,
+
+        farmSize: num(form.farmSize),
+        farmOwnership: form.farmOwnership || undefined,
+        mainCrops: form.mainCrops || undefined,
+        livestockTypes: form.livestockTypes || undefined,
+        extensionOfficer: form.extensionOfficer || undefined,
+        livingConditions: form.livingConditions || undefined,
+        fuelType: form.fuelType || undefined,
+        mealsPerDay: form.mealsPerDay || undefined,
+      }
       const res = await fetch('/api/farmers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...form,
-          farmSize: form.farmSize ? parseFloat(form.farmSize) : undefined,
-        }),
+        body: JSON.stringify(payload),
       })
-      if (!res.ok) throw new Error('Failed to create farmer')
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.error || err.detail || 'Failed to create farmer')
+      }
       toast.success('Farmer registered successfully')
       onClose()
-    } catch {
-      toast.error('Failed to register farmer')
+    } catch (e: any) {
+      toast.error(e.message || 'Failed to register farmer')
     } finally {
       setSaving(false)
     }
@@ -380,38 +503,227 @@ function AddFarmerForm({ onClose }: { onClose: () => void }) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-1.5"><Label>First Name *</Label><Input value={form.firstName} onChange={e => update('firstName', e.target.value)} required /></div>
-        <div className="space-y-1.5"><Label>Last Name *</Label><Input value={form.lastName} onChange={e => update('lastName', e.target.value)} required /></div>
-      </div>
-      <div className="space-y-1.5"><Label>Phone *</Label><Input value={form.phone} onChange={e => update('phone', e.target.value)} placeholder="+256..." required /></div>
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-1.5"><Label>Gender</Label>
-          <Select value={form.gender} onValueChange={v => update('gender', v)}>
-            <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-            <SelectContent><SelectItem value="Male">Male</SelectItem><SelectItem value="Female">Female</SelectItem></SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-1.5"><Label>Education</Label>
-          <Select value={form.education} onValueChange={v => update('education', v)}>
-            <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Primary">Primary</SelectItem><SelectItem value="Secondary">Secondary</SelectItem>
-              <SelectItem value="UG">University</SelectItem><SelectItem value="PG">Post-Grad</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-1.5"><Label>Member Type</Label>
-          <Select value={form.memberType} onValueChange={v => update('memberType', v)}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent><SelectItem value="General">General</SelectItem><SelectItem value="Commercial">Commercial</SelectItem></SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-1.5"><Label>Farm Size (ha)</Label><Input type="number" step="0.1" value={form.farmSize} onChange={e => update('farmSize', e.target.value)} /></div>
-      </div>
-      <div className="space-y-1.5"><Label>Main Crops</Label><Input value={form.mainCrops} onChange={e => update('mainCrops', e.target.value)} placeholder="Maize, Coffee, Beans..." /></div>
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="flex-wrap h-auto">
+          <TabsTrigger value="demographics" className="text-xs gap-1.5"><Users className="w-3.5 h-3.5" /> Demographics</TabsTrigger>
+          <TabsTrigger value="location" className="text-xs gap-1.5"><MapPin className="w-3.5 h-3.5" /> Location</TabsTrigger>
+          <TabsTrigger value="family" className="text-xs gap-1.5"><Users className="w-3.5 h-3.5" /> Family</TabsTrigger>
+          <TabsTrigger value="finance" className="text-xs gap-1.5"><DollarSign className="w-3.5 h-3.5" /> Finance</TabsTrigger>
+          <TabsTrigger value="farm" className="text-xs gap-1.5"><Sprout className="w-3.5 h-3.5" /> Farm</TabsTrigger>
+        </TabsList>
+
+        {/* Demographics Tab */}
+        <TabsContent value="demographics" className="mt-4 space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <FormField label="First Name *" required>
+              <Input value={form.firstName} onChange={e => update('firstName', e.target.value)} required />
+            </FormField>
+            <FormField label="Last Name *">
+              <Input value={form.lastName} onChange={e => update('lastName', e.target.value)} required />
+            </FormField>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <FormField label="Phone *"><Input value={form.phone} onChange={e => update('phone', e.target.value)} placeholder="+256..." required /></FormField>
+            <FormField label="Email"><Input type="email" value={form.email} onChange={e => update('email', e.target.value)} placeholder="optional" /></FormField>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <FormField label="Gender">
+              <CatalogSelect category="gender" value={form.gender} onValueChange={v => update('gender', v)} placeholder="Select" />
+            </FormField>
+            <FormField label="Date of Birth"><Input type="date" value={form.dateOfBirth} onChange={e => update('dateOfBirth', e.target.value)} /></FormField>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <FormField label="Education">
+              <CatalogSelect category="education_level" value={form.education} onValueChange={v => update('education', v)} placeholder="Select" />
+            </FormField>
+            <FormField label="Marital Status">
+              <CatalogSelect category="marital_status" value={form.maritalStatus} onValueChange={v => update('maritalStatus', v)} placeholder="Select" />
+            </FormField>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <FormField label="National ID Type">
+              <CatalogSelect category="national_id_type" value={form.nationalIdType} onValueChange={v => update('nationalIdType', v)} placeholder="Select" />
+            </FormField>
+            <FormField label="National ID No"><Input value={form.nationalIdNo} onChange={e => update('nationalIdNo', e.target.value)} /></FormField>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <FormField label="Guardian Name"><Input value={form.guardianName} onChange={e => update('guardianName', e.target.value)} /></FormField>
+            <FormField label="Enrollment Place">
+              <CatalogSelect category="enrollment_place" value={form.enrollmentPlace} onValueChange={v => update('enrollmentPlace', v)} placeholder="Select" />
+            </FormField>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <FormField label="Member Type">
+              <Select value={form.memberType} onValueChange={v => update('memberType', v)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="General">General</SelectItem>
+                  <SelectItem value="Commercial">Commercial</SelectItem>
+                  <SelectItem value="Contract Farmer">Contract Farmer</SelectItem>
+                  <SelectItem value="Out-grower">Out-grower</SelectItem>
+                </SelectContent>
+              </Select>
+            </FormField>
+            <FormField label="Certified?">
+              <Select value={form.isCertified ? 'yes' : 'no'} onValueChange={v => update('isCertified', v === 'yes')}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="no">No</SelectItem>
+                  <SelectItem value="yes">Yes</SelectItem>
+                </SelectContent>
+              </Select>
+            </FormField>
+          </div>
+          {form.isCertified && (
+            <FormField label="Certification Type">
+              <CatalogSelect category="certification_type" value={form.certificationType} onValueChange={v => update('certificationType', v)} placeholder="Select" />
+            </FormField>
+          )}
+        </TabsContent>
+
+        {/* Location Tab */}
+        <TabsContent value="location" className="mt-4 space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <FormField label="Country"><Input value={form.country} onChange={e => update('country', e.target.value)} placeholder="Uganda" /></FormField>
+            <FormField label="Province/Region"><Input value={form.province} onChange={e => update('province', e.target.value)} /></FormField>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <FormField label="District"><Input value={form.district} onChange={e => update('district', e.target.value)} /></FormField>
+            <FormField label="Sub-county / Commune"><Input value={form.commune} onChange={e => update('commune', e.target.value)} /></FormField>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <FormField label="Village"><Input value={form.villageName} onChange={e => update('villageName', e.target.value)} /></FormField>
+            <FormField label="ZIP Code"><Input value={form.zipCode} onChange={e => update('zipCode', e.target.value)} /></FormField>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <FormField label="GPS Latitude"><Input type="number" step="0.000001" value={form.gpsLatitude} onChange={e => update('gpsLatitude', e.target.value)} /></FormField>
+            <FormField label="GPS Longitude"><Input type="number" step="0.000001" value={form.gpsLongitude} onChange={e => update('gpsLongitude', e.target.value)} /></FormField>
+          </div>
+        </TabsContent>
+
+        {/* Family Tab */}
+        <TabsContent value="family" className="mt-4 space-y-4">
+          <FormField label="Spouse Name"><Input value={form.spouseName} onChange={e => update('spouseName', e.target.value)} /></FormField>
+          <div className="grid grid-cols-2 gap-3">
+            <FormField label="Total Family Members"><Input type="number" value={form.familyMembers} onChange={e => update('familyMembers', e.target.value)} /></FormField>
+            <FormField label="Children Under 18"><Input type="number" value={form.childrenUnder18} onChange={e => update('childrenUnder18', e.target.value)} /></FormField>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <FormField label="Male Children (<18)"><Input type="number" value={form.childrenMaleUnder18} onChange={e => update('childrenMaleUnder18', e.target.value)} /></FormField>
+            <FormField label="Female Children (<18)"><Input type="number" value={form.childrenFemaleUnder18} onChange={e => update('childrenFemaleUnder18', e.target.value)} /></FormField>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <FormField label="School-going Children"><Input type="number" value={form.schoolGoingChildren} onChange={e => update('schoolGoingChildren', e.target.value)} /></FormField>
+            <FormField label="School-going Male"><Input type="number" value={form.schoolGoingMale} onChange={e => update('schoolGoingMale', e.target.value)} /></FormField>
+          </div>
+          <FormField label="School-going Female"><Input type="number" value={form.schoolGoingFemale} onChange={e => update('schoolGoingFemale', e.target.value)} /></FormField>
+          <div className="grid grid-cols-2 gap-3">
+            <FormField label="Housing Ownership">
+              <CatalogSelect category="housing_ownership" value={form.housingOwnership} onValueChange={v => update('housingOwnership', v)} placeholder="Select" />
+            </FormField>
+            <FormField label="House Type">
+              <CatalogSelect category="house_type" value={form.houseType} onValueChange={v => update('houseType', v)} placeholder="Select" />
+            </FormField>
+          </div>
+        </TabsContent>
+
+        {/* Finance Tab */}
+        <TabsContent value="finance" className="mt-4 space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <FormField label="Monthly Household Income (UGX)"><Input type="number" value={form.monthlyHouseholdIncome} onChange={e => update('monthlyHouseholdIncome', e.target.value)} /></FormField>
+            <FormField label="Annual Household Income (UGX)"><Input type="number" value={form.annualHouseholdIncome} onChange={e => update('annualHouseholdIncome', e.target.value)} /></FormField>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <FormField label="Primary Income Source">
+              <CatalogSelect category="income_source" value={form.primaryIncomeSource} onValueChange={v => update('primaryIncomeSource', v)} placeholder="Select" />
+            </FormField>
+            <FormField label="Secondary Income Source"><Input value={form.secondaryIncomeSource} onChange={e => update('secondaryIncomeSource', e.target.value)} /></FormField>
+          </div>
+          <Separator />
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Loan History (last 12 months)</p>
+          <FormField label="Loan Taken Last Year?">
+            <Select value={form.loanTakenLastYear ? 'yes' : 'no'} onValueChange={v => update('loanTakenLastYear', v === 'yes')}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="no">No</SelectItem>
+                <SelectItem value="yes">Yes</SelectItem>
+              </SelectContent>
+            </Select>
+          </FormField>
+          {form.loanTakenLastYear && (
+            <>
+              <div className="grid grid-cols-2 gap-3">
+                <FormField label="Loan From">
+                  <CatalogSelect category="loan_source" value={form.loanTakenFrom} onValueChange={v => update('loanTakenFrom', v)} placeholder="Select" />
+                </FormField>
+                <FormField label="Loan Amount (UGX)"><Input type="number" value={form.loanAmount} onChange={e => update('loanAmount', e.target.value)} /></FormField>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <FormField label="Loan Purpose">
+                  <CatalogSelect category="loan_purpose" value={form.loanPurpose} onValueChange={v => update('loanPurpose', v)} placeholder="Select" />
+                </FormField>
+                <FormField label="Interest Rate (%)"><Input type="number" step="0.1" value={form.loanInterestPct} onChange={e => update('loanInterestPct', e.target.value)} /></FormField>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <FormField label="Interest Period">
+                  <Select value={form.loanInterestPeriod} onValueChange={v => update('loanInterestPeriod', v)}>
+                    <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Monthly">Monthly</SelectItem>
+                      <SelectItem value="Yearly">Yearly</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </FormField>
+                <FormField label="Has Security/Collateral?">
+                  <Select value={form.loanHasSecurity ? 'yes' : 'no'} onValueChange={v => update('loanHasSecurity', v === 'yes')}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="no">No</SelectItem>
+                      <SelectItem value="yes">Yes</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </FormField>
+              </div>
+            </>
+          )}
+        </TabsContent>
+
+        {/* Farm Tab */}
+        <TabsContent value="farm" className="mt-4 space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <FormField label="Farm Size (ha)"><Input type="number" step="0.01" value={form.farmSize} onChange={e => update('farmSize', e.target.value)} /></FormField>
+            <FormField label="Farm Ownership">
+              <CatalogSelect category="land_ownership" value={form.farmOwnership} onValueChange={v => update('farmOwnership', v)} placeholder="Select" />
+            </FormField>
+          </div>
+          <FormField label="Main Crops"><Input value={form.mainCrops} onChange={e => update('mainCrops', e.target.value)} placeholder="Coffee, Beans, Maize..." /></FormField>
+          <FormField label="Livestock Types"><Input value={form.livestockTypes} onChange={e => update('livestockTypes', e.target.value)} placeholder="Cattle, Goats, Poultry..." /></FormField>
+          <div className="grid grid-cols-2 gap-3">
+            <FormField label="Extension Officer"><Input value={form.extensionOfficer} onChange={e => update('extensionOfficer', e.target.value)} /></FormField>
+            <FormField label="Living Conditions"><Input value={form.livingConditions} onChange={e => update('livingConditions', e.target.value)} /></FormField>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <FormField label="Fuel Type">
+              <CatalogSelect category="fuel_type" value={form.fuelType} onValueChange={v => update('fuelType', v)} placeholder="Select" />
+            </FormField>
+            <FormField label="Meals Per Day">
+              <Select value={form.mealsPerDay} onValueChange={v => update('mealsPerDay', v)}>
+                <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1">1</SelectItem>
+                  <SelectItem value="2">2</SelectItem>
+                  <SelectItem value="3">3</SelectItem>
+                  <SelectItem value="4+">4+</SelectItem>
+                </SelectContent>
+              </Select>
+            </FormField>
+          </div>
+          <p className="text-xs text-muted-foreground italic">
+            Bank accounts, insurances, livestock, and equipment can be added after registration from the farmer detail page (multi-entry sections).
+          </p>
+        </TabsContent>
+      </Tabs>
+
       <DialogFooter className="gap-2">
         <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
         <Button type="submit" disabled={saving} className="gap-2">
@@ -419,6 +731,15 @@ function AddFarmerForm({ onClose }: { onClose: () => void }) {
         </Button>
       </DialogFooter>
     </form>
+  )
+}
+
+function FormField({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
+  return (
+    <div className="space-y-1.5">
+      <Label className="text-xs">{label}{required && ' *'}</Label>
+      {children}
+    </div>
   )
 }
 

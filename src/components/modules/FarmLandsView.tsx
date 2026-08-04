@@ -42,6 +42,8 @@ const FarmMapReadOnly = dynamic(() => import('@/components/farmers/FarmMapReadOn
   ),
 })
 
+import { CatalogSelect } from '@/components/ui/catalog-select'
+
 interface FarmLand {
   id: string
   name: string
@@ -360,17 +362,11 @@ function FarmLandCreateForm({ farmerId: preselectFarmerId, onSaved }: { farmerId
             </div>
             <div className="space-y-1.5">
               <Label>Land Ownership</Label>
-              <Select value={form.landOwnership || ''} onValueChange={v => update('landOwnership', v)}>
-                <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                <SelectContent>{LAND_OWNERSHIP.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
-              </Select>
+              <CatalogSelect category="land_ownership" value={form.landOwnership || ''} onValueChange={v => update('landOwnership', v)} placeholder="Select" fallbackOptions={LAND_OWNERSHIP} />
             </div>
             <div className="space-y-1.5">
               <Label>Land Topology</Label>
-              <Select value={form.landTopology || ''} onValueChange={v => update('landTopology', v)}>
-                <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                <SelectContent>{TOPOLOGY.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
-              </Select>
+              <CatalogSelect category="land_topology" value={form.landTopology || ''} onValueChange={v => update('landTopology', v)} placeholder="Select" fallbackOptions={TOPOLOGY} />
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -380,10 +376,7 @@ function FarmLandCreateForm({ farmerId: preselectFarmerId, onSaved }: { farmerId
             </div>
             <div className="space-y-1.5">
               <Label>Power Source</Label>
-              <Select value={form.powerSource || ''} onValueChange={v => update('powerSource', v)}>
-                <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                <SelectContent>{POWER_SOURCES.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent>
-              </Select>
+              <CatalogSelect category="power_source" value={form.powerSource || ''} onValueChange={v => update('powerSource', v)} placeholder="Select" fallbackOptions={POWER_SOURCES} />
             </div>
             <div className="space-y-1.5">
               <Label>Farm Photo URL</Label>
@@ -409,25 +402,26 @@ function FarmLandCreateForm({ farmerId: preselectFarmerId, onSaved }: { farmerId
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <Label>Water Source</Label>
-              <Select value={form.waterSource || ''} onValueChange={v => update('waterSource', v)}>
-                <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                <SelectContent>{WATER_SOURCES.map(w => <SelectItem key={w} value={w}>{w}</SelectItem>)}</SelectContent>
-              </Select>
+              <CatalogSelect category="water_source" value={form.waterSource || ''} onValueChange={v => update('waterSource', v)} placeholder="Select" fallbackOptions={WATER_SOURCES} />
             </div>
             <div className="space-y-1.5">
               <Label>Soil Fertility</Label>
-              <Select value={form.soilFertility || ''} onValueChange={v => update('soilFertility', v)}>
-                <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                <SelectContent>{FERTILITY.map(f => <SelectItem key={f} value={f}>{f}</SelectItem>)}</SelectContent>
-              </Select>
+              <CatalogSelect category="soil_fertility" value={form.soilFertility || ''} onValueChange={v => update('soilFertility', v)} placeholder="Select" fallbackOptions={FERTILITY} />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label>Irrigation Source</Label>
+              <CatalogSelect category="irrigation_source" value={form.irrigationSource || ''} onValueChange={v => update('irrigationSource', v)} placeholder="Select" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Irrigation Type</Label>
+              <CatalogSelect category="irrigation_type" value={form.irrigationType || ''} onValueChange={v => update('irrigationType', v)} placeholder="Select" fallbackOptions={IRRIGATION_TYPES} />
             </div>
           </div>
           <div className="space-y-1.5">
-            <Label>Irrigation Type</Label>
-            <Select value={form.irrigationType || ''} onValueChange={v => update('irrigationType', v)}>
-              <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-              <SelectContent>{IRRIGATION_TYPES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
-            </Select>
+            <Label>Land Gradient</Label>
+            <CatalogSelect category="land_gradient" value={form.landGradient || ''} onValueChange={v => update('landGradient', v)} placeholder="Select" />
           </div>
         </TabsContent>
 
@@ -444,17 +438,11 @@ function FarmLandCreateForm({ farmerId: preselectFarmerId, onSaved }: { farmerId
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <Label>Certification Type</Label>
-              <Select value={form.certType || ''} onValueChange={v => update('certType', v)}>
-                <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                <SelectContent>{CERT_TYPES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
-              </Select>
+              <CatalogSelect category="certification_type" value={form.certType || ''} onValueChange={v => update('certType', v)} placeholder="Select" fallbackOptions={CERT_TYPES} />
             </div>
             <div className="space-y-1.5">
               <Label>Conversion Status</Label>
-              <Select value={form.conversionStatus || ''} onValueChange={v => update('conversionStatus', v)}>
-                <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                <SelectContent>{CONV_STATUS.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
-              </Select>
+              <CatalogSelect category="conversion_status" value={form.conversionStatus || ''} onValueChange={v => update('conversionStatus', v)} placeholder="Select" fallbackOptions={CONV_STATUS} />
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

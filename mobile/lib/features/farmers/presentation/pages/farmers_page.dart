@@ -478,10 +478,18 @@ class _FarmersPageState extends State<FarmersPage> {
 
   void _showRegisterDialog(BuildContext context) {
     final formKey = GlobalKey<FormState>();
-    final nameController = TextEditingController();
+    final firstNameController = TextEditingController();
+    final lastNameController = TextEditingController();
     final phoneController = TextEditingController();
+    final emailController = TextEditingController();
     final districtController = TextEditingController();
+    final villageController = TextEditingController();
     final cropController = TextEditingController();
+    final farmSizeController = TextEditingController();
+    final familyMembersController = TextEditingController();
+    String? gender;
+    String? education;
+    String? maritalStatus;
     bool isSubmitting = false;
 
     showModalBottomSheet(
@@ -504,144 +512,254 @@ class _FarmersPageState extends State<FarmersPage> {
                   top: Radius.circular(24),
                 ),
               ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Center(
-                    child: Container(
-                      width: 40,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: Color(0xFFE2E8F0),
-                        borderRadius: BorderRadius.circular(2),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: Color(0xFFE2E8F0),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'Register New Farmer',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                      color: AppTheme.textPrimary,
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Register New Farmer',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        color: AppTheme.textPrimary,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  Form(
-                    key: formKey,
-                    child: Column(
-                      children: [
-                        TextFormField(
-                          controller: nameController,
-                          decoration: _inputDecoration('Full Name'),
-                          validator: (v) =>
-                              v?.isEmpty ?? true ? 'Required' : null,
-                        ),
-                        const SizedBox(height: 12),
-                        TextFormField(
-                          controller: phoneController,
-                          decoration: _inputDecoration('Phone Number'),
-                          keyboardType: TextInputType.phone,
-                          validator: (v) =>
-                              v?.isEmpty ?? true ? 'Required' : null,
-                        ),
-                        const SizedBox(height: 12),
-                        TextFormField(
-                          controller: districtController,
-                          decoration: _inputDecoration('District'),
-                          validator: (v) =>
-                              v?.isEmpty ?? true ? 'Required' : null,
-                        ),
-                        const SizedBox(height: 12),
-                        TextFormField(
-                          controller: cropController,
-                          decoration: _inputDecoration('Primary Crop Type'),
-                          validator: (v) =>
-                              v?.isEmpty ?? true ? 'Required' : null,
-                        ),
-                      ],
+                    const SizedBox(height: 16),
+                    Form(
+                      key: formKey,
+                      child: Column(
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: TextFormField(
+                                  controller: firstNameController,
+                                  decoration: _inputDecoration('First Name *'),
+                                  validator: (v) =>
+                                      v?.isEmpty ?? true ? 'Required' : null,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: TextFormField(
+                                  controller: lastNameController,
+                                  decoration: _inputDecoration('Last Name *'),
+                                  validator: (v) =>
+                                      v?.isEmpty ?? true ? 'Required' : null,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          TextFormField(
+                            controller: phoneController,
+                            decoration: _inputDecoration('Phone *  +256...'),
+                            keyboardType: TextInputType.phone,
+                            validator: (v) =>
+                                v?.isEmpty ?? true ? 'Required' : null,
+                          ),
+                          const SizedBox(height: 12),
+                          TextFormField(
+                            controller: emailController,
+                            decoration: _inputDecoration('Email (optional)'),
+                            keyboardType: TextInputType.emailAddress,
+                          ),
+                          const SizedBox(height: 12),
+                          DropdownButtonFormField<String>(
+                            value: gender,
+                            decoration: _inputDecoration('Gender'),
+                            items: const [
+                              DropdownMenuItem(value: 'Male', child: Text('Male')),
+                              DropdownMenuItem(value: 'Female', child: Text('Female')),
+                            ],
+                            onChanged: (v) => setModalState(() => gender = v),
+                          ),
+                          const SizedBox(height: 12),
+                          DropdownButtonFormField<String>(
+                            value: education,
+                            decoration: _inputDecoration('Education'),
+                            items: const [
+                              DropdownMenuItem(value: 'None', child: Text('None')),
+                              DropdownMenuItem(value: 'Primary', child: Text('Primary')),
+                              DropdownMenuItem(value: 'O-Level', child: Text('O-Level')),
+                              DropdownMenuItem(value: 'A-Level', child: Text('A-Level')),
+                              DropdownMenuItem(value: 'Certificate', child: Text('Certificate')),
+                              DropdownMenuItem(value: 'Diploma', child: Text('Diploma')),
+                              DropdownMenuItem(value: 'Degree', child: Text('Degree')),
+                              DropdownMenuItem(value: 'Postgraduate', child: Text('Postgraduate')),
+                            ],
+                            onChanged: (v) => setModalState(() => education = v),
+                          ),
+                          const SizedBox(height: 12),
+                          DropdownButtonFormField<String>(
+                            value: maritalStatus,
+                            decoration: _inputDecoration('Marital Status'),
+                            items: const [
+                              DropdownMenuItem(value: 'Single', child: Text('Single')),
+                              DropdownMenuItem(value: 'Married', child: Text('Married')),
+                              DropdownMenuItem(value: 'Divorced', child: Text('Divorced')),
+                              DropdownMenuItem(value: 'Widowed', child: Text('Widowed')),
+                              DropdownMenuItem(value: 'Separated', child: Text('Separated')),
+                            ],
+                            onChanged: (v) => setModalState(() => maritalStatus = v),
+                          ),
+                          const SizedBox(height: 12),
+                          TextFormField(
+                            controller: districtController,
+                            decoration: _inputDecoration('District'),
+                          ),
+                          const SizedBox(height: 12),
+                          TextFormField(
+                            controller: villageController,
+                            decoration: _inputDecoration('Village'),
+                          ),
+                          const SizedBox(height: 12),
+                          TextFormField(
+                            controller: cropController,
+                            decoration: _inputDecoration('Main Crops (Coffee, Beans...)'),
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: TextFormField(
+                                  controller: farmSizeController,
+                                  decoration: _inputDecoration('Farm Size (ha)'),
+                                  keyboardType: TextInputType.number,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: TextFormField(
+                                  controller: familyMembersController,
+                                  decoration: _inputDecoration('Family Members'),
+                                  keyboardType: TextInputType.number,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 20),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 48,
-                    child: ElevatedButton(
-                      onPressed: isSubmitting
-                          ? null
-                          : () async {
-                              if (formKey.currentState?.validate() ??
-                                  false) {
-                                setModalState(() => isSubmitting = true);
-                                try {
-                                  final api = ApiClient();
-                                  await api.post('/api/farmers', body: {
-                                    'name': nameController.text,
-                                    'phone': phoneController.text,
-                                    'district': districtController.text,
-                                    'cropType': cropController.text,
-                                  });
-                                  if (ctx.mounted) {
-                                    Navigator.pop(ctx);
-                                    _loadData();
-                                    ScaffoldMessenger.of(context)
-                                        .showSnackBar(
-                                      const SnackBar(
-                                        content: Text(
-                                            'Farmer registered successfully'),
-                                        backgroundColor:
-                                            AppTheme.successGreen,
-                                      ),
-                                    );
+                    const SizedBox(height: 20),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 48,
+                      child: ElevatedButton(
+                        onPressed: isSubmitting
+                            ? null
+                            : () async {
+                                if (formKey.currentState?.validate() ??
+                                    false) {
+                                  setModalState(() => isSubmitting = true);
+                                  try {
+                                    final api = ApiClient();
+                                    // Build payload — only include non-empty values
+                                    final body = <String, dynamic>{
+                                      'firstName': firstNameController.text.trim(),
+                                      'lastName': lastNameController.text.trim(),
+                                      'phone': phoneController.text.trim(),
+                                      'memberType': 'General',
+                                    };
+                                    if (emailController.text.trim().isNotEmpty) {
+                                      body['email'] = emailController.text.trim();
+                                    }
+                                    if (gender != null) body['gender'] = gender;
+                                    if (education != null) body['education'] = education;
+                                    if (maritalStatus != null) {
+                                      body['maritalStatus'] = maritalStatus;
+                                    }
+                                    if (districtController.text.trim().isNotEmpty) {
+                                      body['district'] = districtController.text.trim();
+                                    }
+                                    if (villageController.text.trim().isNotEmpty) {
+                                      body['villageName'] = villageController.text.trim();
+                                    }
+                                    if (cropController.text.trim().isNotEmpty) {
+                                      body['mainCrops'] = cropController.text.trim();
+                                    }
+                                    if (farmSizeController.text.trim().isNotEmpty) {
+                                      body['farmSize'] =
+                                          double.tryParse(farmSizeController.text.trim());
+                                    }
+                                    if (familyMembersController.text.trim().isNotEmpty) {
+                                      body['familyMembers'] =
+                                          int.tryParse(familyMembersController.text.trim());
+                                    }
+                                    await api.post('/api/farmers', body: body);
+                                    if (ctx.mounted) {
+                                      Navigator.pop(ctx);
+                                      _loadData();
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                              'Farmer registered successfully'),
+                                          backgroundColor:
+                                              AppTheme.successGreen,
+                                        ),
+                                      );
+                                    }
+                                  } catch (e) {
+                                    if (ctx.mounted) {
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                              'Failed to register: $e'),
+                                          backgroundColor: AppTheme.errorRed,
+                                        ),
+                                      );
+                                    }
+                                  } finally {
+                                    setModalState(() => isSubmitting = false);
                                   }
-                                } catch (e) {
-                                  if (ctx.mounted) {
-                                    ScaffoldMessenger.of(context)
-                                        .showSnackBar(
-                                      SnackBar(
-                                        content: Text(
-                                            'Failed to register: $e'),
-                                        backgroundColor: AppTheme.errorRed,
-                                      ),
-                                    );
-                                  }
-                                } finally {
-                                  setModalState(() => isSubmitting = false);
                                 }
-                              }
-                            },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.primaryGreen,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                              },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.primaryGreen,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
+                        child: isSubmitting
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Text(
+                                'Register Farmer',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 15,
+                                ),
+                              ),
                       ),
-                      child: isSubmitting
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                          : const Text(
-                              'Register Farmer',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 15,
-                              ),
-                            ),
                     ),
-                  ),
                 ],
               ),
-            );
-          },
-        );
-      },
+            ),
+          );
+        },
+      );
+    },
     );
   }
 

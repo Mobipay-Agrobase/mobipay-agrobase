@@ -25,7 +25,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   // P7: Decrypt PII fields for the response
   const farmerDecrypted = {
     ...farmer,
-    phone: decryptField(farmer.phone),
+    phone: farmer.phone && farmer.phone.startsWith('enc:v1:') ? decryptField(farmer.phone) : farmer.phone,
     nationalIdNo: farmer.nationalIdNo ? decryptField(farmer.nationalIdNo) : null,
     bankAccountNo: farmer.bankAccountNo ? decryptField(farmer.bankAccountNo) : null,
     email: farmer.email ? decryptField(farmer.email) : null,

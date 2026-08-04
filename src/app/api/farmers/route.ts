@@ -56,7 +56,7 @@ export async function GET(request: Request) {
       db.farmerProfile.count({ where }),
     ])
 
-    // Parse JSON fields for each farmer
+    // Parse JSON fields for each farmer + decrypt PII + include new EKIBBO fields
     const farmersParsed = farmers.map(f => ({
       ...f,
       consumerElectronics: f.consumerElectronics ? JSON.parse(f.consumerElectronics) : [],
@@ -67,7 +67,7 @@ export async function GET(request: Request) {
       mainCrops: f.mainCrops ? JSON.parse(f.mainCrops) : [],
       livestockTypes: f.livestockTypes ? JSON.parse(f.livestockTypes) : [],
       // P7: Decrypt PII fields for the response
-      phone: decryptField(f.phone),
+      phone: f.phone && f.phone.startsWith('enc:v1:') ? decryptField(f.phone) : f.phone,
       nationalIdNo: f.nationalIdNo ? decryptField(f.nationalIdNo) : null,
       bankAccountNo: f.bankAccountNo ? decryptField(f.bankAccountNo) : null,
       email: f.email ? decryptField(f.email) : null,

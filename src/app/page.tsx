@@ -23,6 +23,8 @@ const FarmLandsView = lazy(() => import('@/components/modules/FarmLandsView'))
 const CultivationsView = lazy(() => import('@/components/modules/CultivationsView'))
 const VslaView = lazy(() => import('@/components/modules/VslaView'))
 const SaccoView = lazy(() => import('@/components/modules/SaccoView'))
+const FarmerDetailFull = lazy(() => import('@/components/modules/FarmerDetailFull'))
+const CatalogManager = lazy(() => import('@/components/modules/CatalogManager'))
 const SaccoDashboard = lazy(() => import('@/components/modules/SaccoDashboard'))
 const VslaProviderDashboard = lazy(() => import('@/components/modules/VslaProviderDashboard'))
 const KilimoDashboard = lazy(() => import('@/components/modules/KilimoDashboard'))
@@ -134,6 +136,12 @@ function ModuleRouter() {
 
   switch (activeModule) {
     case 'farmers': return <FarmersView />
+    case 'farmer-detail': {
+      const fid = useAppStore.getState().selectedFarmerId
+      if (!fid) return <div className='text-center p-8 text-muted-foreground'>No farmer selected</div>
+      return <FarmerDetailFull key={fid} farmerId={fid} onBack={() => useAppStore.getState().setActiveModule('farmers')} />
+    }
+    case 'catalog-manager': return <CatalogManager />
     case 'farm-lands': return <FarmLandsView />
     case 'cultivations': return <CultivationsView />
     case 'vsla': return <VslaView />

@@ -79,6 +79,11 @@ export class CreditScoringEngine {
         loanTakenLastYear: true, loanAmount: true, loanRepaymentAmount: true,
         insuranceData: true,
         mainCrops: true,
+        // New multi-entry models
+        farmerBankAccounts: { select: { id: true, isPrimary: true } },
+        farmerInsurances: { select: { id: true, insuranceType: true, amount: true } },
+        farmerAnimals: { select: { id: true, animalType: true, count: true, revenue: true } },
+        farmerEquipment: { select: { id: true, equipmentName: true, count: true } },
       },
     })
 
@@ -173,25 +178,45 @@ export class CreditScoringEngine {
     const land = landHa > 5 ? 100 : landHa >= 2 ? 80 : landHa >= 1 ? 60 : 50
 
     // House
-    const houseScores: Record<string, number> = { 'Brick house': 100, 'Wooden house': 70, Hut: 50, Other: 50 }
+    const houseScores: Record<string, number> = { 'Brick house': 100, 'Brick House': 100, 'Wooden house': 70, 'Wooden House': 70, Hut: 50, 'Mud House': 50, Other: 50 }
     const house = houseScores[farmer.houseType] ?? 50
 
-    // Equipment
+    // Equipment — use new multi-entry model first, fall back to JSON
     let equipment = 50
-    try {
-      const equipmentList = farmer.farmEquipment ? JSON.parse(farmer.farmEquipment) : []
-      const hasTractor = equipmentList.some((e: any) => e.item?.toLowerCase().includes('tractor'))
-      const hasIrrigation = equipmentList.some((e: any) => e.item?.toLowerCase().includes('irrigation'))
+    const farmerEquip = farmer.farmerEquipment || []
+    if (farmerEquip.length > 0) {
+      const hasTractor = farmerEquip.some((e: any) => e.equipmentName?.toLowerCase().includes('tractor'))
+      const hasIrrigation = farmerEquip.some((e: any) => e.equipmentName?.toLowerCase().includes('irrigation') || e.equipmentName?.toLowerCase().includes('pump'))
+      const totalCount = farmerEquip.reduce((s: number, e: any) => s + (e.count || 1), 0)
       if (hasTractor && hasIrrigation) equipment = 100
-      else if (hasTractor || hasIrrigation || equipmentList.length > 0) equipment = 70
-    } catch { /* default 50 */ }
+      else if (hasTractor || hasIrrigation || totalCount >= 3) equipment = 80
+      else if (totalCount > 0) equipment = 70
+    } else {
+      // Fall back to old JSON field
+      try {
+        const equipmentList = farmer.farmEquipment ? JSON.parse(farmer.farmEquipment) : []
+        const hasTractor = equipmentList.some((e: any) => e.item?.toLowerCase().includes('tractor'))
+        const hasIrrigation = equipmentList.some((e: any) => e.item?.toLowerCase().includes('irrigation'))
+        if (hasTractor && hasIrrigation) equipment = 100
+        else if (hasTractor || hasIrrigation || equipmentList.length > 0) equipment = 70
+      } catch { /* default 50 */ }
+    }
 
-    // Livestock
+    // Livestock — use new multi-entry model first, fall back to JSON
     let livestock = 60
-    try {
-      const livestockList = farmer.livestockTypes ? JSON.parse(farmer.livestockTypes) : []
-      livestock = livestockList.length > 3 ? 100 : livestockList.length >= 1 ? 80 : 60
-    } catch { /* default 60 */ }
+    const farmerAnimals = farmer.farmerAnimals || []
+    if (farmerAnimals.length > 0) {
+      const totalAnimals = farmerAnimals.reduce((s: number, a: any) => s + (a.count || 0), 0)
+      const totalRevenue = farmerAnimals.reduce((s: number, a: any) => s + (a.revenue || 0), 0)
+      if (totalAnimals > 20 || totalRevenue > 1000000) livestock = 100
+      else if (totalAnimals >= 5 || totalRevenue > 200000) livestock = 80
+      else if (totalAnimals > 0) livestock = 70
+    } else {
+      try {
+        const livestockList = farmer.livestockTypes ? JSON.parse(farmer.livestockTypes) : []
+        livestock = livestockList.length > 3 ? 100 : livestockList.length >= 1 ? 80 : 60
+      } catch { /* default 60 */ }
+    }
 
     const avg = (land + house + equipment + livestock) / 4
     return { avg, detail: { land, house, equipment, livestock } }
@@ -308,13 +333,24 @@ export class CreditScoringEngine {
       }
     }
 
-    // Insurance coverage
+    // Insurance coverage — use new multi-entry model first, fall back to JSON
     let insurance = 60
-    try {
-      const insData = farmer.insuranceData ? JSON.parse(farmer.insuranceData) : {}
-      const hasAny = insData.life || insData.health || insData.crop || insData.social
-      if (hasAny) insurance = 100
-    } catch { /* default 60 */ }
+    const farmerIns = farmer.farmerInsurances || []
+    if (farmerIns.length > 0) {
+      // Has at least one insurance record
+      const hasLifeOrHealth = farmerIns.some((i: any) => i.insuranceType === 'Life' || i.insuranceType === 'Health')
+      const hasCrop = farmerIns.some((i: any) => i.insuranceType === 'Crop')
+      const totalAmount = farmerIns.reduce((s: number, i: any) => s + (i.amount || 0), 0)
+      if (hasLifeOrHealth && hasCrop) insurance = 100
+      else if (hasLifeOrHealth || hasCrop) insurance = 85
+      else if (farmerIns.length > 0) insurance = 75
+    } else {
+      try {
+        const insData = farmer.insuranceData ? JSON.parse(farmer.insuranceData) : {}
+        const hasAny = insData.life || insData.health || insData.crop || insData.social
+        if (hasAny) insurance = 100
+      } catch { /* default 60 */ }
+    }
 
     const avg = (loan + repayment + insurance) / 3
     return { avg, detail: { loan, repayment, insurance } }

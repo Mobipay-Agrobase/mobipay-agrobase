@@ -96,6 +96,8 @@ const ALL_MODULES: NavItem[] = [
   { key: 'settings', label: 'Settings', icon: Settings, group: 'Admin'},
   // Profile — everyone gets this.
   { key: 'profile', label: 'Profile', icon: Stethoscope, group: 'Admin', alwaysVisible: true },
+  // Catalog Master — admin-only dropdown value management.
+  { key: 'catalog-manager', label: 'Catalog Master', icon: Settings, group: 'Admin', restrictToRoles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'COUNTRY_ADMIN'] },
   // Roles & Permissions — admin-only reference page.
   { key: 'roles-permissions', label: 'Roles & Permissions', icon: KeyRound, group: 'Admin'},
   // Platform Recovery — visible to tenants with billing:read (EKIBBO MD, Finance)

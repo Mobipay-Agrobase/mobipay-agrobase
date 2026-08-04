@@ -20,6 +20,8 @@ export type ModuleKey =
   'support-tickets' | 'quotes' |
   'nssf-contributions' | 'nssf-settlement' |
   // Reference
+  'catalog-manager' |
+  'farmer-detail' |
   'roles-permissions' |
   'super-admin-overview' | 'super-admin-tenants' | 'super-admin-revenue' | 'super-admin-impact' | 'super-admin-users' | 'super-admin-mobile' | 'super-admin-config' | 'super-admin-module-store' | 'reset-dashboard' | 'reset-beneficiaries' | 'reset-vouchers' | 'reset-merchants' | 'reset-cash' | 'reset-reports'
 

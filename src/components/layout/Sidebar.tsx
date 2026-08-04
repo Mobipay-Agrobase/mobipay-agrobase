@@ -97,7 +97,7 @@ const ALL_MODULES: NavItem[] = [
   // Profile — everyone gets this.
   { key: 'profile', label: 'Profile', icon: Stethoscope, group: 'Admin', alwaysVisible: true },
   // Catalog Master — admin-only dropdown value management.
-  { key: 'catalog-manager', label: 'Catalog Master', icon: Settings, group: 'Admin', restrictToRoles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'COUNTRY_ADMIN'] },
+  { key: 'catalog-manager', label: 'Catalog Master', icon: Settings, group: 'Admin', restrictToRoles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'COUNTRY_ADMIN', 'SACCO_ADMIN', 'SACCO_OFFICER', 'VSLA_PROVIDER_ADMIN'] },
   // Roles & Permissions — admin-only reference page.
   { key: 'roles-permissions', label: 'Roles & Permissions', icon: KeyRound, group: 'Admin'},
   // Platform Recovery — visible to tenants with billing:read (EKIBBO MD, Finance)
@@ -292,10 +292,13 @@ export function Sidebar() {
                 // TopBar dropdown items unreachable.
                 const isAlwaysAccessibleForSuperAdmin = (item: NavItem) =>
                   isSuperAdmin &&
-                  ['profile', 'settings', 'roles-permissions', 'billing', 'platform-recovery'].includes(item.key)
+                  ['profile', 'settings', 'roles-permissions', 'billing', 'platform-recovery', 'catalog-manager'].includes(item.key)
 
                 // Filter items by role permission + module entitlement
                 const visibleItems = items.filter(item => {
+                  // enforce restrictToRoles if present (e.g. Catalog Master)
+                  if (item.restrictToRoles && !item.restrictToRoles.includes(role)) return false
+
                   if (isSuperAdmin) {
                     // In non-Super-Admin groups, only show items explicitly allow-listed above
                     if (groupLabel !== 'Super Admin' && !isAlwaysAccessibleForSuperAdmin(item)) return false
@@ -316,22 +319,22 @@ export function Sidebar() {
                     return allowedKeys.includes(item.key)
                   }
 
-                  // SACCO_ADMIN / SACCO_OFFICER: only see SACCO + Farmers + Dashboard + Reports + Training + Profile
+                  // SACCO_ADMIN / SACCO_OFFICER: only see SACCO + Farmers + Dashboard + Reports + Training + Profile + Catalog Master
                   if (role === 'SACCO_ADMIN' || role === 'SACCO_OFFICER') {
                     if (groupLabel === 'Super Admin') return false
                     const allowedKeys = [
                       'dashboard', 'sacco', 'farmers', 'farm-lands', 'cultivations',
-                      'reports', 'training', 'profile',
+                      'reports', 'training', 'profile', 'catalog-manager',
                     ]
                     return allowedKeys.includes(item.key)
                   }
 
-                  // VSLA_PROVIDER_ADMIN: only see VSLA + Farmers + Dashboard + Reports + Training + Profile
+                  // VSLA_PROVIDER_ADMIN: only see VSLA + Farmers + Dashboard + Reports + Training + Profile + Catalog Master
                   if (role === 'VSLA_PROVIDER_ADMIN') {
                     if (groupLabel === 'Super Admin') return false
                     const allowedKeys = [
                       'dashboard', 'vsla', 'farmers', 'farm-lands',
-                      'reports', 'training', 'profile',
+                      'reports', 'training', 'profile', 'catalog-manager',
                     ]
                     return allowedKeys.includes(item.key)
                   }

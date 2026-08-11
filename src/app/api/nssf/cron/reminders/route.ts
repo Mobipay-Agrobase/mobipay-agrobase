@@ -9,11 +9,12 @@
  *   - If not, send SMS: "Dear [Name], your NSSF contribution is due. 
  *     Pay via *123# or the Kilimo Trust app. Min UGX 1,000."
  * 
- * SMS is sent via Africa's Talking (when Joel provides the API key).
- * For now, logs the reminders to console.
+ * SMS is sent via Africa's Talking when AT_API_KEY is configured;
+ * otherwise it falls back to console logging via sendReminderSms.
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { sendReminderSms } from '@/lib/nssf/notifications'
 
 export async function GET(request: NextRequest) {
   try {
@@ -66,11 +67,11 @@ export async function GET(request: NextRequest) {
       }
 
       // Farmer hasn't contributed this month — send reminder
-      const message = `Dear ${farmer.firstName}, your NSSF voluntary savings contribution for this month is due. Pay min UGX 1,000 via *123# or the Kilimo Trust app. NSSF No: ${farmer.nssfNumber || 'N/A'}. Thank you.`
-
-      // TODO: Send actual SMS via Africa's Talking when Joel provides API key
-      // For now, log to console
-      console.log(`[NSSF REMINDER] SMS to ${farmer.phone}: ${message}`)
+      const result = await sendReminderSms({
+        phone: farmer.phone,
+        farmerName: `${farmer.firstName} ${farmer.lastName}`,
+        nssfNumber: farmer.nssfNumber,
+      })
 
       remindersSent++
       results.push({
@@ -78,7 +79,8 @@ export async function GET(request: NextRequest) {
         name: `${farmer.firstName} ${farmer.lastName}`,
         phone: farmer.phone,
         nssfNumber: farmer.nssfNumber,
-        status: 'reminder_logged',
+        status: result.sent ? 'reminder_sent' : 'reminder_logged',
+        channel: result.method,
       })
     }
 

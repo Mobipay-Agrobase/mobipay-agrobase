@@ -167,9 +167,28 @@ export function LoginPage() {
     setUseBackupCode(false)
   }
 
-  const handleForgotPassword = (e: React.MouseEvent) => {
+  const handleForgotPassword = async (e: React.MouseEvent) => {
     e.preventDefault()
-    toast.success('Password reset link sent to your email')
+    const identifier = email.trim()
+    if (!identifier) {
+      toast.error('Enter your email address above to request a reset')
+      return
+    }
+    try {
+      const res = await fetch('/api/auth/reset-password/request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: identifier }),
+      })
+      const data = await res.json()
+      if (res.ok) {
+        toast.success(data.message || 'If the account exists, a reset code has been sent.')
+      } else {
+        toast.error(data.error || 'Failed to send reset code')
+      }
+    } catch {
+      toast.error('Connection error. Please try again.')
+    }
   }
 
   return (

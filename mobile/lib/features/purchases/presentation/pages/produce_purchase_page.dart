@@ -1,5 +1,7 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/api/api_client.dart';
 
 /// Produce Purchase Screen — EKIBBO Coffee Purchase Workflow
 ///
@@ -14,14 +16,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 /// When offline: saves to local storage, syncs when online.
 
 final farmersProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
-  // TODO: Replace with actual API call or local DB query
-  // final api = ApiClient();
-  // final res = await api.get('/api/farmers?limit=200');
-  // return extractArray(res, 'farmers');
-  return [
-    {'id': 'demo1', 'firstName': 'John', 'lastName': 'Mugisha', 'farmerCode': 'BS0001ZE1', 'phone': '+256747076639'},
-    {'id': 'demo2', 'firstName': 'Sarah', 'lastName': 'Achieng', 'farmerCode': 'BS0002ZE2', 'phone': '+256747076640'},
-  ];
+  final res = await ApiClient().get('/api/farmers?limit=200');
+  if (res.statusCode != 200) {
+    throw Exception('Failed to load farmers (${res.statusCode})');
+  }
+  final data = jsonDecode(res.body);
+  return (data['farmers'] as List<dynamic>? ?? [])
+      .map((e) => (e as Map<String, dynamic>))
+      .toList();
 });
 
 const COMMODITIES = ['Coffee', 'Cocoa', 'Vanilla', 'Cassava', 'Avocado', 'Jackfruit'];
@@ -108,20 +110,23 @@ class _ProducePurchasePageState extends ConsumerState<ProducePurchasePage> {
       };
 
       // TODO: Replace with actual API call
-      // final api = ApiClient();
-      // await api.post('/api/purchases', payload);
-
-      // Simulate save
-      await Future.delayed(const Duration(seconds: 1));
+      final res = await ApiClient().post('/api/purchases', body: payload);
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Purchase submitted for approval!'),
-            backgroundColor: Colors.green,
-          ),
-        );
-        Navigator.pop(context);
+        if (res.statusCode == 201) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Purchase submitted for approval!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          Navigator.pop(context);
+        } else {
+          final err = jsonDecode(res.body)['error'] ?? 'Failed to submit purchase';
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(err.toString()), backgroundColor: Colors.red),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {

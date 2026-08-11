@@ -16,21 +16,42 @@ export async function GET(request: Request) {
     const ctx = await getTenantContext()
     const { searchParams } = new URL(request.url)
     const farmerId = searchParams.get('farmerId')
+    const search = searchParams.get('search') || ''
+    const page = parseInt(searchParams.get('page') || '1')
+    const limit = parseInt(searchParams.get('limit') || '20')
+    // Full polygon coordinates are only needed for the map view. The list/table
+    // view only needs the point count, which is far cheaper to fetch.
+    const includePolygons = searchParams.get('includePolygons') === 'true'
 
     const where: Record<string, unknown> = {
       farmer: { ...buildTenantFilter(ctx, 'tenantId') },
     }
     if (farmerId) where.farmerId = farmerId
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { farmer: { firstName: { contains: search, mode: 'insensitive' } } },
+        { farmer: { lastName: { contains: search, mode: 'insensitive' } } },
+        { farmer: { farmerCode: { contains: search, mode: 'insensitive' } } },
+      ]
+    }
 
-    const farms = await db.farmLand.findMany({
-      where,
-      include: {
-        farmer: { select: { id: true, firstName: true, lastName: true, farmerCode: true } },
-        polygonPoints: { orderBy: { pointOrder: 'asc' } },
-        _count: { select: { cultivations: true } },
-      },
-      orderBy: { createdAt: 'desc' },
-    })
+    const [farms, total] = await Promise.all([
+      db.farmLand.findMany({
+        where,
+        skip: (page - 1) * limit,
+        take: limit,
+        include: {
+          farmer: { select: { id: true, firstName: true, lastName: true, farmerCode: true } },
+          ...(includePolygons
+            ? { polygonPoints: { orderBy: { pointOrder: 'asc' } } }
+            : {}),
+          _count: { select: { cultivations: true, polygonPoints: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+      db.farmLand.count({ where }),
+    ])
 
     // Parse JSON fields
     const farmsParsed = farms.map(f => ({
@@ -41,7 +62,7 @@ export async function GET(request: Request) {
       soilCriteria: f.soilCriteria ? JSON.parse(f.soilCriteria) : [],
     }))
 
-    return NextResponse.json({ farms: farmsParsed })
+    return NextResponse.json({ farms: farmsParsed, total, page, totalPages: Math.ceil(total / limit) })
   } catch (error) {
     console.error('Farm land list error:', error)
     return NextResponse.json({ error: 'Failed to fetch farm lands' }, { status: 500 })

@@ -28,7 +28,7 @@ interface Cultivation {
   actualYield?: number | null
   status: string
   createdAt: string
-  farm?: { id: string; name: string; farmer?: { id: string; firstName: string; lastName: string } }
+  farm?: { id: string; name: string; farmer?: { id: string; firstName: string; lastName: string; farmerCode?: string } }
 }
 
 export default function CostOfCultivationView() {

@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import '../../../../core/api/api_client.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/empty_state.dart';
@@ -157,7 +158,7 @@ class _MyPassportPageState extends State<MyPassportPage> {
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
-            // QR code (mock — in production, generate from verificationUrl)
+            // QR encoding the verification URL
             Container(
               width: 160,
               height: 160,
@@ -165,13 +166,28 @@ class _MyPassportPageState extends State<MyPassportPage> {
                 border: Border.all(color: AppTheme.primaryGreen, width: 2),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.qr_code, size: 100, color: AppTheme.primaryGreen),
-                  const Text('Scan to verify', style: TextStyle(fontSize: 10, color: Colors.grey)),
-                ],
-              ),
+              child: verificationUrl.isNotEmpty
+                  ? QrImageView(
+                      data: verificationUrl,
+                      version: QrVersions.auto,
+                      size: 156,
+                      padding: EdgeInsets.zero,
+                      eyeStyle: const QrEyeStyle(
+                        eyeShape: QrEyeShape.square,
+                        color: AppTheme.primaryGreen,
+                      ),
+                      dataModuleStyle: const QrDataModuleStyle(
+                        dataModuleShape: QrDataModuleShape.square,
+                        color: AppTheme.primaryGreen,
+                      ),
+                    )
+                  : Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.qr_code, size: 100, color: AppTheme.primaryGreen),
+                        const Text('Scan to verify', style: TextStyle(fontSize: 10, color: Colors.grey)),
+                      ],
+                    ),
             ),
             const SizedBox(height: 16),
             Text(

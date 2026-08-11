@@ -30,6 +30,26 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   }
 }
 
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const body = await request.json()
+    const { itemId, ...updateData } = body
+    if (!itemId) return NextResponse.json({ error: 'itemId required' }, { status: 400 })
+    const item = await db.farmerFarmEquipment.update({
+      where: { id: itemId },
+      data: {
+        ...(updateData.equipmentName !== undefined && { equipmentName: updateData.equipmentName }),
+        ...(updateData.count !== undefined && { count: updateData.count }),
+        ...(updateData.yearOfManufacture !== undefined && { yearOfManufacture: updateData.yearOfManufacture }),
+        ...(updateData.yearOfPurchase !== undefined && { yearOfPurchase: updateData.yearOfPurchase }),
+      },
+    })
+    return NextResponse.json({ equipment: item })
+  } catch (error) {
+    return NextResponse.json({ error: 'Failed to update equipment' }, { status: 500 })
+  }
+}
+
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { searchParams } = new URL(request.url)

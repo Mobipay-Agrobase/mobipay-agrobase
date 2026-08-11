@@ -11,6 +11,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { StatCard, StatCardGrid } from '@/components/ui/stat-card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -86,24 +87,12 @@ export default function PaymentsView() {
   return (
     <div className="space-y-4">
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card><CardContent className="p-4 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 flex items-center justify-center"><Wallet className="w-5 h-5 text-emerald-600" /></div>
-          <div><p className="text-xs text-muted-foreground">Total Volume</p><p className="text-lg font-bold">UGX {totalAmount.toLocaleString()}</p></div>
-        </CardContent></Card>
-        <Card><CardContent className="p-4 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-green-50 dark:bg-green-950/40 flex items-center justify-center"><CheckCircle className="w-5 h-5 text-green-600" /></div>
-          <div><p className="text-xs text-muted-foreground">Completed</p><p className="text-lg font-bold">UGX {completedTotal.toLocaleString()}</p></div>
-        </CardContent></Card>
-        <Card><CardContent className="p-4 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/40 flex items-center justify-center"><Clock className="w-5 h-5 text-amber-600" /></div>
-          <div><p className="text-xs text-muted-foreground">Pending</p><p className="text-xl font-bold">{pendingCount}</p></div>
-        </CardContent></Card>
-        <Card><CardContent className="p-4 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-red-50 dark:bg-red-950/40 flex items-center justify-center"><XCircle className="w-5 h-5 text-red-600" /></div>
-          <div><p className="text-xs text-muted-foreground">Failed</p><p className="text-xl font-bold">{failedCount}</p></div>
-        </CardContent></Card>
-      </div>
+      <StatCardGrid>
+        <StatCard icon={<Wallet />} label="Total Volume" value={`UGX ${totalAmount.toLocaleString()}`} tone="emerald" />
+        <StatCard icon={<CheckCircle />} label="Completed" value={`UGX ${completedTotal.toLocaleString()}`} tone="green" />
+        <StatCard icon={<Clock />} label="Pending" value={pendingCount} tone="amber" />
+        <StatCard icon={<XCircle />} label="Failed" value={failedCount} tone="red" />
+      </StatCardGrid>
 
       <Tabs value={activeTab} onValueChange={handleTabChange}>
         <div className="flex items-center justify-between">

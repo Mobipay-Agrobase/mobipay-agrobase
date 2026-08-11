@@ -39,6 +39,7 @@ const SYSTEM_ROUTES = [
   '/api/notifications',  // notification routes — auth-only
   '/api/support/',       // support ticket routes — auth-only
   '/api/branding',       // branding config — auth-only
+  '/api/catalog',        // dropdown / catalog reference data — auth-only (writes gated in the route)
   '/api/i18n',           // i18n translations — auth-only
   '/api/credit-score/',  // credit scoring — auth-only (tenant-scoped inside)
   '/api/credit-scores',  // same

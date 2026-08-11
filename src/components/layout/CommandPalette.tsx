@@ -20,7 +20,8 @@ import {
   Sprout, MapPin, Cloud, Layers, Calculator, BookOpen, Search,
   ArrowRight
 } from 'lucide-react'
-import { useAppStore, type ModuleKey } from '@/lib/store'
+import { useAppStore, type ModuleKey, EKB_HIDDEN_MODULES } from '@/lib/store'
+import { useIsEkibboTenant } from '@/hooks/use-is-ekibbo'
 
 interface CommandItemDef {
   key: ModuleKey
@@ -70,7 +71,8 @@ const COMMANDS: CommandItemDef[] = [
 
 export function CommandPalette() {
   const [open, setOpen] = useState(false)
-  const { setActiveModule } = useAppStore()
+  const { setActiveModule, user } = useAppStore()
+  const role = user?.role || ''
 
   // Listen for Cmd+K / Ctrl+K
   useEffect(() => {
@@ -89,8 +91,20 @@ export function CommandPalette() {
     setOpen(false)
   }, [setActiveModule])
 
+  // Filter commands by role / tenant
+  const isEkbRole = ['EKB_MD', 'EKB_OPS_MANAGER', 'EKB_FINANCE', 'EKB_FIN_ASSISTANT', 'EKB_MEC', 'EKB_EXTENSION'].includes(role)
+  const ekibboTenantFromHook = useIsEkibboTenant(role)
+  const ekibboTenant = isEkbRole || ekibboTenantFromHook
+  const filteredCommands = COMMANDS.filter(cmd => {
+    // EKIBBO roles / tenant: hide VSLA
+    if (ekibboTenant && cmd.key === 'vsla') return false
+    // EKIBBO roles / tenant: hide menus not applicable to the Ekibbo tenant
+    if (ekibboTenant && (EKB_HIDDEN_MODULES as readonly string[]).includes(cmd.key)) return false
+    return true
+  })
+
   // Group commands by group label
-  const grouped = COMMANDS.reduce((acc, cmd) => {
+  const grouped = filteredCommands.reduce((acc, cmd) => {
     if (!acc[cmd.group]) acc[cmd.group] = []
     acc[cmd.group].push(cmd)
     return acc

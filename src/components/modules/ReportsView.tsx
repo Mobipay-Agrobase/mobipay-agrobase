@@ -17,6 +17,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { toast } from 'sonner'
+import * as XLSX from 'xlsx'
+import { KpiCards, ReportChart, detectChartType, buildChartRows } from '@/components/reports/ReportCharts'
+import { useAppStore } from '@/lib/store'
 
 interface ReportCategory {
   title: string
@@ -98,17 +101,39 @@ function exportToCSV(data: any[], filename: string) {
   toast.success(`Exported ${data.length} records to ${filename}.csv`)
 }
 
+// Excel (xlsx) export helper
+function exportToExcel(data: any[], filename: string) {
+  if (!data || data.length === 0) {
+    toast.info('No data to export')
+    return
+  }
+  const sheet = XLSX.utils.json_to_sheet(data)
+  const workbook = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(workbook, sheet, 'Report')
+  XLSX.writeFile(workbook, `${filename}.xlsx`)
+  toast.success(`Exported ${data.length} records to ${filename}.xlsx`)
+}
+
 const fmtUGX = (n: number) => 'UGX ' + (Number(n) || 0).toLocaleString()
 const fmtNum = (n: number) => (Number(n) || 0).toLocaleString()
 
 export default function ReportsView() {
+  const user = useAppStore((s) => s.user)
+
+  // Ekibbo is a separate tenant from VSLA — it has no VSLA module, so its
+  // Reports & Analytics must not surface VSLA report cards.
+  const isEkbRole = !!user?.role?.startsWith('EKB_')
+
   const [search, setSearch] = useState('')
   const [selectedReport, setSelectedReport] = useState<string | null>(null)
   const [reportData, setReportData] = useState<any[]>([])
   const [reportLoading, setReportLoading] = useState(false)
   const [reportMeta, setReportMeta] = useState<any>(null)
+  const [viewMode, setViewMode] = useState<'combined' | 'chart' | 'table'>('combined')
 
-  const filteredCategories = REPORT_CATEGORIES.map(cat => ({
+  const filteredCategories = REPORT_CATEGORIES
+    .filter(cat => !(isEkbRole && cat.title === 'VSLA Reports'))
+    .map(cat => ({
     ...cat,
     reports: cat.reports.filter(r =>
       r.label.toLowerCase().includes(search.toLowerCase()) ||
@@ -448,8 +473,11 @@ export default function ReportsView() {
                         <div className="min-w-0">
                           <h5 className="font-medium text-sm group-hover:text-primary transition-colors">{report.label}</h5>
                           <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{report.description}</p>
+                          <div className="mt-2 flex items-center gap-1.5">
+                            <Badge variant="outline" className="text-[10px] text-muted-foreground">{report.key.includes('-') ? report.key.split('-').join(' / ') : report.key}</Badge>
+                          </div>
                         </div>
-                        <Download className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+                        <BarChart3 className="w-4 h-4 text-muted-foreground opacity-60 group-hover:opacity-100 group-hover:text-primary transition-opacity shrink-0" />
                       </div>
                     </CardContent>
                   </Card>
@@ -463,10 +491,23 @@ export default function ReportsView() {
       {/* Report Viewer Dialog */}
       <Dialog open={!!selectedReport} onOpenChange={(o) => !o && handleCloseReport()}>
         <DialogContent className="max-w-5xl max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center justify-between">
-              <span>{reportMeta?.title || 'Report'}</span>
+          <DialogHeader className="sticky top-0 z-20 bg-background/95 backdrop-blur border-b pb-3 mb-3">
+            <DialogTitle className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <span className="block truncate">{reportMeta?.title || 'Report'}</span>
+                <span className="block text-xs font-normal text-muted-foreground mt-0.5">{reportMeta?.subtitle || ''}</span>
+              </div>
               <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => exportToExcel(reportData, selectedReport || 'report')}
+                  disabled={reportLoading || reportData.length === 0}
+                  className="gap-1.5"
+                  title="Download as Excel workbook (.xlsx)"
+                >
+                  <FileText className="w-3.5 h-3.5" /> Excel
+                </Button>
                 <Button
                   size="sm"
                   variant="outline"
@@ -496,36 +537,66 @@ export default function ReportsView() {
             </div>
           ) : (
             <>
-              <div className="mb-3 flex items-center gap-2">
+              <div className="mb-3 flex flex-wrap items-center gap-2">
                 <Badge variant="outline">{reportData.length} records</Badge>
+                <div className="ml-auto flex items-center gap-1 rounded-lg border p-0.5">
+                  {(['combined', 'chart', 'table'] as const).map((mode) => (
+                    <button
+                      key={mode}
+                      type="button"
+                      onClick={() => setViewMode(mode)}
+                      className={cn(
+                        'rounded-md px-3 py-1 text-xs font-medium capitalize transition-colors',
+                        viewMode === mode ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
+                      )}
+                    >
+                      {mode === 'combined' ? 'Summary' : mode}
+                    </button>
+                  ))}
+                </div>
               </div>
-              <div className="overflow-x-auto rounded-lg border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      {(reportMeta?.columns || (reportData.length > 0 ? Object.keys(reportData[0]) : [])).map((col: string) => (
-                        <TableHead key={col} className="whitespace-nowrap capitalize">
-                          {col.replace(/([A-Z])/g, ' $1').replace(/_/g, ' ')}
-                        </TableHead>
-                      ))}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {reportData.slice(0, 100).map((row, idx) => (
-                      <TableRow key={idx}>
-                        {(reportMeta?.columns || Object.keys(row)).map((col: string) => (
-                          <TableCell key={col} className="whitespace-nowrap text-sm">
-                            {formatCellValue(row[col], col)}
-                          </TableCell>
+
+              {(viewMode === 'combined' || viewMode === 'chart') && (
+                <div className="mb-4 space-y-4">
+                  <KpiCards data={reportData} />
+                  {detectChartType(reportData) && (
+                    <div className="rounded-lg border p-3">
+                      <h4 className="mb-2 text-sm font-semibold text-muted-foreground">Visualization</h4>
+                      <ReportChart rows={reportData} />
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {viewMode !== 'chart' && (
+                <div className="overflow-x-auto rounded-lg border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        {(reportMeta?.columns || (reportData.length > 0 ? Object.keys(reportData[0]) : [])).map((col: string) => (
+                          <TableHead key={col} className="whitespace-nowrap capitalize">
+                            {col.replace(/([A-Z])/g, ' $1').replace(/_/g, ' ')}
+                          </TableHead>
                         ))}
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-              {reportData.length > 100 && (
+                    </TableHeader>
+                    <TableBody>
+                      {reportData.slice(0, 100).map((row, idx) => (
+                        <TableRow key={idx}>
+                          {(reportMeta?.columns || Object.keys(row)).map((col: string) => (
+                            <TableCell key={col} className="whitespace-nowrap text-sm">
+                              {formatCellValue(row[col], col)}
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+              {viewMode !== 'chart' && reportData.length > 100 && (
                 <p className="text-xs text-muted-foreground text-center mt-2">
-                  Showing first 100 of {reportData.length} records. Export CSV for full data.
+                  Showing first 100 of {reportData.length} records. Export CSV/Excel for full data.
                 </p>
               )}
             </>

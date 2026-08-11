@@ -1,7 +1,7 @@
 import { db } from '@/lib/db'
 import { NextRequest, NextResponse } from 'next/server'
 import { getTenantContext, buildTenantFilter } from '@/lib/tenant'
-import { decryptField } from '@/lib/security/field-crypto'
+import { decryptField, encryptField } from '@/lib/security/field-crypto'
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -49,11 +49,55 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
   const { firstName, lastName, gender, phone, villageId, status } = body
-  const updated = await db.farmerProfile.update({
-    where: { id },
-    data: { ...(firstName !== undefined && { firstName }), ...(lastName !== undefined && { lastName }), ...(gender !== undefined && { gender }), ...(phone !== undefined && { phone }), ...(villageId !== undefined && { villageId }), ...(status !== undefined && { status }), updatedAt: new Date() },
-  })
-  return NextResponse.json({ data: updated })
+
+    // JSON fields stringified for storage
+    const jsonData: Record<string, string> = {}
+    for (const key of ['consumerElectronics', 'vehicle', 'bankAccounts', 'insuranceData', 'farmEquipment', 'mainCrops', 'livestockTypes']) {
+      if (body[key] !== undefined) jsonData[key] = JSON.stringify(body[key])
+    }
+
+    const scalar: Record<string, unknown> = {}
+    const textFields = [
+      'farmerCode', 'nationalIdType', 'education', 'maritalStatus', 'memberType',
+      'enrollmentPlace', 'icsYear', 'cooperativeId', 'guardianName', 'photoUrl',
+      'country', 'province', 'district', 'commune', 'villageName', 'zipCode',
+      'spouseName', 'housingOwnership', 'houseType', 'bankName', 'bankBranch',
+      'loanTakenFrom', 'loanPurpose', 'loanInterestPeriod', 'landOwnershipInfo',
+      'nextOfKinName', 'nextOfKinPhone', 'nextOfKinRelation',
+    ]
+    for (const k of textFields) if (body[k] !== undefined) scalar[k] = body[k]
+
+    const numFields = [
+      'gpsLatitude', 'gpsLongitude', 'familyMembers', 'childrenUnder18', 'schoolGoingChildren',
+      'childrenMaleUnder18', 'childrenFemaleUnder18', 'schoolGoingMale', 'schoolGoingFemale',
+      'loanAmount', 'loanInterestPct', 'loanRepaymentAmount', 'farmSize',
+    ]
+    for (const k of numFields) if (body[k] !== undefined) scalar[k] = body[k]
+
+    const boolFields = ['isCertified', 'loanTakenLastYear', 'loanHasSecurity']
+    for (const k of boolFields) if (body[k] !== undefined) scalar[k] = !!body[k]
+
+    const dateFields = ['dateOfBirth', 'enrollmentDate', 'loanRepaymentDate']
+    for (const k of dateFields) if (body[k] !== undefined) scalar[k] = new Date(body[k])
+
+    const updated = await db.farmerProfile.update({
+      where: { id },
+      data: {
+        ...(firstName !== undefined && { firstName }),
+        ...(lastName !== undefined && { lastName }),
+        ...(gender !== undefined && { gender }),
+        ...(phone !== undefined && { phone: encryptField(phone) || phone }),
+        ...(body.nationalIdNo !== undefined && { nationalIdNo: encryptField(body.nationalIdNo) || body.nationalIdNo }),
+        ...(body.email !== undefined && { email: encryptField(body.email) || body.email }),
+        ...(body.bankAccountNo !== undefined && { bankAccountNo: encryptField(body.bankAccountNo) || body.bankAccountNo }),
+        ...(villageId !== undefined && { villageId }),
+        ...(status !== undefined && { status }),
+        ...scalar,
+        ...jsonData,
+        updatedAt: new Date(),
+      },
+    })
+    return NextResponse.json({ data: updated })
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {

@@ -197,39 +197,56 @@ class OfflineRepository {
   // FARM LANDS
   // ════════════════════════════════════════════════════════════
 
-  Future<List<Map<String, dynamic>>> getFarmLands({String? farmerId}) async {
-    if (_isOnline) {
-      try {
-        final res = await _api.get('/api/farm-lands${farmerId != null ? '?farmerId=$farmerId' : ''}');
-        if (res.statusCode == 200) {
-          final data = jsonDecode(res.body);
-          final farms = data['farms'] as List<dynamic>? ?? [];
-          for (final f in farms) {
-            await _db.upsertFarmLand(FarmLandCacheCompanion.insert(
-              id: f['id'],
-              farmerId: f['farmerId'] ?? '',
-              name: f['name'] ?? '',
-              sizeHectares: Value(f['sizeHectares']?.toDouble()),
-              latitude: Value(f['latitude']?.toDouble()),
-              longitude: Value(f['longitude']?.toDouble()),
-              landOwnership: Value(f['landOwnership']),
-              waterSource: Value(f['waterSource']),
-              soilFertility: Value(f['soilFertility']),
-              boundaryGeoJson: Value(f['boundaryGeoJson']),
-              syncStatus: Value('synced'),
-              lastSyncedAt: Value(DateTime.now()),
-            ));
-          }
-          return farms.cast<Map<String, dynamic>>();
-        }
-      } catch (e) {
-        debugPrint('[OfflineRepo] Farm lands API failed: $e');
-      }
-    }
+  FarmLandCacheCompanion _farmLandCompanion(Map<String, dynamic> f, {String syncStatus = 'synced'}) {
+    return FarmLandCacheCompanion.insert(
+      id: f['id'] ?? '',
+      farmerId: f['farmerId'] ?? '',
+      name: f['name'] ?? '',
+      sizeHectares: Value(_toDouble(f['sizeHectares'])),
+      latitude: Value(_toDouble(f['latitude'])),
+      longitude: Value(_toDouble(f['longitude'])),
+      landOwnership: Value(_toStr(f['landOwnership'])),
+      waterSource: Value(_toStr(f['waterSource'])),
+      soilFertility: Value(_toStr(f['soilFertility'])),
+      boundaryGeoJson: Value(f['boundaryGeoJson'] != null ? jsonEncode(f['boundaryGeoJson']) : null),
+      landSurveyNo: Value(_toStr(f['landSurveyNo'])),
+      approachRoad: Value(_joinList(f['approachRoad'])),
+      landTopology: Value(_toStr(f['landTopology'])),
+      landGradient: Value(_joinList(f['landGradient'])),
+      landDocumentUrl: Value(_toStr(f['landDocumentUrl'])),
+      powerSource: Value(_toStr(f['powerSource'])),
+      farmPhotoUrl: Value(_toStr(f['farmPhotoUrl'])),
+      irrigationSource: Value(_joinList(f['irrigationSource'])),
+      irrigationType: Value(_toStr(f['irrigationType'])),
+      fullTimeWorkers: Value(_toDouble(f['fullTimeWorkers'])),
+      partTimeWorkers: Value(_toDouble(f['partTimeWorkers'])),
+      seasonalWorkers: Value(_toDouble(f['seasonalWorkers'])),
+      familyWorkers: Value(_toDouble(f['familyWorkers'])),
+      lastChemicalApplicationDate: Value(_toDate(f['lastChemicalApplicationDate'])),
+      conventionalLands: Value(_toStr(f['conventionalLands'])),
+      fallowPastureLand: Value(_toStr(f['fallowPastureLand'])),
+      conventionalCrops: Value(_toStr(f['conventionalCrops'])),
+      estYieldKg: Value(_toDouble(f['estYieldKg'])),
+      certType: Value(_toStr(f['certType'])),
+      conversionStatus: Value(_toStr(f['conversionStatus'])),
+      conversionDate: Value(_toDate(f['conversionDate'])),
+      inspectorName: Value(_toStr(f['inspectorName'])),
+      conversionQualified: Value(f['conversionQualified'] == null ? null : (f['conversionQualified'] == true || f['conversionQualified'] == 'Yes')),
+      conversionRemarks: Value(_toStr(f['conversionRemarks'])),
+      soilCollectionDate: Value(_toDate(f['soilCollectionDate'])),
+      soilLabTestingDate: Value(_toDate(f['soilLabTestingDate'])),
+      soilResultDate: Value(_toDate(f['soilResultDate'])),
+      soilReportUrl: Value(_toStr(f['soilReportUrl'])),
+      soilSamplesInfo: Value(_toStr(f['soilSamplesInfo'])),
+      soilCriteria: Value(f['soilCriteria'] != null ? jsonEncode(f['soilCriteria']) : null),
+      syncStatus: Value(syncStatus),
+      lastSyncedAt: Value(syncStatus == 'synced' ? DateTime.now() : null),
+      updatedAt: Value(DateTime.now()),
+    );
+  }
 
-    // Offline
-    final cached = await _db.getCachedFarmLands(farmerId: farmerId);
-    return cached.map((f) => {
+  Map<String, dynamic> _farmLandMap(FarmLandCacheData f) {
+    return {
       'id': f.id,
       'farmerId': f.farmerId,
       'name': f.name,
@@ -239,9 +256,82 @@ class OfflineRepository {
       'landOwnership': f.landOwnership,
       'waterSource': f.waterSource,
       'soilFertility': f.soilFertility,
-      'boundaryGeoJson': f.boundaryGeoJson,
+      'boundaryGeoJson': f.boundaryGeoJson != null ? jsonDecode(f.boundaryGeoJson!) : null,
+      'landSurveyNo': f.landSurveyNo,
+      'approachRoad': f.approachRoad,
+      'landTopology': f.landTopology,
+      'landGradient': f.landGradient,
+      'landDocumentUrl': f.landDocumentUrl,
+      'powerSource': f.powerSource,
+      'farmPhotoUrl': f.farmPhotoUrl,
+      'irrigationSource': f.irrigationSource,
+      'irrigationType': f.irrigationType,
+      'fullTimeWorkers': f.fullTimeWorkers,
+      'partTimeWorkers': f.partTimeWorkers,
+      'seasonalWorkers': f.seasonalWorkers,
+      'familyWorkers': f.familyWorkers,
+      'lastChemicalApplicationDate': f.lastChemicalApplicationDate?.toIso8601String(),
+      'conventionalLands': f.conventionalLands,
+      'fallowPastureLand': f.fallowPastureLand,
+      'conventionalCrops': f.conventionalCrops,
+      'estYieldKg': f.estYieldKg,
+      'certType': f.certType,
+      'conversionStatus': f.conversionStatus,
+      'conversionDate': f.conversionDate?.toIso8601String(),
+      'inspectorName': f.inspectorName,
+      'conversionQualified': f.conversionQualified,
+      'conversionRemarks': f.conversionRemarks,
+      'soilCollectionDate': f.soilCollectionDate?.toIso8601String(),
+      'soilLabTestingDate': f.soilLabTestingDate?.toIso8601String(),
+      'soilResultDate': f.soilResultDate?.toIso8601String(),
+      'soilReportUrl': f.soilReportUrl,
+      'soilSamplesInfo': f.soilSamplesInfo,
+      'soilCriteria': f.soilCriteria != null ? jsonDecode(f.soilCriteria!) : null,
       'syncStatus': f.syncStatus,
-    }).toList();
+    };
+  }
+
+  Future<List<Map<String, dynamic>>> getFarmLands({String? farmerId}) async {
+    if (_isOnline) {
+      try {
+        final res = await _api.get('/api/farm-lands${farmerId != null ? '?farmerId=$farmerId' : ''}');
+        if (res.statusCode == 200) {
+          final data = jsonDecode(res.body);
+          final farms = data['farms'] as List<dynamic>? ?? [];
+          for (final f in farms) {
+            await _db.upsertFarmLand(_farmLandCompanion(f.cast<String, dynamic>()));
+          }
+          return farms.cast<Map<String, dynamic>>().toList();
+        }
+      } catch (e) {
+        debugPrint('[OfflineRepo] Farm lands API failed: $e');
+      }
+    }
+
+    // Offline
+    final cached = await _db.getCachedFarmLands(farmerId: farmerId);
+    return cached.map(_farmLandMap).toList();
+  }
+
+  Future<Map<String, dynamic>?> getFarmLandById(String id) async {
+    if (_isOnline) {
+      try {
+        final res = await _api.get('/api/farm-lands/$id');
+        if (res.statusCode == 200) {
+          final farm = (jsonDecode(res.body)['farm'] as Map<String, dynamic>?) ?? {};
+          if (farm.isNotEmpty) {
+            await _db.upsertFarmLand(_farmLandCompanion(farm));
+          }
+          return farm;
+        }
+      } catch (e) {
+        debugPrint('[OfflineRepo] Farm land detail API failed: $e');
+      }
+    }
+    final cached = await _db.getCachedFarmLands();
+    final match = cached.where((f) => f.id == id).toList();
+    if (match.isEmpty) return null;
+    return _farmLandMap(match.first);
   }
 
   Future<Map<String, dynamic>?> createFarmLand(Map<String, dynamic> data) async {
@@ -252,14 +342,10 @@ class OfflineRepository {
       try {
         final res = await _api.post('/api/farm-lands', body: data);
         if (res.statusCode == 201) {
-          final farm = jsonDecode(res.body)['farm'];
-          await _db.upsertFarmLand(FarmLandCacheCompanion.insert(
-            id: farm['id'],
-            farmerId: farm['farmerId'] ?? '',
-            name: farm['name'] ?? '',
-            syncStatus: Value('synced'),
-            lastSyncedAt: Value(DateTime.now()),
-          ));
+          final farm = (jsonDecode(res.body)['farm'] as Map<String, dynamic>?) ?? {};
+          if (farm.isNotEmpty) {
+            await _db.upsertFarmLand(_farmLandCompanion(farm));
+          }
           return farm;
         }
       } catch (e) {
@@ -268,26 +354,261 @@ class OfflineRepository {
     }
 
     // Offline
-    await _db.upsertFarmLand(FarmLandCacheCompanion.insert(
-      id: localId,
-      farmerId: data['farmerId'] ?? '',
-      name: data['name'] ?? '',
-      sizeHectares: Value(data['sizeHectares']?.toDouble()),
-      latitude: Value(data['latitude']?.toDouble()),
-      longitude: Value(data['longitude']?.toDouble()),
-      landOwnership: Value(data['landOwnership']),
-      boundaryGeoJson: Value(data['boundaryGeoJson']),
-      syncStatus: Value('pending'),
-    ));
-
+    await _db.upsertFarmLand(_farmLandCompanion(data, syncStatus: 'pending'));
     await _syncEngine.queueWrite(
       entityType: 'farm_land',
       entityId: localId,
       operation: 'create',
       payload: data,
     );
-
     return data;
+  }
+
+  Future<Map<String, dynamic>?> updateFarmLand(String id, Map<String, dynamic> data) async {
+    data['id'] = id;
+    if (_isOnline) {
+      try {
+        final res = await _api.put('/api/farm-lands/$id', body: data);
+        if (res.statusCode == 200) {
+          final farm = (jsonDecode(res.body)['farm'] as Map<String, dynamic>?) ?? {};
+          if (farm.isNotEmpty) {
+            await _db.upsertFarmLand(_farmLandCompanion(farm));
+          }
+          return farm;
+        }
+      } catch (e) {
+        debugPrint('[OfflineRepo] Update farm land API failed, queuing: $e');
+      }
+    }
+    // Offline — update local then queue
+    await _db.upsertFarmLand(_farmLandCompanion(data, syncStatus: 'pending'));
+    await _syncEngine.queueWrite(
+      entityType: 'farm_land',
+      entityId: id,
+      operation: 'update',
+      payload: data,
+    );
+    return data;
+  }
+
+  Future<void> deleteFarmLand(String id) async {
+    if (_isOnline) {
+      try {
+        final res = await _api.delete('/api/farm-lands/$id');
+        if (res.statusCode == 200) {
+          await _db.deleteFarmLand(id);
+          return;
+        }
+      } catch (e) {
+        debugPrint('[OfflineRepo] Delete farm land API failed, queuing: $e');
+      }
+    }
+    await _db.upsertFarmLand(FarmLandCacheCompanion.insert(
+      id: id,
+      farmerId: '',
+      name: 'deleted',
+      syncStatus: Value('pending'),
+    ));
+    await _syncEngine.queueWrite(
+      entityType: 'farm_land',
+      entityId: id,
+      operation: 'delete',
+      payload: {'id': id},
+    );
+  }
+
+  // ════════════════════════════════════════════════════════════
+  // CULTIVATIONS
+  // ════════════════════════════════════════════════════════════
+
+  CultivationCacheCompanion _cultivationCompanion(Map<String, dynamic> c, {String syncStatus = 'synced'}) {
+    return CultivationCacheCompanion.insert(
+      id: c['id'] ?? '',
+      farmId: c['farmId'] ?? '',
+      cropName: c['cropName'] ?? '',
+      variety: Value(_toStr(c['variety'])),
+      season: Value(_toStr(c['season'])),
+      cultivationAreaHa: Value(_toDouble(c['cultivationAreaHa'])),
+      sowingDate: Value(_toDate(c['sowingDate'])),
+      estimatedYield: Value(_toDouble(c['estimatedYield'])),
+      actualYield: Value(_toDouble(c['actualYield'])),
+      seedCost: Value(_toDouble(c['seedCost'])),
+      sowingCost: Value(_toDouble(c['sowingCost'])),
+      status: Value(_toStr(c['status']) ?? 'ACTIVE'),
+      cropCategory: Value(_toStr(c['cropCategory'])),
+      cropCalendarId: Value(_toStr(c['cropCalendarId'])),
+      cultivationGeoJson: Value(c['cultivationGeoJson'] != null ? jsonEncode(c['cultivationGeoJson']) : null),
+      photoUrl: Value(_toStr(c['photoUrl'])),
+      seedSource: Value(_toStr(c['seedSource'])),
+      isSeedTreated: Value(c['isSeedTreated'] == null ? null : (c['isSeedTreated'] == true || c['isSeedTreated'] == 'Yes')),
+      seedType: Value(_toStr(c['seedType'])),
+      seedQuantity: Value(_toDouble(c['seedQuantity'])),
+      seedPrice: Value(_toDouble(c['seedPrice'])),
+      sowingType: Value(_toStr(c['sowingType'])),
+      sowingChargesBy: Value(_toStr(c['sowingChargesBy'])),
+      sowingCharges: Value(_toDouble(c['sowingCharges'])),
+      bambooVariety: Value(_toStr(c['bambooVariety'])),
+      seedlingCount: Value(_toDouble(c['seedlingCount'])),
+      syncStatus: Value(syncStatus),
+      lastSyncedAt: Value(syncStatus == 'synced' ? DateTime.now() : null),
+      updatedAt: Value(DateTime.now()),
+    );
+  }
+
+  Map<String, dynamic> _cultivationMap(CultivationCacheData c) {
+    return {
+      'id': c.id,
+      'farmId': c.farmId,
+      'cropName': c.cropName,
+      'variety': c.variety,
+      'season': c.season,
+      'cultivationAreaHa': c.cultivationAreaHa,
+      'sowingDate': c.sowingDate?.toIso8601String(),
+      'estimatedYield': c.estimatedYield,
+      'actualYield': c.actualYield,
+      'seedCost': c.seedCost,
+      'sowingCost': c.sowingCost,
+      'status': c.status,
+      'cropCategory': c.cropCategory,
+      'cropCalendarId': c.cropCalendarId,
+      'cultivationGeoJson': c.cultivationGeoJson != null ? jsonDecode(c.cultivationGeoJson!) : null,
+      'photoUrl': c.photoUrl,
+      'seedSource': c.seedSource,
+      'isSeedTreated': c.isSeedTreated,
+      'seedType': c.seedType,
+      'seedQuantity': c.seedQuantity,
+      'seedPrice': c.seedPrice,
+      'sowingType': c.sowingType,
+      'sowingChargesBy': c.sowingChargesBy,
+      'sowingCharges': c.sowingCharges,
+      'bambooVariety': c.bambooVariety,
+      'seedlingCount': c.seedlingCount,
+      'syncStatus': c.syncStatus,
+    };
+  }
+
+  Future<List<Map<String, dynamic>>> getCultivations({String? farmId}) async {
+    if (_isOnline) {
+      try {
+        final res = await _api.get('/api/cultivations${farmId != null ? '?farmId=$farmId' : ''}');
+        if (res.statusCode == 200) {
+          final data = jsonDecode(res.body);
+          final cultivations = data['cultivations'] as List<dynamic>? ?? [];
+          for (final c in cultivations) {
+            await _db.upsertCultivation(_cultivationCompanion(c.cast<String, dynamic>()));
+          }
+          return cultivations.cast<Map<String, dynamic>>().toList();
+        }
+      } catch (e) {
+        debugPrint('[OfflineRepo] Cultivations API failed: $e');
+      }
+    }
+
+    // Offline
+    final cached = await _db.getCachedCultivations(farmId: farmId);
+    return cached.map(_cultivationMap).toList();
+  }
+
+  Future<Map<String, dynamic>?> getCultivationById(String id) async {
+    if (_isOnline) {
+      try {
+        final res = await _api.get('/api/cultivations/$id');
+        if (res.statusCode == 200) {
+          final c = (jsonDecode(res.body)['data'] as Map<String, dynamic>?) ?? {};
+          if (c.isNotEmpty) {
+            await _db.upsertCultivation(_cultivationCompanion(c));
+          }
+          return c;
+        }
+      } catch (e) {
+        debugPrint('[OfflineRepo] Cultivation detail API failed: $e');
+      }
+    }
+    final cached = await _db.getCachedCultivationById(id);
+    if (cached == null) return null;
+    return _cultivationMap(cached);
+  }
+
+  Future<Map<String, dynamic>?> createCultivation(Map<String, dynamic> data) async {
+    final localId = DateTime.now().millisecondsSinceEpoch.toString();
+    data['id'] = localId;
+
+    if (_isOnline) {
+      try {
+        final res = await _api.post('/api/cultivations', body: data);
+        if (res.statusCode == 201) {
+          final c = (jsonDecode(res.body)['cultivation'] as Map<String, dynamic>?) ?? {};
+          if (c.isNotEmpty) {
+            await _db.upsertCultivation(_cultivationCompanion(c));
+          }
+          return c;
+        }
+      } catch (e) {
+        debugPrint('[OfflineRepo] Create cultivation API failed, queuing: $e');
+      }
+    }
+
+    // Offline
+    await _db.upsertCultivation(_cultivationCompanion(data, syncStatus: 'pending'));
+    await _syncEngine.queueWrite(
+      entityType: 'cultivation',
+      entityId: localId,
+      operation: 'create',
+      payload: data,
+    );
+    return data;
+  }
+
+  Future<Map<String, dynamic>?> updateCultivation(String id, Map<String, dynamic> data) async {
+    data['id'] = id;
+    if (_isOnline) {
+      try {
+        final res = await _api.put('/api/cultivations/$id', body: data);
+        if (res.statusCode == 200) {
+          final c = (jsonDecode(res.body)['data'] as Map<String, dynamic>?) ?? {};
+          if (c.isNotEmpty) {
+            await _db.upsertCultivation(_cultivationCompanion(c));
+          }
+          return c;
+        }
+      } catch (e) {
+        debugPrint('[OfflineRepo] Update cultivation API failed, queuing: $e');
+      }
+    }
+    await _db.upsertCultivation(_cultivationCompanion(data, syncStatus: 'pending'));
+    await _syncEngine.queueWrite(
+      entityType: 'cultivation',
+      entityId: id,
+      operation: 'update',
+      payload: data,
+    );
+    return data;
+  }
+
+  Future<void> deleteCultivation(String id) async {
+    if (_isOnline) {
+      try {
+        final res = await _api.delete('/api/cultivations/$id');
+        if (res.statusCode == 200) {
+          await _db.deleteCultivation(id);
+          return;
+        }
+      } catch (e) {
+        debugPrint('[OfflineRepo] Delete cultivation API failed, queuing: $e');
+      }
+    }
+    await _db.upsertCultivation(CultivationCacheCompanion.insert(
+      id: id,
+      farmId: '',
+      cropName: 'deleted',
+      syncStatus: Value('pending'),
+    ));
+    await _syncEngine.queueWrite(
+      entityType: 'cultivation',
+      entityId: id,
+      operation: 'delete',
+      payload: {'id': id},
+    );
   }
 
   // ════════════════════════════════════════════════════════════
@@ -609,5 +930,34 @@ class OfflineRepository {
     );
 
     return data;
+  }
+
+  // ─── Helpers ────────────────────────────────────────────────
+
+  double? _toDouble(dynamic v) {
+    if (v == null) return null;
+    if (v is num) return v.toDouble();
+    if (v is String && v.isNotEmpty) return double.tryParse(v);
+    return null;
+  }
+
+  String? _toStr(dynamic v) {
+    if (v == null) return null;
+    if (v is String) return v.isEmpty ? null : v;
+    return v.toString();
+  }
+
+  DateTime? _toDate(dynamic v) {
+    if (v == null) return null;
+    if (v is DateTime) return v;
+    if (v is String && v.isNotEmpty) return DateTime.tryParse(v);
+    return null;
+  }
+
+  String? _joinList(dynamic v) {
+    if (v == null) return null;
+    if (v is List) return v.join(', ');
+    if (v is String) return v.isEmpty ? null : v;
+    return v.toString();
   }
 }

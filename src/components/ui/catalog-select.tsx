@@ -31,6 +31,19 @@ interface CatalogSelectProps {
   disabled?: boolean
 }
 
+/** Remove options that share a value, keeping the first occurrence. Catalog
+ * values are effectively unique dropdown entries; duplicates cause React
+ * "two children with the same key" warnings and broken option selection. */
+function dedupe(items: Array<{ value: string; label: string | null }>): Array<{ value: string; label: string | null }> {
+  const seen = new Set<string>()
+  return items.filter(i => {
+    const v = (i.value || '').trim()
+    if (!v || seen.has(v)) return false
+    seen.add(v)
+    return true
+  })
+}
+
 export function CatalogSelect({
   category,
   value,
@@ -49,9 +62,9 @@ export function CatalogSelect({
     fetchCatalog(category).then(opts => {
       if (!mounted) return
       if (opts.length === 0 && fallbackOptions.length > 0) {
-        setItems(fallbackOptions.map(v => ({ value: v, label: null })))
+        setItems(dedupe(fallbackOptions.map(v => ({ value: v, label: null }))))
       } else {
-        setItems(opts)
+        setItems(dedupe(opts))
       }
       setLoading(false)
     })

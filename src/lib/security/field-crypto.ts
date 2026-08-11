@@ -50,6 +50,17 @@ const PREFIX = 'enc:v1:' // versioned prefix for migration support
 
 // Cache the derived key so we don't re-derive on every call.
 let cachedKey: Buffer | null = null
+// Legacy dev key (previously used when ENCRYPTION_KEY was unset). We keep it only
+// as a DECRYPT fallback so data encrypted under the old dev key still reads back.
+let cachedLegacyDevKey: Buffer | null = null
+
+function getLegacyDevKey(): Buffer | null {
+  if (process.env.ENCRYPTION_KEY || process.env.NODE_ENV === 'production') return null
+  if (!cachedLegacyDevKey) {
+    cachedLegacyDevKey = crypto.scryptSync('agrobase-dev-key-insecure', 'agrobase-salt', 32)
+  }
+  return cachedLegacyDevKey
+}
 
 /**
  * Derive a 32-byte AES key from the ENCRYPTION_KEY env var.
@@ -63,11 +74,17 @@ function getEncryptionKey(): Buffer {
 
   const envKey = process.env.ENCRYPTION_KEY
   if (!envKey) {
-    // Development fallback: derive a deterministic key from a fixed salt.
-    // This is NOT secure for production — it just prevents crashes in dev.
+    // Development fallback: derive a key that is NOT a fixed published constant.
+    // We combine the deployment's NEXTAUTH_SECRET (already secret + per-deployment)
+    // with an instance salt so every dev environment uses a different key, and a
+    // hardcoded value is never used verbatim. This is STILL not production-grade —
+    // it just prevents crashes in dev and avoids a byte-for-byte public key.
     if (process.env.NODE_ENV !== 'production') {
-      console.warn('[field-crypto] ENCRYPTION_KEY not set — using insecure dev key. Set ENCRYPTION_KEY in production!')
-      cachedKey = crypto.scryptSync('agrobase-dev-key-insecure', 'agrobase-salt', 32)
+      const authSecret = process.env.NEXTAUTH_SECRET || 'dev-only-ephemeral-secret-do-not-use-in-production'
+      const salt = crypto.createHash('sha256').update('agrobase-field-encryption-salt:v2').digest('hex')
+      const secretMaterial = Buffer.from(`dev|${authSecret}`, 'utf8')
+      console.warn('[field-crypto] ENCRYPTION_KEY not set — using development fallback derived from NEXTAUTH_SECRET. Set ENCRYPTION_KEY in production!')
+      cachedKey = crypto.scryptSync(secretMaterial, salt, 32)
       return cachedKey
     }
     throw new Error('ENCRYPTION_KEY environment variable is required in production')
@@ -142,20 +159,28 @@ export function decryptField(encryptedValue: string | null | undefined): string 
   const authTag = Buffer.from(authTagHex, 'hex')
   const ciphertext = Buffer.from(ciphertextHex, 'hex')
 
-  const decipher = crypto.createDecipheriv(ALGORITHM, key, iv, { authTagLength: AUTH_TAG_LENGTH })
-  decipher.setAuthTag(authTag)
+  const keys = [getEncryptionKey()]
+  const legacy = getLegacyDevKey()
+  if (legacy) keys.push(legacy)
 
-  try {
-    const decrypted = Buffer.concat([
-      decipher.update(ciphertext),
-      decipher.final(),
-    ])
-    return decrypted.toString('utf8')
-  } catch (error) {
-    // Auth tag mismatch — the ciphertext was tampered with or the key changed.
-    // In production, this should trigger a security alert.
-    throw new Error('Failed to decrypt field — possible tampering or key mismatch')
+  for (const key of keys) {
+    try {
+      const decipher = crypto.createDecipheriv(ALGORITHM, key, iv, { authTagLength: AUTH_TAG_LENGTH })
+      decipher.setAuthTag(authTag)
+      const decrypted = Buffer.concat([
+        decipher.update(ciphertext),
+        decipher.final(),
+      ])
+      return decrypted.toString('utf8')
+    } catch {
+      // try next key
+    }
   }
+
+  // Auth tag mismatch — tampered, or no known key matches. We return the raw
+  // value rather than throwing so a single bad field can't take down the whole list.
+  console.warn('[field-crypto] decrypt failed for value (tampered or unknown key)')
+  return encryptedValue
 }
 
 /**

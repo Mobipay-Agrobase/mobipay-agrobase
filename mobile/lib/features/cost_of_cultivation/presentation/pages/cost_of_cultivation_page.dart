@@ -1,31 +1,35 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/api/api_client.dart';
 
 /// Cost of Cultivation — Mobile Screen
 /// Shows per-cultivation cost breakdown (seed cost, sowing cost, total, profit).
 
 final cultivationsProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
-  // TODO: Replace with API call to /api/cultivations
-  return [
-    {
-      'crop': 'Coffee Arabica',
-      'farm': 'Kibale Plot 1',
-      'area': 1.5,
-      'seedCost': 25000,
-      'sowingCost': 75000,
-      'total': 100000,
-      'estYield': 750,
-    },
-    {
-      'crop': 'Maize',
-      'farm': 'Wakiso Maize Field',
-      'area': 2.0,
-      'seedCost': 15000,
-      'sowingCost': 100000,
-      'total': 115000,
-      'estYield': 1000,
-    },
-  ];
+  final res = await ApiClient().get('/api/cultivations');
+  if (res.statusCode != 200) {
+    throw Exception('Failed to load cultivations (${res.statusCode})');
+  }
+  final data = jsonDecode(res.body);
+  final list = (data['cultivations'] as List<dynamic>? ?? [])
+      .map((e) => (e as Map<String, dynamic>))
+      .toList();
+  // Map API fields to the keys this screen renders.
+  return list.map((c) {
+    final seedCost = (c['seedCost'] as num?)?.toDouble() ?? 0.0;
+    final sowingCost = (c['sowingCost'] as num?)?.toDouble() ?? 0.0;
+    final farm = c['farm'] is Map ? (c['farm'] as Map) : <String, dynamic>{};
+    return {
+      'crop': c['cropName'] ?? 'Crop',
+      'farm': farm['name'] ?? 'Farm',
+      'area': (c['cultivationAreaHa'] as num?)?.toDouble() ?? 0.0,
+      'seedCost': seedCost,
+      'sowingCost': sowingCost,
+      'total': seedCost + sowingCost,
+      'estYield': (c['estimatedYield'] as num?)?.toDouble() ?? 0.0,
+    };
+  }).toList();
 });
 
 class CostOfCultivationPage extends ConsumerWidget {

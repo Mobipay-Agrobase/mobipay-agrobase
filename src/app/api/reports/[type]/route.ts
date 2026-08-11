@@ -57,8 +57,8 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ typ
         break
       }
       case 'trainings':
-        // TODO: Add tenantId to Training model for full multi-tenant isolation
         data = await db.training.findMany({
+          where: tenantWhere,
           include: { _count: { select: { attendance: true } } },
           orderBy: { date: 'desc' }, take: 100,
         })
@@ -75,13 +75,18 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ typ
         })
         break
       }
-      case 'attendance':
-        // TODO: Add tenantId to Training model for full multi-tenant isolation
+      case 'attendance': {
+        const attendanceWhere: Record<string, unknown> = {}
+        if (!ctx.isSuperAdmin) {
+          attendanceWhere.training = { tenantId: { in: ctx.tenantScope as string[] } }
+        }
         data = await db.trainingAttendance.findMany({
+          where: attendanceWhere,
           include: { training: { select: { topic: true, date: true } }, farmer: { select: { firstName: true, lastName: true } } },
           take: 200,
         })
         break
+      }
       default:
         data = await db.farmerProfile.findMany({ where: tenantWhere, take: 50 })
     }

@@ -39,6 +39,29 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   }
 }
 
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const { id } = await params
+    const body = await request.json()
+    const { accountId, ...updateData } = body
+    if (!accountId) return NextResponse.json({ error: 'accountId required' }, { status: 400 })
+    const account = await db.farmerBankAccount.update({
+      where: { id: accountId },
+      data: {
+        ...(updateData.accountType !== undefined && { accountType: updateData.accountType }),
+        ...(updateData.accountNo !== undefined && { accountNo: updateData.accountNo }),
+        ...(updateData.bankName !== undefined && { bankName: updateData.bankName }),
+        ...(updateData.branchDetails !== undefined && { branchDetails: updateData.branchDetails }),
+        ...(updateData.sortCode !== undefined && { sortCode: updateData.sortCode }),
+        ...(updateData.isPrimary !== undefined && { isPrimary: updateData.isPrimary }),
+      },
+    })
+    return NextResponse.json({ account })
+  } catch (error) {
+    return NextResponse.json({ error: 'Failed to update bank account' }, { status: 500 })
+  }
+}
+
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { searchParams } = new URL(request.url)

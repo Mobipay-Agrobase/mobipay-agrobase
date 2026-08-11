@@ -49,7 +49,6 @@ export async function GET(request: Request) {
         take: limit,
         include: {
           group: { select: { id: true, name: true } },
-          _count: { select: { farms: true, creditScores: true, trainings: true, sales: true } },
         },
         orderBy: { createdAt: 'desc' },
       }),
@@ -180,18 +179,33 @@ export async function POST(request: Request) {
     })
 
     // Create a login user for the farmer if email/phone + password provided
+    let farmerUserId: string | null = null
     if (body.password && (body.email || body.phone)) {
       const passwordHash = await hashPassword(body.password)
-      await db.user.create({
+      const isEkibbo = (await db.tenant.findFirst({
+        where: { id: ctx.tenantId, isActive: true },
+        select: { name: true },
+      }))?.name?.toUpperCase().includes('EKIBBO') ?? false
+      const createdUser = await db.user.create({
         data: {
           tenantId: ctx.tenantId,
-          role: 'FARMER',
+          // EKIBBO farmers get the EKIBBO-scoped self-service role; others get the generic FARMER role.
+          role: isEkibbo ? 'EKB_FARMER' : 'FARMER',
           email: body.email || null,
           phone: body.phone,
           passwordHash,
           firstName: body.firstName,
           lastName: body.lastName,
         },
+      })
+      farmerUserId = createdUser.id
+    }
+
+    // Link the farmer profile to its login user (enables self-service scoping).
+    if (farmerUserId) {
+      await db.farmerProfile.update({
+        where: { id: farmer.id },
+        data: { userId: farmerUserId },
       })
     }
 

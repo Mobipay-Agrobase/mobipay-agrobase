@@ -1,5 +1,7 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/api/api_client.dart';
 
 /// Input Distribution Screen — Distribute inputs to farmers
 ///
@@ -7,18 +9,25 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 /// Offline-capable: saves locally, syncs when online.
 
 final distributionsProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
-  // TODO: Replace with actual API call
-  // final api = ApiClient();
-  // final res = await api.get('/api/input-distribution');
-  // return extractArray(res, 'data');
-  return [];
+  final res = await ApiClient().get('/api/input-distribution');
+  if (res.statusCode != 200) {
+    throw Exception('Failed to load distributions (${res.statusCode})');
+  }
+  final data = jsonDecode(res.body);
+  return (data['data'] as List<dynamic>? ?? [])
+      .map((e) => (e as Map<String, dynamic>))
+      .toList();
 });
 
 final farmersProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
-  return [
-    {'id': 'demo1', 'firstName': 'John', 'lastName': 'Mugisha', 'farmerCode': 'BS0001ZE1'},
-    {'id': 'demo2', 'firstName': 'Sarah', 'lastName': 'Achieng', 'farmerCode': 'BS0002ZE2'},
-  ];
+  final res = await ApiClient().get('/api/farmers?limit=200');
+  if (res.statusCode != 200) {
+    throw Exception('Failed to load farmers (${res.statusCode})');
+  }
+  final data = jsonDecode(res.body);
+  return (data['farmers'] as List<dynamic>? ?? [])
+      .map((e) => (e as Map<String, dynamic>))
+      .toList();
 });
 
 const INPUT_TYPES = ['Tarpaulin', 'Fertilizer', 'Pruning Saw', 'Seedling'];
@@ -311,24 +320,29 @@ class _DistributeInputFormState extends ConsumerState<_DistributeInputForm> {
 
     setState(() => _saving = true);
     try {
-      // TODO: Replace with actual API call
-      // final api = ApiClient();
-      // await api.post('/api/input-distribution', {
-      //   'farmerId': _farmerId,
-      //   'inputType': _inputType,
-      //   'inputName': _inputNameCtrl.text,
-      //   'quantity': _quantityCtrl.text,
-      //   'unitCost': _unitCostCtrl.text,
-      //   'notes': _notesCtrl.text,
-      // });
-
-      await Future.delayed(const Duration(seconds: 1));
+      final res = await ApiClient().post('/api/input-distribution', body: {
+        'farmerId': _farmerId,
+        'inputType': _inputType,
+        'inputName': _inputNameCtrl.text.isEmpty ? null : _inputNameCtrl.text,
+        'quantity': double.tryParse(_quantityCtrl.text),
+        'unit': 'pcs',
+        'unitCost': double.tryParse(_unitCostCtrl.text),
+        'notes': _notesCtrl.text.isEmpty ? null : _notesCtrl.text,
+      });
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Input distributed!'), backgroundColor: Colors.green),
-        );
-        Navigator.pop(context);
+        if (res.statusCode == 201) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Input distributed!'), backgroundColor: Colors.green),
+          );
+          Navigator.pop(context);
+          ref.invalidate(distributionsProvider);
+        } else {
+          final err = jsonDecode(res.body)['error'] ?? 'Failed to distribute input';
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(err.toString()), backgroundColor: Colors.red),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {

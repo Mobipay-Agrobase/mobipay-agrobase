@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'dart:convert';
+import '../../../../core/api/api_client.dart';
 import '../../../../core/auth/auth_provider.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/formatters.dart';
@@ -301,28 +303,60 @@ class _LoginPageState extends State<LoginPage> {
                 ),
                 if (!otpSent)
                   ElevatedButton(
-                    onPressed: () {
-                      // In production: call /api/auth/reset-password/request
-                      // For demo: auto-advance with a mock OTP
+                    onPressed: () async {
+                      final phone = phoneController.text.trim();
+                      if (phone.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Enter your phone number'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                        return;
+                      }
                       setDialogState(() => otpSent = true);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('OTP sent: 123456 (demo mode)'),
-                          backgroundColor: Colors.green,
-                        ),
-                      );
+                      try {
+                        final res = await ApiClient().post('/api/auth/reset-password/request', body: {
+                          'phone': phone,
+                        });
+                        final data = jsonDecode(res.body);
+                        if (res.statusCode == 200) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Reset code sent via SMS. Check your phone.'),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(data['error'] ?? 'Failed to send reset code'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      } catch (_) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Connection error. Please try again.'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
                     },
                     child: const Text('Send OTP'),
                   ),
                 if (otpSent && !otpVerified)
                   ElevatedButton(
                     onPressed: () {
-                      if (otpController.text == '123456') {
+                      // Client-side sanity check; the server validates the OTP in the
+                      // final confirm call. Show password fields so the user can reset.
+                      if (otpController.text.trim().length == 6) {
                         setDialogState(() => otpVerified = true);
                       } else {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                            content: Text('Invalid OTP. Use 123456 (demo mode)'),
+                            content: Text('Enter the 6-digit code'),
                             backgroundColor: Colors.red,
                           ),
                         );
@@ -343,15 +377,37 @@ class _LoginPageState extends State<LoginPage> {
                         );
                         return;
                       }
-                      // In production: call /api/auth/reset-password/confirm
-                      // For demo: just close and show success
-                      Navigator.pop(dialogContext);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Password reset successful! Please log in.'),
-                          backgroundColor: Colors.green,
-                        ),
-                      );
+                      try {
+                        final res = await ApiClient().post('/api/auth/reset-password/confirm', body: {
+                          'phone': phoneController.text.trim(),
+                          'otp': otpController.text.trim(),
+                          'newPassword': newPasswordController.text,
+                        });
+                        final data = jsonDecode(res.body);
+                        if (res.statusCode == 200) {
+                          Navigator.pop(dialogContext);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Password reset successful! Please log in.'),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(data['error'] ?? 'Password reset failed'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      } catch (_) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Connection error. Please try again.'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
                     },
                     child: const Text('Reset Password'),
                   ),

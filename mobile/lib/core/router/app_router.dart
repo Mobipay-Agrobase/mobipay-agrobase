@@ -6,7 +6,11 @@ import '../../features/dashboard/presentation/pages/dashboard_page.dart';
 import '../../features/farmers/presentation/pages/farmers_page.dart';
 import '../../features/farmers/presentation/pages/farmer_detail_page.dart';
 import '../../features/farm_lands/presentation/pages/farm_lands_page.dart';
+import '../../features/farm_lands/presentation/pages/farm_land_detail_page.dart';
+import '../../features/farm_lands/presentation/pages/farm_land_form_page.dart';
 import '../../features/cultivations/presentation/pages/cultivations_page.dart';
+import '../../features/cultivations/presentation/pages/cultivation_form_page.dart';
+import '../../features/cultivations/presentation/pages/cultivation_detail_page.dart';
 import '../../features/sales/presentation/pages/sales_page.dart';
 import '../../features/payments/presentation/pages/payments_page.dart';
 import '../../features/loans/presentation/pages/loans_page.dart';
@@ -36,6 +40,7 @@ import '../../features/impact/presentation/pages/my_passport_page.dart';
 import '../../features/purchases/presentation/pages/produce_purchase_page.dart';
 import '../../features/input_distribution/presentation/pages/input_distribution_page.dart';
 import '../../features/farmer_ledger/presentation/pages/farmer_ledger_page.dart';
+import '../../features/farmer_ledger/presentation/pages/my_farmer_dashboard_page.dart';
 import '../../core/navigation/dynamic_navigation_service.dart';
 
 class AppRouter {
@@ -133,14 +138,42 @@ class AppRouter {
             builder: (_, state) =>
                 FarmerLedgerPage(farmerId: state.pathParameters['id']!),
           ),
+          GoRoute(
+            path: '/my-dashboard',
+            builder: (_, __) => const MyFarmerDashboardPage(),
+          ),
           // ─── Phase 2: Farm Lands, Cultivations, Sales, Payments ───
           GoRoute(
             path: '/farm-lands',
             builder: (_, __) => const FarmLandsPage(),
           ),
           GoRoute(
+            path: '/farm-lands/new',
+            builder: (_, state) => FarmLandFormPage(farmerId: state.uri.queryParameters['farmerId']),
+          ),
+          GoRoute(
+            path: '/farm-lands/:id',
+            builder: (_, state) => FarmLandDetailPage(farmLandId: state.pathParameters['id']!),
+          ),
+          GoRoute(
+            path: '/farm-lands/:id/edit',
+            builder: (_, state) => FarmLandFormPage(farmLandId: state.pathParameters['id']!),
+          ),
+          GoRoute(
             path: '/cultivations',
             builder: (_, state) => CultivationsPage(farmId: state.uri.queryParameters['farmId']),
+          ),
+          GoRoute(
+            path: '/cultivation-create',
+            builder: (_, state) => CultivationFormPage(farmId: state.uri.queryParameters['farmId']),
+          ),
+          GoRoute(
+            path: '/cultivation-edit/:id',
+            builder: (_, state) => CultivationFormPage(cultivationId: state.pathParameters['id']!),
+          ),
+          GoRoute(
+            path: '/cultivation-detail/:id',
+            builder: (_, state) => CultivationDetailPage(cultivationId: state.pathParameters['id']!),
           ),
           GoRoute(
             path: '/sales',

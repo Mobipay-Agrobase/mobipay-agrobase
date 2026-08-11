@@ -153,7 +153,7 @@ export function FarmerRegistrationForm({ onSaved, initialData }: FarmerFormProps
                 <div className="space-y-2"><Label>Certification Type</Label>
                   <Select value={form.certificationType || ''} onValueChange={v => update('certificationType', v)}>
                     <SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger>
-                    <SelectContent><SelectItem value="Individual">Individual</SelectItem><SelectItem value="Group">Group</SelectItem></SelectContent>
+                    <SelectContent><SelectItem value="Individual">Individual</SelectItem><SelectItem value="Group">Group</SelectItem><SelectItem value="RFA">RFA (Rainforest Alliance)</SelectItem><SelectItem value="Rainforest Alliance">Rainforest Alliance</SelectItem><SelectItem value="Organic">Organic</SelectItem><SelectItem value="UTZ">UTZ</SelectItem><SelectItem value="Fairtrade">Fairtrade</SelectItem></SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2"><Label>Year of ICS</Label><Input type="number" value={form.icsYear || ''} onChange={e => update('icsYear', e.target.value)} placeholder="2024" /></div>

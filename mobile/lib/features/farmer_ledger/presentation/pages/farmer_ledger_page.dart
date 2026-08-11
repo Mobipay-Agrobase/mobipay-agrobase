@@ -1,5 +1,7 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/api/api_client.dart';
 
 /// Farmer Ledger Screen — View farmer's complete transaction history
 ///
@@ -8,22 +10,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 /// + Full chronological transaction list with color-coded type badges
 
 final ledgerProvider = FutureProvider.family<Map<String, dynamic>, String>((ref, farmerId) async {
-  // TODO: Replace with actual API call
-  // final api = ApiClient();
-  // final res = await api.get('/api/farmers/$farmerId/ledger');
-  // return res;
-  return {
-    'farmer': {'firstName': 'John', 'lastName': 'Mugisha', 'farmerCode': 'BS0001ZE1'},
-    'entries': [],
-    'summary': {
-      'totalEarned': 0,
-      'totalDeducted': 0,
-      'totalPaid': 0,
-      'currentBalance': 0,
-      'outstandingLoans': 0,
-      'outstandingInputs': 0,
-    },
-  };
+  final res = await ApiClient().get('/api/farmers/$farmerId/ledger');
+  if (res.statusCode != 200) {
+    throw Exception('Failed to load ledger (${res.statusCode})');
+  }
+  return jsonDecode(res.body) as Map<String, dynamic>;
 });
 
 class FarmerLedgerPage extends ConsumerWidget {

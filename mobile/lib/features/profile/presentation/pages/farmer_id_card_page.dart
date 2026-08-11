@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../../../core/api/api_client.dart';
 import '../../../../core/theme/app_theme.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 
 /// Farmer ID Card — a printable/shareable card with QR code.
 ///
@@ -210,16 +211,29 @@ class _FarmerIdCardPageState extends State<FarmerIdCardPage> {
                       ),
                       child: Column(
                         children: [
-                          // QR placeholder (in production: generate from verificationUrl)
+                          // Real QR generated from the verification URL
                           Container(
-                            width: 120,
-                            height: 120,
+                            padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(8),
                               border: Border.all(color: AppTheme.primaryGreen, width: 2),
                             ),
-                            child: Icon(Icons.qr_code, size: 80, color: AppTheme.primaryGreen),
+                            child: QrImageView(
+                              data: verificationUrl,
+                              version: QrVersions.auto,
+                              size: 120,
+                              backgroundColor: Colors.white,
+                              padding: EdgeInsets.zero,
+                              eyeStyle: const QrEyeStyle(
+                                eyeShape: QrEyeShape.square,
+                                color: AppTheme.primaryGreen,
+                              ),
+                              dataModuleStyle: const QrDataModuleStyle(
+                                dataModuleShape: QrDataModuleShape.square,
+                                color: AppTheme.primaryGreen,
+                              ),
+                            ),
                           ),
                           const SizedBox(height: 8),
                           Text(

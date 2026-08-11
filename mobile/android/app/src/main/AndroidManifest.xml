@@ -2,6 +2,9 @@
     <!-- P7: INTERNET permission required for release builds (debug/profile have it automatically) -->
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+    <!-- Location for farm polygon boundary capture (EKIBBO Phase 3) -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
     <application
         android:allowBackup="false"
         android:usesCleartextTraffic="false"

@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils'
 import {
   Search, Plus, Eye, X, MapPin, Ruler, Sprout, Layers, Table as TableIcon,
   ArrowLeft, Loader2, Map as MapIcon, Crosshair, Trash2, Save, Calendar,
-  Leaf, Droplets, Users as UsersIcon, FlaskConical, ShieldCheck
+  Leaf, Droplets, Users as UsersIcon, FlaskConical, ShieldCheck, Pencil
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -20,6 +20,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 import { Separator } from '@/components/ui/separator'
 import { toast } from 'sonner'
+import { StatCard, StatCardGrid } from '@/components/ui/stat-card'
 import dynamic from 'next/dynamic'
 import { useAppStore } from '@/lib/store'
 
@@ -46,6 +47,7 @@ import { CatalogSelect } from '@/components/ui/catalog-select'
 
 interface FarmLand {
   id: string
+  farmerId: string
   name: string
   sizeHectares: number | null
   latitude: number | null
@@ -57,17 +59,49 @@ interface FarmLand {
   landTopology: string | null
   powerSource: string | null
   irrigationType: string | null
+  irrigationSource?: string | null
+  landGradient?: string | null
+  approachRoad?: string | null
+  farmPhotoUrl?: string | null
   certType: string | null
   conversionStatus: string | null
+  conversionDate?: string | null
+  inspectorName?: string | null
+  conversionQualified?: boolean | null
+  conversionRemarks?: string | null
   fullTimeWorkers: number | null
   partTimeWorkers: number | null
   seasonalWorkers: number | null
   familyWorkers: number | null
+  lastChemicalApplicationDate?: string | null
+  conventionalLands?: string | null
+  fallowPastureLand?: string | null
+  conventionalCrops?: string | null
+  estYieldKg?: number | null
+  soilCollectionDate?: string | null
+  soilLabTestingDate?: string | null
+  soilResultDate?: string | null
+  soilReportUrl?: string | null
+  soilSamplesInfo?: string | null
   createdAt: string
   farmer?: { id: string; firstName: string; lastName: string; farmerCode?: string | null }
   polygonPoints?: Array<{ id: string; latitude: number; longitude: number; pointOrder: number; altitude?: number | null }>
-  _count?: { cultivations: number }
+  _count?: { cultivations: number; polygonPoints?: number }
   cultivations?: Array<{ id: string; cropName: string; status: string; cultivationAreaHa: number | null }>
+  soilAnalyses?: Array<SoilAnalysis>
+}
+
+interface SoilAnalysis {
+  id?: string
+  collectionDate?: string | null
+  labTestingDate?: string | null
+  resultDate?: string | null
+  reportUrl?: string | null
+  samplesInfo?: string | null
+  criteria: string
+  criteriaValue?: string | null
+  minValue?: string | null
+  maxValue?: string | null
 }
 
 const LAND_OWNERSHIP = ['Owned', 'Rent', 'Lease']
@@ -80,45 +114,68 @@ const CONV_STATUS = ['IC-1', 'IC-2', 'IC-3', 'Organic', 'SRP']
 const CERT_TYPES = ['NPOP', 'NOP', 'EU Organic', 'USDA Organic']
 
 export default function FarmLandsView() {
-  const { selectedFarmerId, setSelectedFarmerId } = useAppStore()
+  const { selectedFarmerId, setSelectedFarmerId, setActiveModule } = useAppStore()
   const [farms, setFarms] = useState<FarmLand[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [showAdd, setShowAdd] = useState(false)
+  const [editingFarm, setEditingFarm] = useState<FarmLand | null>(null)
   const [selectedFarm, setSelectedFarm] = useState<FarmLand | null>(null)
   const [activeTab, setActiveTab] = useState<'table' | 'map'>('table')
   const [filterFarmer, setFilterFarmer] = useState<string>(selectedFarmerId || '')
+  const [page, setPage] = useState(1)
+  const [total, setTotal] = useState(0)
+  const [limit, setLimit] = useState(20)
 
   const fetchFarms = useCallback(async () => {
     setLoading(true)
     try {
       const params = new URLSearchParams()
       if (filterFarmer) params.set('farmerId', filterFarmer)
+      if (search) params.set('search', search)
+      params.set('page', String(page))
+      params.set('limit', String(limit))
+      if (activeTab === 'map') params.set('includePolygons', 'true')
       const res = await fetch(`/api/farm-lands?${params}`)
       const data = await res.json()
       setFarms(data.farms || [])
+      if (typeof data.total === 'number') setTotal(data.total)
     } catch (e) {
       console.error(e)
       toast.error('Failed to load farm lands')
     } finally {
       setLoading(false)
     }
-  }, [filterFarmer])
+  }, [filterFarmer, search, page, limit, activeTab])
 
   useEffect(() => { fetchFarms() }, [fetchFarms])
 
-  const filtered = farms.filter(f => {
-    if (!search) return true
-    const farmerName = f.farmer ? `${f.farmer.firstName} ${f.farmer.lastName}` : ''
-    return (
-      f.name.toLowerCase().includes(search.toLowerCase()) ||
-      farmerName.toLowerCase().includes(search.toLowerCase()) ||
-      (f.landOwnership || '').toLowerCase().includes(search.toLowerCase())
-    )
-  })
+  const handleDelete = useCallback(async (farm: FarmLand) => {
+    if (!confirm(`Are you sure you want to delete "${farm.name}"? This action cannot be undone.`)) return
+    try {
+      const res = await fetch(`/api/farm-lands/${farm.id}`, { method: 'DELETE' })
+      if (res.ok) {
+        toast.success(`Farm land "${farm.name}" deleted`)
+        fetchFarms()
+      } else {
+        const data = await res.json()
+        toast.error(data.error || 'Failed to delete farm land')
+      }
+    } catch {
+      toast.error('Network error')
+    }
+  }, [fetchFarms])
+
+  const filtered = farms
+
+  // Debounce search + reset to page 1 before refetching (server-side).
+  useEffect(() => {
+    const t = setTimeout(() => { setPage(1) }, 350)
+    return () => clearTimeout(t)
+  }, [search])
 
   const totalArea = farms.reduce((s, f) => s + (f.sizeHectares || 0), 0)
-  const withPolygon = farms.filter(f => (f.polygonPoints?.length ?? 0) >= 3).length
+  const withPolygon = farms.filter(f => (f._count?.polygonPoints ?? f.polygonPoints?.length ?? 0) >= 3).length
   const withCultivations = farms.filter(f => (f._count?.cultivations || 0) > 0).length
 
   if (selectedFarm) {
@@ -142,31 +199,19 @@ export default function FarmLandsView() {
               <TabsTrigger value="map" className="text-xs gap-1.5"><MapIcon className="w-3.5 h-3.5" /> Map</TabsTrigger>
             </TabsList>
           </Tabs>
-          <Button onClick={() => setShowAdd(true)} className="gap-2">
+          <Button onClick={() => setActiveModule('farmland-create')} className="gap-2">
             <Plus className="w-4 h-4" /> Register Farm Land
           </Button>
         </div>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card><CardContent className="p-4 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 flex items-center justify-center"><Layers className="w-5 h-5 text-emerald-600" /></div>
-          <div><p className="text-xs text-muted-foreground">Total Lands</p><p className="text-lg font-bold">{farms.length}</p></div>
-        </CardContent></Card>
-        <Card><CardContent className="p-4 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/40 flex items-center justify-center"><Ruler className="w-5 h-5 text-blue-600" /></div>
-          <div><p className="text-xs text-muted-foreground">Total Area</p><p className="text-lg font-bold">{totalArea.toFixed(2)} ha</p></div>
-        </CardContent></Card>
-        <Card><CardContent className="p-4 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-purple-50 dark:bg-purple-950/40 flex items-center justify-center"><MapPin className="w-5 h-5 text-purple-600" /></div>
-          <div><p className="text-xs text-muted-foreground">With GPS Polygon</p><p className="text-lg font-bold">{withPolygon}</p></div>
-        </CardContent></Card>
-        <Card><CardContent className="p-4 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/40 flex items-center justify-center"><Sprout className="w-5 h-5 text-amber-600" /></div>
-          <div><p className="text-xs text-muted-foreground">Has Cultivations</p><p className="text-lg font-bold">{withCultivations}</p></div>
-        </CardContent></Card>
-      </div>
+      <StatCardGrid>
+        <StatCard icon={<Layers />} label="Total Lands" value={farms.length} tone="emerald" />
+        <StatCard icon={<Ruler />} label="Total Area" value={`${totalArea.toFixed(2)} ha`} tone="blue" />
+        <StatCard icon={<MapPin />} label="With GPS Polygon" value={withPolygon} tone="purple" />
+        <StatCard icon={<Sprout />} label="Has Cultivations" value={withCultivations} tone="amber" />
+      </StatCardGrid>
 
       {/* Search */}
       <div className="flex flex-col sm:flex-row gap-2">
@@ -199,8 +244,9 @@ export default function FarmLandsView() {
                 <p className="text-sm mt-1">Click "Register Farm Land" to add the first one</p>
               </div>
             ) : (
-              <Table>
-                <TableHeader>
+              <>
+                <Table>
+                  <TableHeader>
                   <TableRow>
                     <TableHead>Farm Name</TableHead>
                     <TableHead>Farmer</TableHead>
@@ -219,7 +265,7 @@ export default function FarmLandsView() {
                         {f.landTopology && <p className="text-[10px] text-muted-foreground">{f.landTopology}</p>}
                       </TableCell>
                       <TableCell className="text-sm">
-                        {f.farmer ? `${f.farmer.firstName} ${f.farmer.lastName}` : '—'}
+                        {f.farmer ? `${f.farmer.firstName} ${f.farmer.lastName}${f.farmer.farmerCode ? ` (${f.farmer.farmerCode})` : ''}` : '—'}
                       </TableCell>
                       <TableCell className="hidden md:table-cell text-sm">{f.sizeHectares?.toFixed(2) ?? '—'}</TableCell>
                       <TableCell className="hidden lg:table-cell text-sm">{f.landOwnership || '—'}</TableCell>
@@ -227,21 +273,46 @@ export default function FarmLandsView() {
                         {f._count?.cultivations ? `${f._count.cultivations} crop(s)` : '—'}
                       </TableCell>
                       <TableCell className="hidden xl:table-cell">
-                        {(f.polygonPoints?.length ?? 0) >= 3 ? (
+                        {(f._count?.polygonPoints ?? f.polygonPoints?.length ?? 0) >= 3 ? (
                           <Badge className="bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300 text-[10px]">
-                            <MapPin className="w-3 h-3 mr-1" /> {f.polygonPoints!.length} pts
+                            <MapPin className="w-3 h-3 mr-1" /> {f._count?.polygonPoints ?? f.polygonPoints?.length ?? 0} pts
                           </Badge>
                         ) : <span className="text-xs text-muted-foreground">No polygon</span>}
                       </TableCell>
                       <TableCell>
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); setSelectedFarm(f) }}>
-                          <Eye className="w-4 h-4" />
-                        </Button>
+                        <div className="flex items-center gap-1">
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); useAppStore.getState().setSelectedFarmLandId(f.id); setActiveModule('farmland-detail') }}>
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); useAppStore.getState().setSelectedFarmLandId(f.id); setActiveModule('farmland-edit') }}>
+                            <Pencil className="w-4 h-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={(e) => { e.stopPropagation(); handleDelete(f) }}>
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
+              {total > limit && (
+                <div className="flex items-center justify-between px-4 py-3 border-t">
+                  <p className="text-sm text-muted-foreground">
+                    Showing <span className="font-medium">{(page - 1) * limit + 1}</span>–{Math.min(page * limit, total)} of {total}
+                  </p>
+                  <div className="flex items-center gap-1">
+                    <Button variant="outline" size="sm" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page <= 1}>
+                      Previous
+                    </Button>
+                    <span className="text-sm text-muted-foreground px-2">Page {page} of {Math.ceil(total / limit)}</span>
+                    <Button variant="outline" size="sm" onClick={() => setPage(p => p + 1)} disabled={page >= Math.ceil(total / limit)}>
+                      Next
+                    </Button>
+                  </div>
+                </div>
+              )}
+              </>
             )}
           </CardContent>
         </Card>
@@ -262,31 +333,22 @@ export default function FarmLandsView() {
         </Card>
       )}
 
-      {/* Add Dialog */}
-      <Dialog open={showAdd} onOpenChange={setShowAdd}>
-        <DialogContent className="max-w-4xl max-h-[92vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Register New Farm Land</DialogTitle>
-            <CardDescription>Create a farm land with GPS polygon, ownership, irrigation, soil, labor and conversion details.</CardDescription>
-          </DialogHeader>
-          <FarmLandCreateForm
-            farmerId={filterFarmer}
-            onSaved={() => { setShowAdd(false); fetchFarms() }}
-          />
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }
 
 // ─── Create Form (uses PolygonMap) ───────────────────────────────
 
-function FarmLandCreateForm({ farmerId: preselectFarmerId, onSaved }: { farmerId?: string; onSaved: () => void }) {
+function FarmLandCreateForm({ farmerId: preselectFarmerId, editFarm, onSaved }: { farmerId?: string; editFarm?: FarmLand; onSaved: () => void }) {
   const [saving, setSaving] = useState(false)
   const [farmers, setFarmers] = useState<Array<{ id: string; firstName: string; lastName: string; farmerCode?: string | null }>>([])
   const [form, setForm] = useState<Record<string, any>>({})
   const [polygonPoints, setPolygonPoints] = useState<Array<{ lat: number; lng: number }>>([])
   const [polygonArea, setPolygonArea] = useState(0)
+  const [soilAnalyses, setSoilAnalyses] = useState<Array<SoilAnalysis>>([
+    { criteria: '', criteriaValue: '', minValue: '', maxValue: '' }
+  ])
+  const isEditing = !!editFarm
 
   useEffect(() => {
     fetch('/api/farmers?limit=200')
@@ -294,6 +356,61 @@ function FarmLandCreateForm({ farmerId: preselectFarmerId, onSaved }: { farmerId
       .then(data => setFarmers(data.farmers || data.data || []))
       .catch(() => {})
   }, [])
+
+  useEffect(() => {
+    if (editFarm) {
+      setForm({
+        farmerId: editFarm.farmerId || '',
+        name: editFarm.name || '',
+        sizeHectares: editFarm.sizeHectares ?? '',
+        latitude: editFarm.latitude ?? '',
+        longitude: editFarm.longitude ?? '',
+        landOwnership: editFarm.landOwnership || '',
+        landSurveyNo: editFarm.landSurveyNo || '',
+        waterSource: editFarm.waterSource || '',
+        soilFertility: editFarm.soilFertility || '',
+        landTopology: editFarm.landTopology || '',
+        powerSource: editFarm.powerSource || '',
+        farmPhotoUrl: editFarm.farmPhotoUrl || '',
+        irrigationType: editFarm.irrigationType || '',
+        certType: editFarm.certType || '',
+        conversionStatus: editFarm.conversionStatus || '',
+        fullTimeWorkers: editFarm.fullTimeWorkers ?? '',
+        partTimeWorkers: editFarm.partTimeWorkers ?? '',
+        seasonalWorkers: editFarm.seasonalWorkers ?? '',
+        familyWorkers: editFarm.familyWorkers ?? '',
+        lastChemicalApplicationDate: editFarm.lastChemicalApplicationDate || '',
+        conventionalLands: editFarm.conventionalLands || '',
+        fallowPastureLand: editFarm.fallowPastureLand || '',
+        conventionalCrops: editFarm.conventionalCrops || '',
+        estYieldKg: editFarm.estYieldKg ?? '',
+        conversionDate: editFarm.conversionDate || '',
+        inspectorName: editFarm.inspectorName || '',
+        conversionQualified: editFarm.conversionQualified || false,
+        conversionRemarks: editFarm.conversionRemarks || '',
+        soilCollectionDate: editFarm.soilCollectionDate || '',
+        soilLabTestingDate: editFarm.soilLabTestingDate || '',
+        soilResultDate: editFarm.soilResultDate || '',
+        soilReportUrl: editFarm.soilReportUrl || '',
+        soilSamplesInfo: editFarm.soilSamplesInfo || '',
+        approachRoad: editFarm.approachRoad || '',
+        landGradient: editFarm.landGradient || '',
+        irrigationSource: editFarm.irrigationSource || '',
+      })
+      if (editFarm.polygonPoints && editFarm.polygonPoints.length > 0) {
+        setPolygonPoints(editFarm.polygonPoints.map(p => ({ lat: p.latitude, lng: p.longitude })))
+      }
+      if (editFarm.soilAnalyses && editFarm.soilAnalyses.length > 0) {
+        setSoilAnalyses(editFarm.soilAnalyses.map(a => ({
+          id: a.id,
+          criteria: a.criteria || '',
+          criteriaValue: a.criteriaValue || '',
+          minValue: a.minValue || '',
+          maxValue: a.maxValue || '',
+        })))
+      }
+    }
+  }, [editFarm])
 
   const update = (k: string, v: any) => setForm(p => ({ ...p, [k]: v }))
 
@@ -308,18 +425,30 @@ function FarmLandCreateForm({ farmerId: preselectFarmerId, onSaved }: { farmerId
         farmerId: form.farmerId,
         polygonPoints: polygonPoints.length >= 3 ? polygonPoints : undefined,
         sizeHectares: form.sizeHectares || (polygonArea > 0 ? polygonArea : undefined),
+        soilAnalyses: soilAnalyses.filter(a => a.criteria), // only send entries with criteria
       }
-      const res = await fetch('/api/farm-lands', {
-        method: 'POST',
+      const url = isEditing ? `/api/farm-lands/${editFarm!.id}` : '/api/farm-lands'
+      const method = isEditing ? 'PUT' : 'POST'
+      const res = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       })
       const data = await res.json()
       if (res.ok) {
-        toast.success(`Farm land "${form.name}" created successfully!`)
+        // Save soil analyses
+        const farmId = isEditing ? editFarm!.id : data.farm?.id
+        if (farmId && soilAnalyses.filter(a => a.criteria).length > 0) {
+          await fetch(`/api/farm-lands/${farmId}/soil-analyses`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ analyses: soilAnalyses.filter(a => a.criteria) }),
+          })
+        }
+        toast.success(`Farm land "${form.name}" ${isEditing ? 'updated' : 'created'} successfully!`)
         onSaved()
       } else {
-        toast.error(data.error || 'Failed to create farm land')
+        toast.error(data.error || `Failed to ${isEditing ? 'update' : 'create'} farm land`)
       }
     } catch {
       toast.error('Network error')
@@ -335,6 +464,7 @@ function FarmLandCreateForm({ farmerId: preselectFarmerId, onSaved }: { farmerId
           <TabsTrigger value="basic" className="text-xs gap-1.5"><MapPin className="w-3.5 h-3.5" /> Basic</TabsTrigger>
           <TabsTrigger value="polygon" className="text-xs gap-1.5"><Ruler className="w-3.5 h-3.5" /> Polygon</TabsTrigger>
           <TabsTrigger value="soil" className="text-xs">Soil &amp; Water</TabsTrigger>
+          <TabsTrigger value="soil-analysis" className="text-xs gap-1.5"><FlaskConical className="w-3.5 h-3.5" /> Soil Analysis</TabsTrigger>
           <TabsTrigger value="labor" className="text-xs">Labor</TabsTrigger>
           <TabsTrigger value="conversion" className="text-xs">Conversion</TabsTrigger>
         </TabsList>
@@ -387,6 +517,7 @@ function FarmLandCreateForm({ farmerId: preselectFarmerId, onSaved }: { farmerId
 
         <TabsContent value="polygon" className="mt-4">
           <PolygonMap
+            initialPoints={isEditing ? polygonPoints : []}
             onChange={(pts, a) => { setPolygonPoints(pts); setPolygonArea(a) }}
           />
           {polygonArea > 0 && (
@@ -425,6 +556,137 @@ function FarmLandCreateForm({ farmerId: preselectFarmerId, onSaved }: { farmerId
           </div>
         </TabsContent>
 
+        <TabsContent value="soil-analysis" className="mt-4 space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium">Soil Analysis Information</p>
+              <p className="text-xs text-muted-foreground">Add multiple criteria entries (pH, Nitrogen, Sulphur, etc.)</p>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setSoilAnalyses(prev => [...prev, { criteria: '', criteriaValue: '', minValue: '', maxValue: '' }])}
+              className="gap-1.5"
+            >
+              <Plus className="w-3.5 h-3.5" /> Add Criteria
+            </Button>
+          </div>
+
+          {soilAnalyses.map((analysis, idx) => (
+            <Card key={idx} className="relative">
+              <CardContent className="p-4 space-y-3">
+                {soilAnalyses.length > 1 && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute top-2 right-2 h-6 w-6"
+                    onClick={() => setSoilAnalyses(prev => prev.filter((_, i) => i !== idx))}
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </Button>
+                )}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label>Criteria *</Label>
+                    <Select
+                      value={analysis.criteria || ''}
+                      onValueChange={v => {
+                        const updated = [...soilAnalyses]
+                        updated[idx] = { ...updated[idx], criteria: v }
+                        setSoilAnalyses(updated)
+                      }}
+                    >
+                      <SelectTrigger><SelectValue placeholder="Select criteria" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="pH">pH</SelectItem>
+                        <SelectItem value="Sulphur(S)">Sulphur (S)</SelectItem>
+                        <SelectItem value="Nitrogen(N)">Nitrogen (N)</SelectItem>
+                        <SelectItem value="Phosphorus(P)">Phosphorus (P)</SelectItem>
+                        <SelectItem value="Potassium(K)">Potassium (K)</SelectItem>
+                        <SelectItem value="Organic Carbon">Organic Carbon</SelectItem>
+                        <SelectItem value="Electrical Conductivity">Electrical Conductivity</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Criteria Value</Label>
+                    <Input
+                      value={analysis.criteriaValue || ''}
+                      onChange={e => {
+                        const updated = [...soilAnalyses]
+                        updated[idx] = { ...updated[idx], criteriaValue: e.target.value }
+                        setSoilAnalyses(updated)
+                      }}
+                      placeholder="e.g. 6.5, 120ppm"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label>Min Permissible Value</Label>
+                    <Input
+                      value={analysis.minValue || ''}
+                      onChange={e => {
+                        const updated = [...soilAnalyses]
+                        updated[idx] = { ...updated[idx], minValue: e.target.value }
+                        setSoilAnalyses(updated)
+                      }}
+                      placeholder="e.g. 5.5ppm"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Max Permissible Value</Label>
+                    <Input
+                      value={analysis.maxValue || ''}
+                      onChange={e => {
+                        const updated = [...soilAnalyses]
+                        updated[idx] = { ...updated[idx], maxValue: e.target.value }
+                        setSoilAnalyses(updated)
+                      }}
+                      placeholder="e.g. 7.5ppm"
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="space-y-1.5">
+              <Label>Collection Date</Label>
+              <Input type="date" value={form.soilCollectionDate?.split('T')[0] || ''} onChange={e => update('soilCollectionDate', e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Lab Testing Date</Label>
+              <Input type="date" value={form.soilLabTestingDate?.split('T')[0] || ''} onChange={e => update('soilLabTestingDate', e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Result Date</Label>
+              <Input type="date" value={form.soilResultDate?.split('T')[0] || ''} onChange={e => update('soilResultDate', e.target.value)} />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label>Samples Info</Label>
+              <Input
+                value={form.soilSamplesInfo || ''}
+                onChange={e => update('soilSamplesInfo', e.target.value)}
+                placeholder="e.g. 3 samples from 2 hectares"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Report URL</Label>
+              <Input
+                value={form.soilReportUrl || ''}
+                onChange={e => update('soilReportUrl', e.target.value)}
+                placeholder="Link to uploaded report"
+              />
+            </div>
+          </div>
+        </TabsContent>
+
         <TabsContent value="labor" className="mt-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="space-y-1.5"><Label>Full-time Workers</Label><Input type="number" value={form.fullTimeWorkers ?? ''} onChange={e => update('fullTimeWorkers', e.target.value)} /></div>
@@ -449,6 +711,19 @@ function FarmLandCreateForm({ farmerId: preselectFarmerId, onSaved }: { farmerId
             <div className="space-y-1.5"><Label>Conversion Date</Label><Input type="date" value={form.conversionDate?.split('T')[0] || ''} onChange={e => update('conversionDate', e.target.value)} /></div>
             <div className="space-y-1.5"><Label>Inspector Name</Label><Input value={form.inspectorName || ''} onChange={e => update('inspectorName', e.target.value)} /></div>
           </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-1.5"><Label>Last Chemical Application Date</Label><Input type="date" value={form.lastChemicalApplicationDate?.split('T')[0] || ''} onChange={e => update('lastChemicalApplicationDate', e.target.value)} /></div>
+            <div className="space-y-1.5"><Label>Estimated Yield (kg)</Label><Input type="number" step="0.01" value={form.estYieldKg ?? ''} onChange={e => update('estYieldKg', e.target.value)} /></div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-1.5"><Label>Conventional Lands</Label><Input value={form.conventionalLands || ''} onChange={e => update('conventionalLands', e.target.value)} placeholder="e.g. Adjacent conventional plots" /></div>
+            <div className="space-y-1.5"><Label>Fallow/Pasture Land</Label><Input value={form.fallowPastureLand || ''} onChange={e => update('fallowPastureLand', e.target.value)} placeholder="e.g. 2 ha fallow" /></div>
+          </div>
+          <div className="space-y-1.5"><Label>Conventional Crops</Label><Input value={form.conventionalCrops || ''} onChange={e => update('conventionalCrops', e.target.value)} placeholder="e.g. Maize, Beans" /></div>
+          <div className="flex items-center gap-2">
+            <input type="checkbox" id="conversionQualified" checked={!!form.conversionQualified} onChange={e => update('conversionQualified', e.target.checked)} className="rounded" />
+            <Label htmlFor="conversionQualified">Conversion Qualified</Label>
+          </div>
           <div className="space-y-1.5"><Label>Remarks</Label><Textarea value={form.conversionRemarks || ''} onChange={e => update('conversionRemarks', e.target.value)} /></div>
         </TabsContent>
       </Tabs>
@@ -456,7 +731,7 @@ function FarmLandCreateForm({ farmerId: preselectFarmerId, onSaved }: { farmerId
       <DialogFooter className="gap-2">
         <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
         <Button type="submit" disabled={saving} className="gap-2">
-          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} Create Farm Land
+          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} {isEditing ? 'Update Farm Land' : 'Create Farm Land'}
         </Button>
       </DialogFooter>
     </form>
@@ -468,6 +743,7 @@ function FarmLandCreateForm({ farmerId: preselectFarmerId, onSaved }: { farmerId
 function FarmLandDetail({ farm, onBack }: { farm: FarmLand; onBack: () => void }) {
   const [cultivations, setCultivations] = useState<any[]>([])
   const [loadingCult, setLoadingCult] = useState(false)
+  const [soilAnalyses, setSoilAnalyses] = useState<SoilAnalysis[]>([])
 
   useEffect(() => {
     setLoadingCult(true)
@@ -476,6 +752,11 @@ function FarmLandDetail({ farm, onBack }: { farm: FarmLand; onBack: () => void }
       .then(data => setCultivations(data.cultivations || []))
       .catch(() => {})
       .finally(() => setLoadingCult(false))
+
+    fetch(`/api/farm-lands/${farm.id}/soil-analyses`)
+      .then(r => r.json())
+      .then(data => setSoilAnalyses(data.analyses || []))
+      .catch(() => {})
   }, [farm.id])
 
   const polygonPoints = farm.polygonPoints || []
@@ -547,9 +828,54 @@ function FarmLandDetail({ farm, onBack }: { farm: FarmLand; onBack: () => void }
         </Card>
       </div>
 
+      {/* Soil Analysis Records */}
+      {soilAnalyses.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <FlaskConical className="w-4 h-4" /> Soil Analysis Records ({soilAnalyses.length} criteria)
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Criteria</TableHead>
+                  <TableHead>Value</TableHead>
+                  <TableHead>Min Permissible</TableHead>
+                  <TableHead>Max Permissible</TableHead>
+                  <TableHead className="hidden md:table-cell">Collection Date</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {soilAnalyses.map((a, idx) => (
+                  <TableRow key={a.id || idx}>
+                    <TableCell className="font-medium text-sm">{a.criteria}</TableCell>
+                    <TableCell className="text-sm">{a.criteriaValue || '—'}</TableCell>
+                    <TableCell className="text-sm">{a.minValue || '—'}</TableCell>
+                    <TableCell className="text-sm">{a.maxValue || '—'}</TableCell>
+                    <TableCell className="hidden md:table-cell text-sm">
+                      {a.collectionDate ? new Date(a.collectionDate).toLocaleDateString() : '—'}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Cultivations on this farm */}
       <Card>
-        <CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><Sprout className="w-4 h-4" /> Cultivations on this Farm</CardTitle></CardHeader>
+        <CardHeader className="pb-2 flex flex-row items-center justify-between">
+          <CardTitle className="text-base flex items-center gap-2"><Sprout className="w-4 h-4" /> Cultivations on this Farm ({cultivations.length})</CardTitle>
+          <Button size="sm" className="gap-1.5" onClick={() => {
+            useAppStore.getState().setSelectedFarmId(farm.id)
+            useAppStore.getState().setActiveModule('cultivations')
+          }}>
+            <Plus className="w-3.5 h-3.5" /> Add Cultivation
+          </Button>
+        </CardHeader>
         <CardContent className="p-0">
           {loadingCult ? (
             <div className="p-6 space-y-3">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-12 w-full rounded" />)}</div>
@@ -565,6 +891,7 @@ function FarmLandDetail({ farm, onBack }: { farm: FarmLand; onBack: () => void }
                   <TableHead>Variety</TableHead>
                   <TableHead>Season</TableHead>
                   <TableHead>Area (ha)</TableHead>
+                  <TableHead>Seed Cost</TableHead>
                   <TableHead>Status</TableHead>
                 </TableRow>
               </TableHeader>
@@ -575,6 +902,7 @@ function FarmLandDetail({ farm, onBack }: { farm: FarmLand; onBack: () => void }
                     <TableCell className="text-sm">{c.variety || '—'}</TableCell>
                     <TableCell className="text-sm">{c.season || '—'}</TableCell>
                     <TableCell className="text-sm">{c.cultivationAreaHa?.toFixed(2) ?? '—'}</TableCell>
+                    <TableCell className="text-sm">{c.seedCost ? `UGX ${c.seedCost.toLocaleString()}` : '—'}</TableCell>
                     <TableCell><Badge variant="outline">{c.status}</Badge></TableCell>
                   </TableRow>
                 ))}

@@ -27,7 +27,7 @@ const nextConfig: NextConfig = {
               "script-src 'self' 'unsafe-inline'",
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: blob: https:",
-              "font-src 'self' data:",
+              "font-src 'self' data: https:",
               "connect-src 'self' https://mobipay-agrobase.vercel.app https://api.flutterwave.com https://api.africastalking.com wss:",
               "frame-ancestors 'none'",
             ].join("; "),

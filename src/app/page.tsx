@@ -2,7 +2,8 @@
 
 import React, { Suspense, lazy, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
-import { useAppStore } from '@/lib/store'
+import { useAppStore, EKB_HIDDEN_MODULES } from '@/lib/store'
+import { useIsEkibboTenant } from '@/hooks/use-is-ekibbo'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { TopBar } from '@/components/layout/TopBar'
 import { LoginPage } from '@/components/auth/LoginPage'
@@ -24,7 +25,13 @@ const CultivationsView = lazy(() => import('@/components/modules/CultivationsVie
 const VslaView = lazy(() => import('@/components/modules/VslaView'))
 const SaccoView = lazy(() => import('@/components/modules/SaccoView'))
 const FarmerDetailFull = lazy(() => import('@/components/modules/FarmerDetailFull'))
+const FarmerFormPage = lazy(() => import('@/components/modules/FarmerFormPage'))
+const FarmLandFormPage = lazy(() => import('@/components/modules/FarmLandFormPage'))
+const FarmLandDetailPage = lazy(() => import('@/components/modules/FarmLandDetailPage'))
+const CultivationFormPage = lazy(() => import('@/components/modules/CultivationFormPage'))
+const CultivationDetailPage = lazy(() => import('@/components/modules/CultivationDetailPage'))
 const CatalogManager = lazy(() => import('@/components/modules/CatalogManager'))
+const MasterDataView = lazy(() => import('@/components/modules/MasterDataView'))
 const SaccoDashboard = lazy(() => import('@/components/modules/SaccoDashboard'))
 const VslaProviderDashboard = lazy(() => import('@/components/modules/VslaProviderDashboard'))
 const KilimoDashboard = lazy(() => import('@/components/modules/KilimoDashboard'))
@@ -108,7 +115,7 @@ function ModuleLoader() {
 }
 
 function ModuleRouter() {
-  const { activeModule, user } = useAppStore()
+  const { activeModule, user, selectedFarmerId, selectedFarmId, selectedFarmLandId, selectedCultivationId } = useAppStore()
   const role = user?.role || ''
 
   // Tenant-specific dashboard routing
@@ -137,11 +144,38 @@ function ModuleRouter() {
   switch (activeModule) {
     case 'farmers': return <FarmersView />
     case 'farmer-detail': {
-      const fid = useAppStore.getState().selectedFarmerId
-      if (!fid) return <div className='text-center p-8 text-muted-foreground'>No farmer selected</div>
-      return <FarmerDetailFull key={fid} farmerId={fid} onBack={() => useAppStore.getState().setActiveModule('farmers')} />
+      if (!selectedFarmerId) return <div className='text-center p-8 text-muted-foreground'>No farmer selected</div>
+      return <FarmerDetailFull key={selectedFarmerId} farmerId={selectedFarmerId} onBack={() => useAppStore.getState().setActiveModule('farmers')} />
+    }
+    case 'farmer-create': return <FarmerFormPage mode="create" />
+    case 'farmer-edit': {
+      if (!selectedFarmerId) return <div className='text-center p-8 text-muted-foreground'>No farmer selected</div>
+      return <FarmerFormPage key={selectedFarmerId} mode="edit" farmerId={selectedFarmerId} />
+    }
+    case 'farmland-create': return <FarmLandFormPage mode="create" farmerId={selectedFarmerId || undefined} />
+    case 'farmland-edit': {
+      if (!selectedFarmLandId) return <div className='text-center p-8 text-muted-foreground'>No farm land selected</div>
+      return <FarmLandFormPage key={selectedFarmLandId} mode="edit" farmLandId={selectedFarmLandId} />
+    }
+    case 'farmland-detail': {
+      if (!selectedFarmLandId) return <div className='text-center p-8 text-muted-foreground'>No farm land selected</div>
+      return <FarmLandDetailPage key={selectedFarmLandId} farmLandId={selectedFarmLandId} onBack={() => useAppStore.getState().setActiveModule('farm-lands')} />
+    }
+    case 'cultivation-create': return <CultivationFormPage mode="create" farmId={selectedFarmId || selectedFarmLandId || undefined} />
+    case 'cultivation-edit': {
+      if (!selectedCultivationId) return <div className='text-center p-8 text-muted-foreground'>No cultivation selected</div>
+      return <CultivationFormPage key={selectedCultivationId} mode="edit" cultivationId={selectedCultivationId} />
+    }
+    case 'cultivation-detail': {
+      if (!selectedCultivationId) return <div className='text-center p-8 text-muted-foreground'>No cultivation selected</div>
+      return <CultivationDetailPage key={selectedCultivationId} cultivationId={selectedCultivationId} onBack={() => useAppStore.getState().setActiveModule('cultivations')} />
     }
     case 'catalog-manager': return <CatalogManager />
+    case 'master-data': return <MasterDataView kind="crop" />
+    case 'season-master': return <MasterDataView kind="season" />
+    case 'crop-master': return <MasterDataView kind="crop" />
+    case 'seed-master': return <MasterDataView kind="seed" />
+    case 'fertilizer-master': return <MasterDataView kind="fertilizer" />
     case 'farm-lands': return <FarmLandsView />
     case 'cultivations': return <CultivationsView />
     case 'vsla': return <VslaView />
@@ -256,6 +290,7 @@ export default function HomePage() {
   const setUser = useAppStore((s) => s.setUser)
   const setActiveModule = useAppStore((s) => s.setActiveModule)
   const activeModule = useAppStore((s) => s.activeModule)
+  const isEkibbo = useIsEkibboTenant((session?.user as { role?: string } | undefined)?.role)
 
   useEffect(() => {
     if (session?.user) {
@@ -274,6 +309,8 @@ export default function HomePage() {
       const adminAllowedForSuperAdmin = new Set([
         'profile', 'settings', 'roles-permissions', 'billing',
         'platform-recovery', 'catalog-manager', 'farmer-detail',
+        'farmland-detail', 'cultivation-detail', 'master-data',
+        'season-master', 'crop-master', 'seed-master', 'fertilizer-master',
       ])
       const isAllowedForSuperAdmin =
         activeModule.startsWith('super-admin') ||
@@ -307,7 +344,11 @@ export default function HomePage() {
       // SACCO_ADMIN / SACCO_OFFICER: redirect to dashboard if on an irrelevant module
       const saccoAllowed = new Set([
         'dashboard', 'sacco', 'farmers', 'farm-lands', 'cultivations',
-        'reports', 'training', 'profile', 'catalog-manager', 'farmer-detail',
+        'reports', 'training', 'profile', 'catalog-manager',
+        'master-data', 'season-master', 'crop-master', 'seed-master', 'fertilizer-master',
+        'farmer-detail', 'farmer-create', 'farmer-edit',
+        'farmland-detail', 'farmland-create', 'farmland-edit',
+        'cultivation-detail', 'cultivation-create', 'cultivation-edit',
       ])
       if ((role === 'SACCO_ADMIN' || role === 'SACCO_OFFICER') && !saccoAllowed.has(activeModule)) {
         setActiveModule('dashboard')
@@ -315,8 +356,11 @@ export default function HomePage() {
 
       // VSLA_PROVIDER_ADMIN: redirect to dashboard if on an irrelevant module
       const vslaProviderAllowed = new Set([
-        'dashboard', 'vsla', 'farmers', 'farm-lands',
-        'reports', 'training', 'profile', 'catalog-manager', 'farmer-detail',
+        'dashboard', 'vsla', 'farmers', 'farm-lands', 'cultivations',
+        'reports', 'training', 'profile', 'catalog-manager',
+        'farmer-detail', 'farmer-create', 'farmer-edit',
+        'farmland-detail', 'farmland-create', 'farmland-edit',
+        'cultivation-detail', 'cultivation-create', 'cultivation-edit',
       ])
       if (role === 'VSLA_PROVIDER_ADMIN' && !vslaProviderAllowed.has(activeModule)) {
         setActiveModule('dashboard')
@@ -334,20 +378,40 @@ export default function HomePage() {
 
       // EKIBBO roles: redirect to dashboard if on an irrelevant module
       const ekbRoles = ['EKB_MD', 'EKB_OPS_MANAGER', 'EKB_FINANCE', 'EKB_FIN_ASSISTANT', 'EKB_MEC', 'EKB_EXTENSION']
+      // Ekibbo tenant (any role, incl. shared TENANT_ADMIN): bounce off
+      // modules that are excluded from the Ekibbo product.
+      if (isEkibbo && (EKB_HIDDEN_MODULES as readonly string[]).includes(activeModule as string)) {
+        setActiveModule('dashboard')
+      }
       const ekbAllowed = new Set([
         'dashboard', 'farmers', 'farm-lands', 'cultivations', 'purchases', 'sales',
         'input-aggregation', 'input-distribution', 'approvals', 'processing', 'deliveries',
-        'consignments', 'trace', 'reports', 'training', 'farm-visits', 'surveys', 'feedback',
-        'impact-assessment', 'compliance', 'cost-of-cultivation', 'farmer-ledger',
-        'profile', 'support-tickets', 'farmer-detail',
+        'consignments', 'trace', 'reports', 'training', 'farm-visits', 'surveys',
+        'compliance', 'cost-of-cultivation', 'farmer-ledger',
+        'agritrack',
+        'profile', 'support-tickets', 'farmer-detail', 'farmer-create', 'farmer-edit',
+        'farmland-detail', 'farmland-create', 'farmland-edit',
+        'cultivation-detail', 'cultivation-create', 'cultivation-edit',
+        'settings', 'catalog-manager', 'master-data', 'season-master',
+        'crop-master', 'seed-master', 'fertilizer-master',
       ])
       if (ekbRoles.includes(role) && !ekbAllowed.has(activeModule)) {
+        setActiveModule('dashboard')
+      }
+
+      // EKIBBO Farmer (self-service): allow only farmer-facing modules.
+      const ekbFarmerAllowed = new Set([
+        'dashboard', 'profile', 'farmer-ledger', 'sales', 'purchases',
+        'training', 'farm-visits',
+        'farmer-detail', 'farm-lands', 'cultivations', 'surveys',
+      ])
+      if (role === 'EKB_FARMER' && !ekbFarmerAllowed.has(activeModule)) {
         setActiveModule('dashboard')
       }
     } else {
       setUser(null)
     }
-  }, [session, setUser, setActiveModule, activeModule])
+  }, [session, setUser, setActiveModule, activeModule, isEkibbo])
 
   if (status === 'loading') {
     return (

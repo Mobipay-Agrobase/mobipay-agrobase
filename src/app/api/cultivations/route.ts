@@ -19,27 +19,67 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url)
     const farmId = searchParams.get('farmId')
     const farmerId = searchParams.get('farmerId')
+    const search = searchParams.get('search') || ''
+    const status = searchParams.get('status') || ''
+    const page = parseInt(searchParams.get('page') || '1')
+    const limit = parseInt(searchParams.get('limit') || '20')
 
     const where: Record<string, unknown> = {
       farm: { farmer: { ...buildTenantFilter(ctx, 'tenantId') } },
     }
     if (farmId) where.farmId = farmId
     if (farmerId) where.farm = { farmerId }
+    if (status) where.status = status
+    if (search) {
+      where.OR = [
+        { cropName: { contains: search, mode: 'insensitive' } },
+        { variety: { contains: search, mode: 'insensitive' } },
+        { farm: { name: { contains: search, mode: 'insensitive' } } },
+        { farm: { farmer: { firstName: { contains: search, mode: 'insensitive' } } } },
+        { farm: { farmer: { lastName: { contains: search, mode: 'insensitive' } } } },
+        { farm: { farmer: { farmerCode: { contains: search, mode: 'insensitive' } } } },
+      ]
+    }
 
-    const cultivations = await db.cultivation.findMany({
-      where,
-      include: {
-        farm: {
-          select: {
-            id: true, name: true, sizeHectares: true,
-            farmer: { select: { id: true, firstName: true, lastName: true } },
+    const filterForCount = (statusValues: (string | null)[]): Record<string, unknown> => {
+      const w: Record<string, unknown> = { ...where, status: { in: statusValues } }
+      return w
+    }
+
+    const [cultivations, total, totalActive, totalHarvested, sums] = await Promise.all([
+      db.cultivation.findMany({
+        where,
+        skip: (page - 1) * limit,
+        take: limit,
+        include: {
+          farm: {
+            select: {
+              id: true, name: true, sizeHectares: true,
+              farmer: { select: { id: true, firstName: true, lastName: true, farmerCode: true } },
+            },
           },
         },
-      },
-      orderBy: { createdAt: 'desc' },
-    })
+        orderBy: { createdAt: 'desc' },
+      }),
+      db.cultivation.count({ where }),
+      db.cultivation.count({ where: filterForCount(['ACTIVE']) }),
+      db.cultivation.count({ where: filterForCount(['HARVESTED']) }),
+      db.cultivation.aggregate({
+        _sum: { cultivationAreaHa: true, seedCost: true, sowingCost: true },
+        where,
+      }),
+    ])
 
-    return NextResponse.json({ cultivations })
+    const stats = {
+      total,
+      active: totalActive,
+      harvested: totalHarvested,
+      totalArea: sums._sum.cultivationAreaHa || 0,
+      totalSeedCost: sums._sum.seedCost || 0,
+      totalSowingCost: sums._sum.sowingCost || 0,
+    }
+
+    return NextResponse.json({ cultivations, total, page, totalPages: Math.ceil(total / limit), stats })
   } catch (error) {
     console.error('Cultivation list error:', error)
     return NextResponse.json({ error: 'Failed to fetch cultivations' }, { status: 500 })

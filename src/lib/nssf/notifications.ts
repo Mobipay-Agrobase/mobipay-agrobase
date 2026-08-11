@@ -73,8 +73,8 @@ export async function sendReminderSms(params: {
   phone: string
   farmerName: string
   nssfNumber?: string | null
-}): Promise<void> {
-  await sendSms({
+}): Promise<{ sent: boolean; method: string }> {
+  return sendSms({
     phone: params.phone,
     message: `Dear ${params.farmerName}, your NSSF contribution is due this month. Pay min UGX 1,000 via *123# or the Kilimo Trust app. NSSF No: ${params.nssfNumber || 'N/A'}. Thank you.`,
   })

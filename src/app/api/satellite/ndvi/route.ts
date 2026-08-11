@@ -1,6 +1,8 @@
 import { db } from '@/lib/db'
 import { getTenantContext, buildTenantFilter } from '@/lib/tenant'
 import { NextResponse } from 'next/server'
+import { SatelliteOrchestrator } from '@/lib/satellite/orchestrator'
+import type { NDVITimeSeries } from '@/lib/satellite/types'
 
 export async function GET(request: Request) {
   try {
@@ -59,30 +61,32 @@ export async function GET(request: Request) {
       })
     }
 
-    // TODO: Wire to SatelliteEngine.getNdviTimeSeries()
-    // Return placeholder mock data
-    const points: { date: string; ndvi: number; evi: number }[] = []
-    const now = new Date()
-    for (let i = months; i >= 0; i--) {
-      const d = new Date(now)
-      d.setMonth(d.getMonth() - i)
-      const monthProgress = d.getMonth() / 12
-      const ndvi = 0.4 + 0.3 * Math.sin(monthProgress * Math.PI * 2) + (Math.random() * 0.1 - 0.05)
-      points.push({
-        date: d.toISOString().split('T')[0],
-        ndvi: Math.round(ndvi * 1000) / 1000,
-        evi: Math.round((ndvi * 0.85) * 1000) / 1000,
+    // Fall back to the satellite analysis engine
+    const timeSeries: NDVITimeSeries = await SatelliteOrchestrator.getPlotTimeSeries(farmId, months)
+
+    if (timeSeries.points.length > 0) {
+      const ndviValues = timeSeries.points.map((p) => p.value)
+      return NextResponse.json({
+        farmId,
+        points: timeSeries.points.map((p) => ({
+          date: p.date,
+          ndvi: Math.round(p.value * 1000) / 1000,
+          evi: -1, // EVI not available from engine time series
+        })),
+        trend: timeSeries.trend,
+        average: Math.round((ndviValues.reduce((a, b) => a + b, 0) / ndviValues.length) * 1000) / 1000,
+        min: Math.round(Math.min(...ndviValues) * 1000) / 1000,
+        max: Math.round(Math.max(...ndviValues) * 1000) / 1000,
       })
     }
 
-    const ndviValues = points.map((p) => p.ndvi)
     return NextResponse.json({
       farmId,
-      points,
-      trend: 'STABLE',
-      average: Math.round((ndviValues.reduce((a, b) => a + b, 0) / ndviValues.length) * 1000) / 1000,
-      min: Math.round(Math.min(...ndviValues) * 1000) / 1000,
-      max: Math.round(Math.max(...ndviValues) * 1000) / 1000,
+      points: [],
+      trend: 'INSUFFICIENT_DATA',
+      average: 0,
+      min: 0,
+      max: 0,
     })
   } catch (error) {
     console.error('NDVI timeseries error:', error)

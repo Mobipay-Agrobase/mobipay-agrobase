@@ -21,7 +21,11 @@ export type ModuleKey =
   'nssf-contributions' | 'nssf-settlement' |
   // Reference
   'catalog-manager' |
-  'farmer-detail' |
+  // Master data (seasons, crops, seeds, fertilizers, catalog)
+  'season-master' | 'crop-master' | 'seed-master' | 'fertilizer-master' | 'master-data' |
+  'farmer-detail' | 'farmer-create' | 'farmer-edit' |
+  'farmland-detail' | 'farmland-create' | 'farmland-edit' |
+  'cultivation-detail' | 'cultivation-create' | 'cultivation-edit' |
   'roles-permissions' |
   'super-admin-overview' | 'super-admin-tenants' | 'super-admin-revenue' | 'super-admin-impact' | 'super-admin-users' | 'super-admin-mobile' | 'super-admin-config' | 'super-admin-module-store' | 'reset-dashboard' | 'reset-beneficiaries' | 'reset-vouchers' | 'reset-merchants' | 'reset-cash' | 'reset-reports'
 
@@ -43,12 +47,18 @@ interface AppState {
   activeSubTab: string
   sidebarOpen: boolean
   selectedFarmerId: string | null
+  selectedFarmId: string | null
+  selectedFarmLandId: string | null
+  selectedCultivationId: string | null
   selectedVslaGroupId: string | null
   user: AuthUser | null
   setActiveModule: (m: ModuleKey) => void
   setActiveSubTab: (t: string) => void
   setSidebarOpen: (o: boolean) => void
   setSelectedFarmerId: (id: string | null) => void
+  setSelectedFarmId: (id: string | null) => void
+  setSelectedFarmLandId: (id: string | null) => void
+  setSelectedCultivationId: (id: string | null) => void
   setSelectedVslaGroupId: (id: string | null) => void
   setUser: (user: AuthUser | null) => void
 }
@@ -58,12 +68,36 @@ export const useAppStore = create<AppState>((set) => ({
   activeSubTab: '',
   sidebarOpen: false,
   selectedFarmerId: null,
+  selectedFarmId: null,
+  selectedFarmLandId: null,
+  selectedCultivationId: null,
   selectedVslaGroupId: null,
   user: null,
-  setActiveModule: (m) => set({ activeModule: m, activeSubTab: '', selectedFarmerId: null, selectedVslaGroupId: null }),
+  setActiveModule: (m) => set((state) => ({
+    activeModule: m,
+    activeSubTab: '',
+    selectedFarmerId: m === 'farmer-detail' || m === 'farmer-edit' ? state.selectedFarmerId : null,
+    selectedFarmId: (m === 'farm-lands' || m === 'cultivations' || m === 'farmland-detail' || m === 'farmland-edit') ? state.selectedFarmId : null,
+    selectedFarmLandId: m === 'farmland-detail' || m === 'farmland-edit' || m === 'cultivation-create' ? state.selectedFarmLandId : null,
+    selectedCultivationId: m === 'cultivation-detail' || m === 'cultivation-edit' ? state.selectedCultivationId : null,
+    selectedVslaGroupId: null,
+  })),
   setActiveSubTab: (t) => set({ activeSubTab: t }),
   setSidebarOpen: (o) => set({ sidebarOpen: o }),
   setSelectedFarmerId: (id) => set({ selectedFarmerId: id }),
+  setSelectedFarmId: (id) => set({ selectedFarmId: id }),
+  setSelectedFarmLandId: (id) => set({ selectedFarmLandId: id }),
+  setSelectedCultivationId: (id) => set({ selectedCultivationId: id }),
   setSelectedVslaGroupId: (id) => set({ selectedVslaGroupId: id }),
   setUser: (user) => set({ user }),
 }))
+
+// Menus that are NOT applicable to the Ekibbo tenant and must be hidden for all
+// EKB_* roles (sidebar, command palette, and module-router guard).
+export const EKB_HIDDEN_MODULES = [
+  'marketplace', 'payments', 'loans',           // Core Operations
+  'carbon', 'crop-insurance',                    // Farm Management
+  'impact-assessment',                           // Intelligence
+  'communication', 'feedback', 'channel-sim',    // Engagement
+  'mfi',                                         // Finance
+] as const

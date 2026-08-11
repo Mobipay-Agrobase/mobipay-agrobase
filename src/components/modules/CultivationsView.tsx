@@ -4,8 +4,12 @@ import React, { useEffect, useState, useCallback } from 'react'
 import { cn } from '@/lib/utils'
 import {
   Search, Plus, Eye, X, Sprout, Calendar, Ruler, DollarSign, ArrowLeft,
-  Loader2, Save, FlaskConical, Leaf, Layers, MapPin
+  Loader2, Save, FlaskConical, Leaf, Layers, MapPin, Pencil, Trash2
 } from 'lucide-react'
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -19,9 +23,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Separator } from '@/components/ui/separator'
 import { toast } from 'sonner'
 import { CatalogSelect } from '@/components/ui/catalog-select'
+import { useAppStore } from '@/lib/store'
+import { StatCard, StatCardGrid } from '@/components/ui/stat-card'
 
 interface Cultivation {
   id: string
+  farmId: string
   cropName: string
   variety?: string | null
   season?: string | null
@@ -42,7 +49,7 @@ interface Cultivation {
   sowingCharges?: number | null
   sowingCost?: number | null
   createdAt: string
-  farm?: { id: string; name: string; sizeHectares?: number | null; farmer?: { id: string; firstName: string; lastName: string } }
+  farm?: { id: string; name: string; sizeHectares?: number | null; farmer?: { id: string; firstName: string; lastName: string; farmerCode?: string } }
 }
 
 const CROP_CATEGORIES = ['Main Crop', 'Inter Crop', 'Border Crop']
@@ -58,48 +65,57 @@ const statusColor: Record<string, string> = {
 }
 
 export default function CultivationsView() {
+  const { setActiveModule } = useAppStore()
   const [cultivations, setCultivations] = useState<Cultivation[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
+  const [page, setPage] = useState(1)
+  const [total, setTotal] = useState(0)
+  const [limit, setLimit] = useState(20)
+  const [stats, setStats] = useState({ total: 0, active: 0, harvested: 0, totalArea: 0, totalSeedCost: 0, totalSowingCost: 0 })
   const [showAdd, setShowAdd] = useState(false)
+  const [editingCultivation, setEditingCultivation] = useState<Cultivation | null>(null)
+  const [deletingCultivation, setDeletingCultivation] = useState<Cultivation | null>(null)
   const [selected, setSelected] = useState<Cultivation | null>(null)
 
   const fetchCultivations = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await fetch('/api/cultivations')
+      const params = new URLSearchParams()
+      params.set('page', String(page))
+      params.set('limit', String(limit))
+      if (search) params.set('search', search)
+      if (statusFilter) params.set('status', statusFilter)
+      const res = await fetch(`/api/cultivations?${params}`)
       const data = await res.json()
       setCultivations(data.cultivations || [])
+      if (typeof data.total === 'number') setTotal(data.total)
+      if (data.stats) setStats(data.stats)
     } catch (e) {
       console.error(e)
       toast.error('Failed to load cultivations')
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [page, limit, search, statusFilter])
 
   useEffect(() => { fetchCultivations() }, [fetchCultivations])
 
-  const filtered = cultivations.filter(c => {
-    if (statusFilter && c.status !== statusFilter) return false
-    if (!search) return true
-    const farmerName = c.farm?.farmer ? `${c.farm.farmer.firstName} ${c.farm.farmer.lastName}` : ''
-    return (
-      c.cropName.toLowerCase().includes(search.toLowerCase()) ||
-      (c.variety || '').toLowerCase().includes(search.toLowerCase()) ||
-      (c.farm?.name || '').toLowerCase().includes(search.toLowerCase()) ||
-      farmerName.toLowerCase().includes(search.toLowerCase())
-    )
-  })
-
-  const stats = {
-    total: cultivations.length,
-    active: cultivations.filter(c => c.status === 'ACTIVE').length,
-    harvested: cultivations.filter(c => c.status === 'HARVESTED').length,
-    totalArea: cultivations.reduce((s, c) => s + (c.cultivationAreaHa || 0), 0),
-    totalSeedCost: cultivations.reduce((s, c) => s + (c.seedCost || 0), 0),
-    totalSowingCost: cultivations.reduce((s, c) => s + (c.sowingCost || 0), 0),
+  const handleDelete = async (c: Cultivation) => {
+    try {
+      const res = await fetch(`/api/cultivations/${c.id}`, { method: 'DELETE' })
+      if (res.ok) {
+        toast.success(`${c.cropName} deleted`)
+        fetchCultivations()
+      } else {
+        const data = await res.json()
+        toast.error(data.error || 'Failed to delete')
+      }
+    } catch {
+      toast.error('Network error')
+    }
+    setDeletingCultivation(null)
   }
 
   if (selected) {
@@ -111,24 +127,24 @@ export default function CultivationsView() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h3 className="text-lg font-semibold">Cultivation Registry</h3>
-          <p className="text-sm text-muted-foreground">{cultivations.length} cultivations · {stats.totalArea.toFixed(2)} ha · {stats.active} active</p>
+          <p className="text-sm text-muted-foreground">{stats.total} cultivations · {stats.totalArea.toFixed(2)} ha · {stats.active} active</p>
         </div>
-        <Button onClick={() => setShowAdd(true)} className="gap-2"><Plus className="w-4 h-4" /> Add Cultivation</Button>
+        <Button onClick={() => setActiveModule('cultivation-create')} className="gap-2"><Plus className="w-4 h-4" /> Add Cultivation</Button>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card><CardContent className="p-4 flex items-center gap-3"><div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 flex items-center justify-center"><Sprout className="w-5 h-5 text-emerald-600" /></div><div><p className="text-xs text-muted-foreground">Total Cultivations</p><p className="text-lg font-bold">{stats.total}</p></div></CardContent></Card>
-        <Card><CardContent className="p-4 flex items-center gap-3"><div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/40 flex items-center justify-center"><Ruler className="w-5 h-5 text-blue-600" /></div><div><p className="text-xs text-muted-foreground">Cultivated Area</p><p className="text-lg font-bold">{stats.totalArea.toFixed(2)} ha</p></div></CardContent></Card>
-        <Card><CardContent className="p-4 flex items-center gap-3"><div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/40 flex items-center justify-center"><DollarSign className="w-5 h-5 text-amber-600" /></div><div><p className="text-xs text-muted-foreground">Seed Cost Total</p><p className="text-lg font-bold">UGX {(stats.totalSeedCost / 1000).toFixed(0)}K</p></div></CardContent></Card>
-        <Card><CardContent className="p-4 flex items-center gap-3"><div className="w-10 h-10 rounded-xl bg-purple-50 dark:bg-purple-950/40 flex items-center justify-center"><Calendar className="w-5 h-5 text-purple-600" /></div><div><p className="text-xs text-muted-foreground">Sowing Cost Total</p><p className="text-lg font-bold">UGX {(stats.totalSowingCost / 1000).toFixed(0)}K</p></div></CardContent></Card>
-      </div>
+      <StatCardGrid>
+        <StatCard icon={<Sprout />} label="Total Cultivations" value={stats.total} tone="emerald" />
+        <StatCard icon={<Ruler />} label="Cultivated Area" value={`${stats.totalArea.toFixed(2)} ha`} tone="blue" />
+        <StatCard icon={<DollarSign />} label="Seed Cost Total" value={`UGX ${(stats.totalSeedCost / 1000).toFixed(0)}K`} tone="amber" />
+        <StatCard icon={<Calendar />} label="Sowing Cost Total" value={`UGX ${(stats.totalSowingCost / 1000).toFixed(0)}K`} tone="purple" />
+      </StatCardGrid>
 
       <div className="flex flex-col sm:flex-row gap-2">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input placeholder="Search by crop, variety, farm, or farmer..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
+          <Input placeholder="Search by crop, variety, farm, or farmer..." className="pl-9" value={search} onChange={e => { setSearch(e.target.value); setPage(1) }} />
         </div>
-        <Select value={statusFilter} onValueChange={v => setStatusFilter(v === 'all' ? '' : v)}>
+        <Select value={statusFilter} onValueChange={v => { setStatusFilter(v === 'all' ? '' : v); setPage(1) }}>
           <SelectTrigger className="w-full sm:w-[140px]"><SelectValue placeholder="Status" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Status</SelectItem>
@@ -138,7 +154,7 @@ export default function CultivationsView() {
           </SelectContent>
         </Select>
         {(search || statusFilter) && (
-          <Button variant="ghost" size="sm" onClick={() => { setSearch(''); setStatusFilter('') }} className="gap-1"><X className="w-3.5 h-3.5" /> Clear</Button>
+          <Button variant="ghost" size="sm" onClick={() => { setSearch(''); setStatusFilter(''); setPage(1) }} className="gap-1"><X className="w-3.5 h-3.5" /> Clear</Button>
         )}
       </div>
 
@@ -146,7 +162,7 @@ export default function CultivationsView() {
         <CardContent className="p-0">
           {loading ? (
             <div className="p-6 space-y-3">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-12 w-full rounded" />)}</div>
-          ) : filtered.length === 0 ? (
+          ) : cultivations.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
               <Sprout className="w-10 h-10 mx-auto mb-3 opacity-40" />
               <p className="font-medium">No cultivations found</p>
@@ -162,11 +178,11 @@ export default function CultivationsView() {
                   <TableHead className="hidden lg:table-cell">Area (ha)</TableHead>
                   <TableHead className="hidden xl:table-cell">Seed Cost</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead className="w-[70px]"></TableHead>
+                  <TableHead className="w-[100px]"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filtered.map(c => (
+                {cultivations.map(c => (
                   <TableRow key={c.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setSelected(c)}>
                     <TableCell>
                       <div className="flex items-center gap-2">
@@ -179,14 +195,18 @@ export default function CultivationsView() {
                     </TableCell>
                     <TableCell>
                       <p className="text-sm">{c.farm?.name || '—'}</p>
-                      <p className="text-[10px] text-muted-foreground">{c.farm?.farmer ? `${c.farm.farmer.firstName} ${c.farm.farmer.lastName}` : ''}</p>
+                      <p className="text-[10px] text-muted-foreground">{c.farm?.farmer ? `${c.farm.farmer.firstName} ${c.farm.farmer.lastName}${c.farm.farmer.farmerCode ? ` (${c.farm.farmer.farmerCode})` : ''}` : ''}</p>
                     </TableCell>
                     <TableCell className="hidden md:table-cell text-sm">{c.season || '—'}</TableCell>
                     <TableCell className="hidden lg:table-cell text-sm">{c.cultivationAreaHa?.toFixed(2) ?? '—'}</TableCell>
                     <TableCell className="hidden xl:table-cell text-sm">{c.seedCost ? `UGX ${c.seedCost.toLocaleString()}` : '—'}</TableCell>
                     <TableCell><Badge className={cn('text-[10px]', statusColor[c.status] || '')}>{c.status}</Badge></TableCell>
                     <TableCell>
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={e => { e.stopPropagation(); setSelected(c) }}><Eye className="w-4 h-4" /></Button>
+                      <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); useAppStore.getState().setSelectedCultivationId(c.id); setActiveModule('cultivation-edit') }}><Pencil className="w-3.5 h-3.5" /></Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => setDeletingCultivation(c)}><Trash2 className="w-3.5 h-3.5" /></Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); useAppStore.getState().setSelectedCultivationId(c.id); setActiveModule('cultivation-detail') }}><Eye className="w-4 h-4" /></Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -196,28 +216,79 @@ export default function CultivationsView() {
         </CardContent>
       </Card>
 
-      {/* Add Dialog */}
-      <Dialog open={showAdd} onOpenChange={setShowAdd}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader><DialogTitle>Add Cultivation</DialogTitle></DialogHeader>
-          <CultivationCreateForm onSaved={() => { setShowAdd(false); fetchCultivations() }} />
-        </DialogContent>
-      </Dialog>
+      {/* Pagination */}
+      {total > 0 && (
+        <div className="flex items-center justify-between">
+          <p className="text-xs text-muted-foreground">
+            {total} cultivations · page {page} of {Math.max(1, Math.ceil(total / limit))}
+          </p>
+          <div className="flex items-center gap-1">
+            <Button variant="outline" size="sm" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page <= 1}>Prev</Button>
+            <Button variant="outline" size="sm" onClick={() => setPage(p => p + 1)} disabled={page >= Math.ceil(total / limit)}>Next</Button>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation */}
+      <AlertDialog open={!!deletingCultivation} onOpenChange={v => { if (!v) setDeletingCultivation(null) }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Cultivation</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete <strong>{deletingCultivation?.cropName}</strong>?
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={() => deletingCultivation && handleDelete(deletingCultivation)}>
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
 
-function CultivationCreateForm({ onSaved }: { onSaved: () => void }) {
+function CultivationCreateForm({ onSaved, cultivation }: { onSaved: () => void; cultivation?: Cultivation | null }) {
   const [saving, setSaving] = useState(false)
   const [farms, setFarms] = useState<Array<{ id: string; name: string; farmer?: { firstName: string; lastName: string } }>>([])
   const [form, setForm] = useState<Record<string, any>>({})
+  const selectedFarmId = useAppStore(s => s.selectedFarmId)
+  const isEdit = !!cultivation
 
   useEffect(() => {
     fetch('/api/farm-lands')
       .then(r => r.json())
-      .then(data => setFarms(data.farms || []))
+      .then(data => {
+        const farmList = data.farms || []
+        setFarms(farmList)
+        if (cultivation) {
+          setForm({
+            farmId: cultivation.farmId || cultivation.farm?.id || '',
+            cropName: cultivation.cropName || '',
+            variety: cultivation.variety || '',
+            season: cultivation.season || '',
+            sowingDate: cultivation.sowingDate ? cultivation.sowingDate.split('T')[0] : '',
+            estimatedYield: cultivation.estimatedYield ?? '',
+            cropCategory: cultivation.cropCategory || '',
+            cultivationAreaHa: cultivation.cultivationAreaHa ?? '',
+            seedSource: cultivation.seedSource || '',
+            isSeedTreated: cultivation.isSeedTreated ?? false,
+            seedType: cultivation.seedType || '',
+            seedQuantity: cultivation.seedQuantity ?? '',
+            seedPrice: cultivation.seedPrice ?? '',
+            sowingType: cultivation.sowingType || '',
+            sowingChargesBy: cultivation.sowingChargesBy || '',
+            sowingCharges: cultivation.sowingCharges ?? '',
+          })
+        } else if (selectedFarmId) {
+          setForm(prev => ({ ...prev, farmId: selectedFarmId }))
+        }
+      })
       .catch(() => {})
-  }, [])
+  }, [selectedFarmId, cultivation])
 
   const update = (k: string, v: any) => setForm(p => ({ ...p, [k]: v }))
 
@@ -235,17 +306,19 @@ function CultivationCreateForm({ onSaved }: { onSaved: () => void }) {
     if (!form.cropName) { toast.error('Crop name is required'); return }
     setSaving(true)
     try {
-      const res = await fetch('/api/cultivations', {
-        method: 'POST',
+      const url = isEdit ? `/api/cultivations/${cultivation.id}` : '/api/cultivations'
+      const method = isEdit ? 'PUT' : 'POST'
+      const res = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
       })
       const data = await res.json()
       if (res.ok) {
-        toast.success(`Cultivation of ${form.cropName} created!`)
+        toast.success(isEdit ? `${form.cropName} updated!` : `Cultivation of ${form.cropName} created!`)
         onSaved()
       } else {
-        toast.error(data.error || 'Failed to create cultivation')
+        toast.error(data.error || `Failed to ${isEdit ? 'update' : 'create'} cultivation`)
       }
     } catch {
       toast.error('Network error')
@@ -312,6 +385,18 @@ function CultivationCreateForm({ onSaved }: { onSaved: () => void }) {
         <div className="space-y-1.5"><Label>Seed Quantity (kg)</Label><Input type="number" step="0.01" value={form.seedQuantity ?? ''} onChange={e => update('seedQuantity', e.target.value)} /></div>
         <div className="space-y-1.5"><Label>Seed Price (per kg)</Label><Input type="number" step="0.01" value={form.seedPrice ?? ''} onChange={e => update('seedPrice', e.target.value)} /></div>
       </div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="space-y-1.5">
+          <Label>Is Seed Treated?</Label>
+          <Select value={form.isSeedTreated === true ? 'yes' : form.isSeedTreated === false ? 'no' : ''} onValueChange={v => update('isSeedTreated', v === 'yes')}>
+            <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="yes">Yes</SelectItem>
+              <SelectItem value="no">No</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
       {seedCostPreview > 0 && (
         <div className="p-2 rounded-md bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 text-xs">
           <span className="text-muted-foreground">Auto-calculated seed cost:</span>{' '}
@@ -340,7 +425,7 @@ function CultivationCreateForm({ onSaved }: { onSaved: () => void }) {
       )}
       <DialogFooter className="gap-2">
         <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
-        <Button type="submit" disabled={saving} className="gap-2">{saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} Create Cultivation</Button>
+        <Button type="submit" disabled={saving} className="gap-2">{saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} {isEdit ? 'Update Cultivation' : 'Create Cultivation'}</Button>
       </DialogFooter>
     </form>
   )

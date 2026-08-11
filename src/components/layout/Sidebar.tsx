@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { useAppStore, type ModuleKey } from '@/lib/store'
+import { useAppStore, type ModuleKey, EKB_HIDDEN_MODULES } from '@/lib/store'
 import { cn } from '@/lib/utils'
 import { hasPermission, getRoleModules } from '@/lib/permissions'
 import {
@@ -11,7 +11,8 @@ import {
   Receipt, TrendingUp, Phone, Map, Radio, ShoppingCart,
   Sprout, PiggyBank, DollarSign, FileText, Leaf,
   Stethoscope, Activity, Smartphone, TreePine, UsersRound, Landmark, MapPin,
-  Cloud, Calculator, BookOpen, KeyRound, Boxes
+  Cloud, Calculator, BookOpen, KeyRound, Boxes, Database, Wheat, Calendar, FlaskConical,
+  ChevronRight
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
@@ -55,6 +56,12 @@ const ALL_MODULES: NavItem[] = [
   { key: 'cost-of-cultivation', label: 'Cost of Cultivation', icon: Calculator, group: 'Farm Management', permModule: 'farmers' },
   { key: 'carbon', label: 'Carbon & Compliance', icon: Cloud, group: 'Farm Management', permModule: 'carbon' },
   { key: 'crop-insurance', label: 'Crop Insurance', icon: Shield, group: 'Farm Management', permModule: 'carbon' },
+  // Master Data — reference tables shared by enrollment + farm forms.
+  { key: 'catalog-manager', label: 'Dropdown Catalog', icon: Database, group: 'Master Data', permModule: 'farmers' },
+  { key: 'crop-master', label: 'Crop Master', icon: Wheat, group: 'Master Data', permModule: 'farmers' },
+  { key: 'season-master', label: 'Season Master', icon: Calendar, group: 'Master Data', permModule: 'farmers' },
+  { key: 'seed-master', label: 'Seed Master', icon: Sprout, group: 'Master Data', permModule: 'farmers' },
+  { key: 'fertilizer-master', label: 'Fertilizer Master', icon: FlaskConical, group: 'Master Data', permModule: 'farmers' },
   // Supply Chain
   { key: 'input-aggregation', label: 'Input Aggregation', icon: Package, group: 'Supply Chain', permModule: 'input_aggregation' },
   { key: 'input-distribution', label: 'Input Distribution', icon: Package, group: 'Supply Chain', permModule: 'input_aggregation' },
@@ -96,8 +103,6 @@ const ALL_MODULES: NavItem[] = [
   { key: 'settings', label: 'Settings', icon: Settings, group: 'Admin'},
   // Profile — everyone gets this.
   { key: 'profile', label: 'Profile', icon: Stethoscope, group: 'Admin', alwaysVisible: true },
-  // Catalog Master — admin-only dropdown value management.
-  { key: 'catalog-manager', label: 'Catalog Master', icon: Settings, group: 'Admin', restrictToRoles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'COUNTRY_ADMIN', 'SACCO_ADMIN', 'SACCO_OFFICER', 'VSLA_PROVIDER_ADMIN'] },
   // Roles & Permissions — admin-only reference page.
   { key: 'roles-permissions', label: 'Roles & Permissions', icon: KeyRound, group: 'Admin'},
   // Platform Recovery — visible to tenants with billing:read (EKIBBO MD, Finance)
@@ -175,6 +180,30 @@ export function Sidebar() {
   const { activeModule, setActiveModule, sidebarOpen, setSidebarOpen, user } = useAppStore()
   const [disabledModules, setDisabledModules] = useState<Set<string>>(new Set())
   const [entitlementsLoaded, setEntitlementsLoaded] = useState(false)
+  const [tenantIsEkibbo, setTenantIsEkibbo] = useState(false)
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(() => {
+    if (typeof window === 'undefined') return new Set()
+    try {
+      const raw = window.localStorage.getItem('agrobase:collapsedGroups')
+      return new Set(raw ? (JSON.parse(raw) as string[]) : [])
+    } catch {
+      return new Set()
+    }
+  })
+
+  const toggleGroup = (group: string) => {
+    setCollapsedGroups(prev => {
+      const next = new Set(prev)
+      if (next.has(group)) next.delete(group)
+      else next.add(group)
+      try {
+        window.localStorage.setItem('agrobase:collapsedGroups', JSON.stringify([...next]))
+      } catch {
+        /* ignore */
+      }
+      return next
+    })
+  }
 
   // Fetch tenant's enabled modules on mount
   const failClosed = () => {
@@ -201,6 +230,9 @@ export function Sidebar() {
       .then(data => {
         if (!data) return // already handled by failClosed
         setDisabledModules(new Set(data.disabledModules || []))
+        if (typeof data.tenantName === 'string' && /ekibbo/i.test(data.tenantName)) {
+          setTenantIsEkibbo(true)
+        }
         setEntitlementsLoaded(true)
       })
       .catch(() => failClosed())
@@ -272,8 +304,9 @@ export function Sidebar() {
 
                 // EKIBBO roles: only show specific groups
                 const isEkbRole = role.startsWith('EKB_')
+                const ekibboTenant = isEkbRole || tenantIsEkibbo
                 if (isEkbRole) {
-                  const ekbAllowedGroups = ['Overview', 'Core Operations', 'Supply Chain', 'Farm Management', 'Admin']
+                  const ekbAllowedGroups = ['Overview', 'Core Operations', 'Supply Chain', 'Farm Management', 'Master Data', 'Intelligence', 'Engagement', 'Finance', 'Admin']
                   if (!ekbAllowedGroups.includes(groupLabel)) return null
                 }
 
@@ -292,7 +325,7 @@ export function Sidebar() {
                 // TopBar dropdown items unreachable.
                 const isAlwaysAccessibleForSuperAdmin = (item: NavItem) =>
                   isSuperAdmin &&
-                  ['profile', 'settings', 'roles-permissions', 'billing', 'platform-recovery', 'catalog-manager'].includes(item.key)
+                  ['profile', 'settings', 'roles-permissions', 'billing', 'platform-recovery'].includes(item.key)
 
                 // Filter items by role permission + module entitlement
                 const visibleItems = items.filter(item => {
@@ -324,7 +357,7 @@ export function Sidebar() {
                     if (groupLabel === 'Super Admin') return false
                     const allowedKeys = [
                       'dashboard', 'sacco', 'farmers', 'farm-lands', 'cultivations',
-                      'reports', 'training', 'profile', 'catalog-manager',
+                      'reports', 'training', 'profile',
                     ]
                     return allowedKeys.includes(item.key)
                   }
@@ -334,7 +367,7 @@ export function Sidebar() {
                     if (groupLabel === 'Super Admin') return false
                     const allowedKeys = [
                       'dashboard', 'vsla', 'farmers', 'farm-lands',
-                      'reports', 'training', 'profile', 'catalog-manager',
+                      'reports', 'training', 'profile',
                     ]
                     return allowedKeys.includes(item.key)
                   }
@@ -347,12 +380,15 @@ export function Sidebar() {
                     if (!allowedAdminKeys.includes(item.key)) return false
                   }
 
-                  // EKIBBO roles: within Admin group, only Profile + Support Tickets
+                  // EKIBBO roles: within Admin group, allow settings, profile, support-tickets
                   if (isEkbRole && groupLabel === 'Admin') {
-                    if (!['profile', 'support-tickets'].includes(item.key)) return false
+                    if (!['profile', 'support-tickets', 'settings'].includes(item.key)) return false
                   }
-                  // EKIBBO roles: within Core Operations, hide VSLA + SACCO + Loans + Payments
-                  if (isEkbRole && groupLabel === 'Core Operations' && ['vsla', 'sacco', 'loans', 'payments'].includes(item.key)) return false
+                  // EKIBBO roles: within Core Operations, hide VSLA + SACCO only
+                  if (isEkbRole && groupLabel === 'Core Operations' && ['vsla', 'sacco'].includes(item.key)) return false
+                  // EKIBBO roles / tenant: hide menus not applicable to the Ekibbo tenant
+                  // (applies to shared roles like TENANT_ADMIN on the Ekibbo tenant too)
+                  if (ekibboTenant && (EKB_HIDDEN_MODULES as readonly string[]).includes(item.key)) return false
 
                   // Check role permission
                   if (item.permModule && !hasPermission(role, `${item.permModule}:read`)) return false
@@ -379,39 +415,51 @@ export function Sidebar() {
 
                 if (visibleItems.length === 0) return null
 
+                const isCollapsed = collapsedGroups.has(groupLabel)
+
                 return (
-                  <div key={groupLabel} className="mb-3">
-                    <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/40">
-                      {groupLabel}
-                    </p>
-                    {visibleItems.map((item) => {
-                      const Icon = item.icon
-                      const isActive = activeModule === item.key
-                      return (
-                        <Tooltip key={item.key} delayDuration={0}>
-                          <TooltipTrigger asChild>
-                            <button
-                              onClick={() => handleNav(item.key)}
-                              className={cn(
-                                'w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150',
-                                isActive
-                                  ? 'bg-sidebar-primary text-sidebar-primary-foreground shadow-sm'
-                                  : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground'
-                              )}
-                            >
-                              <Icon className="w-4 h-4 shrink-0" />
-                              <span className="truncate">{item.label}</span>
-                              {isActive && (
-                                <div className="ml-auto w-1.5 h-1.5 rounded-full bg-sidebar-primary-foreground" />
-                              )}
-                            </button>
-                          </TooltipTrigger>
-                          <TooltipContent side="right" className="lg:hidden">
-                            {item.label}
-                          </TooltipContent>
-                        </Tooltip>
-                      )
-                    })}
+                  <div key={groupLabel} className="mb-1">
+                    <button
+                      type="button"
+                      onClick={() => toggleGroup(groupLabel)}
+                      className="group-header w-full flex items-center justify-between px-3 py-1.5 rounded-md text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/40 hover:text-sidebar-foreground/70 transition-colors"
+                    >
+                      <span>{groupLabel}</span>
+                      <span className="flex items-center gap-1.5">
+                        <span className="text-[10px] bg-sidebar-accent rounded px-1.5 py-px">{visibleItems.length}</span>
+                        <ChevronRight className={cn('w-3.5 h-3.5 transition-transform duration-150', isCollapsed ? '' : 'rotate-90')} />
+                      </span>
+                    </button>
+                    {isCollapsed ? null : (
+                      visibleItems.map((item) => {
+                        const Icon = item.icon
+                        const isActive = activeModule === item.key
+                        return (
+                          <Tooltip key={item.key} delayDuration={0}>
+                            <TooltipTrigger asChild>
+                              <button
+                                onClick={() => handleNav(item.key)}
+                                className={cn(
+                                  'w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150',
+                                  isActive
+                                    ? 'bg-sidebar-primary text-sidebar-primary-foreground shadow-sm'
+                                    : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground'
+                                )}
+                              >
+                                <Icon className="w-4 h-4 shrink-0" />
+                                <span className="truncate">{item.label}</span>
+                                {isActive && (
+                                  <div className="ml-auto w-1.5 h-1.5 rounded-full bg-sidebar-primary-foreground" />
+                                )}
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent side="right" className="lg:hidden">
+                              {item.label}
+                            </TooltipContent>
+                          </Tooltip>
+                        )
+                      })
+                    )}
                   </div>
                 )
               })

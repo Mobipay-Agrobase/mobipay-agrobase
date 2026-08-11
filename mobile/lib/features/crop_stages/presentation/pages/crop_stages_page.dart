@@ -1,24 +1,46 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/api/api_client.dart';
 
 /// Crop Stage Library — Mobile Screen
 /// Shows the 10 crop verticals (CoffeeCore, LiveCore, CropCore, etc.)
 /// and their stage definitions.
 
 final cropVerticalsProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
-  // TODO: Replace with API call to /api/crop-stages/definitions
-  return [
-    {'id': 'coffeecore', 'name': 'CoffeeCore', 'label': 'Coffee & Cocoa', 'icon': '☕', 'stages': 12, 'fields': 80},
-    {'id': 'livecore', 'name': 'LiveCore', 'label': 'Livestock & Dairy', 'icon': '🐄', 'stages': 20, 'fields': 120},
-    {'id': 'cropcore', 'name': 'CropCore', 'label': 'Field Crops', 'icon': '🌽', 'stages': 11, 'fields': 60},
-    {'id': 'orchardcore', 'name': 'OrchardCore', 'label': 'Orchard Fruits', 'icon': '🍎', 'stages': 12, 'fields': 70},
-    {'id': 'vegcore', 'name': 'VegCore', 'label': 'Vegetables', 'icon': '🥬', 'stages': 10, 'fields': 50},
-    {'id': 'floracore', 'name': 'FloraCore', 'label': 'Floriculture', 'icon': '🌺', 'stages': 9, 'fields': 40},
-    {'id': 'aquacore', 'name': 'AquaCore', 'label': 'Aquaculture', 'icon': '🐟', 'stages': 15, 'fields': 90},
-    {'id': 'forestcore', 'name': 'ForestCore', 'label': 'Forestry', 'icon': '🌳', 'stages': 11, 'fields': 55},
-    {'id': 'timbercore', 'name': 'TimberCore', 'label': 'Timber Tracking', 'icon': '🌲', 'stages': 10, 'fields': 45},
-    {'id': 'mangrovecore', 'name': 'MangroveCore', 'label': 'Mangrove Restoration', 'icon': '🌿', 'stages': 9, 'fields': 35},
-  ];
+  final res = await ApiClient().get('/api/crop-stages/definitions');
+  if (res.statusCode != 200) {
+    throw Exception('Failed to load crop verticals (${res.statusCode})');
+  }
+  final data = jsonDecode(res.body);
+  final list = (data['available'] as List<dynamic>? ?? [])
+      .map((e) => (e as Map<String, dynamic>))
+      .toList();
+
+  const icons = <String, String>{
+    'coffeecore': '☕', 'livecore': '🐄', 'cropcore': '🌽', 'orchardcore': '🍎',
+    'vegcore': '🥬', 'floracore': '🌺', 'aquacore': '🐟', 'forestcore': '🌳',
+    'timbercore': '🌲', 'mangrovecore': '🌿',
+  };
+  const labels = <String, String>{
+    'coffeecore': 'Coffee & Cocoa', 'livecore': 'Livestock & Dairy', 'cropcore': 'Field Crops',
+    'orchardcore': 'Orchard Fruits', 'vegcore': 'Vegetables', 'floracore': 'Floriculture',
+    'aquacore': 'Aquaculture', 'forestcore': 'Forestry', 'timbercore': 'Timber Tracking',
+    'mangrovecore': 'Mangrove Restoration',
+  };
+
+  // Map API records to the keys this screen renders.
+  return list.map((v) {
+    final key = v['vertical']?.toString().toLowerCase() ?? '';
+    return {
+      'id': key,
+      'name': v['vertical'],
+      'label': labels[key] ?? (v['cropTypes'] is List ? (v['cropTypes'] as List).join(', ') : ''),
+      'icon': icons[key] ?? '🌿',
+      'stages': v['totalStages'] ?? 0,
+      'fields': v['totalFields'] ?? 0,
+    };
+  }).toList();
 });
 
 class CropStagesPage extends ConsumerWidget {

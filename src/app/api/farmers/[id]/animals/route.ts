@@ -33,6 +33,29 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   }
 }
 
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const body = await request.json()
+    const { itemId, ...updateData } = body
+    if (!itemId) return NextResponse.json({ error: 'itemId required' }, { status: 400 })
+    const item = await db.farmerAnimalHusbandry.update({
+      where: { id: itemId },
+      data: {
+        ...(updateData.animalType !== undefined && { animalType: updateData.animalType }),
+        ...(updateData.count !== undefined && { count: updateData.count }),
+        ...(updateData.breedName !== undefined && { breedName: updateData.breedName }),
+        ...(updateData.fodder !== undefined && { fodder: updateData.fodder }),
+        ...(updateData.animalHousing !== undefined && { animalHousing: updateData.animalHousing }),
+        ...(updateData.revenue !== undefined && { revenue: updateData.revenue }),
+        ...(updateData.animalForGrowth !== undefined && { animalForGrowth: updateData.animalForGrowth }),
+      },
+    })
+    return NextResponse.json({ animal: item })
+  } catch (error) {
+    return NextResponse.json({ error: 'Failed to update animal' }, { status: 500 })
+  }
+}
+
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { searchParams } = new URL(request.url)

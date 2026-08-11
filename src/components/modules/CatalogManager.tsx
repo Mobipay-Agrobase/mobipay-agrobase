@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Plus, Trash2, Settings, Loader2 } from 'lucide-react'
+import { Plus, Trash2, Settings, Loader2, Pencil, Check, X } from 'lucide-react'
 import { toast } from 'sonner'
 
 const CATEGORIES = [
@@ -28,6 +28,42 @@ export function CatalogManager() {
   const [newValue, setNewValue] = useState('')
   const [newLabel, setNewLabel] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editValue, setEditValue] = useState('')
+  const [editLabel, setEditLabel] = useState('')
+  const [editSort, setEditSort] = useState('')
+  const [savingEdit, setSavingEdit] = useState(false)
+
+  const startEdit = (item: any) => {
+    setEditingId(item.id)
+    setEditValue(item.value || '')
+    setEditLabel(item.label || '')
+    setEditSort(String(item.sortOrder ?? 0))
+  }
+
+  const saveEdit = async (id: string) => {
+    if (!editValue.trim()) { toast.error('Value is required'); return }
+    setSavingEdit(true)
+    try {
+      const res = await fetch(`/api/catalog?id=${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ value: editValue.trim(), label: editLabel.trim() || null, sortOrder: Number(editSort) || 0 }),
+      })
+      if (res.ok) {
+        toast.success('Value updated')
+        setEditingId(null)
+        load()
+      } else {
+        const d = await res.json().catch(() => ({}))
+        toast.error(d.error || 'Failed to update')
+      }
+    } catch {
+      toast.error('Network error')
+    } finally {
+      setSavingEdit(false)
+    }
+  }
 
   const load = useCallback(() => {
     setLoading(true)
@@ -141,17 +177,47 @@ export function CatalogManager() {
               <tbody>
                 {items.map(item => (
                   <tr key={item.id} className="border-b hover:bg-muted/30">
-                    <td className="py-2 px-4 font-medium">{item.value}</td>
-                    <td className="py-2 px-4 text-muted-foreground">{item.label || '—'}</td>
-                    <td className="py-2 px-4 text-center">
-                      <Badge variant={item.isGlobal ? 'default' : 'secondary'} className="text-[10px]">{item.isGlobal ? 'Global' : 'Tenant'}</Badge>
-                    </td>
-                    <td className="py-2 px-4 text-right text-muted-foreground">{item.sortOrder}</td>
-                    <td className="py-2 px-4">
-                      <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => deleteItem(item.id)}>
-                        <Trash2 className="w-3.5 h-3.5 text-red-500" />
-                      </Button>
-                    </td>
+                    {editingId === item.id ? (
+                      <>
+                        <td className="py-2 px-4">
+                          <Input value={editValue} onChange={e => setEditValue(e.target.value)} className="h-8" placeholder="Value" />
+                        </td>
+                        <td className="py-2 px-4">
+                          <Input value={editLabel} onChange={e => setEditLabel(e.target.value)} className="h-8" placeholder="Label (optional)" />
+                        </td>
+                        <td className="py-2 px-4 text-center">
+                          <Badge variant={item.isGlobal ? 'default' : 'secondary'} className="text-[10px]">{item.isGlobal ? 'Global' : 'Tenant'}</Badge>
+                        </td>
+                        <td className="py-2 px-4 text-right">
+                          <Input value={editSort} onChange={e => setEditSort(e.target.value.replace(/[^\d]/g, ''))} className="h-8 w-16 ml-auto text-right" inputMode="numeric" />
+                        </td>
+                        <td className="py-2 px-4 text-right whitespace-nowrap">
+                          <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => saveEdit(item.id)} disabled={savingEdit}>
+                            {savingEdit ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5 text-emerald-600" />}
+                          </Button>
+                          <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setEditingId(null)}>
+                            <X className="w-3.5 h-3.5 text-muted-foreground" />
+                          </Button>
+                        </td>
+                      </>
+                    ) : (
+                      <>
+                        <td className="py-2 px-4 font-medium">{item.value}</td>
+                        <td className="py-2 px-4 text-muted-foreground">{item.label || '—'}</td>
+                        <td className="py-2 px-4 text-center">
+                          <Badge variant={item.isGlobal ? 'default' : 'secondary'} className="text-[10px]">{item.isGlobal ? 'Global' : 'Tenant'}</Badge>
+                        </td>
+                        <td className="py-2 px-4 text-right text-muted-foreground">{item.sortOrder}</td>
+                        <td className="py-2 px-4 text-right whitespace-nowrap">
+                          <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => startEdit(item)}>
+                            <Pencil className="w-3.5 h-3.5" />
+                          </Button>
+                          <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => deleteItem(item.id)}>
+                            <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                          </Button>
+                        </td>
+                      </>
+                    )}
                   </tr>
                 ))}
               </tbody>

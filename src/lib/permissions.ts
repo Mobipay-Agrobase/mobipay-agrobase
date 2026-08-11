@@ -55,20 +55,18 @@ const ROLE_PERMISSIONS: RolePerms = {
 
   // ─── EKIBBO-Specific Roles (from EKIBBO requirements Excel) ───
 
-  // EKIBBO Managing Director (Eric): Full access — same as TENANT_ADMIN
+  // EKIBBO Managing Director (Eric): Full access — same as TENANT_ADMIN.
+  // NOTE: Marketplace, Payments, Loans, Carbon, MFI, Communication, Feedback and
+  // Impact Assessment are NOT part of the Ekibbo product — stripped so this role
+  // cannot reach those APIs/menus (separate-tenant separation).
   EKB_MD: [
     'dashboard:*',
     'farmers:*',
-    'vsla:*',
-    'marketplace:*',
-    'payments:*',
-    'loans:*',
     'reports:*',
     'training:*',
     'surveys:*',
     'trace:*',
     'compliance:*',
-    'communication:*',
     'input_aggregation:*',
     'purchases:*',
     'approvals:*',
@@ -79,11 +77,7 @@ const ROLE_PERMISSIONS: RolePerms = {
     'companies:read',
     'users:*',
     'agritrack:*',
-    'feedback:*',
     'farm_visits:*',
-    'impact_assessment:*',
-    'carbon:*',
-    'mfi:*',
     'transport:*',
     'profile:*',
     'billing:read',
@@ -110,8 +104,6 @@ const ROLE_PERMISSIONS: RolePerms = {
     'farmers:read',           // view only — no create/edit
     'purchases:read', 'purchases:approve',
     'sales:*',
-    'loans:read',
-    'payments:read',
     'reports:read', 'reports:export',
     'trace:read',
     'profile:read', 'profile:update',
@@ -135,11 +127,8 @@ const ROLE_PERMISSIONS: RolePerms = {
     'training:read', 'training:update', // can correct training records
     'farm_visits:read',
     'surveys:*',
-    'communication:*',
     'reports:read', 'reports:export',
     'compliance:read',
-    'carbon:read',
-    'impact_assessment:read',
     'profile:read', 'profile:update',
   ],
 
@@ -154,7 +143,6 @@ const ROLE_PERMISSIONS: RolePerms = {
     'surveys:read', 'surveys:create',
     'trace:read',
     'compliance:read',
-    'carbon:read',
     'profile:read', 'profile:update',
   ],
 
@@ -227,6 +215,24 @@ const ROLE_PERMISSIONS: RolePerms = {
   CASUAL: [
     'dashboard:read',
     'profile:read',
+  ],
+
+  // EKIBBO Farmer: self-service (EKIBBO-tenant only)
+  // Farmers can view their own produce sales (products/quantities/income),
+  // loans, and financial ledger/transactions — scoped to the logged-in farmer.
+  EKB_FARMER: [
+    'dashboard:read',
+    'profile:read', 'profile:update',
+    'farmer_ledger:read',
+    'sales:read',
+    'purchases:read',
+    'loans:read',
+    'payments:read',
+    'training:read',
+    'farm_visits:read',
+    'marketplace:read',
+    'survey_reports:read',
+    'feedback:create',
   ],
 
   // Farmer: self-service

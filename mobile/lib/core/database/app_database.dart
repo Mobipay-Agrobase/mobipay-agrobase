@@ -66,6 +66,37 @@ class FarmLandCache extends Table {
   TextColumn get waterSource => text().nullable()();
   TextColumn get soilFertility => text().nullable()();
   TextColumn get boundaryGeoJson => text().nullable()(); // polygon points as JSON
+  // Extra farm detail fields (matches server Prisma model)
+  TextColumn get landSurveyNo => text().nullable()();
+  TextColumn get approachRoad => text().nullable()(); // comma-joined multi-select
+  TextColumn get landTopology => text().nullable()();
+  TextColumn get landGradient => text().nullable()(); // comma-joined multi-select
+  TextColumn get landDocumentUrl => text().nullable()();
+  TextColumn get powerSource => text().nullable()();
+  TextColumn get farmPhotoUrl => text().nullable()();
+  TextColumn get irrigationSource => text().nullable()(); // comma-joined multi-select
+  TextColumn get irrigationType => text().nullable()();
+  RealColumn get fullTimeWorkers => real().nullable()();
+  RealColumn get partTimeWorkers => real().nullable()();
+  RealColumn get seasonalWorkers => real().nullable()();
+  RealColumn get familyWorkers => real().nullable()();
+  DateTimeColumn get lastChemicalApplicationDate => dateTime().nullable()();
+  TextColumn get conventionalLands => text().nullable()();
+  TextColumn get fallowPastureLand => text().nullable()();
+  TextColumn get conventionalCrops => text().nullable()();
+  RealColumn get estYieldKg => real().nullable()();
+  TextColumn get certType => text().nullable()();
+  TextColumn get conversionStatus => text().nullable()();
+  DateTimeColumn get conversionDate => dateTime().nullable()();
+  TextColumn get inspectorName => text().nullable()();
+  BoolColumn get conversionQualified => boolean().nullable()();
+  TextColumn get conversionRemarks => text().nullable()();
+  DateTimeColumn get soilCollectionDate => dateTime().nullable()();
+  DateTimeColumn get soilLabTestingDate => dateTime().nullable()();
+  DateTimeColumn get soilResultDate => dateTime().nullable()();
+  TextColumn get soilReportUrl => text().nullable()();
+  TextColumn get soilSamplesInfo => text().nullable()();
+  TextColumn get soilCriteria => text().nullable()(); // JSON array of soil analyses
   TextColumn get syncStatus => text().withDefault(const Constant('synced'))();
   DateTimeColumn get lastSyncedAt => dateTime().nullable()();
   DateTimeColumn get updatedAt => dateTime().nullable()();
@@ -88,6 +119,21 @@ class CultivationCache extends Table {
   RealColumn get seedCost => real().nullable()();
   RealColumn get sowingCost => real().nullable()();
   TextColumn get status => text().withDefault(const Constant('ACTIVE'))();
+  // Extra cultivation fields (matches server Prisma model)
+  TextColumn get cropCategory => text().nullable()();
+  TextColumn get cropCalendarId => text().nullable()();
+  TextColumn get cultivationGeoJson => text().nullable()();
+  TextColumn get photoUrl => text().nullable()();
+  TextColumn get seedSource => text().nullable()();
+  BoolColumn get isSeedTreated => boolean().nullable()();
+  TextColumn get seedType => text().nullable()();
+  RealColumn get seedQuantity => real().nullable()();
+  RealColumn get seedPrice => real().nullable()();
+  TextColumn get sowingType => text().nullable()();
+  TextColumn get sowingChargesBy => text().nullable()();
+  RealColumn get sowingCharges => real().nullable()();
+  TextColumn get bambooVariety => text().nullable()();
+  RealColumn get seedlingCount => real().nullable()();
   TextColumn get syncStatus => text().withDefault(const Constant('synced'))();
   DateTimeColumn get lastSyncedAt => dateTime().nullable()();
   DateTimeColumn get updatedAt => dateTime().nullable()();
@@ -272,7 +318,19 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
+
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+    beforeOpen: (details) async {
+      if (details.hadUpgrade) {
+        // Recreate farm land + cultivation tables to add new columns.
+        // Cache-only tables; loss is acceptable on upgrade.
+        await delete(farmLandCache).go();
+        await delete(cultivationCache).go();
+      }
+    },
+  );
 
   // ─── Sync Queue Operations ──────────────────────────────────
 
@@ -343,6 +401,14 @@ class AppDatabase extends _$AppDatabase {
     await into(farmLandCache).insertOnConflictUpdate(farm);
   }
 
+  Future<FarmLandCacheData?> getCachedFarmLandById(String id) async {
+    return (select(farmLandCache)..where((t) => t.id.equals(id))).getSingleOrNull();
+  }
+
+  Future<void> deleteFarmLand(String id) async {
+    await (delete(farmLandCache)..where((t) => t.id.equals(id))).go();
+  }
+
   // ─── Cultivation Operations ─────────────────────────────────
 
   Future<List<CultivationCacheData>> getCachedCultivations({String? farmId}) {
@@ -353,8 +419,16 @@ class AppDatabase extends _$AppDatabase {
     return query.get();
   }
 
+  Future<CultivationCacheData?> getCachedCultivationById(String id) async {
+    return (select(cultivationCache)..where((t) => t.id.equals(id))).getSingleOrNull();
+  }
+
   Future<void> upsertCultivation(CultivationCacheCompanion cultivation) async {
     await into(cultivationCache).insertOnConflictUpdate(cultivation);
+  }
+
+  Future<void> deleteCultivation(String id) async {
+    await (delete(cultivationCache)..where((t) => t.id.equals(id))).go();
   }
 
   // ─── VSLA Operations ────────────────────────────────────────

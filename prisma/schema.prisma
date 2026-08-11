@@ -171,6 +171,10 @@ model User {
   avatarUrl     String?
   isActive      Boolean  @default(true)
   lastLogin     DateTime?
+  // ─── Password Reset (OTP flow) ───
+  passwordResetToken  String?
+  passwordResetExpiresAt DateTime?
+  passwordResetUsedAt  DateTime?
   // ─── 2FA (TOTP) ───
   twoFactorEnabled  Boolean  @default(false)
   twoFactorSecret   String?
@@ -486,6 +490,16 @@ model FarmerProfile {
   // Relations
   nssfRegistration    NssfRegistration? @relation("NssfRegistrationFarmer")
   nssfContributions   NssfContribution[] @relation("NssfContributionFarmer")
+
+  @@index([tenantId])
+  @@index([groupId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([firstName])
+  @@index([lastName])
+  @@index([phone])
+  @@index([district])
+  @@index([gender])
 }
 
 model ChildProfile {
@@ -543,7 +557,7 @@ model FarmLand {
   inspectorName    String?
   conversionQualified Boolean?
   conversionRemarks String?
-  // Soil Analysis
+  // Soil Analysis (kept for backward compatibility with existing data)
   soilCollectionDate DateTime?
   soilLabTestingDate DateTime?
   soilResultDate   DateTime?
@@ -556,6 +570,30 @@ model FarmLand {
 
   cultivations Cultivation[]
   polygonPoints FarmPolygon[]
+  soilAnalyses  SoilAnalysis[]
+
+  @@index([farmerId])
+  @@index([createdAt])
+  @@index([name])
+}
+
+model SoilAnalysis {
+  id              String   @id @default(cuid())
+  farmId          String
+  farm            FarmLand @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  collectionDate  DateTime?
+  labTestingDate  DateTime?
+  resultDate      DateTime?
+  reportUrl       String?
+  samplesInfo     String?  // no of samples collected and area
+  criteria        String   // pH, Sulphur(S), Nitrogen(N), Phosphorus(P), Potassium(K), etc.
+  criteriaValue   String?  // value with UOM (e.g. "6.5", "120ppm")
+  minValue        String?  // min permissible value with UOM
+  maxValue        String?  // max permissible value with UOM
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([farmId])
 }
 
 model Cultivation {
@@ -598,6 +636,11 @@ model Cultivation {
 
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+
+  @@index([farmId])
+  @@index([cropName])
+  @@index([status])
+  @@index([createdAt])
 }
 
 // --- CROP PRODUCTION (EKIBBO real data — crop-specific per farmer) ---
@@ -1857,6 +1900,8 @@ model FarmPolygon {
   longitude Float
   altitude  Float?
   createdAt DateTime @default(now())
+
+  @@index([farmId])
 }
 
 // --- COMPLIANCE: EUDR (EU Deforestation Regulation) ---
@@ -2347,8 +2392,8 @@ model CarbonFootprint {
   verificationStatus    String   @default("DRAFT")
   verifiedBy            String?
   verifiedAt            DateTime?
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }
 
 model CbamCalculation {

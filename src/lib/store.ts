@@ -20,7 +20,7 @@ export type ModuleKey =
   'support-tickets' | 'quotes' |
   'nssf-contributions' | 'nssf-settlement' |
   // Reference
-  'catalog-manager' |
+  'catalog-manager' | 'data-quality' |
   // Master data (seasons, crops, seeds, fertilizers, catalog)
   'season-master' | 'crop-master' | 'seed-master' | 'fertilizer-master' | 'master-data' |
   'equipment-master' | 'pesticide-master' | 'weed-master' | 'disease-master' | 'pest-master' | 'soiltype-master' |

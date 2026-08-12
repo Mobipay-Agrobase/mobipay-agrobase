@@ -64,6 +64,9 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       'spouseName', 'housingOwnership', 'houseType', 'bankName', 'bankBranch',
       'loanTakenFrom', 'loanPurpose', 'loanInterestPeriod', 'landOwnershipInfo',
       'nextOfKinName', 'nextOfKinPhone', 'nextOfKinRelation',
+      // New fields from the rebuilt AddFarmerForm
+      'certificationType', 'primaryIncomeSource', 'secondaryIncomeSource',
+      'livingConditions', 'fuelType', 'mealsPerDay', 'farmOwnership',
     ]
     for (const k of textFields) if (body[k] !== undefined) scalar[k] = body[k]
 
@@ -71,6 +74,8 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       'gpsLatitude', 'gpsLongitude', 'familyMembers', 'childrenUnder18', 'schoolGoingChildren',
       'childrenMaleUnder18', 'childrenFemaleUnder18', 'schoolGoingMale', 'schoolGoingFemale',
       'loanAmount', 'loanInterestPct', 'loanRepaymentAmount', 'farmSize',
+      'monthlyHouseholdIncome', 'annualHouseholdIncome', 'monthlyFarmIncome', 'annualFarmIncome',
+      'fuelCostMonthly', 'unusedLandSize', 'gpsAltitude',
     ]
     for (const k of numFields) if (body[k] !== undefined) scalar[k] = body[k]
 

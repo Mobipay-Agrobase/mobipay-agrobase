@@ -78,6 +78,15 @@ export function CatalogSelect({
     return match ? (match.label || match.value) : value
   }, [value, items])
 
+  // Ensure the currently-selected value is always present as a SelectItem,
+  // even if the catalog hasn't loaded it yet (or it was deleted from the catalog).
+  // Without this, Radix Select shows an empty trigger when value isn't in items.
+  const itemsWithCurrent = useMemo(() => {
+    if (!value) return items
+    if (items.some(i => i.value === value)) return items
+    return [{ value, label: displayLabel || value }, ...items]
+  }, [items, value, displayLabel])
+
   if (loading) {
     return (
       <Select disabled value="" onValueChange={() => {}}>
@@ -101,12 +110,12 @@ export function CatalogSelect({
         </SelectValue>
       </SelectTrigger>
       <SelectContent className="max-h-72">
-        {items.length === 0 ? (
+        {itemsWithCurrent.length === 0 ? (
           <div className="px-3 py-2 text-xs text-muted-foreground">
             No options configured. Add values in Catalog Master.
           </div>
         ) : (
-          items.map(opt => (
+          itemsWithCurrent.map(opt => (
             <SelectItem key={opt.value} value={opt.value}>
               {opt.label || opt.value}
             </SelectItem>

@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react'
 import { cn } from '@/lib/utils'
 import {
   MapPin, ChevronRight, ChevronDown, Plus, Pencil, Trash2,
-  Globe, Building2, Map, Trees, Home, Landmark, TreePine
+  Globe, Building2, Map, Trees, Home, Landmark, TreePine, Loader2
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -189,7 +189,7 @@ export function LocationMaster() {
       }
 
       setDialogOpen(false)
-      fetchRegions()
+      reload()
     } catch {
       toast.error('Operation failed')
     }
@@ -218,48 +218,57 @@ export function LocationMaster() {
       }
       toast.success(`${LEVEL_CONFIG[level].label} deleted`)
       setDeleteConfirm(null)
-      fetchRegions()
+      reload()
     } catch {
       toast.error('Delete failed')
     }
   }
 
-  const getChildEntities = (entity: GeoEntity, level: number): GeoEntity[] => {
-    const childKeys = ['subRegions', 'districts', 'counties', 'subCounties', 'parishes', 'villages']
-    return entity[childKeys[level]] || []
+  // Lazy children: for a node at `level`, its children live at `level+1`
+  // and are cached under key `${LEVEL_CONFIG[level+1].key}_${entity.id}`.
+  const getChildren = (level: number, entity: GeoEntity): GeoEntity[] => {
+    if (level >= LEVEL_CONFIG.length - 1) return []  // leaf
+    const childLevel = level + 1
+    const key = `${LEVEL_CONFIG[childLevel].key}_${entity.id}`
+    return childrenCache[key] || []
   }
 
   const renderTree = (entities: GeoEntity[], level: number, path: string[] = []) => {
     if (level >= LEVEL_CONFIG.length) return null
     const config = LEVEL_CONFIG[level]
     const Icon = config.icon
-    const childKey = ['subRegions', 'districts', 'counties', 'subCounties', 'parishes', 'villages'][level]
+    const isLeaf = level === LEVEL_CONFIG.length - 1
 
     return (
       <div className={cn('ml-4', level > 0 && 'border-l-2 border-muted pl-4')}>
         {entities.map(entity => {
-          const children = entity[childKey] || []
+          const children = getChildren(level, entity)
           const isExpanded = expandedIds.has(entity.id)
-          const hasChildren = children.length > 0
+          const childCacheKey = `${LEVEL_CONFIG[level + 1]?.key}_${entity.id}`
+          const isLoadingChildren = loadingLevel === childCacheKey
+          // For non-leaf levels, always show the chevron (children may exist on the server)
+          const hasChildren = !isLeaf
 
           return (
             <div key={entity.id} className="py-1">
               <div className="flex items-center gap-2 group">
                 <button
-                  onClick={() => toggleExpand(entity.id)}
+                  onClick={() => toggleExpand(level, entity)}
                   className={cn(
                     'flex items-center gap-1.5 px-1 py-0.5 rounded hover:bg-muted transition-colors',
                     !hasChildren && 'invisible'
                   )}
                 >
-                  {isExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+                  {isLoadingChildren
+                    ? <Loader2 className="w-3 h-3 animate-spin" />
+                    : isExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
                 </button>
                 <Icon className="w-4 h-4 text-muted-foreground" />
                 <span className="flex-1 text-sm font-medium">{entity.name}</span>
                 {level === 0 && entity.country && (
                   <Badge variant="outline" className="text-xs">{entity.country}</Badge>
                 )}
-                {hasChildren && (
+                {isExpanded && children.length > 0 && (
                   <Badge variant="secondary" className="text-xs">{children.length}</Badge>
                 )}
                 <div className="opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-opacity">
@@ -291,7 +300,13 @@ export function LocationMaster() {
                   </Button>
                 </div>
               </div>
-              {isExpanded && hasChildren && renderTree(children, level + 1, [...path, entity.name])}
+              {isExpanded && !isLeaf && (
+                isLoadingChildren
+                  ? <div className="ml-8 py-1 text-xs text-muted-foreground">Loading…</div>
+                  : children.length === 0
+                    ? <div className="ml-8 py-1 text-xs text-muted-foreground italic">No child entries.</div>
+                    : renderTree(children, level + 1, [...path, entity.name])
+              )}
             </div>
           )
         })}

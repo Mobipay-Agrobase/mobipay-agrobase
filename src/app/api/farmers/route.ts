@@ -5,6 +5,7 @@ import { hashPassword } from '@/lib/password'
 import { appendImpactEvent } from '@/lib/impact/hash-chain'
 import { UsageTracker } from '@/lib/billing/usage'
 import { encryptField, decryptField } from '@/lib/security/field-crypto'
+import { generateFarmerCode } from '@/lib/farmer-code'
 
 /**
  * GET /api/farmers — List farmers with search, filter, pagination
@@ -84,9 +85,8 @@ export async function POST(request: Request) {
     const ctx = await getTenantContext()
     const body = await request.json()
 
-    // Generate farmer code if not provided
-    const farmerCount = await db.farmerProfile.count({ where: { tenantId: ctx.tenantId } })
-    const farmerCode = body.farmerCode || `FRM-${String(farmerCount + 1).padStart(5, '0')}`
+    // Generate tenant-aware farmer code (e.g. EKB-00001 for EKIBBO, SAA-00001 for SAA-WFP-AMS)
+    const farmerCode = await generateFarmerCode(ctx.tenantId, body.farmerCode)
 
     // Stringify JSON fields
     const jsonData: Record<string, string | undefined> = {}

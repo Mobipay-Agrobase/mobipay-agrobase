@@ -166,7 +166,7 @@ export function LocationPicker({
   const setLevel = (key: LevelKey, id: string) => {
     const thisIdx = LEVELS.findIndex(l => l.key === key)
     const clear = LEVELS.slice(thisIdx + 1).map(l => l.key) as LevelKey[]
-    const next: LocSelection = { country: 'Uganda', ...sel, [key]: id }
+    const next: LocSelection = { ...sel, country: 'Uganda', [key]: id }
     for (const k of clear) { delete next[k]; delete next[k.replace('Id', '') as keyof LocSelection] }
     const cur = levelOptions(key).list.find(o => o.id === id)
     if (cur) (next as any)[key.replace('Id', '')] = cur.name

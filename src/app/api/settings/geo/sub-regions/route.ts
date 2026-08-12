@@ -1,6 +1,18 @@
 import { db } from '@/lib/db'
 import { NextRequest, NextResponse } from 'next/server'
 
+export async function GET(req: NextRequest) {
+  try {
+    const { searchParams } = new URL(req.url)
+    const regionId = searchParams.get('regionId')
+    const rows = await db.subRegion.findMany({ where: regionId ? { regionId } : {}, orderBy: { name: 'asc' } })
+    return NextResponse.json({ data: rows })
+  } catch (error) {
+    console.error('Sub-region list error:', error)
+    return NextResponse.json({ error: 'Failed to fetch sub-regions' }, { status: 500 })
+  }
+}
+
 /**
  * POST /api/settings/geo/sub-regions — Create a sub-region
  * DELETE /api/settings/geo/sub-regions?id=xxx — Delete a sub-region

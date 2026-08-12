@@ -1,6 +1,18 @@
 import { db } from '@/lib/db'
 import { NextRequest, NextResponse } from 'next/server'
 
+export async function GET(req: NextRequest) {
+  try {
+    const { searchParams } = new URL(req.url)
+    const subRegionId = searchParams.get('subRegionId')
+    const rows = await db.district.findMany({ where: subRegionId ? { subRegionId } : {}, orderBy: { name: 'asc' } })
+    return NextResponse.json({ data: rows })
+  } catch (error) {
+    console.error('District list error:', error)
+    return NextResponse.json({ error: 'Failed to fetch districts' }, { status: 500 })
+  }
+}
+
 /**
  * POST /api/settings/geo/districts — Create a district
  * PUT /api/settings/geo/districts?id=xxx — Update a district
@@ -44,9 +56,9 @@ export async function DELETE(req: NextRequest) {
     const { searchParams } = new URL(req.url)
     const id = searchParams.get('id')
     if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
-    const constituencyCount = await db.constituency.count({ where: { districtId: id } })
-    if (constituencyCount > 0) {
-      return NextResponse.json({ error: 'Cannot delete district with constituencies' }, { status: 400 })
+    const countyCount = await db.county.count({ where: { districtId: id } })
+    if (countyCount > 0) {
+      return NextResponse.json({ error: 'Cannot delete district with counties' }, { status: 400 })
     }
     await db.district.delete({ where: { id } })
     return NextResponse.json({ success: true })

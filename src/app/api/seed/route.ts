@@ -18,7 +18,7 @@ const VSLA_NAMES = ['Kabonera VSLA','Buwenge Savings','Masindi VSLA','Kampala Ce
 export async function POST() {
   try {
     // Wipe all data safely
-    const modelNames = ['AuditLog','Feedback','Delivery','Sale','Commodity','SurveyResponse','SurveyQuestion','Survey','Message','ApiKey','Subscription','ModuleEntitlement','CreditScore','TrainingAttendance','Training','Payment','PaymentAccount','LoanApplication','LoanProduct','InputRequest','InputProduct','InputDealer','MarketMatch','MarketProduct','Consignment','Purchase','WelfarePayment','VslaTransaction','VslaAttendance','VslaMeeting','VslaLoanRepayment','VslaLoan','VslaMember','VslaSaving','VslaGroup','ChildProfile','Cultivation','FarmLand','FarmerProfile','AgentAssignment','User','Company','FarmerGroup','Village','Parish','SubCounty','Constituency','District','SubRegion','Region','Tenant']
+    const modelNames = ['AuditLog','Feedback','Delivery','Sale','Commodity','SurveyResponse','SurveyQuestion','Survey','Message','ApiKey','Subscription','ModuleEntitlement','CreditScore','TrainingAttendance','Training','Payment','PaymentAccount','LoanApplication','LoanProduct','InputRequest','InputProduct','InputDealer','MarketMatch','MarketProduct','Consignment','Purchase','WelfarePayment','VslaTransaction','VslaAttendance','VslaMeeting','VslaLoanRepayment','VslaLoan','VslaMember','VslaSaving','VslaGroup','ChildProfile','Cultivation','FarmLand','FarmerProfile','AgentAssignment','User','Company','FarmerGroup','Village','Parish','SubCounty','County','District','SubRegion','Region','Tenant']
     for (const t of modelNames) { try { await db.$executeRawUnsafe(`DELETE FROM "${t}"`) } catch(e: any) { /* skip */ } }
 
     // Tenants

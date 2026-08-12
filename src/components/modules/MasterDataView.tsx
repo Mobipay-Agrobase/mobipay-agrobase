@@ -70,10 +70,70 @@ const MASTER_KINDS: MasterKind[] = [
     ],
     columns: ['name', 'uom', 'nutrition'],
   },
+  {
+    key: 'equipment', label: 'Equipment Master', description: 'Farm equipment and machinery catalogued for farmers.',
+    fields: [
+      { name: 'name', label: 'Equipment Name', type: 'text' },
+      { name: 'uom', label: 'Unit (UoM)', type: 'select', options: ['Piece', 'Unit', 'Set', 'Nos'] },
+      { name: 'description', label: 'Description', type: 'text' },
+    ],
+    columns: ['name', 'uom'],
+  },
+  {
+    key: 'pesticide', label: 'Pesticide Master', description: 'Pesticides applied on farms with chemical/biological names.',
+    fields: [
+      { name: 'name', label: 'Pesticide Name', type: 'text' },
+      { name: 'uom', label: 'Unit (UoM)', type: 'select', options: ['Kg', 'Gram', 'ml', 'Litre'] },
+      { name: 'chemicalName', label: 'Chemical Name', type: 'text' },
+      { name: 'biologicalName', label: 'Biological Name', type: 'text' },
+      { name: 'manufacturer', label: 'Manufacturer', type: 'text' },
+      { name: 'description', label: 'Description', type: 'text' },
+    ],
+    columns: ['name', 'chemicalName', 'manufacturer'],
+  },
+  {
+    key: 'weed', label: 'Weed Master', description: 'Weed species requiring control on cultivation plots.',
+    fields: [
+      { name: 'name', label: 'Weed Name', type: 'text' },
+      { name: 'uom', label: 'Unit (UoM)', type: 'select', options: ['Area', 'Bed', 'Tree', 'Nos'] },
+      { name: 'description', label: 'Description', type: 'text' },
+    ],
+    columns: ['name', 'uom'],
+  },
+  {
+    key: 'disease', label: 'Disease Master', description: 'Plant diseases by affected plant part/unit.',
+    fields: [
+      { name: 'name', label: 'Disease Name', type: 'text' },
+      { name: 'affectedTypes', label: 'Affected Plant Part', type: 'select', options: ['Flower', 'Fruit', 'Leaf', 'Soil', 'Grain', 'Tree', 'Other'] },
+      { name: 'affectedUom', label: 'Affected Unit', type: 'select', options: ['Tree', 'Area', 'Bed'] },
+      { name: 'description', label: 'Description', type: 'text' },
+    ],
+    columns: ['name', 'affectedTypes'],
+  },
+  {
+    key: 'pest', label: 'Pest Master', description: 'Pests affecting crops by growth stage and affected part.',
+    fields: [
+      { name: 'name', label: 'Pest Name', type: 'text' },
+      { name: 'affectedTypes', label: 'Affected Plant Part', type: 'select', options: ['Flower', 'Fruit', 'Leaf', 'Soil', 'Grain', 'Tree', 'Other'] },
+      { name: 'affectedUom', label: 'Affected Unit', type: 'select', options: ['Tree', 'Area', 'Bed'] },
+      { name: 'affectedStage', label: 'Affected Crop Stage', type: 'select', options: ['Sowing', 'Young Tree', 'Flowering', 'Graining'] },
+      { name: 'description', label: 'Description', type: 'text' },
+    ],
+    columns: ['name', 'affectedTypes', 'affectedStage'],
+  },
+  {
+    key: 'soiltype', label: 'Soil Type Master', description: 'Soil types used in soil analysis criteria.',
+    fields: [
+      { name: 'name', label: 'Soil Type', type: 'text' },
+      { name: 'description', label: 'Description', type: 'text' },
+    ],
+    columns: ['name'],
+  },
 ]
 
 export function MasterDataView({ kind }: { kind: string }) {
-  const selected = MASTER_KINDS.find(m => m.key === kind) ?? MASTER_KINDS[0]
+  const [activeKind, setActiveKind] = useState(kind)
+  const selected = MASTER_KINDS.find(m => m.key === activeKind) ?? MASTER_KINDS[0]
   const [rows, setRows] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
@@ -176,7 +236,7 @@ export function MasterDataView({ kind }: { kind: string }) {
       <div className="flex flex-wrap gap-2">
         {MASTER_KINDS.map(k => (
           <Button key={k.key} variant={k.key === selected.key ? 'default' : 'outline'} size="sm"
-            onClick={() => { setEditing(null); setShowForm(false) }}>
+            onClick={() => { setActiveKind(k.key); setEditing(null); setShowForm(false); setSearch(''); setPage(1) }}>
             {k.label}
           </Button>
         ))}

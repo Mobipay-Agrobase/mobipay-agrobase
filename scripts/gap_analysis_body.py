@@ -837,7 +837,7 @@ story.append(p(
 ))
 story.append(p(
     "Geographic data migration presents another challenge. The V3 platform introduces a 7-level "
-    "geographic hierarchy (Region, SubRegion, District, Constituency, SubCounty, Parish, Village) "
+    "geographic hierarchy (Region, SubRegion, District, County, SubCounty, Parish, Village) "
     "that may not match the V1 data structure. The V1 platform may store location data as free-text "
     "fields or a flatter hierarchy, requiring geocoding and hierarchical assignment during migration. "
     "Multi-tenancy introduces an additional complexity: V1 may not have a proper tenant model, meaning "

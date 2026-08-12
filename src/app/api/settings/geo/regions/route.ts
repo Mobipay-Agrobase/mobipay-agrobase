@@ -5,34 +5,27 @@ import { NextRequest, NextResponse } from 'next/server'
 // Geo data (regions, districts, etc.) is shared across all tenants — no tenant isolation needed.
 
 /**
- * GET /api/settings/geo/regions — Get full geographic hierarchy tree
- * POST /api/settings/geo/regions — Create a new region/sub-region/district
+ * GET /api/settings/geo/regions — List top-level regions (shallow, for lazy-loading the hierarchy)
+ * POST /api/settings/geo/regions — Create a new region/sub-region/district/...
+ * Body options:
+ *   { name, country }                           → Create Region
+ *   { name, regionId }                          → Create SubRegion
+ *   { name, subRegionId }                       → Create District
+ *   { name, districtId }                        → Create County
+ *   { name, countyId }                          → Create SubCounty
+ *   { name, subCountyId }                       → Create Parish
+ *   { name, parishId }                          → Create Village
  */
 export async function GET() {
   try {
     const regions = await db.region.findMany({
-      include: {
-        subRegions: {
-          include: {
-            districts: {
-              include: {
-                constituencies: {
-                  include: {
-                    subCounties: {
-                      include: {
-                        parishes: {
-                          include: { villages: true }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
+      select: {
+        id: true,
+        name: true,
+        country: true,
+        _count: { select: { subRegions: true } },
       },
-      orderBy: { name: 'asc' }
+      orderBy: { name: 'asc' },
     })
     return NextResponse.json({ data: regions })
   } catch (error) {
@@ -41,64 +34,37 @@ export async function GET() {
   }
 }
 
-/**
- * POST /api/settings/geo/regions — Create geographic entities at any level
- * 
- * Body options:
- *   { name, country }                           → Create Region
- *   { name, regionId }                          → Create SubRegion
- *   { name, subRegionId }                       → Create District
- *   { name, districtId }                        → Create Constituency
- *   { name, constituencyId }                    → Create SubCounty
- *   { name, subCountyId }                       → Create Parish
- *   { name, parishId }                          → Create Village
- */
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    
-    // Determine level based on parent ID provided
+
     if (body.parishId) {
-      const village = await db.village.create({
-        data: { name: body.name, parishId: body.parishId }
-      })
+      const village = await db.village.create({ data: { name: body.name, parishId: body.parishId } })
       return NextResponse.json({ data: village }, { status: 201 })
     }
     if (body.subCountyId) {
-      const parish = await db.parish.create({
-        data: { name: body.name, subCountyId: body.subCountyId }
-      })
+      const parish = await db.parish.create({ data: { name: body.name, subCountyId: body.subCountyId } })
       return NextResponse.json({ data: parish }, { status: 201 })
     }
-    if (body.constituencyId) {
-      const subCounty = await db.subCounty.create({
-        data: { name: body.name, constituencyId: body.constituencyId }
-      })
+    if (body.countyId) {
+      const subCounty = await db.subCounty.create({ data: { name: body.name, countyId: body.countyId } })
       return NextResponse.json({ data: subCounty }, { status: 201 })
     }
     if (body.districtId) {
-      const constituency = await db.constituency.create({
-        data: { name: body.name, districtId: body.districtId }
-      })
-      return NextResponse.json({ data: constituency }, { status: 201 })
+      const county = await db.county.create({ data: { name: body.name, districtId: body.districtId } })
+      return NextResponse.json({ data: county }, { status: 201 })
     }
     if (body.subRegionId) {
-      const district = await db.district.create({
-        data: { name: body.name, subRegionId: body.subRegionId }
-      })
+      const district = await db.district.create({ data: { name: body.name, subRegionId: body.subRegionId } })
       return NextResponse.json({ data: district }, { status: 201 })
     }
     if (body.regionId) {
-      const subRegion = await db.subRegion.create({
-        data: { name: body.name, regionId: body.regionId }
-      })
+      const subRegion = await db.subRegion.create({ data: { name: body.name, regionId: body.regionId } })
       return NextResponse.json({ data: subRegion }, { status: 201 })
     }
-    
+
     // Default: Create Region
-    const region = await db.region.create({
-      data: { name: body.name, country: body.country || 'Uganda' }
-    })
+    const region = await db.region.create({ data: { name: body.name, country: body.country || 'Uganda' } })
     return NextResponse.json({ data: region }, { status: 201 })
   } catch (error) {
     console.error('Geo create error:', error)

@@ -28,8 +28,8 @@ export async function GET(request: Request) {
     const where: Record<string, unknown> = {
       ...buildTenantFilter(ctx, 'tenantId'),
     }
-    if (status) where.status = status
-    else where.status = 'ACTIVE'
+    if (status && status !== 'all') where.status = status
+    else if (status !== 'all') where.status = 'ACTIVE'
     if (gender) where.gender = gender
     if (isCertified === 'true') where.isCertified = true
     if (isCertified === 'false') where.isCertified = false
@@ -124,6 +124,7 @@ export async function POST(request: Request) {
         enrollmentPlace: body.enrollmentPlace,
         icsYear: body.icsYear,
         cooperativeId: body.cooperativeId,
+        extensionOfficer: body.extensionOfficer,
 
         // ID Proof
         idProofPhotoUrl: body.idProofPhotoUrl,
@@ -139,6 +140,7 @@ export async function POST(request: Request) {
         district: body.district,
         commune: body.commune,
         villageName: body.villageName,
+        villageId: body.villageId,
         zipCode: body.zipCode,
 
         // Family

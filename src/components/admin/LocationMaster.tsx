@@ -23,7 +23,7 @@ interface GeoEntity {
   country?: string
   subRegions?: GeoEntity[]
   districts?: GeoEntity[]
-  constituencies?: GeoEntity[]
+  counties?: GeoEntity[]
   subCounties?: GeoEntity[]
   parishes?: GeoEntity[]
   villages?: GeoEntity[]
@@ -33,20 +33,55 @@ const LEVEL_CONFIG = [
   { key: 'region', label: 'Region', icon: Globe, parentField: null },
   { key: 'subRegion', label: 'Sub-Region', icon: Map, parentField: 'regionId' },
   { key: 'district', label: 'District', icon: Building2, parentField: 'subRegionId' },
-  { key: 'constituency', label: 'Constituency', icon: Trees, parentField: 'districtId' },
-  { key: 'subCounty', label: 'Sub-County', icon: Landmark, parentField: 'constituencyId' },
+  { key: 'county', label: 'County', icon: Trees, parentField: 'districtId' },
+  { key: 'subCounty', label: 'Sub-County', icon: Landmark, parentField: 'countyId' },
   { key: 'parish', label: 'Parish', icon: TreePine, parentField: 'subCountyId' },
   { key: 'village', label: 'Village', icon: Home, parentField: 'parishId' },
 ]
 
 export function LocationMaster() {
   const [regions, setRegions] = useState<GeoEntity[]>([])
+  const [childrenCache, setChildrenCache] = useState<Record<string, GeoEntity[]>>({})
+  const [loadingLevel, setLoadingLevel] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set())
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingEntity, setEditingEntity] = useState<{ level: number; entity: GeoEntity } | null>(null)
   const [newEntity, setNewEntity] = useState<{ level: number; parentId: string; name: string }>({ level: 0, parentId: '', name: '' })
   const [deleteConfirm, setDeleteConfirm] = useState<{ level: number; entity: GeoEntity } | null>(null)
+
+  // child endpoint + parent query param per level
+  const childEndpoint = (level: number) => {
+    const map: Record<number, { path: string; param: string }> = {
+      1: { path: '/sub-regions', param: 'regionId' },
+      2: { path: '/districts', param: 'subRegionId' },
+      3: { path: '/counties', param: 'districtId' },
+      4: { path: '/sub-counties', param: 'countyId' },
+      5: { path: '/parishes', param: 'subCountyId' },
+      6: { path: '/villages', param: 'parishId' },
+    }
+    return map[level]
+  }
+
+  const cacheKey = (level: number, parentId: string) => `${LEVEL_CONFIG[level].key}_${parentId}`
+
+  const loadChildren = useCallback(async (level: number, parentId: string) => {
+    const ep = childEndpoint(level)
+    if (!ep) return
+    const key = cacheKey(level, parentId)
+    if (childrenCache[key]) return
+    setLoadingLevel(key)
+    try {
+      const res = await fetch(`/api/settings/geo${ep.path}?${ep.param}=${encodeURIComponent(parentId)}`)
+      if (!res.ok) return
+      const d = await res.json()
+      setChildrenCache(p => ({ ...p, [key]: d.data || [] }))
+    } catch {
+      toast.error('Failed to load children')
+    } finally {
+      setLoadingLevel(prev => (prev === key ? null : prev))
+    }
+  }, [childrenCache])
 
   const fetchRegions = useCallback(async () => {
     try {
@@ -62,11 +97,23 @@ export function LocationMaster() {
 
   useEffect(() => { fetchRegions() }, [fetchRegions])
 
-  const toggleExpand = (id: string) => {
+  const reload = () => {
+    setChildrenCache({})
+    setExpandedIds(new Set())
+    setLoading(true)
+    fetchRegions()
+  }
+
+  const toggleExpand = (level: number, entity: GeoEntity) => {
+    const id = entity.id
+    const isLeaf = level === LEVEL_CONFIG.length - 1
     setExpandedIds(prev => {
       const next = new Set(prev)
       if (next.has(id)) next.delete(id)
-      else next.add(id)
+      else {
+        next.add(id)
+        if (!isLeaf) loadChildren(level + 1, id)
+      }
       return next
     })
   }
@@ -97,7 +144,7 @@ export function LocationMaster() {
           region: `/api/settings/geo/regions/${editingEntity.entity.id}`,
           subRegion: `/api/settings/geo/sub-regions?id=${editingEntity.entity.id}`,
           district: `/api/settings/geo/districts?id=${editingEntity.entity.id}`,
-          constituency: `/api/settings/geo/constituencies?id=${editingEntity.entity.id}`,
+          county: `/api/settings/geo/counties?id=${editingEntity.entity.id}`,
           subCounty: `/api/settings/geo/sub-counties?id=${editingEntity.entity.id}`,
           parish: `/api/settings/geo/parishes?id=${editingEntity.entity.id}`,
           village: `/api/settings/geo/villages?id=${editingEntity.entity.id}`,
@@ -126,7 +173,7 @@ export function LocationMaster() {
           '/api/settings/geo/regions',
           '/api/settings/geo/sub-regions',
           '/api/settings/geo/districts',
-          '/api/settings/geo/constituencies',
+          '/api/settings/geo/counties',
           '/api/settings/geo/sub-counties',
           '/api/settings/geo/parishes',
           '/api/settings/geo/villages',
@@ -157,7 +204,7 @@ export function LocationMaster() {
         0: `/api/settings/geo/regions?id=${entity.id}`,
         1: `/api/settings/geo/sub-regions?id=${entity.id}`,
         2: `/api/settings/geo/districts?id=${entity.id}`,
-        3: `/api/settings/geo/constituencies?id=${entity.id}`,
+        3: `/api/settings/geo/counties?id=${entity.id}`,
         4: `/api/settings/geo/sub-counties?id=${entity.id}`,
         5: `/api/settings/geo/parishes?id=${entity.id}`,
         6: `/api/settings/geo/villages?id=${entity.id}`,
@@ -178,7 +225,7 @@ export function LocationMaster() {
   }
 
   const getChildEntities = (entity: GeoEntity, level: number): GeoEntity[] => {
-    const childKeys = ['subRegions', 'districts', 'constituencies', 'subCounties', 'parishes', 'villages']
+    const childKeys = ['subRegions', 'districts', 'counties', 'subCounties', 'parishes', 'villages']
     return entity[childKeys[level]] || []
   }
 
@@ -186,7 +233,7 @@ export function LocationMaster() {
     if (level >= LEVEL_CONFIG.length) return null
     const config = LEVEL_CONFIG[level]
     const Icon = config.icon
-    const childKey = ['subRegions', 'districts', 'constituencies', 'subCounties', 'parishes', 'villages'][level]
+    const childKey = ['subRegions', 'districts', 'counties', 'subCounties', 'parishes', 'villages'][level]
 
     return (
       <div className={cn('ml-4', level > 0 && 'border-l-2 border-muted pl-4')}>

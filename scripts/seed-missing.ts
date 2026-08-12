@@ -41,7 +41,7 @@ export async function seedMissing(
   const u0 = users[0]?.id; const u2 = users[2]?.id; const u3 = users[3]?.id
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // 1. GEOGRAPHIC HIERARCHY (Region → SubRegion → District → Constituency → SubCounty → Parish → Village)
+  // 1. GEOGRAPHIC HIERARCHY (Region → SubRegion → District → County → SubCounty → Parish → Village)
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   console.log('  ↳ Seeding Geographic hierarchy...')
 
@@ -60,13 +60,13 @@ export async function seedMissing(
   const dist4 = await db.district.create({ data: { name: 'Jinja District', subRegionId: subRegion2.id } })
   const dist5 = await db.district.create({ data: { name: 'Kibale District', subRegionId: subRegion1.id } })
 
-  const const1 = await db.constituency.create({ data: { name: 'Kampala Central', districtId: dist1.id } })
-  const const2 = await db.constituency.create({ data: { name: 'Mbale Municipality', districtId: dist2.id } })
-  const const3 = await db.constituency.create({ data: { name: 'Gulu Municipality', districtId: dist3.id } })
+  const const1 = await db.county.create({ data: { name: 'Kampala Central', districtId: dist1.id } })
+  const const2 = await db.county.create({ data: { name: 'Mbale Municipality', districtId: dist2.id } })
+  const const3 = await db.county.create({ data: { name: 'Gulu Municipality', districtId: dist3.id } })
 
-  const subCo1 = await db.subCounty.create({ data: { name: 'Kawempe', constituencyId: const1.id } })
-  const subCo2 = await db.subCounty.create({ data: { name: 'Bungokho', constituencyId: const2.id } })
-  const subCo3 = await db.subCounty.create({ data: { name: 'Laroo', constituencyId: const3.id } })
+  const subCo1 = await db.subCounty.create({ data: { name: 'Kawempe', countyId: const1.id } })
+  const subCo2 = await db.subCounty.create({ data: { name: 'Bungokho', countyId: const2.id } })
+  const subCo3 = await db.subCounty.create({ data: { name: 'Laroo', countyId: const3.id } })
 
   const parish1 = await db.parish.create({ data: { name: 'Kawempe I', subCountyId: subCo1.id } })
   const parish2 = await db.parish.create({ data: { name: 'Bumayoka', subCountyId: subCo2.id } })

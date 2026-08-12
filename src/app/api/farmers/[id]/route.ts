@@ -12,7 +12,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     where: { id, ...tf },
     include: {
       group: true,
-      village: { include: { parish: { include: { subCounty: { include: { constituency: { include: { district: { include: { subRegion: { include: { region: true } } } } } } } } } } } },
+      village: { include: { parish: { include: { subCounty: { include: { county: { include: { district: { include: { subRegion: { include: { region: true } } } } } } } } } } } },
       creditScores: { orderBy: { scoreDate: 'desc' }, take: 1 },
       savings: { take: 10, orderBy: { createdAt: 'desc' } },
       vslaLoans: { take: 10, orderBy: { createdAt: 'desc' } },
@@ -59,8 +59,8 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     const scalar: Record<string, unknown> = {}
     const textFields = [
       'farmerCode', 'nationalIdType', 'education', 'maritalStatus', 'memberType',
-      'enrollmentPlace', 'icsYear', 'cooperativeId', 'guardianName', 'photoUrl',
-      'country', 'province', 'district', 'commune', 'villageName', 'zipCode',
+      'enrollmentPlace', 'icsYear', 'cooperativeId', 'extensionOfficer', 'guardianName', 'photoUrl',
+      'country', 'province', 'district', 'commune', 'villageName', 'villageId', 'zipCode',
       'spouseName', 'housingOwnership', 'houseType', 'bankName', 'bankBranch',
       'loanTakenFrom', 'loanPurpose', 'loanInterestPeriod', 'landOwnershipInfo',
       'nextOfKinName', 'nextOfKinPhone', 'nextOfKinRelation',

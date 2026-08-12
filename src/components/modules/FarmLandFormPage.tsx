@@ -119,7 +119,7 @@ export default function FarmLandFormPage({ mode, farmLandId, farmerId }: FarmLan
   const isEditing = mode === 'edit'
 
   useEffect(() => {
-    fetch('/api/farmers?limit=100')
+    fetch('/api/farmers?limit=100&status=all')
       .then(r => r.json())
       .then(data => setFarmers(data.farmers || data.data || []))
       .catch(() => {})

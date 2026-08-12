@@ -231,23 +231,23 @@ model District {
   name        String
   subRegionId String
   subRegion   SubRegion    @relation(fields: [subRegionId], references: [id])
-  constituencies Constituency[]
+  counties    County[]
 }
 
-model Constituency {
-  id          String       @id @default(cuid())
+model County {
+  id          String     @id @default(cuid())
   name        String
   districtId  String
-  district    District     @relation(fields: [districtId], references: [id])
+  district    District   @relation(fields: [districtId], references: [id])
   subCounties SubCounty[]
 }
 
 model SubCounty {
-  id            String    @id @default(cuid())
-  name          String
-  constituencyId String
-  constituency   Constituency @relation(fields: [constituencyId], references: [id])
-  parishes      Parish[]
+  id        String    @id @default(cuid())
+  name      String
+  countyId  String
+  county    County    @relation(fields: [countyId], references: [id])
+  parishes  Parish[]
 }
 
 model Parish {

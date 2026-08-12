@@ -32,6 +32,10 @@ const CultivationFormPage = lazy(() => import('@/components/modules/CultivationF
 const CultivationDetailPage = lazy(() => import('@/components/modules/CultivationDetailPage'))
 const CatalogManager = lazy(() => import('@/components/modules/CatalogManager'))
 const MasterDataView = lazy(() => import('@/components/modules/MasterDataView'))
+const FarmerMappingView = lazy(() => import('@/components/modules/FarmerMappingView'))
+const LocationMaster = lazy(() => import('@/components/admin/LocationMaster').then(m => ({ default: m.LocationMaster })))
+const FieldStaffManagement = lazy(() => import('@/components/admin/FieldStaffManagement').then(m => ({ default: m.FieldStaffManagement })))
+const CooperativeManagement = lazy(() => import('@/components/admin/CooperativeManagement').then(m => ({ default: m.CooperativeManagement })))
 const SaccoDashboard = lazy(() => import('@/components/modules/SaccoDashboard'))
 const VslaProviderDashboard = lazy(() => import('@/components/modules/VslaProviderDashboard'))
 const KilimoDashboard = lazy(() => import('@/components/modules/KilimoDashboard'))
@@ -176,6 +180,16 @@ function ModuleRouter() {
     case 'crop-master': return <MasterDataView kind="crop" />
     case 'seed-master': return <MasterDataView kind="seed" />
     case 'fertilizer-master': return <MasterDataView kind="fertilizer" />
+    case 'equipment-master': return <MasterDataView kind="equipment" />
+    case 'pesticide-master': return <MasterDataView kind="pesticide" />
+    case 'weed-master': return <MasterDataView kind="weed" />
+    case 'disease-master': return <MasterDataView kind="disease" />
+    case 'pest-master': return <MasterDataView kind="pest" />
+    case 'soiltype-master': return <MasterDataView kind="soiltype" />
+    case 'location-master': return <LocationMaster />
+    case 'field-staff': return <FieldStaffManagement />
+    case 'cooperatives': return <CooperativeManagement />
+    case 'farmer-mapping': return <FarmerMappingView />
     case 'farm-lands': return <FarmLandsView />
     case 'cultivations': return <CultivationsView />
     case 'vsla': return <VslaView />

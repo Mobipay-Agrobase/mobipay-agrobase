@@ -1,6 +1,18 @@
 import { db } from '@/lib/db'
 import { NextRequest, NextResponse } from 'next/server'
 
+export async function GET(req: NextRequest) {
+  try {
+    const { searchParams } = new URL(req.url)
+    const countyId = searchParams.get('countyId')
+    const rows = await db.subCounty.findMany({ where: countyId ? { countyId } : {}, orderBy: { name: 'asc' } })
+    return NextResponse.json({ data: rows })
+  } catch (error) {
+    console.error('Sub-county list error:', error)
+    return NextResponse.json({ error: 'Failed to fetch sub-counties' }, { status: 500 })
+  }
+}
+
 /**
  * POST /api/settings/geo/sub-counties — Create a sub-county
  * PUT /api/settings/geo/sub-counties?id=xxx — Update
@@ -9,11 +21,11 @@ import { NextRequest, NextResponse } from 'next/server'
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    if (!body.constituencyId || !body.name) {
-      return NextResponse.json({ error: 'constituencyId and name are required' }, { status: 400 })
+    if (!body.countyId || !body.name) {
+      return NextResponse.json({ error: 'countyId and name are required' }, { status: 400 })
     }
     const subCounty = await db.subCounty.create({
-      data: { name: body.name, constituencyId: body.constituencyId },
+      data: { name: body.name, countyId: body.countyId },
     })
     return NextResponse.json({ data: subCounty }, { status: 201 })
   } catch (error) {

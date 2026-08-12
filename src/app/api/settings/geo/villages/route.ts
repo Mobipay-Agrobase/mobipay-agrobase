@@ -1,6 +1,19 @@
 import { db } from '@/lib/db'
 import { NextRequest, NextResponse } from 'next/server'
 
+export async function GET(req: NextRequest) {
+  try {
+    const { searchParams } = new URL(req.url)
+    const parishId = searchParams.get('parishId')
+    if (!parishId) return NextResponse.json({ data: [], total: 0 })
+    const rows = await db.village.findMany({ where: { parishId }, orderBy: { name: 'asc' } })
+    return NextResponse.json({ data: rows })
+  } catch (error) {
+    console.error('Village list error:', error)
+    return NextResponse.json({ error: 'Failed to fetch villages' }, { status: 500 })
+  }
+}
+
 /**
  * POST /api/settings/geo/villages — Create a village
  * PUT /api/settings/geo/villages?id=xxx — Update

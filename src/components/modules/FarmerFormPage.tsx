@@ -24,6 +24,7 @@ import { Separator } from '@/components/ui/separator'
 import { Checkbox } from '@/components/ui/checkbox'
 import { toast } from 'sonner'
 import { CatalogSelect } from '@/components/ui/catalog-select'
+import { LocationPicker } from '@/components/ui/location-picker'
 
 interface Farmer {
   id: string; firstName: string; lastName: string; phone: string
@@ -113,6 +114,19 @@ function AddFarmerForm({ onClose, initialData, farmerId }: { onClose: () => void
   const isEdit = !!farmerId
   const [saving, setSaving] = useState(false)
   const [activeTab, setActiveTab] = useState('enrollment')
+  const [officers, setOfficers] = useState<{ id: string; name: string }[]>([])
+  const [coopOptions, setCoopOptions] = useState<{ id: string; name: string }[]>([])
+
+  useEffect(() => {
+    fetch('/api/field-staff?limit=1000')
+      .then(r => r.json())
+      .then(d => setOfficers((d.data || []).map((s: any) => ({ id: s.id, name: `${s.firstName} ${s.lastName}` }))))
+      .catch(() => {})
+    fetch('/api/cooperatives?limit=1000')
+      .then(r => r.json())
+      .then(d => setCoopOptions((d.data || []).map((c: any) => ({ id: c.id, name: c.name }))))
+      .catch(() => {})
+  }, [])
   const [form, setForm] = useState<Record<string, any>>(() => {
     const defaults: Record<string, any> = {
       // Tab 1: Enrollment
@@ -124,7 +138,9 @@ function AddFarmerForm({ onClose, initialData, farmerId }: { onClose: () => void
       yearOfIcs: '',
       farmerRegistrationUnder: '',
       cooperative: '',
+      cooperativeId: '',
       fieldOfficer: '',
+      extensionOfficer: '',
 
       // Tab 2: Personal Information
       firstName: '',
@@ -146,6 +162,7 @@ function AddFarmerForm({ onClose, initialData, farmerId }: { onClose: () => void
       district: '',
       commune: '',
       villageName: '',
+      villageId: '',
       zipCode: '',
       gpsLatitude: '',
       gpsLongitude: '',
@@ -284,6 +301,16 @@ function AddFarmerForm({ onClose, initialData, farmerId }: { onClose: () => void
       setActiveTab('enrollment')
       return
     }
+    if (!form.cooperativeId) {
+      toast.error('Please select a Cooperative')
+      setActiveTab('enrollment')
+      return
+    }
+    if (!form.extensionOfficer) {
+      toast.error('Please select a Field Officer')
+      setActiveTab('enrollment')
+      return
+    }
     setSaving(true)
     try {
       const num = (v: any) => (v === '' || v == null ? undefined : Number(v))
@@ -299,7 +326,9 @@ function AddFarmerForm({ onClose, initialData, farmerId }: { onClose: () => void
         yearOfIcs: str(form.yearOfIcs),
         farmerRegistrationUnder: str(form.farmerRegistrationUnder),
         cooperative: str(form.cooperative),
+        cooperativeId: str(form.cooperativeId),
         fieldOfficer: str(form.fieldOfficer),
+        extensionOfficer: str(form.extensionOfficer),
 
         // Tab 2: Personal Information
         firstName: form.firstName,
@@ -321,6 +350,7 @@ function AddFarmerForm({ onClose, initialData, farmerId }: { onClose: () => void
         district: str(form.district),
         commune: str(form.commune),
         villageName: str(form.villageName),
+        villageId: str(form.villageId),
         zipCode: str(form.zipCode),
         gpsLatitude: num(form.gpsLatitude),
         gpsLongitude: num(form.gpsLongitude),
@@ -486,10 +516,32 @@ function AddFarmerForm({ onClose, initialData, farmerId }: { onClose: () => void
           </FormField>
           <div className="grid grid-cols-2 gap-3">
             <FormField label="Cooperative *" required>
-              <Input value={form.cooperative} onChange={e => update('cooperative', e.target.value)} placeholder="Cooperative name" required />
+              <Select value={form.cooperativeId || undefined}
+                onValueChange={v => {
+                  const c = coopOptions.find(o => o.id === v)
+                  update('cooperativeId', v)
+                  update('cooperative', c?.name ?? '')
+                }}>
+                <SelectTrigger><SelectValue placeholder={form.cooperative || "Select cooperative"} /></SelectTrigger>
+                <SelectContent>
+                  {coopOptions.length === 0 && <div className="px-3 py-2 text-xs text-muted-foreground">No cooperatives yet — add one under Master Data.</div>}
+                  {coopOptions.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </FormField>
             <FormField label="Field Officer *" required>
-              <Input value={form.fieldOfficer} onChange={e => update('fieldOfficer', e.target.value)} placeholder="Field officer name" required />
+              <Select value={form.extensionOfficer || undefined}
+                onValueChange={v => {
+                  const o = officers.find(x => x.name === v)
+                  update('extensionOfficer', v)
+                  update('fieldOfficer', o?.name ?? v)
+                }}>
+                <SelectTrigger><SelectValue placeholder={form.fieldOfficer || "Select field officer"} /></SelectTrigger>
+                <SelectContent>
+                  {officers.length === 0 && <div className="px-3 py-2 text-xs text-muted-foreground">No field officers yet — add one under Master Data.</div>}
+                  {officers.map(o => <SelectItem key={o.id} value={o.name}>{o.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </FormField>
           </div>
         </TabsContent>
@@ -509,7 +561,7 @@ function AddFarmerForm({ onClose, initialData, farmerId }: { onClose: () => void
               <Input value={form.phone} onChange={e => update('phone', e.target.value)} placeholder="+256..." required />
             </FormField>
             <FormField label="Gender">
-              <CatalogSelect category="gender" value={form.gender} onValueChange={v => update('gender', v)} placeholder="Select" />
+              <CatalogSelect category="gender" value={form.gender} onValueChange={v => update('gender', v)} placeholder="Select" fallbackOptions={['Male', 'Female', 'Other']} />
             </FormField>
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -550,28 +602,26 @@ function AddFarmerForm({ onClose, initialData, farmerId }: { onClose: () => void
 
         {/* ── Tab 3: Contact Information ── */}
         <TabsContent value="contact" className="mt-4 space-y-4">
+          <LocationPicker
+            value={{
+              country: 'Uganda',
+              villageId: form.villageId,
+            }}
+            onChange={sel => {
+              update('country', sel.country || 'Uganda')
+              update('province', sel.region || '')
+              update('district', sel.district || '')
+              update('commune', sel.subCounty || '')
+              update('villageName', sel.village || '')
+              update('villageId', sel.villageId || '')
+            }}
+          />
           <div className="grid grid-cols-2 gap-3">
-            <FormField label="Country">
-              <CatalogSelect category="country" value={form.country} onValueChange={v => update('country', v)} placeholder="Select" />
-            </FormField>
-            <FormField label="Province">
-              <CatalogSelect category="province" value={form.province} onValueChange={v => update('province', v)} placeholder="Select" />
-            </FormField>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <FormField label="District">
-              <CatalogSelect category="district" value={form.district} onValueChange={v => update('district', v)} placeholder="Select" />
-            </FormField>
-            <FormField label="Commune">
-              <CatalogSelect category="commune" value={form.commune} onValueChange={v => update('commune', v)} placeholder="Select" />
-            </FormField>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <FormField label="Village">
-              <Input value={form.villageName} onChange={e => update('villageName', e.target.value)} />
-            </FormField>
             <FormField label="Zip Code">
               <Input value={form.zipCode} onChange={e => update('zipCode', e.target.value)} />
+            </FormField>
+            <FormField label="Country">
+              <Input value={form.country || 'Uganda'} disabled placeholder="Uganda" />
             </FormField>
           </div>
           <div className="grid grid-cols-2 gap-3">

@@ -27,6 +27,7 @@ import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from '
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Cell, PieChart, Pie } from 'recharts'
 import { exportToCSV } from '@/components/ui/empty-state'
 import { UssdSimulatorView } from '@/components/modules/UssdSimulatorView'
+import { LocationPicker } from '@/components/ui/location-picker'
 
 const COLORS = ['#059669', '#10b981', '#34d399', '#6ee7b7', '#f59e0b']
 
@@ -398,11 +399,18 @@ function CreateGroupDialog({ editing, onClose, onSaved }: { editing: any; onClos
       <DialogContent className="max-w-lg">
         <DialogHeader><DialogTitle>{editing ? 'Edit Group' : 'New VSLA Group'}</DialogTitle></DialogHeader>
         <div className="space-y-3">
-          <div><Label>Group Name</Label><Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} /></div>
           <div className="grid grid-cols-2 gap-3">
-            <div><Label>District</Label><Input value={form.district} onChange={e => setForm({ ...form, district: e.target.value })} /></div>
-            <div><Label>Region</Label><Input value={form.region} onChange={e => setForm({ ...form, region: e.target.value })} /></div>
+            <div><Label>Group Name</Label><Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} /></div>
+            <div><Label>Location</Label>
+              <div className="rounded-md border p-2 min-h-[40px] flex items-center">
+                {form.region ? `${form.region}${form.district ? ' / ' + form.district : ''}` : <span className="text-muted-foreground text-sm">Click below to set</span>}
+              </div>
+            </div>
           </div>
+          <LocationPicker
+            value={{ country: 'Uganda', region: form.region, district: form.district }}
+            onChange={sel => setForm({ ...form, region: sel.region || '', district: sel.district || '' })}
+          />
           <div className="grid grid-cols-2 gap-3">
             <div><Label>Share Price (UGX)</Label><Input type="number" value={form.sharePrice} onChange={e => setForm({ ...form, sharePrice: +e.target.value })} /></div>
             <div><Label>Loan Multiplier</Label><Input type="number" value={form.loanMultiplier} onChange={e => setForm({ ...form, loanMultiplier: +e.target.value })} /></div>
@@ -738,9 +746,16 @@ function GroupSettingsDialog({ group, onClose, onSaved }: { group: any; onClose:
             <p className="text-xs font-semibold text-muted-foreground uppercase">Basic Information</p>
             <div><Label>Name</Label><Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} /></div>
             <div className="grid grid-cols-2 gap-3">
-              <div><Label>District</Label><Input value={form.district} onChange={e => setForm({ ...form, district: e.target.value })} /></div>
-              <div><Label>Region</Label><Input value={form.region} onChange={e => setForm({ ...form, region: e.target.value })} /></div>
+              <div><Label>Location</Label>
+                <div className="rounded-md border p-2 min-h-[40px] flex items-center">
+                  {form.region ? `${form.region}${form.district ? ' / ' + form.district : ''}` : <span className="text-muted-foreground text-sm">Click below to set</span>}
+                </div>
+              </div>
             </div>
+            <LocationPicker
+              value={{ country: 'Uganda', region: form.region, district: form.district }}
+              onChange={sel => setForm({ ...form, region: sel.region || '', district: sel.district || '' })}
+            />
           </div>
 
           {/* Savings Config */}

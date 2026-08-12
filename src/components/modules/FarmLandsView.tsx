@@ -351,7 +351,7 @@ function FarmLandCreateForm({ farmerId: preselectFarmerId, editFarm, onSaved }: 
   const isEditing = !!editFarm
 
   useEffect(() => {
-    fetch('/api/farmers?limit=200')
+    fetch('/api/farmers?limit=200&status=all')
       .then(r => r.json())
       .then(data => setFarmers(data.farmers || data.data || []))
       .catch(() => {})

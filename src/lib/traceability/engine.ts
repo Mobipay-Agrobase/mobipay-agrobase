@@ -56,7 +56,7 @@ export class TraceabilityEngine {
       where: { id: farmerId },
       include: {
         group: { include: { company: true } },
-        village: { include: { parish: { include: { subCounty: { include: { constituency: { include: { district: true } } } } } } } },
+        village: { include: { parish: { include: { subCounty: { include: { county: { include: { district: true } } } } } } } },
       },
     })
 

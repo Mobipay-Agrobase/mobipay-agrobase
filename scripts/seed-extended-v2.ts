@@ -2,7 +2,7 @@
  * Agrobase V3 — Extended Seed V2
  *
  * Seeds 55 additional Prisma models across all domains:
- * - Geographic Hierarchy (7): Region, SubRegion, District, Constituency, SubCounty, Parish, Village
+ * - Geographic Hierarchy (7): Region, SubRegion, District, County, SubCounty, Parish, Village
  * - Org Hierarchy (2): Company, AgentAssignment
  * - RBAC (3): Permission, RolePermission, ModuleEntitlement
  * - Finance (7): Account, JournalEntry, JournalLine, PaymentAccount, PaymentTransaction, Escrow, ProduceIntake
@@ -112,9 +112,9 @@ export async function seedExtendedV2(ctx: SeedContext) {
 
   const districtRows = await db.district.findMany({ orderBy: { name: 'asc' } })
 
-  // ── Constituency ────────────────────────────────────────────
-  console.log('  ↳ Seeding Constituencies...')
-  await db.constituency.createMany({
+  // ── County ────────────────────────────────────────────
+  console.log('  ↳ Seeding Counties...')
+  await db.county.createMany({
     data: [
       { name: 'Kawempe', districtId: districtRows[0]?.id ?? '' },
       { name: 'Makindye', districtId: districtRows[0]?.id ?? '' },
@@ -123,16 +123,16 @@ export async function seedExtendedV2(ctx: SeedContext) {
     ],
   })
 
-  const constituencyRows = await db.constituency.findMany({ orderBy: { name: 'asc' } })
+  const countyRows = await db.county.findMany({ orderBy: { name: 'asc' } })
 
   // ── SubCounty ───────────────────────────────────────────────
   console.log('  ↳ Seeding SubCounties...')
   await db.subCounty.createMany({
     data: [
-      { name: 'Kawempe', constituencyId: constituencyRows[0]?.id ?? '' },
-      { name: 'Makindye Division', constituencyId: constituencyRows[1]?.id ?? '' },
-      { name: 'Nansana Municipality', constituencyId: constituencyRows[2]?.id ?? '' },
-      { name: 'Bungokho', constituencyId: constituencyRows[3]?.id ?? '' },
+      { name: 'Kawempe', countyId: countyRows[0]?.id ?? '' },
+      { name: 'Makindye Division', countyId: countyRows[1]?.id ?? '' },
+      { name: 'Nansana Municipality', countyId: countyRows[2]?.id ?? '' },
+      { name: 'Bungokho', countyId: countyRows[3]?.id ?? '' },
     ],
   })
 

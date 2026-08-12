@@ -11,7 +11,11 @@ import { hasPermission } from '@/lib/permissions'
 export async function GET(request: NextRequest) {
   try {
     const ctx = await getTenantContext()
-    if (!hasPermission(ctx.role, 'users:read')) {
+    const canReadUsers = hasPermission(ctx.role, 'users:read')
+    const canAssignFarmers = hasPermission(ctx.role, 'farmers:create') || hasPermission(ctx.role, 'farmers:update')
+    // Admin users see full records; roles that can register/edit farmers may pick an
+    // officer for mapping but only get a redacted (id + name) payload.
+    if (!canReadUsers && !canAssignFarmers) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
@@ -68,14 +72,16 @@ export async function GET(request: NextRequest) {
         id: s.id,
         firstName: s.firstName,
         lastName: s.lastName,
-        email: s.email,
-        phone: s.phone,
         role: s.role,
-        isActive: s.isActive,
-        lastLogin: s.lastLogin,
-        createdAt: s.createdAt,
-        farmerCount: s._count.farmerProfiles,
-        cooperatives: cooperativeNames.filter(Boolean).map((c: any) => ({ id: c.id, name: c.name })),
+        ...(canReadUsers ? {
+          email: s.email,
+          phone: s.phone,
+          isActive: s.isActive,
+          lastLogin: s.lastLogin,
+          createdAt: s.createdAt,
+          farmerCount: s._count.farmerProfiles,
+          cooperatives: cooperativeNames.filter(Boolean).map((c: any) => ({ id: c.id, name: c.name })),
+        } : {}),
       }
     }))
 

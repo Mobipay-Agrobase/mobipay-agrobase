@@ -130,7 +130,7 @@ export async function GET(request: Request) {
           select: {
             subCounty: {
               select: {
-                constituency: {
+                county: {
                   select: {
                     district: {
                       select: {
@@ -152,8 +152,8 @@ export async function GET(request: Request) {
       villageGeo.map(v => [
         v.id,
         {
-          district: v.parish.subCounty.constituency.district.name,
-          region: v.parish.subCounty.constituency.district.subRegion.region.name,
+          district: v.parish.subCounty.county.district.name,
+          region: v.parish.subCounty.county.district.subRegion.region.name,
         },
       ]),
     )

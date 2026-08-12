@@ -16,7 +16,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
           include: {
             districts: {
               include: {
-                constituencies: {
+                counties: {
                   include: {
                     subCounties: {
                       include: {

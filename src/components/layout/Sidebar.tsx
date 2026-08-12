@@ -12,6 +12,7 @@ import {
   Sprout, PiggyBank, DollarSign, FileText, Leaf,
   Stethoscope, Activity, Smartphone, TreePine, UsersRound, Landmark, MapPin,
   Cloud, Calculator, BookOpen, KeyRound, Boxes, Database, Wheat, Calendar, FlaskConical,
+  Tractor, SprayCan, Bug, Mountain, UserCog,
   ChevronRight
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -62,6 +63,16 @@ const ALL_MODULES: NavItem[] = [
   { key: 'season-master', label: 'Season Master', icon: Calendar, group: 'Master Data', permModule: 'farmers' },
   { key: 'seed-master', label: 'Seed Master', icon: Sprout, group: 'Master Data', permModule: 'farmers' },
   { key: 'fertilizer-master', label: 'Fertilizer Master', icon: FlaskConical, group: 'Master Data', permModule: 'farmers' },
+  { key: 'equipment-master', label: 'Equipment Master', icon: Tractor, group: 'Master Data', permModule: 'farmers' },
+  { key: 'pesticide-master', label: 'Pesticide Master', icon: SprayCan, group: 'Master Data', permModule: 'farmers' },
+  { key: 'weed-master', label: 'Weed Master', icon: Leaf, group: 'Master Data', permModule: 'farmers' },
+  { key: 'disease-master', label: 'Disease Master', icon: Bug, group: 'Master Data', permModule: 'farmers' },
+  { key: 'pest-master', label: 'Pest Master', icon: Bug, group: 'Master Data', permModule: 'farmers' },
+  { key: 'soiltype-master', label: 'Soil Type Master', icon: Mountain, group: 'Master Data', permModule: 'farmers' },
+  { key: 'location-master', label: 'Location Master', icon: MapPin, group: 'Master Data', permModule: 'farmers' },
+  { key: 'field-staff', label: 'Field Staff', icon: Users, group: 'Master Data', permModule: 'farmers' },
+  { key: 'cooperatives', label: 'Cooperative Master', icon: Landmark, group: 'Master Data', permModule: 'farmers' },
+  { key: 'farmer-mapping', label: 'Officer–Farmer Mapping', icon: UserCog, group: 'Master Data', permModule: 'farmers' },
   // Supply Chain
   { key: 'input-aggregation', label: 'Input Aggregation', icon: Package, group: 'Supply Chain', permModule: 'input_aggregation' },
   { key: 'input-distribution', label: 'Input Distribution', icon: Package, group: 'Supply Chain', permModule: 'input_aggregation' },

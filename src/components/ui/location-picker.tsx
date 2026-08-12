@@ -96,7 +96,7 @@ export function LocationPicker({
         .then(d => {
           const chain = d.data as LocSelection | null
           if (!chain) return
-          setSel({ country: chain.country || 'Uganda', ...chain })
+          setSel({ ...chain, country: chain.country || 'Uganda' })
           // Ensure each ancestor's children are available so selects show the selected item
           const pairs: [LevelKey, string][] = [
             ['subRegionId', chain.regionId as string],

@@ -62,11 +62,14 @@ export async function POST(request: Request) {
           status: { in: ['DISBURSED', 'OUTSTANDING', 'OVERDUE'] },
         },
         orderBy: { createdAt: 'desc' },
-        select: { id: true, amount: true, repaymentAmount: true },
+        select: { id: true, amount: true, totalRepayable: true, amountRepaid: true },
       })
 
       if (outstandingLoan) {
-        const outstanding = (Number(outstandingLoan.amount) || 0) - (Number(outstandingLoan.repaymentAmount) || 0)
+        // Outstanding = total repayable - already repaid
+        const totalRepayable = Number(outstandingLoan.totalRepayable ?? outstandingLoan.amount) || 0
+        const alreadyRepaid = Number(outstandingLoan.amountRepaid) || 0
+        const outstanding = Math.max(0, totalRepayable - alreadyRepaid)
         if (outstanding > 0) {
           const saleValue = Number(body.totalAmount) || 0
           if (loanDeducted === 0 && saleValue > 0) {
@@ -76,11 +79,11 @@ export async function POST(request: Request) {
           loanBalanceAfter = Math.max(0, outstanding - loanDeducted)
           linkedLoanId = outstandingLoan.id
 
-          // Update the loan's repaymentAmount
+          // Update the loan's amountRepaid + status
           await db.vslaLoan.update({
             where: { id: outstandingLoan.id },
             data: {
-              repaymentAmount: (Number(outstandingLoan.repaymentAmount) || 0) + loanDeducted,
+              amountRepaid: alreadyRepaid + loanDeducted,
               status: loanBalanceAfter === 0 ? 'REPAID' : (loanBalanceAfter < outstanding * 0.5 ? 'OUTSTANDING' : undefined),
             },
           })

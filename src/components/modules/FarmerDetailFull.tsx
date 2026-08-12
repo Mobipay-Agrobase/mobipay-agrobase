@@ -404,7 +404,9 @@ export function FarmerDetailFull({ farmerId, onBack }: Props) {
                       return (
                         <div className="space-y-2">
                           {active.map((l: any) => {
-                            const outstanding = (Number(l.amount) || 0) - (Number(l.repaymentAmount) || 0)
+                            const totalRepayable = Number(l.totalRepayable ?? l.amount) || 0
+                            const repaid = Number(l.amountRepaid) || 0
+                            const outstanding = Math.max(0, totalRepayable - repaid)
                             return (
                               <div key={l.id} className="p-3 rounded-lg bg-muted/50">
                                 <div className="flex justify-between mb-1">
@@ -422,7 +424,7 @@ export function FarmerDetailFull({ farmerId, onBack }: Props) {
                                   </div>
                                   <div>
                                     <p className="text-muted-foreground">Repaid</p>
-                                    <p className="font-medium text-emerald-600">UGX {(Number(l.repaymentAmount) || 0).toLocaleString()}</p>
+                                    <p className="font-medium text-emerald-600">UGX {(Number(l.amountRepaid) || 0).toLocaleString()}</p>
                                   </div>
                                   <div>
                                     <p className="text-muted-foreground">Balance</p>

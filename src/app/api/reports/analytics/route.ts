@@ -263,22 +263,27 @@ async function computeFinancial(ctx: any, tf: any) {
     const [purchases, sales] = await Promise.all([
       db.purchase.findMany({
         where: { farmer: tf },
-        select: { commodity: true, quantity: true, totalAmount: true },
+        select: { commodity: true, quantity: true, totalAmount: true, loanDeduction: true, momoCharges: true, momoTax: true, netPayment: true },
         take: 1000,
       }),
       db.sale.findMany({
         where: { farmer: tf },
-        select: { commodity: true, quantity: true, totalAmount: true },
+        select: { product: true, category: true, quantity: true, totalAmount: true, charges: true, taxAmount: true, netAmount: true, loanDeducted: true },
         take: 1000,
       }),
     ])
-    const purchasesByCommodity = aggregateByCommodity(purchases)
-    const salesByCommodity = aggregateByCommodity(sales)
+    const purchasesByCommodity = aggregateByField(purchases, 'commodity')
+    const salesByProduct = aggregateByField(sales, 'product')
+    const salesByCategory = aggregateByField(sales, 'category')
     return {
       purchasesByCommodity,
-      salesByCommodity,
+      salesByProduct,
+      salesByCategory,
       totalPurchaseValue: purchasesByCommodity.reduce((s, r) => s + r.value, 0),
-      totalSalesValue: salesByCommodity.reduce((s, r) => s + r.value, 0),
+      totalSalesValue: salesByProduct.reduce((s, r) => s + r.value, 0),
+      totalLoanDeductions: purchases.reduce((s, p) => s + (Number(p.loanDeduction) || 0), 0) + sales.reduce((s, sa) => s + (Number(sa.loanDeducted) || 0), 0),
+      totalCharges: purchases.reduce((s, p) => s + (Number(p.momoCharges) || 0), 0) + sales.reduce((s, sa) => s + (Number(sa.charges) || 0), 0),
+      totalTax: purchases.reduce((s, p) => s + (Number(p.momoTax) || 0), 0) + sales.reduce((s, sa) => s + (Number(sa.taxAmount) || 0), 0),
     }
   } catch (e) {
     console.error('Financial error:', e)
@@ -286,10 +291,10 @@ async function computeFinancial(ctx: any, tf: any) {
   }
 }
 
-function aggregateByCommodity(rows: any[]) {
+function aggregateByField(rows: any[], field: string) {
   const m: Record<string, { volume: number; value: number; count: number }> = {}
   for (const r of rows) {
-    const c = r.commodity || 'Unknown'
+    const c = r[field] || 'Unknown'
     if (!m[c]) m[c] = { volume: 0, value: 0, count: 0 }
     m[c].volume += Number(r.quantity) || 0
     m[c].value += Number(r.totalAmount) || 0

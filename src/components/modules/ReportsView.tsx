@@ -212,15 +212,18 @@ export default function ReportsView() {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 <Kpi label="Total Purchase Value" value={fmtUGX(data.financial.totalPurchaseValue)} icon={DollarSign} color="text-rose-600" />
                 <Kpi label="Total Sales Value" value={fmtUGX(data.financial.totalSalesValue)} icon={DollarSign} color="text-emerald-600" />
-                <Kpi label="Purchase Commodities" value={data.financial.purchasesByCommodity.length} icon={Sprout} color="text-blue-600" />
-                <Kpi label="Sales Commodities" value={data.financial.salesByCommodity.length} icon={Sprout} color="text-amber-600" />
+                <Kpi label="Loan Deductions" value={fmtUGX(data.financial.totalLoanDeductions)} icon={CreditCard} color="text-purple-600" />
+                <Kpi label="Charges + Tax" value={fmtUGX((data.financial.totalCharges || 0) + (data.financial.totalTax || 0))} icon={Activity} color="text-amber-600" />
               </div>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <ChartCard title="Purchases by Commodity" desc="Total purchase value per commodity (UGX)">
                   <BarChart500 data={(data.financial.purchasesByCommodity || []).slice(0, 10)} />
                 </ChartCard>
-                <ChartCard title="Sales by Commodity" desc="Total sales revenue per commodity (UGX)">
-                  <BarChart500 data={(data.financial.salesByCommodity || []).slice(0, 10)} />
+                <ChartCard title="Sales by Product" desc="Total sales revenue per product (UGX)">
+                  <BarChart500 data={(data.financial.salesByProduct || []).slice(0, 10)} />
+                </ChartCard>
+                <ChartCard title="Sales by Category" desc="PRODUCE vs INPUT split">
+                  <PieChart500 data={data.financial.salesByCategory || []} />
                 </ChartCard>
               </div>
             </>

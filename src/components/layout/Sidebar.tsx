@@ -13,7 +13,7 @@ import {
   Stethoscope, Activity, Smartphone, TreePine, UsersRound, Landmark, MapPin,
   Cloud, Calculator, BookOpen, KeyRound, Boxes, Database, Wheat, Calendar, FlaskConical,
   Tractor, SprayCan, Bug, Mountain, UserCog,
-  ChevronRight
+  ChevronRight, ShieldCheck
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
@@ -59,6 +59,7 @@ const ALL_MODULES: NavItem[] = [
   { key: 'crop-insurance', label: 'Crop Insurance', icon: Shield, group: 'Farm Management', permModule: 'carbon' },
   // Master Data — reference tables shared by enrollment + farm forms.
   { key: 'catalog-manager', label: 'Dropdown Catalog', icon: Database, group: 'Master Data', permModule: 'farmers' },
+  { key: 'data-quality', label: 'Data Quality', icon: ShieldCheck, group: 'Master Data', restrictToRoles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'COUNTRY_ADMIN', 'SACCO_ADMIN', 'SACCO_OFFICER'] },
   { key: 'crop-master', label: 'Crop Master', icon: Wheat, group: 'Master Data', permModule: 'farmers' },
   { key: 'season-master', label: 'Season Master', icon: Calendar, group: 'Master Data', permModule: 'farmers' },
   { key: 'seed-master', label: 'Seed Master', icon: Sprout, group: 'Master Data', permModule: 'farmers' },

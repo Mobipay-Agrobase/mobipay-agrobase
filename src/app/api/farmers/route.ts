@@ -180,10 +180,12 @@ export async function POST(request: Request) {
       },
     })
 
-    // Create a login user for the farmer if email/phone + password provided
+    // Create a login user for the farmer if email/phone + password provided,
+    // OR if body.createLogin === true (auto-generates a default password from the phone number).
     let farmerUserId: string | null = null
-    if (body.password && (body.email || body.phone)) {
-      const passwordHash = await hashPassword(body.password)
+    const effectivePassword = body.password || (body.createLogin ? (body.phone || '12345678') : null)
+    if (effectivePassword && (body.email || body.phone)) {
+      const passwordHash = await hashPassword(effectivePassword)
       const isEkibbo = (await db.tenant.findFirst({
         where: { id: ctx.tenantId, isActive: true },
         select: { name: true },

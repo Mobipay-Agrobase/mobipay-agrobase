@@ -4,7 +4,7 @@ import React, { useMemo, useState } from 'react'
 import { cn } from '@/lib/utils'
 import {
   Loader2, Save, Calculator, Scale, DollarSign, Camera, Droplet,
-  Bug, AlertCircle
+  Bug, AlertCircle, UserPlus, X
 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
-import { DialogFooter, DialogClose } from '@/components/ui/dialog'
+import { DialogFooter, DialogClose, Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { toast } from 'sonner'
 
@@ -34,8 +34,12 @@ const COMMODITIES = [
 const fmtUGX = (n: number) => `UGX ${(Number(n) || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}`
 const fmtKg = (n: number) => `${(Number(n) || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })} kg`
 
-export function EnhancedPurchaseForm({ farmers, onClose, onSaved }: EnhancedPurchaseFormProps) {
+export function EnhancedPurchaseForm({ farmers: initialFarmers, onClose, onSaved }: EnhancedPurchaseFormProps) {
+  const [farmers, setFarmers] = useState<any[]>(initialFarmers)
   const [saving, setSaving] = useState(false)
+  const [showQuickAdd, setShowQuickAdd] = useState(false)
+  const [quickAdd, setQuickAdd] = useState({ firstName: '', lastName: '', phone: '', district: '' })
+  const [quickAdding, setQuickAdding] = useState(false)
   const [form, setForm] = useState<Record<string, string>>({
     farmerId: '',
     commodity: 'coffee',
@@ -53,6 +57,42 @@ export function EnhancedPurchaseForm({ farmers, onClose, onSaved }: EnhancedPurc
   })
 
   const update = (k: string, v: string) => setForm(p => ({ ...p, [k]: v }))
+
+  const handleQuickAdd = async () => {
+    if (!quickAdd.firstName.trim() || !quickAdd.lastName.trim() || !quickAdd.phone.trim()) {
+      toast.error('First name, last name, and phone are required')
+      return
+    }
+    setQuickAdding(true)
+    try {
+      const res = await fetch('/api/farmers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          firstName: quickAdd.firstName.trim(),
+          lastName: quickAdd.lastName.trim(),
+          phone: quickAdd.phone.trim(),
+          district: quickAdd.district.trim() || undefined,
+          memberType: 'General',
+          createLogin: true,  // auto-create mobile login
+        }),
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.error || 'Failed to create farmer')
+      }
+      const newFarmer = await res.json()
+      setFarmers(prev => [newFarmer, ...prev])
+      setForm(prev => ({ ...prev, farmerId: newFarmer.id }))
+      toast.success(`${quickAdd.firstName} ${quickAdd.lastName} added — selected as the farmer`)
+      setQuickAdd({ firstName: '', lastName: '', phone: '', district: '' })
+      setShowQuickAdd(false)
+    } catch (e: any) {
+      toast.error(e.message || 'Failed to add farmer')
+    } finally {
+      setQuickAdding(false)
+    }
+  }
 
   // Auto-calculations (real-time)
   const totalWeight = Number(form.totalWeight) || 0
@@ -125,7 +165,12 @@ export function EnhancedPurchaseForm({ farmers, onClose, onSaved }: EnhancedPurc
       {/* Farmer + Commodity */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <div className="space-y-1.5">
-          <Label>Farmer *</Label>
+          <div className="flex items-center justify-between">
+            <Label>Farmer *</Label>
+            <Button type="button" variant="ghost" size="sm" className="h-6 px-2 text-xs gap-1" onClick={() => setShowQuickAdd(true)}>
+              <UserPlus className="w-3 h-3" /> Quick Add
+            </Button>
+          </div>
           <Select value={form.farmerId} onValueChange={v => update('farmerId', v)}>
             <SelectTrigger><SelectValue placeholder={farmers.length === 0 ? 'No farmers available' : 'Select farmer'} /></SelectTrigger>
             <SelectContent>
@@ -331,6 +376,45 @@ export function EnhancedPurchaseForm({ farmers, onClose, onSaved }: EnhancedPurc
           Create Purchase
         </Button>
       </DialogFooter>
+
+      {/* Quick Add Farmer Dialog — extension officers can add a new farmer contact inline during payment */}
+      <Dialog open={showQuickAdd} onOpenChange={setShowQuickAdd}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center justify-between">
+              <span className="flex items-center gap-2"><UserPlus className="w-4 h-4" /> Quick Add Farmer</span>
+              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setShowQuickAdd(false)}><X className="w-3 h-3" /></Button>
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-1">
+                <Label className="text-xs">First Name *</Label>
+                <Input value={quickAdd.firstName} onChange={e => setQuickAdd(p => ({ ...p, firstName: e.target.value }))} />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Last Name *</Label>
+                <Input value={quickAdd.lastName} onChange={e => setQuickAdd(p => ({ ...p, lastName: e.target.value }))} />
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Phone *</Label>
+              <Input value={quickAdd.phone} onChange={e => setQuickAdd(p => ({ ...p, phone: e.target.value }))} placeholder="+256..." />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">District (optional)</Label>
+              <Input value={quickAdd.district} onChange={e => setQuickAdd(p => ({ ...p, district: e.target.value }))} />
+            </div>
+            <p className="text-xs text-muted-foreground">A mobile-app login is auto-created with the phone number as the default password. The farmer can change it later via Forgot Password.</p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowQuickAdd(false)}>Cancel</Button>
+            <Button onClick={handleQuickAdd} disabled={quickAdding} className="gap-2">
+              {quickAdding && <Loader2 className="w-3 h-3 animate-spin" />} Add &amp; Select
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </form>
   )
 }

@@ -31,6 +31,7 @@ const FarmLandDetailPage = lazy(() => import('@/components/modules/FarmLandDetai
 const CultivationFormPage = lazy(() => import('@/components/modules/CultivationFormPage'))
 const CultivationDetailPage = lazy(() => import('@/components/modules/CultivationDetailPage'))
 const CatalogManager = lazy(() => import('@/components/modules/CatalogManager'))
+const DataQualityView = lazy(() => import('@/components/admin/DataQualityView'))
 const MasterDataView = lazy(() => import('@/components/modules/MasterDataView'))
 const FarmerMappingView = lazy(() => import('@/components/modules/FarmerMappingView'))
 const LocationMaster = lazy(() => import('@/components/admin/LocationMaster').then(m => ({ default: m.LocationMaster })))
@@ -175,6 +176,7 @@ function ModuleRouter() {
       return <CultivationDetailPage key={selectedCultivationId} cultivationId={selectedCultivationId} onBack={() => useAppStore.getState().setActiveModule('cultivations')} />
     }
     case 'catalog-manager': return <CatalogManager />
+    case 'data-quality': return <DataQualityView />
     case 'master-data': return <MasterDataView kind="crop" />
     case 'season-master': return <MasterDataView kind="season" />
     case 'crop-master': return <MasterDataView kind="crop" />
@@ -322,7 +324,7 @@ export default function HomePage() {
       // continue to work for SUPER_ADMIN.
       const adminAllowedForSuperAdmin = new Set([
         'profile', 'settings', 'roles-permissions', 'billing',
-        'platform-recovery', 'catalog-manager', 'farmer-detail',
+        'platform-recovery', 'catalog-manager', 'farmer-detail', 'data-quality',
         'farmland-detail', 'cultivation-detail', 'master-data',
         'season-master', 'crop-master', 'seed-master', 'fertilizer-master',
       ])
@@ -358,7 +360,7 @@ export default function HomePage() {
       // SACCO_ADMIN / SACCO_OFFICER: redirect to dashboard if on an irrelevant module
       const saccoAllowed = new Set([
         'dashboard', 'sacco', 'farmers', 'farm-lands', 'cultivations',
-        'reports', 'training', 'profile', 'catalog-manager',
+        'reports', 'training', 'profile', 'catalog-manager', 'data-quality',
         'master-data', 'season-master', 'crop-master', 'seed-master', 'fertilizer-master',
         'farmer-detail', 'farmer-create', 'farmer-edit',
         'farmland-detail', 'farmland-create', 'farmland-edit',

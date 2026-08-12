@@ -45,21 +45,112 @@ export async function POST(request: Request) {
   try {
     const ctx = await getTenantContext()
     const body = await request.json()
+
+    // ─── EKIBBO: Auto loan deduction from produce sold ───
+    // If farmer has an outstanding loan, deduct a portion of the sale toward repayment.
+    // Default: deduct the smaller of (outstanding balance) or (50% of sale value),
+    // unless the caller explicitly passes loanDeducted.
+    let loanDeducted = Number(body.loanDeducted) || 0
+    let loanBalanceAfter: number | null = null
+    let linkedLoanId: string | null = null
+
+    if (body.farmerId) {
+      // Find the farmer's most recent outstanding VSLA loan
+      const outstandingLoan = await db.vslaLoan.findFirst({
+        where: {
+          farmerId: body.farmerId,
+          status: { in: ['DISBURSED', 'OUTSTANDING', 'OVERDUE'] },
+        },
+        orderBy: { createdAt: 'desc' },
+        select: { id: true, amount: true, repaymentAmount: true },
+      })
+
+      if (outstandingLoan) {
+        const outstanding = (Number(outstandingLoan.amount) || 0) - (Number(outstandingLoan.repaymentAmount) || 0)
+        if (outstanding > 0) {
+          const saleValue = Number(body.totalAmount) || 0
+          if (loanDeducted === 0 && saleValue > 0) {
+            // Auto-deduct: min(outstanding, 50% of sale value)
+            loanDeducted = Math.min(outstanding, saleValue * 0.5)
+          }
+          loanBalanceAfter = Math.max(0, outstanding - loanDeducted)
+          linkedLoanId = outstandingLoan.id
+
+          // Update the loan's repaymentAmount
+          await db.vslaLoan.update({
+            where: { id: outstandingLoan.id },
+            data: {
+              repaymentAmount: (Number(outstandingLoan.repaymentAmount) || 0) + loanDeducted,
+              status: loanBalanceAfter === 0 ? 'REPAID' : (loanBalanceAfter < outstanding * 0.5 ? 'OUTSTANDING' : undefined),
+            },
+          })
+        }
+      }
+    }
+
+    // Auto-calc netAmount if not provided
+    const charges = Number(body.charges) || 0
+    const taxAmount = Number(body.taxAmount) || 0
+    const totalAmount = Number(body.totalAmount) || 0
+    const netAmount = body.netAmount != null ? Number(body.netAmount) : Math.max(0, totalAmount - charges - taxAmount - loanDeducted)
+
     const sale = await db.sale.create({
       data: {
         farmerId: body.farmerId || null,
         customerId: body.customerId || null,
         customerName: body.customerName || null,
         product: body.product,
+        category: body.category || 'PRODUCE',
         quantity: body.quantity,
         unitPrice: body.unitPrice ?? null,
-        totalAmount: body.totalAmount ?? null,
+        totalAmount,
+        charges,
+        taxAmount,
+        netAmount,
+        paymentMethod: body.paymentMethod || null,
+        loanDeducted: loanDeducted > 0 ? loanDeducted : null,
+        loanBalanceAfter,
         status: body.status || 'COMPLETED',
+        approvedBy: body.approvedBy || null,
       },
       include: { farmer: true },
     })
-    return NextResponse.json(sale, { status: 201 })
+
+    // Create a ledger entry for this sale (and the loan deduction if any)
+    if (body.farmerId && ctx.tenantId) {
+      try {
+        await db.farmerLedgerEntry.create({
+          data: {
+            tenantId: ctx.tenantId,
+            farmerId: body.farmerId,
+            type: 'SALE',
+            description: `Sale of ${body.product} (${body.quantity})`,
+            amount: totalAmount,
+            referenceType: 'Sale',
+            referenceId: sale.id,
+          },
+        })
+        if (loanDeducted > 0) {
+          await db.farmerLedgerEntry.create({
+            data: {
+              tenantId: ctx.tenantId,
+              farmerId: body.farmerId,
+              type: 'LOAN_REPAY',
+              description: `Auto loan repayment from sale of ${body.product}`,
+              amount: -loanDeducted,
+              referenceType: 'Sale',
+              referenceId: sale.id,
+            },
+          })
+        }
+      } catch (ledgerErr) {
+        console.error('[sales POST] ledger entry failed:', ledgerErr)
+      }
+    }
+
+    return NextResponse.json({ ...sale, loanDeducted, loanBalanceAfter, linkedLoanId }, { status: 201 })
   } catch (error) {
+    console.error('[sales POST] error:', error)
     return NextResponse.json({ error: 'Failed to create sale' }, { status: 500 })
   }
 }

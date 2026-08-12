@@ -12,7 +12,7 @@ import { Separator } from '@/components/ui/separator'
 import {
   ArrowLeft, Plus, Trash2, Banknote, Shield, Tractor, Users,
   Loader2, Save, MapPin, QrCode, TrendingUp, ShoppingCart,
-  CreditCard, FileText, Landmark, Pencil, User,
+  CreditCard, FileText, Landmark, Pencil, User, Wallet,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAppStore } from '@/lib/store'
@@ -384,6 +384,57 @@ export function FarmerDetailFull({ farmerId, onBack }: Props) {
                         </>
                       )}
                     </div>
+                  </CardContent>
+                </Card>
+
+                {/* Active VSLA Loans + outstanding balance — EKIBBO requirement */}
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <Wallet className="w-4 h-4 text-primary" /> Active Loan Balance
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {(() => {
+                      const loans = (farmer as any).vslaLoans || []
+                      const active = loans.filter((l: any) => ['DISBURSED', 'OUTSTANDING', 'OVERDUE'].includes(l.status))
+                      if (active.length === 0) {
+                        return <p className="text-xs text-muted-foreground italic">No active loans.</p>
+                      }
+                      return (
+                        <div className="space-y-2">
+                          {active.map((l: any) => {
+                            const outstanding = (Number(l.amount) || 0) - (Number(l.repaymentAmount) || 0)
+                            return (
+                              <div key={l.id} className="p-3 rounded-lg bg-muted/50">
+                                <div className="flex justify-between mb-1">
+                                  <span className="text-xs text-muted-foreground">
+                                    {l.vslaGroup?.name || 'VSLA Loan'} · {l.status}
+                                  </span>
+                                  <Badge variant={outstanding > 0 ? 'default' : 'secondary'} className="text-[10px]">
+                                    {outstanding > 0 ? 'Outstanding' : 'Repaid'}
+                                  </Badge>
+                                </div>
+                                <div className="grid grid-cols-3 gap-2 text-xs">
+                                  <div>
+                                    <p className="text-muted-foreground">Principal</p>
+                                    <p className="font-medium">UGX {(Number(l.amount) || 0).toLocaleString()}</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-muted-foreground">Repaid</p>
+                                    <p className="font-medium text-emerald-600">UGX {(Number(l.repaymentAmount) || 0).toLocaleString()}</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-muted-foreground">Balance</p>
+                                    <p className="font-bold text-red-600">UGX {outstanding.toLocaleString()}</p>
+                                  </div>
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      )
+                    })()}
                   </CardContent>
                 </Card>
               </div>

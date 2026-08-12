@@ -52,6 +52,10 @@ const CATALOG: Record<string, string[]> = {
   income_source: ['Crop Sales', 'Livestock Sales', 'Salary', 'Business', 'Remittances', 'Pension', 'Casual Labor', 'Other'],
   fuel_type: ['Firewood', 'Charcoal', 'Gas', 'Electricity', 'Solar', 'Kerosene', 'Biogas', 'Mixed'],
   cooperative_service: ['Marketing', 'Input Supply', 'Credit', 'Processing', 'Transport', 'Training', 'Insurance', 'Other'],
+  // EKIBBO sales categories — inputs vs produce
+  produce_type: ['Hulled Coffee', 'Cocoa', 'Cassava', 'Avocado', 'Vanilla', 'Jackfruit', 'Other'],
+  input_type: ['Fertilizers', 'Tarpaulins', 'Seedlings', 'Pruning Saws', 'Other'],
+  sale_category: ['PRODUCE', 'INPUT'],
 }
 
 async function main() {

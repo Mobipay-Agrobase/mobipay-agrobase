@@ -47,8 +47,11 @@ export function LocationMaster() {
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set())
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingEntity, setEditingEntity] = useState<{ level: number; entity: GeoEntity } | null>(null)
-  const [newEntity, setNewEntity] = useState<{ level: number; parentId: string; name: string }>({ level: 0, parentId: '', name: '' })
+  const [newEntity, setNewEntity] = useState<{ level: number; parentId: string; name: string; parents: Record<string, string> }>({ level: 0, parentId: '', name: '', parents: {} })
   const [deleteConfirm, setDeleteConfirm] = useState<{ level: number; entity: GeoEntity } | null>(null)
+  // Parent options for the create dialog — keyed by level so we can lazy-load
+  // each level's options only when the user picks that level's parent.
+  const [parentOptions, setParentOptions] = useState<Record<number, GeoEntity[]>>({})
 
   // child endpoint + parent query param per level
   const childEndpoint = (level: number) => {
@@ -64,6 +67,24 @@ export function LocationMaster() {
   }
 
   const cacheKey = (level: number, parentId: string) => `${LEVEL_CONFIG[level].key}_${parentId}`
+
+  // Load parent options for a given level (1=subRegions of selected region, etc.)
+  const loadParentOptions = useCallback(async (level: number, parentId: string) => {
+    if (!parentId) {
+      setParentOptions(prev => ({ ...prev, [level]: [] }))
+      return
+    }
+    const ep = childEndpoint(level)
+    if (!ep) return
+    try {
+      const res = await fetch(`/api/settings/geo${ep.path}?${ep.param}=${encodeURIComponent(parentId)}`)
+      if (!res.ok) return
+      const d = await res.json()
+      setParentOptions(prev => ({ ...prev, [level]: d.data || [] }))
+    } catch {
+      setParentOptions(prev => ({ ...prev, [level]: [] }))
+    }
+  }, [])
 
   const loadChildren = useCallback(async (level: number, parentId: string) => {
     const ep = childEndpoint(level)
@@ -120,13 +141,25 @@ export function LocationMaster() {
 
   const openCreateDialog = (level: number, parentId: string) => {
     setEditingEntity(null)
-    setNewEntity({ level, parentId, name: '' })
+    // Pre-populate the parent chain so the dialog shows the right selectors
+    const parents: Record<string, string> = {}
+    if (level > 0 && parentId) {
+      parents[LEVEL_CONFIG[level].parentField as string] = parentId
+    }
+    setNewEntity({ level, parentId, name: '', parents })
+    setDialogOpen(true)
+  }
+
+  // Open a generic "Add any level" dialog — user picks the level + parent chain
+  const openAddAnyDialog = () => {
+    setEditingEntity(null)
+    setNewEntity({ level: 0, parentId: '', name: '', parents: {} })
     setDialogOpen(true)
   }
 
   const openEditDialog = (level: number, entity: GeoEntity) => {
     setEditingEntity({ level, entity })
-    setNewEntity({ level, parentId: '', name: entity.name })
+    setNewEntity({ level, parentId: '', name: entity.name, parents: {} })
     setDialogOpen(true)
   }
 
@@ -134,6 +167,14 @@ export function LocationMaster() {
     if (!newEntity.name.trim()) {
       toast.error('Name is required')
       return
+    }
+    // For non-region levels, require the immediate parent to be selected
+    if (!editingEntity && newEntity.level > 0) {
+      const parentField = LEVEL_CONFIG[newEntity.level].parentField
+      if (parentField && !newEntity.parents[parentField]) {
+        toast.error(`Please select the parent ${LEVEL_CONFIG[newEntity.level - 1].label} first`)
+        return
+      }
     }
 
     try {
@@ -162,8 +203,9 @@ export function LocationMaster() {
         // Create
         const levelConfig = LEVEL_CONFIG[newEntity.level]
         const body: Record<string, string> = { name: newEntity.name }
-        if (levelConfig.parentField) {
-          body[levelConfig.parentField] = newEntity.parentId
+        // Include all selected parents from the cascading dialog
+        if (levelConfig.parentField && newEntity.parents[levelConfig.parentField]) {
+          body[levelConfig.parentField] = newEntity.parents[levelConfig.parentField]
         }
         if (newEntity.level === 0) {
           body.country = 'Uganda'
@@ -184,7 +226,10 @@ export function LocationMaster() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(body),
         })
-        if (!res.ok) throw new Error('Failed to create')
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}))
+          throw new Error(err.error || 'Failed to create')
+        }
         toast.success(`${levelConfig.label} created`)
       }
 
@@ -325,8 +370,8 @@ export function LocationMaster() {
           <MapPin className="w-5 h-5" />
           Location Master
         </CardTitle>
-        <Button size="sm" onClick={() => openCreateDialog(0, '')}>
-          <Plus className="w-4 h-4 mr-1" /> Add Region
+        <Button size="sm" onClick={openAddAnyDialog}>
+          <Plus className="w-4 h-4 mr-1" /> Add Location
         </Button>
       </CardHeader>
       <CardContent>
@@ -334,7 +379,7 @@ export function LocationMaster() {
           <div className="text-center py-8 text-muted-foreground">
             <MapPin className="w-12 h-12 mx-auto mb-2 opacity-50" />
             <p>No regions configured yet.</p>
-            <Button className="mt-4" onClick={() => openCreateDialog(0, '')}>
+            <Button className="mt-4" onClick={openAddAnyDialog}>
               <Plus className="w-4 h-4 mr-1" /> Add First Region
             </Button>
           </div>
@@ -344,23 +389,105 @@ export function LocationMaster() {
           </div>
         )}
 
-        {/* Create/Edit Dialog */}
+        {/* Create/Edit Dialog — with cascading parent selectors */}
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogContent>
+          <DialogContent className="max-w-lg">
             <DialogHeader>
               <DialogTitle>
                 {editingEntity ? 'Edit' : 'Add'} {LEVEL_CONFIG[editingEntity?.level ?? newEntity.level].label}
               </DialogTitle>
             </DialogHeader>
-            <div className="space-y-4 py-4">
+            <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
+              {/* Level picker — only show when creating (not editing) */}
+              {!editingEntity && (
+                <div className="space-y-2">
+                  <Label>Level *</Label>
+                  <Select
+                    value={String(newEntity.level)}
+                    onValueChange={v => {
+                      const level = parseInt(v)
+                      setNewEntity(prev => ({ ...prev, level, parents: {}, name: '' }))
+                      setParentOptions({})
+                    }}
+                  >
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {LEVEL_CONFIG.map((cfg, i) => (
+                        <SelectItem key={cfg.key} value={String(i)}>{cfg.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Pick the level you want to add. Parent selectors will appear below for any level above region.
+                  </p>
+                </div>
+              )}
+
+              {/* Cascading parent selectors — for each level above the target, show a dropdown */}
+              {!editingEntity && newEntity.level > 0 && (() => {
+                const levelsToShow: React.ReactElement[] = []
+                for (let i = 0; i < newEntity.level; i++) {
+                  const cfg = LEVEL_CONFIG[i]
+                  const nextCfg = LEVEL_CONFIG[i + 1]
+                  const parentField = nextCfg.parentField
+                  const optionsList = i === 0 ? regions : (parentOptions[i] || [])
+                  const currentValue = parentField ? (newEntity.parents[parentField] || '') : ''
+                  levelsToShow.push(
+                    <div key={i} className="space-y-2">
+                      <Label>{cfg.label} *</Label>
+                      <Select
+                        value={currentValue}
+                        onValueChange={v => {
+                          // Set this parent, clear all deeper parents, load next level's options
+                          setNewEntity(prev => {
+                            const newParents: Record<string, string> = {}
+                            // Keep parents up to and including this level's parent field
+                            for (let j = 0; j <= i; j++) {
+                              const pf = LEVEL_CONFIG[j + 1].parentField
+                              if (pf && prev.parents[pf]) newParents[pf] = prev.parents[pf]
+                            }
+                            if (parentField) newParents[parentField] = v
+                            return { ...prev, parents: newParents, name: '' }
+                          })
+                          // Load the next level's options (i+1's children of this selected parent)
+                          if (i + 1 < newEntity.level) {
+                            loadParentOptions(i + 1, v)
+                          }
+                          setParentOptions(prev => {
+                            const cleared = { ...prev }
+                            for (let j = i + 1; j < LEVEL_CONFIG.length; j++) delete cleared[j]
+                            return cleared
+                          })
+                        }}
+                      >
+                        <SelectTrigger><SelectValue placeholder={`Select ${cfg.label.toLowerCase()}`} /></SelectTrigger>
+                        <SelectContent className="max-h-60">
+                          {optionsList.length === 0 ? (
+                            <div className="px-3 py-2 text-xs text-muted-foreground">No {cfg.label.toLowerCase()}s available. Add one first.</div>
+                          ) : (
+                            optionsList.map(opt => (
+                              <SelectItem key={opt.id} value={opt.id}>{opt.name}</SelectItem>
+                            ))
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )
+                }
+                return <>{levelsToShow}</>
+              })()}
+
+              {/* Name field */}
               <div className="space-y-2">
-                <Label>Name *</Label>
+                <Label>{editingEntity ? 'Name *' : `${LEVEL_CONFIG[newEntity.level].label} Name *`}</Label>
                 <Input
                   value={newEntity.name}
                   onChange={e => setNewEntity(prev => ({ ...prev, name: e.target.value }))}
                   placeholder={`Enter ${LEVEL_CONFIG[editingEntity?.level ?? newEntity.level].label.toLowerCase()} name`}
                 />
               </div>
+
+              {/* Country picker — only when editing a region (level 0) */}
               {editingEntity?.level === 0 && (
                 <div className="space-y-2">
                   <Label>Country</Label>
@@ -379,10 +506,26 @@ export function LocationMaster() {
                   </Select>
                 </div>
               )}
+
+              {/* Validation hint */}
+              {!editingEntity && newEntity.level > 0 && (() => {
+                const parentField = LEVEL_CONFIG[newEntity.level].parentField
+                const parentSelected = parentField ? !!newEntity.parents[parentField] : false
+                if (!parentSelected) {
+                  return (
+                    <p className="text-xs text-amber-600">
+                      Select all parent levels above before creating this {LEVEL_CONFIG[newEntity.level].label.toLowerCase()}.
+                    </p>
+                  )
+                }
+                return null
+              })()}
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
-              <Button onClick={saveEntity}>{editingEntity ? 'Update' : 'Create'}</Button>
+              <Button onClick={saveEntity} disabled={!newEntity.name.trim()}>
+                {editingEntity ? 'Update' : 'Create'}
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

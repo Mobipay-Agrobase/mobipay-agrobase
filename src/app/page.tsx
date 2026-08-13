@@ -3,6 +3,30 @@
 import React, { Suspense, lazy, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { useAppStore, EKB_HIDDEN_MODULES } from '@/lib/store'
+
+// Master-data module keys that should be accessible to all admin/field roles.
+// Listed once here so every role bouncer stays in sync — previously each
+// allowlist had its own partial copy, which caused sidebar clicks to bounce
+// to dashboard when the key wasn't included.
+const MASTER_DATA_KEYS = [
+  'master-data',
+  'catalog-manager',
+  'data-quality',
+  'location-master',
+  'season-master',
+  'crop-master',
+  'seed-master',
+  'fertilizer-master',
+  'equipment-master',
+  'pesticide-master',
+  'weed-master',
+  'disease-master',
+  'pest-master',
+  'soiltype-master',
+  'field-staff',
+  'cooperatives',
+  'farmer-mapping',
+] as const
 import { useIsEkibboTenant } from '@/hooks/use-is-ekibbo'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { TopBar } from '@/components/layout/TopBar'
@@ -324,9 +348,9 @@ export default function HomePage() {
       // continue to work for SUPER_ADMIN.
       const adminAllowedForSuperAdmin = new Set([
         'profile', 'settings', 'roles-permissions', 'billing',
-        'platform-recovery', 'catalog-manager', 'farmer-detail', 'data-quality',
-        'farmland-detail', 'cultivation-detail', 'master-data',
-        'season-master', 'crop-master', 'seed-master', 'fertilizer-master',
+        'platform-recovery', 'farmer-detail',
+        'farmland-detail', 'cultivation-detail',
+        ...MASTER_DATA_KEYS,
       ])
       const isAllowedForSuperAdmin =
         activeModule.startsWith('super-admin') ||
@@ -360,11 +384,11 @@ export default function HomePage() {
       // SACCO_ADMIN / SACCO_OFFICER: redirect to dashboard if on an irrelevant module
       const saccoAllowed = new Set([
         'dashboard', 'sacco', 'farmers', 'farm-lands', 'cultivations',
-        'reports', 'training', 'profile', 'catalog-manager', 'data-quality',
-        'master-data', 'season-master', 'crop-master', 'seed-master', 'fertilizer-master',
+        'reports', 'training', 'profile',
         'farmer-detail', 'farmer-create', 'farmer-edit',
         'farmland-detail', 'farmland-create', 'farmland-edit',
         'cultivation-detail', 'cultivation-create', 'cultivation-edit',
+        ...MASTER_DATA_KEYS,
       ])
       if ((role === 'SACCO_ADMIN' || role === 'SACCO_OFFICER') && !saccoAllowed.has(activeModule)) {
         setActiveModule('dashboard')
@@ -373,10 +397,11 @@ export default function HomePage() {
       // VSLA_PROVIDER_ADMIN: redirect to dashboard if on an irrelevant module
       const vslaProviderAllowed = new Set([
         'dashboard', 'vsla', 'farmers', 'farm-lands', 'cultivations',
-        'reports', 'training', 'profile', 'catalog-manager',
+        'reports', 'training', 'profile',
         'farmer-detail', 'farmer-create', 'farmer-edit',
         'farmland-detail', 'farmland-create', 'farmland-edit',
         'cultivation-detail', 'cultivation-create', 'cultivation-edit',
+        ...MASTER_DATA_KEYS,
       ])
       if (role === 'VSLA_PROVIDER_ADMIN' && !vslaProviderAllowed.has(activeModule)) {
         setActiveModule('dashboard')
@@ -408,8 +433,8 @@ export default function HomePage() {
         'profile', 'support-tickets', 'farmer-detail', 'farmer-create', 'farmer-edit',
         'farmland-detail', 'farmland-create', 'farmland-edit',
         'cultivation-detail', 'cultivation-create', 'cultivation-edit',
-        'settings', 'catalog-manager', 'master-data', 'season-master',
-        'crop-master', 'seed-master', 'fertilizer-master',
+        'settings',
+        ...MASTER_DATA_KEYS,
       ])
       if (ekbRoles.includes(role) && !ekbAllowed.has(activeModule)) {
         setActiveModule('dashboard')

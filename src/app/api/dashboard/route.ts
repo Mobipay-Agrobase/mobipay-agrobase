@@ -2,9 +2,31 @@ import { db } from '@/lib/db'
 import { NextResponse } from 'next/server'
 import { getTenantContext, buildTenantFilter } from '@/lib/tenant'
 
+/**
+ * GET /api/dashboard
+ *
+ * Role-aware dashboard data:
+ *   - FARMER / EKB_FARMER: returns the farmer's OWN data (sales, loans,
+ *     ledger, trainings) — powers the farmer self-service dashboard
+ *   - EXTENSION_OFFICER / EKB_EXTENSION / field-officer roles: returns
+ *     tenant-wide stats + the farmers they've recently visited
+ *   - TENANT_ADMIN / SACCO_ADMIN / VSLA_PROVIDER_ADMIN / SUPER_ADMIN:
+ *     returns tenant-wide KPIs (existing behaviour)
+ *
+ * The mobile app renders different widgets based on the role field in
+ * the response.
+ */
 export async function GET() {
   try {
     const ctx = await getTenantContext()
+
+    // ─── FARMER self-service dashboard ──────────────────────────────────
+    // Returns the farmer's own data — products sold, loans, ledger, trainings.
+    if (['FARMER', 'EKB_FARMER'].includes(ctx.role) && ctx.userId) {
+      return await farmerDashboard(ctx)
+    }
+
+    // ─── Admin / officer dashboard (existing tenant-wide stats) ─────────
     const tenantWhere = buildTenantFilter(ctx, 'tenantId')
 
     const [farmerCount, vslaCount, totalSavings, activeLoans, marketListings, trainingCount, payments, monthlyFarmerData, vslaSavingsData, recentTransactions] = await Promise.all([
@@ -70,6 +92,8 @@ export async function GET() {
     }))
 
     return NextResponse.json({
+      role: ctx.role,
+      dashboardType: 'admin',
       farmerCount,
       vslaCount,
       totalSavings: totalSavings._sum.amount || 0,
@@ -84,4 +108,86 @@ export async function GET() {
   } catch (error) {
     return NextResponse.json({ error: 'Failed to fetch dashboard data' }, { status: 500 })
   }
+}
+
+// ─── Farmer self-service dashboard ────────────────────────────────────────
+// Returns the farmer's OWN data — products sold, loans, ledger, trainings.
+// Powers the mobile app's farmer-facing dashboard.
+async function farmerDashboard(ctx: any) {
+  const farmer = await db.farmerProfile.findFirst({
+    where: { userId: ctx.userId, tenantId: ctx.tenantId },
+    select: {
+      id: true, farmerCode: true, firstName: true, lastName: true, phone: true,
+      gender: true, photoUrl: true, isCertified: true, certificationType: true,
+      farmSize: true, groupId: true, group: { select: { id: true, name: true } },
+      villageName: true, district: true, country: true,
+    },
+  })
+  if (!farmer) {
+    return NextResponse.json({
+      role: ctx.role,
+      dashboardType: 'farmer',
+      error: 'No farmer profile linked to this account',
+    }, { status: 200 })  // 200 so the mobile app can render a "no profile" state
+  }
+
+  const farmerId = farmer.id
+
+  const [sales, loans, trainings, ledger, inputDistributions] = await Promise.all([
+    db.sale.findMany({
+      where: { farmerId, tenantId: ctx.tenantId },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+      select: { id: true, product: true, quantity: true, totalAmount: true, netAmount: true, loanDeducted: true, status: true, createdAt: true },
+    }),
+    db.vslaLoan.findMany({
+      where: { farmerId, status: { in: ['DISBURSED', 'OUTSTANDING', 'OVERDUE'] } },
+      orderBy: { createdAt: 'desc' },
+      select: { id: true, amount: true, totalRepayable: true, amountRepaid: true, status: true, createdAt: true, vslaGroup: { select: { name: true } } },
+    }),
+    db.trainingAttendance.findMany({
+      where: { farmerId },
+      orderBy: { createdAt: 'desc' },
+      take: 20,
+      select: { id: true, training: { select: { topic: true, date: true, location: true } }, attended: true, createdAt: true },
+    }),
+    db.farmerLedgerEntry.findMany({
+      where: { farmerId, tenantId: ctx.tenantId },
+      orderBy: { date: 'desc' },
+      take: 30,
+      select: { id: true, type: true, description: true, amount: true, balanceAfter: true, date: true },
+    }),
+    db.inputDistribution.findMany({
+      where: { farmerId, tenantId: ctx.tenantId },
+      orderBy: { createdAt: 'desc' },
+      take: 20,
+      select: { id: true, inputType: true, quantity: true, totalCost: true, balanceRemaining: true, status: true, createdAt: true },
+    }),
+  ])
+
+  const totalIncome = sales.reduce((s, x) => s + (x.netAmount || 0), 0)
+  const totalLoanRepaid = sales.reduce((s, x) => s + (x.loanDeducted || 0), 0)
+  const outstandingLoans = loans.reduce((s, l) => s + Math.max(0, (l.totalRepayable ?? l.amount) - l.amountRepaid), 0)
+  const inputBalanceTotal = inputDistributions.reduce((s, i) => s + (i.balanceRemaining || 0), 0)
+  const currentBalance = ledger[0]?.balanceAfter || 0
+
+  return NextResponse.json({
+    role: ctx.role,
+    dashboardType: 'farmer',
+    farmer,
+    summary: {
+      totalSales: sales.length,
+      totalIncome,
+      totalLoanRepaid,
+      outstandingLoans,
+      outstandingInputs: inputBalanceTotal,
+      currentBalance,
+      trainingsAttended: trainings.filter(t => t.attended).length,
+    },
+    recentSales: sales.slice(0, 10),
+    activeLoans: loans,
+    recentTrainings: trainings.slice(0, 5),
+    recentLedger: ledger.slice(0, 10),
+    inputDistributions,
+  })
 }

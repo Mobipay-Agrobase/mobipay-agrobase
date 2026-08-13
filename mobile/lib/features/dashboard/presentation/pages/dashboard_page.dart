@@ -133,24 +133,352 @@ class _DashboardPageState extends State<DashboardPage> {
           : SmartRefresher(
               controller: _refreshController,
               onRefresh: _loadData,
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 8),
-                    _buildKpiGrid(),
-                    const SizedBox(height: 24),
-                    _buildLoanPortfolioChart(),
-                    const SizedBox(height: 24),
-                    _buildRecentActivity(),
-                    const SizedBox(height: 24),
-                    _buildQuickActions(),
-                    const SizedBox(height: 32),
-                  ],
+              child: _buildDashboardBody(),
+            ),
+    );
+  }
+
+  /// Picks the dashboard body based on the `dashboardType` field from the API.
+  /// - 'farmer': self-service view (own sales, loans, ledger, trainings)
+  /// - 'admin' / null: tenant-wide KPIs (existing widgets)
+  Widget _buildDashboardBody() {
+    final dashboardType = _dashboardData?['dashboardType'] as String? ?? 'admin';
+    if (dashboardType == 'farmer') {
+      return _buildFarmerDashboard();
+    }
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: 8),
+          _buildKpiGrid(),
+          const SizedBox(height: 24),
+          _buildLoanPortfolioChart(),
+          const SizedBox(height: 24),
+          _buildRecentActivity(),
+          const SizedBox(height: 24),
+          _buildQuickActions(),
+          const SizedBox(height: 32),
+        ],
+      ),
+    );
+  }
+
+  /// Farmer self-service dashboard — shown when the logged-in user is a FARMER
+  /// or EKB_FARMER. Renders their own sales, loan balance, ledger, and recent
+  /// trainings instead of tenant-wide KPIs.
+  Widget _buildFarmerDashboard() {
+    final farmer = _dashboardData?['farmer'] as Map<String, dynamic>?;
+    final summary = _dashboardData?['summary'] as Map<String, dynamic>? ?? {};
+    final recentSales = _dashboardData?['recentSales'] as List<dynamic>? ?? [];
+    final activeLoans = _dashboardData?['activeLoans'] as List<dynamic>? ?? [];
+    final recentTrainings = _dashboardData?['recentTrainings'] as List<dynamic>? ?? [];
+    final recentLedger = _dashboardData?['recentLedger'] as List<dynamic>? ?? [];
+
+    if (farmer == null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.person_off, size: 64, color: AppTheme.textSecondary),
+              const SizedBox(height: 16),
+              const Text('No farmer profile linked to your account',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+              ),
+              const SizedBox(height: 8),
+              const Text('Please contact your field officer or cooperative to be registered.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final farmerName = '${farmer['firstName'] ?? ''} ${farmer['lastName'] ?? ''}'.trim();
+    final farmerCode = farmer['farmerCode'] ?? '—';
+    final groupName = farmer['group']?['name'] ?? '—';
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: 8),
+          // Farmer card
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [AppTheme.primaryGreen, Color(0xFF2D6A4F)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 28,
+                  backgroundColor: Colors.white.withOpacity(0.2),
+                  child: Text(
+                    (farmerName.isNotEmpty ? farmerName[0] : '?'),
+                    style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(farmerName,
+                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                      ),
+                      const SizedBox(height: 4),
+                      Text('Code: $farmerCode  ·  Group: $groupName',
+                        style: const TextStyle(fontSize: 12, color: Colors.white70),
+                      ),
+                      if (farmer['isCertified'] == true) ...[
+                        const SizedBox(height: 4),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text('Certified: ${farmer['certificationType'] ?? 'Yes'}',
+                            style: const TextStyle(fontSize: 11, color: Colors.white, fontWeight: FontWeight.w500),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+          // Summary KPIs (4 cards)
+          GridView.count(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            crossAxisCount: 2,
+            mainAxisSpacing: 12,
+            crossAxisSpacing: 12,
+            childAspectRatio: 1.6,
+            children: [
+              _buildFarmerKpiCard('Total Income', 'UGX ${(summary['totalIncome'] ?? 0).toStringAsFixed(0)}', Icons.trending_up, Colors.green),
+              _buildFarmerKpiCard('Sales', '${summary['totalSales'] ?? 0}', Icons.shopping_cart, Colors.blue),
+              _buildFarmerKpiCard('Loan Balance', 'UGX ${(summary['outstandingLoans'] ?? 0).toStringAsFixed(0)}', Icons.account_balance_wallet, Colors.orange),
+              _buildFarmerKpiCard('Trainings', '${summary['trainingsAttended'] ?? 0}', Icons.school, Colors.purple),
+            ],
+          ),
+          const SizedBox(height: 24),
+          // Recent sales
+          if (recentSales.isNotEmpty) ...[
+            _buildSectionHeader('Recent Sales', Icons.shopping_cart),
+            const SizedBox(height: 8),
+            ...recentSales.take(5).map((s) => _buildSaleTile(s as Map<String, dynamic>)),
+            const SizedBox(height: 24),
+          ],
+          // Active loans
+          if (activeLoans.isNotEmpty) ...[
+            _buildSectionHeader('Active Loans', Icons.account_balance_wallet),
+            const SizedBox(height: 8),
+            ...activeLoans.take(3).map((l) => _buildLoanTile(l as Map<String, dynamic>)),
+            const SizedBox(height: 24),
+          ],
+          // Recent ledger entries
+          if (recentLedger.isNotEmpty) ...[
+            _buildSectionHeader('Recent Transactions', Icons.receipt_long),
+            const SizedBox(height: 8),
+            ...recentLedger.take(5).map((e) => _buildLedgerTile(e as Map<String, dynamic>)),
+            const SizedBox(height: 24),
+          ],
+          // Recent trainings
+          if (recentTrainings.isNotEmpty) ...[
+            _buildSectionHeader('Recent Trainings', Icons.school),
+            const SizedBox(height: 8),
+            ...recentTrainings.take(3).map((t) => _buildTrainingTile(t as Map<String, dynamic>)),
+            const SizedBox(height: 32),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFarmerKpiCard(String label, String value, IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Color(0xFFE2E8F0)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 20, color: color),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(label,
+                  style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary, fontWeight: FontWeight.w500),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
+            ],
+          ),
+          Text(value,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader(String title, IconData icon) {
+    return Row(
+      children: [
+        Icon(icon, size: 18, color: AppTheme.primaryGreen),
+        const SizedBox(width: 8),
+        Text(title,
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSaleTile(Map<String, dynamic> sale) {
+    final product = sale['product'] ?? '—';
+    final qty = sale['quantity'] ?? '—';
+    final amount = (sale['netAmount'] ?? sale['totalAmount'] ?? 0) as num;
+    final date = sale['createdAt'] != null
+        ? DateFormat('dd MMM').format(DateTime.parse(sale['createdAt']).toLocal())
+        : '—';
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: ListTile(
+        leading: const CircleAvatar(child: Icon(Icons.shopping_basket, size: 18)),
+        title: Text('$product ($qty)', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+        subtitle: Text(date, style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
+        trailing: Text('UGX ${amount.toStringAsFixed(0)}',
+          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.green),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLoanTile(Map<String, dynamic> loan) {
+    final amount = (loan['amount'] ?? 0) as num;
+    final repaid = (loan['amountRepaid'] ?? 0) as num;
+    final totalRepayable = (loan['totalRepayable'] ?? amount) as num;
+    final balance = (totalRepayable - repaid).clamp(0, double.infinity).toDouble();
+    final status = loan['status'] ?? '—';
+    final groupName = loan['vslaGroup']?['name'] ?? '—';
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(child: Text(groupName, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500))),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: status == 'OVERDUE' ? Colors.red.shade100 : Colors.orange.shade100,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(status, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: status == 'OVERDUE' ? Colors.red : Colors.orange)),
+                ),
+              ],
             ),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _buildLoanColumn('Principal', 'UGX ${amount.toStringAsFixed(0)}'),
+                _buildLoanColumn('Repaid', 'UGX ${repaid.toStringAsFixed(0)}'),
+                _buildLoanColumn('Balance', 'UGX ${balance.toStringAsFixed(0)}', highlight: true),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLoanColumn(String label, String value, {bool highlight = false}) {
+    return Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Text(label, style: const TextStyle(fontSize: 10, color: AppTheme.textSecondary)),
+          const SizedBox(height: 2),
+          Text(value,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: highlight ? Colors.red : AppTheme.textPrimary,
+            ),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLedgerTile(Map<String, dynamic> entry) {
+    final type = entry['type'] ?? '—';
+    final desc = entry['description'] ?? '—';
+    final amount = (entry['amount'] ?? 0) as num;
+    final date = entry['date'] != null
+        ? DateFormat('dd MMM').format(DateTime.parse(entry['date']).toLocal())
+        : '—';
+    final isCredit = amount >= 0;
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: ListTile(
+        dense: true,
+        title: Text(desc, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500), overflow: TextOverflow.ellipsis),
+        subtitle: Text('$type · $date', style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary)),
+        trailing: Text('${isCredit ? '+' : ''}UGX ${amount.abs().toStringAsFixed(0)}',
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.bold,
+            color: isCredit ? Colors.green : Colors.red,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTrainingTile(Map<String, dynamic> t) {
+    final training = t['training'] as Map<String, dynamic>?;
+    final topic = training?['topic'] ?? '—';
+    final location = training?['location'] ?? '—';
+    final date = training?['date'] != null
+        ? DateFormat('dd MMM yyyy').format(DateTime.parse(training!['date']).toLocal())
+        : '—';
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: ListTile(
+        leading: const CircleAvatar(child: Icon(Icons.school, size: 18)),
+        title: Text(topic, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+        subtitle: Text('$location · $date', style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
+      ),
     );
   }
 

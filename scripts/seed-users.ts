@@ -6,6 +6,15 @@
  */
 import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs'
+import * as dotenv from 'dotenv'
+import * as path from 'path'
+
+dotenv.config({ path: path.join(__dirname, '..', '.env'), override: true })
+
+if (!process.env.DATABASE_URL?.startsWith('postgres')) {
+  console.error('DATABASE_URL is not a postgres URL. Got:', process.env.DATABASE_URL?.substring(0, 50))
+  process.exit(1)
+}
 
 const db = new PrismaClient()
 

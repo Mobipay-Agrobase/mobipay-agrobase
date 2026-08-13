@@ -113,8 +113,14 @@ class AuthState extends ChangeNotifier {
       });
 
       if (res.statusCode != 200) {
-        final data = jsonDecode(res.body);
-        _error = data['error'] ?? 'Invalid email or password';
+        // Try to parse JSON error, fall back to raw body
+        try {
+          final data = jsonDecode(res.body);
+          _error = data['error'] ?? 'Invalid email or password';
+        } catch (_) {
+          _error = 'Server error (${res.statusCode}). Try again.';
+        }
+        debugPrint('[auth] login failed: ${res.statusCode} ${res.body.substring(0, 200)}');
         notifyListeners();
         return false;
       }
@@ -146,7 +152,8 @@ class AuthState extends ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      _error = 'Connection error. Check your internet and try again.';
+      debugPrint('[auth] login exception: $e');
+      _error = 'Connection error: $e';
       notifyListeners();
       return false;
     } finally {

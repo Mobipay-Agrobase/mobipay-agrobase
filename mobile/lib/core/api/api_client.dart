@@ -26,20 +26,31 @@ class ApiClient {
   /// For local dev against Vercel staging:
   ///   flutter run --dart-define=API_BASE_URL=https://mobipay-agrobase-git-staging.vercel.app
   static Future<String> getBaseUrl() async {
+    String url;
     // 1. Compile-time override (highest priority)
-    if (_compiledBaseUrl.isNotEmpty) return _compiledBaseUrl;
-
-    // 2. Runtime override (from SharedPreferences / app settings)
-    if (_runtimeBaseUrl != null) return _runtimeBaseUrl!;
-    final prefs = await SharedPreferences.getInstance();
-    final stored = prefs.getString('api_base_url');
-    if (stored != null && stored.isNotEmpty) {
-      _runtimeBaseUrl = stored;
-      return stored;
+    if (_compiledBaseUrl.isNotEmpty) {
+      url = _compiledBaseUrl;
+    } else {
+      // 2. Runtime override (from SharedPreferences / app settings)
+      if (_runtimeBaseUrl != null) {
+        url = _runtimeBaseUrl!;
+      } else {
+        final prefs = await SharedPreferences.getInstance();
+        final stored = prefs.getString('api_base_url');
+        if (stored != null && stored.isNotEmpty) {
+          _runtimeBaseUrl = stored;
+          url = stored;
+        } else {
+          // 3. Default: Vercel production API
+          url = 'https://mobipay-agrobase.vercel.app';
+        }
+      }
     }
-
-    // 3. Default: Vercel production API
-    return 'https://mobipay-agrobase.vercel.app';
+    // Strip trailing slash to avoid double-slash when concatenating with paths
+    while (url.endsWith('/')) {
+      url = url.substring(0, url.length - 1);
+    }
+    return url;
   }
 
   /// Call this from a settings screen to let users configure the server URL.

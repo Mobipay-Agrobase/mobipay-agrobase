@@ -56,6 +56,11 @@ const CATALOG: Record<string, string[]> = {
   produce_type: ['Hulled Coffee', 'Cocoa', 'Cassava', 'Avocado', 'Vanilla', 'Jackfruit', 'Other'],
   input_type: ['Fertilizers', 'Tarpaulins', 'Seedlings', 'Pruning Saws', 'Other'],
   sale_category: ['PRODUCE', 'INPUT'],
+  // Banks + insurance companies in Uganda (team feedback: avoid typing errors)
+  bank_uganda: ['Stanbic Bank Uganda', 'Centenary Bank', 'Equity Bank Uganda', 'DFCU Bank', 'Standard Chartered Bank Uganda', 'Bank of Africa Uganda', 'Housing Finance Bank', 'Tropical Bank', 'Bank of Baroda Uganda', 'KCB Bank Uganda', 'NCBA Bank Uganda', 'ABSA Bank Uganda', 'Finance Trust Bank', 'Pride Microfinance', 'UGAFODE Microfinance', 'PostBank Uganda', 'Opportunity Bank Uganda', 'Guaranty Trust Bank Uganda', 'Exim Bank Uganda', 'Other'],
+  insurance_company_uganda: ['Jubilee Insurance', 'UAP Old Mutual Insurance', 'Britam Insurance Uganda', 'Sanlam General Insurance', 'ICEA Lion Insurance', 'Prudential Assurance Uganda', 'Liberty Life Insurance Uganda', 'AIC Life Insurance', 'Metric Insurance Brokers', 'First Insurance Company', 'Other'],
+  // Asset types — farmers have diverse assets; dropdown + free text (team feedback)
+  asset_type: ['Land', 'Vehicle', 'Motorcycle', 'Bicycle', 'Tractor', 'Animal-drawn Cart', 'Generator', 'Solar System', 'Television', 'Radio', 'Refrigerator', 'Water Tank', 'Irrigation Pump', 'Sprayer', 'Storage Shed', 'Processing Equipment', 'Other'],
 }
 
 async function main() {

@@ -24,6 +24,7 @@ import { Separator } from '@/components/ui/separator'
 import { Checkbox } from '@/components/ui/checkbox'
 import { toast } from 'sonner'
 import { CatalogSelect } from '@/components/ui/catalog-select'
+import { AssetMultiSelect } from '@/components/ui/asset-multi-select'
 import { LocationPicker } from '@/components/ui/location-picker'
 
 interface Farmer {
@@ -178,6 +179,7 @@ function AddFarmerForm({ onClose, initialData, farmerId }: { onClose: () => void
       houseType: '',
       consumerElectronics: [] as string[],
       vehicles: [] as string[],
+      assets: [] as string[],  // catalog-driven multi-select (asset_type)
 
       // Tab 6: Finance Information
       bankAccounts: [] as Array<{ accountType: string; accountNo: string; bankName: string; branchDetails: string; sortCode: string }>,
@@ -366,6 +368,7 @@ function AddFarmerForm({ onClose, initialData, farmerId }: { onClose: () => void
         houseType: str(form.houseType),
         consumerElectronics: form.consumerElectronics.length > 0 ? form.consumerElectronics : undefined,
         vehicles: form.vehicles.length > 0 ? form.vehicles : undefined,
+        assets: form.assets.length > 0 ? form.assets : undefined,
 
         // Tab 6: Finance Information
         bankAccounts: form.bankAccounts.length > 0 ? form.bankAccounts.map((a: any) => ({
@@ -662,9 +665,17 @@ function AddFarmerForm({ onClose, initialData, farmerId }: { onClose: () => void
               <CatalogSelect category="house_type" value={form.houseType} onValueChange={v => update('houseType', v)} placeholder="Select" />
             </FormField>
           </div>
+          {/* Assets — catalog-driven multi-select + free text (team feedback: farmers have diverse assets) */}
+          <FormField label="Assets Owned (select from list + add your own)">
+            <AssetMultiSelect
+              value={form.assets || []}
+              onChange={(v) => update('assets', v)}
+              category="asset_type"
+            />
+          </FormField>
           <FormField label="Consumer Electronics">
             <div className="flex flex-wrap gap-2 pt-1">
-              {['TV', 'Washing Machine', 'Air Conditioner', 'Fridge'].map(item => (
+              {['TV', 'Washing Machine', 'Air Conditioner', 'Fridge', 'Radio', 'Smartphone'].map(item => (
                 <button
                   key={item}
                   type="button"
@@ -681,9 +692,9 @@ function AddFarmerForm({ onClose, initialData, farmerId }: { onClose: () => void
               ))}
             </div>
           </FormField>
-          <FormField label="Vehicle">
+          <FormField label="Vehicles">
             <div className="flex flex-wrap gap-2 pt-1">
-              {['Bike', 'Car', 'Boat'].map(item => (
+              {['Bicycle', 'Motorcycle', 'Car', 'Pickup', 'Lorry', 'Animal-drawn Cart'].map(item => (
                 <button
                   key={item}
                   type="button"
@@ -737,7 +748,7 @@ function AddFarmerForm({ onClose, initialData, farmerId }: { onClose: () => void
                 </div>
                 <div className="grid grid-cols-3 gap-3">
                   <FormField label="Bank Name">
-                    <Input value={acc.bankName} onChange={e => updateBankAccount(i, 'bankName', e.target.value)} />
+                    <CatalogSelect category="bank_uganda" value={acc.bankName} onValueChange={v => updateBankAccount(i, 'bankName', v)} placeholder="Select bank" />
                   </FormField>
                   <FormField label="Branch Details">
                     <Input value={acc.branchDetails} onChange={e => updateBankAccount(i, 'branchDetails', e.target.value)} />
@@ -861,7 +872,7 @@ function AddFarmerForm({ onClose, initialData, farmerId }: { onClose: () => void
                 <>
                   <div className="grid grid-cols-2 gap-3">
                     <FormField label="Provider" required>
-                      <Input value={ins.provider} onChange={e => updateInsurance(i, 'provider', e.target.value)} required />
+                      <CatalogSelect category="insurance_company_uganda" value={ins.provider} onValueChange={v => updateInsurance(i, 'provider', v)} placeholder="Select provider" />
                     </FormField>
                     <FormField label="Insurance Amount" required>
                       <Input type="number" value={ins.insuranceAmount} onChange={e => updateInsurance(i, 'insuranceAmount', e.target.value)} required />
@@ -961,7 +972,7 @@ function AddFarmerForm({ onClose, initialData, farmerId }: { onClose: () => void
                 </FormField>
               </div>
               <FormField label="Animal for Growth">
-                <CatalogSelect category="animal_growth" value={an.animalForGrowth} onValueChange={v => updateAnimal(i, 'animalForGrowth', v)} placeholder="Select" />
+                <CatalogSelect category="animal_for_growth" value={an.animalForGrowth} onValueChange={v => updateAnimal(i, 'animalForGrowth', v)} placeholder="Select" />
               </FormField>
             </div>
           ))}

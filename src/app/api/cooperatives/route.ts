@@ -10,7 +10,11 @@ import { hasPermission } from '@/lib/permissions'
 export async function GET(request: NextRequest) {
   try {
     const ctx = await getTenantContext()
-    if (!hasPermission(ctx.role, 'users:read')) {
+    // Allow anyone who can read users OR create/update farmers to pick a cooperative
+    // (field officers + tenant admins need this during farmer enrollment)
+    const canReadUsers = hasPermission(ctx.role, 'users:read')
+    const canManageFarmers = hasPermission(ctx.role, 'farmers:create') || hasPermission(ctx.role, 'farmers:update')
+    if (!canReadUsers && !canManageFarmers) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 

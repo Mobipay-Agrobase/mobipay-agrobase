@@ -47,6 +47,12 @@ const SYSTEM_ROUTES = [
   '/api/reports/',       // reports — permission checked via 'reports:read' but route prefix differs
   '/api/impact/',        // impact routes — auth-only
   '/api/satellite/',     // satellite routes — auth-only
+  '/api/master',         // master data (crops, seeds, fertilizers, soil types) — auth-only, tenant-scoped inside
+  '/api/cooperatives',   // cooperatives — permission checked inside the route handler (farmers:create OR users:read)
+  '/api/field-staff',    // field staff — permission checked inside the route handler (same pattern)
+  '/api/data-quality',   // data quality report — auth-only (admin-only inside)
+  '/api/crop-varieties', // crop variety master — auth-only (farmer module)
+  '/api/attachments',    // attachments — auth-only (permission checked inside route handler)
 ]
 
 // ─── Helpers ────────────────────────────────────────────────────────────────

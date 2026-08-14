@@ -10,7 +10,7 @@ export type ModuleKey =
   'ivr' | 'feedback' | 'trace' | 'users' | 'surveys' |
   'farm-visits' | 'impact-assessment' | 'channel-sim' | 'compliance' | 'mfi' | 'transport' | 'plots' |
   // Core product modules
-  'carbon' | 'farm5x' | 'cost-of-cultivation' | 'crop-stages' |
+  'carbon' | 'farm5x' | 'cost-of-cultivation' | 'crop-stages' | 'crop-variety' |
   // Billing
   'billing' |
   // EKIBBO modules

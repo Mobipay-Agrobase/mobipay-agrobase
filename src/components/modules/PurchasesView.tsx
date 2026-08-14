@@ -491,6 +491,9 @@ function NewPurchaseForm({ onClose }: { onClose: () => void }) {
           unitPrice: price,
           totalAmount,
           status: 'PENDING',
+          // EKIBBO charges + tax — Purchase schema uses momoCharges + momoTax
+          momoCharges: charges || null,
+          momoTax: tax || null,
         }),
       })
       if (!res.ok) {

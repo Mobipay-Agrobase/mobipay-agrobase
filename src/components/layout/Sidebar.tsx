@@ -61,6 +61,7 @@ const ALL_MODULES: NavItem[] = [
   { key: 'catalog-manager', label: 'Dropdown Catalog', icon: Database, group: 'Master Data', permModule: 'farmers' },
   { key: 'data-quality', label: 'Data Quality', icon: ShieldCheck, group: 'Master Data', restrictToRoles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'COUNTRY_ADMIN', 'SACCO_ADMIN', 'SACCO_OFFICER'] },
   { key: 'crop-master', label: 'Crop Master', icon: Wheat, group: 'Master Data', permModule: 'farmers' },
+  { key: 'crop-variety', label: 'Crop Variety Master', icon: Sprout, group: 'Master Data', permModule: 'farmers' },
   { key: 'season-master', label: 'Season Master', icon: Calendar, group: 'Master Data', permModule: 'farmers' },
   { key: 'seed-master', label: 'Seed Master', icon: Sprout, group: 'Master Data', permModule: 'farmers' },
   { key: 'fertilizer-master', label: 'Fertilizer Master', icon: FlaskConical, group: 'Master Data', permModule: 'farmers' },

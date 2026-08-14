@@ -95,8 +95,12 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const ctx = await getTenantContext()
-    if (!hasPermission(ctx.role, 'users:create')) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    // Allow anyone who can create users OR create/update farmers to add field officers
+    // (tenant admins, EKB_MD, EKB_OPS_MANAGER, and extension officers need this)
+    const canCreateUsers = hasPermission(ctx.role, 'users:create')
+    const canManageFarmers = hasPermission(ctx.role, 'farmers:create') || hasPermission(ctx.role, 'farmers:update')
+    if (!canCreateUsers && !canManageFarmers) {
+      return NextResponse.json({ error: 'Forbidden — insufficient permissions' }, { status: 403 })
     }
 
     const body = await request.json()

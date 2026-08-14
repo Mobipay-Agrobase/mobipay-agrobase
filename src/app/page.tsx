@@ -23,6 +23,8 @@ const MASTER_DATA_KEYS = [
   'disease-master',
   'pest-master',
   'soiltype-master',
+  'crop-stages',
+  'crop-variety',
   'field-staff',
   'cooperatives',
   'farmer-mapping',
@@ -114,6 +116,7 @@ const CarbonView = lazy(() => import('@/components/modules/CarbonView'))
 const Farm5xView = lazy(() => import('@/components/modules/Farm5xView'))
 const CostOfCultivationView = lazy(() => import('@/components/modules/CostOfCultivationView'))
 const CropStagesLibraryView = lazy(() => import('@/components/modules/CropStagesLibraryView'))
+const CropVarietyMasterView = lazy(() => import('@/components/modules/CropVarietyMasterView'))
 const RolesPermissionsView = lazy(() => import('@/components/modules/RolesPermissionsView'))
 const InputDistributionView = lazy(() => import('@/components/ekbibo/InputDistributionView'))
 const CropInsuranceView = lazy(() => import('@/components/ekbibo/CropInsuranceView'))
@@ -233,6 +236,7 @@ function ModuleRouter() {
     case 'farm5x': return <Farm5xView />
     case 'cost-of-cultivation': return <CostOfCultivationView />
     case 'crop-stages': return <CropStagesLibraryView />
+    case 'crop-variety': return <CropVarietyMasterView />
     case 'roles-permissions': return <RolesPermissionsView />
     case 'input-distribution': return <InputDistributionView />
     case 'crop-insurance': return <CropInsuranceView />

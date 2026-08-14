@@ -213,12 +213,47 @@ export default function FarmLandFormPage({ mode, farmLandId, farmerId }: FarmLan
     if (!form.name) { toast.error('Farm/Plot name is required'); return }
     setSaving(true)
     try {
-      const payload = {
-        ...form,
+      // Build a clean payload with ONLY known fields — avoid spreading ...form
+      // which can include UI-only state (approachRoadValues etc.) that Prisma rejects.
+      const payload: Record<string, any> = {
         farmerId: form.farmerId,
-        polygonPoints: polygonPoints.length >= 3 ? polygonPoints : undefined,
+        name: form.name,
         sizeHectares: form.sizeHectares || (polygonArea > 0 ? polygonArea : undefined),
-        soilAnalyses: soilAnalyses.filter(a => a.criteria),
+        latitude: form.latitude || undefined,
+        longitude: form.longitude || undefined,
+        landOwnership: form.landOwnership || undefined,
+        landSurveyNo: form.landSurveyNo || undefined,
+        waterSource: form.waterSource || undefined,
+        soilFertility: form.soilFertility || undefined,
+        landTopology: form.landTopology || undefined,
+        powerSource: form.powerSource || undefined,
+        farmPhotoUrl: form.farmPhotoUrl || undefined,
+        landDocumentUrl: form.landDocumentUrl || undefined,
+        irrigationType: form.irrigationType || undefined,
+        irrigationSource: form.irrigationSource || undefined,
+        approachRoad: form.approachRoad || undefined,
+        landGradient: form.landGradient || undefined,
+        certType: form.certType || undefined,
+        conversionStatus: form.conversionStatus || undefined,
+        conversionDate: form.conversionDate || undefined,
+        inspectorName: form.inspectorName || undefined,
+        conversionQualified: form.conversionQualified ?? false,
+        conversionRemarks: form.conversionRemarks || undefined,
+        fullTimeWorkers: form.fullTimeWorkers || undefined,
+        partTimeWorkers: form.partTimeWorkers || undefined,
+        seasonalWorkers: form.seasonalWorkers || undefined,
+        familyWorkers: form.familyWorkers || undefined,
+        lastChemicalApplicationDate: form.lastChemicalApplicationDate || undefined,
+        conventionalLands: form.conventionalLands || undefined,
+        fallowPastureLand: form.fallowPastureLand || undefined,
+        conventionalCrops: form.conventionalCrops || undefined,
+        estYieldKg: form.estYieldKg || undefined,
+        soilCollectionDate: form.soilCollectionDate || undefined,
+        soilLabTestingDate: form.soilLabTestingDate || undefined,
+        soilResultDate: form.soilResultDate || undefined,
+        soilReportUrl: form.soilReportUrl || undefined,
+        soilSamplesInfo: form.soilSamplesInfo || undefined,
+        polygonPoints: polygonPoints.length >= 3 ? polygonPoints : undefined,
       }
       const url = isEditing ? `/api/farm-lands/${farmLandId}` : '/api/farm-lands'
       const method = isEditing ? 'PUT' : 'POST'
@@ -240,10 +275,12 @@ export default function FarmLandFormPage({ mode, farmLandId, farmerId }: FarmLan
         toast.success(`Farm land "${form.name}" ${isEditing ? 'updated' : 'created'} successfully!`)
         handleBack()
       } else {
-        toast.error(data.error || `Failed to ${isEditing ? 'update' : 'create'} farm land`)
+        console.error('[FarmLandForm] save failed:', res.status, data)
+        toast.error(data.error || `Failed to ${isEditing ? 'update' : 'create'} farm land: ${data.detail || res.status}`)
       }
-    } catch {
-      toast.error('Network error')
+    } catch (err: any) {
+      console.error('[FarmLandForm] network error:', err)
+      toast.error(`Network error: ${err.message || 'unknown'}`)
     } finally {
       setSaving(false)
     }

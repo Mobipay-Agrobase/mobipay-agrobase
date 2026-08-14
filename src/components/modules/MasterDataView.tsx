@@ -125,9 +125,12 @@ const MASTER_KINDS: MasterKind[] = [
     key: 'soiltype', label: 'Soil Type Master', description: 'Soil types used in soil analysis criteria.',
     fields: [
       { name: 'name', label: 'Soil Type', type: 'text' },
+      { name: 'keyRegions', label: 'Key Regions', type: 'text' },
+      { name: 'fertility', label: 'Fertility', type: 'select', options: ['High', 'Medium', 'Low', 'Very Low'] },
+      { name: 'mainCrops', label: 'Main Crops', type: 'text' },
       { name: 'description', label: 'Description', type: 'text' },
     ],
-    columns: ['name'],
+    columns: ['name', 'keyRegions', 'fertility', 'mainCrops'],
   },
 ]
 

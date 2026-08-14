@@ -830,6 +830,9 @@ model SeedMaster {
 model SoilTypeMaster {
   id              String   @id @default(cuid())
   name            String   @unique
+  keyRegions      String?  // e.g. "SW Highlands, Mt Elgon"
+  fertility       String?  // High, Medium, Low
+  mainCrops       String?  // e.g. "Tea, Coffee, Potatoes, Vegetables"
   description     String?
   status          String   @default("ACTIVE")
   createdAt       DateTime @default(now())

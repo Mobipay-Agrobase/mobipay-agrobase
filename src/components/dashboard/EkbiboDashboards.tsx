@@ -212,12 +212,10 @@ function FarmGeoMap({ locations }: { locations: Array<{ lat: number; lng: number
   const centerLat = (minLat + maxLat) / 2
   const centerLng = (minLng + maxLng) / 2
 
-  // Build OSM embed URL with marker overlays (OSM allows many markers)
-  const markerParams = locations.map(l =>
-    `marker=${l.lat},${l.lng}`
-  ).join('&')
+  // Build OSM embed URL — use bounding box + single center marker only
+  // (adding hundreds of marker params causes "URI Too Long" error)
   const bbox = `${minLng},${minLat},${maxLng},${maxLat}`
-  const osmUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${centerLat},${centerLng}&${markerParams}`
+  const osmUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${centerLat},${centerLng}`
 
   return (
     <div className="space-y-3">

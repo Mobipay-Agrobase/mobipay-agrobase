@@ -13,7 +13,7 @@ import {
   ArrowLeft, Plus, Trash2, Banknote, Shield, Tractor, Users,
   Loader2, Save, MapPin, QrCode, TrendingUp, ShoppingCart,
   CreditCard, FileText, Landmark, Pencil, User, Wallet,
-  ChevronDown, Sprout,
+  ChevronDown, Sprout, Printer, Share2,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAppStore } from '@/lib/store'
@@ -150,6 +150,20 @@ export function FarmerDetailFull({ farmerId, onBack }: Props) {
     setActiveModule('farmer-edit')
   }
 
+  const handleShare = () => {
+    // Generate a shareable link with MASKED sensitive data
+    // The public link shows only: name, farmer code, district, certification, farm size
+    // Phone, email, national ID, bank details are NOT included
+    const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://mobipay-agrobase.vercel.app'
+    const shareUrl = `${baseUrl}/farmer/${farmerId}?public=1`
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(shareUrl)
+      toast.success('Share link copied to clipboard (sensitive data masked)')
+    } else {
+      toast.info(`Share this link: ${shareUrl}`)
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex flex-col h-full">
@@ -174,35 +188,81 @@ export function FarmerDetailFull({ farmerId, onBack }: Props) {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Hero Card with farmer info + QR code */}
+      {/* Hero Card — green gradient with credit score circle, QR, badges, actions */}
       <div className="shrink-0 p-4 lg:p-6 pb-0">
-        <div className="rounded-2xl overflow-hidden shadow-lg bg-gradient-to-br from-emerald-600 to-emerald-800">
-          <div className="p-5 flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={onBack} className="text-white hover:bg-white/10 h-9 w-9 shrink-0">
-              <ArrowLeft className="w-5 h-5" />
-            </Button>
-            <div className="w-14 h-14 rounded-full bg-white/20 flex items-center justify-center text-xl font-bold text-white shrink-0">
-              {farmer.firstName?.[0]}{farmer.lastName?.[0]}
+        <div className="relative rounded-2xl overflow-hidden shadow-xl bg-gradient-to-br from-emerald-700 via-emerald-600 to-teal-700">
+          {/* Decorative bubble shapes */}
+          <div className="absolute top-0 right-0 w-48 h-48 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/4" />
+          <div className="absolute bottom-0 left-1/3 w-32 h-32 bg-white/5 rounded-full translate-y-1/2" />
+
+          <div className="relative p-5">
+            {/* Top row: back + identity + actions */}
+            <div className="flex items-start gap-4">
+              <Button variant="ghost" size="icon" onClick={onBack} className="text-white hover:bg-white/10 h-9 w-9 shrink-0 mt-1">
+                <ArrowLeft className="w-5 h-5" />
+              </Button>
+
+              {/* Avatar with verification badge */}
+              <div className="relative shrink-0">
+                <div className="w-16 h-16 rounded-full bg-white/20 backdrop-blur flex items-center justify-center text-2xl font-bold text-white border-2 border-white/30">
+                  {farmer.firstName?.[0]}{farmer.lastName?.[0]}
+                </div>
+                {farmer.isCertified && (
+                  <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-yellow-400 rounded-full flex items-center justify-center border-2 border-emerald-700">
+                    <Shield className="w-3 h-3 text-emerald-800" />
+                  </div>
+                )}
+              </div>
+
+              {/* Name + badges + metadata */}
+              <div className="flex-1 min-w-0">
+                <h1 className="text-xl font-bold text-white truncate">{farmer.firstName} {farmer.lastName}</h1>
+                <div className="flex flex-wrap items-center gap-2 mt-1.5">
+                  {farmer.farmerCode && (
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-white/15 text-white flex items-center gap-1">
+                      <QrCode className="w-3 h-3" /> {farmer.farmerCode}
+                    </span>
+                  )}
+                  {farmer.isCertified && (
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-yellow-400/20 text-yellow-200 border border-yellow-400/30">
+                      {farmer.certificationType || 'Certified'}
+                    </span>
+                  )}
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${farmer.status === 'ACTIVE' ? 'bg-green-400/20 text-green-200 border border-green-400/30' : 'bg-gray-400/20 text-gray-200'}`}>
+                    ● {farmer.status || 'ACTIVE'}
+                  </span>
+                </div>
+                <div className="flex flex-wrap items-center gap-3 mt-2 text-xs text-white/70">
+                  {farmer.district && <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {farmer.district}</span>}
+                  {farmer.villageName && <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {farmer.villageName}</span>}
+                  {farmer.farmSize != null && <span className="flex items-center gap-1"><Sprout className="w-3 h-3" /> {farmer.farmSize} ha</span>}
+                </div>
+              </div>
+
+              {/* Right side: credit score circle + QR code */}
+              <div className="flex items-center gap-3 shrink-0">
+                {/* Credit Score Circle */}
+                <CreditScoreCircle farmerId={farmer.id} />
+                {/* QR Code */}
+                <div className="bg-white p-1.5 rounded-lg shadow-md">
+                  <div className="w-16 h-16 flex items-center justify-center">
+                    <QrCode className="w-12 h-12 text-gray-800" />
+                  </div>
+                </div>
+              </div>
             </div>
-            <div className="flex-1 min-w-0">
-              <h1 className="text-xl font-bold text-white truncate">{farmer.firstName} {farmer.lastName}</h1>
-              <div className="flex flex-wrap items-center gap-2 mt-1">
-                {farmer.farmerCode && <span className="text-xs px-2 py-0.5 rounded-full bg-white/15 text-white">{farmer.farmerCode}</span>}
-                {farmer.isCertified && <span className="text-xs px-2 py-0.5 rounded-full bg-yellow-400/20 text-yellow-200">Certified: {farmer.certificationType || 'Yes'}</span>}
-                <span className={`text-xs px-2 py-0.5 rounded-full ${farmer.status === 'ACTIVE' ? 'bg-green-400/20 text-green-200' : 'bg-gray-400/20 text-gray-200'}`}>{farmer.status || 'ACTIVE'}</span>
-              </div>
-              <div className="flex flex-wrap items-center gap-3 mt-1 text-xs text-white/70">
-                {farmer.district && <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {farmer.district}</span>}
-                {farmer.farmSize != null && <span className="flex items-center gap-1"><Sprout className="w-3 h-3" /> {farmer.farmSize} ha</span>}
-              </div>
-            </div>
-            <Button variant="ghost" size="sm" onClick={handleEdit} className="text-white hover:bg-white/10 gap-1.5 shrink-0">
-              <Pencil className="w-4 h-4" /> Edit
-            </Button>
-            <div className="shrink-0 bg-white p-2 rounded-lg">
-              <div className="w-16 h-16 flex items-center justify-center">
-                <QrCode className="w-12 h-12 text-gray-800" />
-              </div>
+
+            {/* Action buttons row */}
+            <div className="flex items-center justify-end gap-2 mt-4">
+              <Button variant="ghost" size="sm" onClick={handleEdit} className="text-white hover:bg-white/10 gap-1.5">
+                <Pencil className="w-3.5 h-3.5" /> Edit
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => window.print()} className="text-white hover:bg-white/10 gap-1.5">
+                <Printer className="w-3.5 h-3.5" /> Print Card
+              </Button>
+              <Button variant="ghost" size="sm" onClick={handleShare} className="text-white hover:bg-white/10 gap-1.5">
+                <Share2 className="w-3.5 h-3.5" /> Share
+              </Button>
             </div>
           </div>
         </div>
@@ -243,6 +303,63 @@ export function FarmerDetailFull({ farmerId, onBack }: Props) {
             </TabsContent>
           </div>
         </Tabs>
+      </div>
+    </div>
+  )
+}
+
+/* --- CreditScoreCircle — donut-style score for the hero card --- */
+function CreditScoreCircle({ farmerId }: { farmerId: string }) {
+  const [score, setScore] = useState<number | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetch(`/api/credit-score/${farmerId}`)
+      .then(r => r.json())
+      .then(d => {
+        const s = d.score
+        const val = typeof s === 'number' ? s : s?.score || s?.totalScore || null
+        setScore(val)
+        setLoading(false)
+      })
+      .catch(() => setLoading(false))
+  }, [farmerId])
+
+  if (loading) {
+    return (
+      <div className="w-20 h-20 rounded-full bg-white/10 backdrop-blur flex items-center justify-center">
+        <Loader2 className="w-5 h-5 text-white/50 animate-spin" />
+      </div>
+    )
+  }
+
+  if (score == null) {
+    return (
+      <div className="w-20 h-20 rounded-full bg-white/10 backdrop-blur flex items-center justify-center border-2 border-white/20">
+        <div className="text-center">
+          <p className="text-[10px] text-white/50">No</p>
+          <p className="text-[10px] text-white/50">Score</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Score circle with gradient color based on score
+  const pct = Math.min(100, (score / 1000) * 100)
+  const color = score >= 700 ? '#22c55e' : score >= 400 ? '#f59e0b' : '#ef4444'
+  const bgGradient = score >= 700 ? 'from-green-400/20 to-emerald-500/20' : score >= 400 ? 'from-amber-400/20 to-orange-500/20' : 'from-red-400/20 to-rose-500/20'
+
+  return (
+    <div className={`w-20 h-20 rounded-full bg-gradient-to-br ${bgGradient} backdrop-blur flex items-center justify-center border-2 border-white/30 relative`}>
+      {/* SVG donut ring */}
+      <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 80 80">
+        <circle cx="40" cy="40" r="36" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="4" />
+        <circle cx="40" cy="40" r="36" fill="none" stroke={color} strokeWidth="4" strokeLinecap="round"
+          strokeDasharray={`${2 * Math.PI * 36 * pct / 100} ${2 * Math.PI * 36}`} />
+      </svg>
+      <div className="relative text-center">
+        <p className="text-xl font-bold text-white">{score}</p>
+        <p className="text-[8px] text-white/60 uppercase tracking-wide">Score</p>
       </div>
     </div>
   )
@@ -552,7 +669,7 @@ function FarmLandsTab({ farmerId, onRefresh }: { farmerId: string; onRefresh: ()
   useEffect(() => {
     fetch(`/api/farm-lands?farmerId=${farmerId}`)
       .then(r => r.json())
-      .then(d => { setLands(d.data || d.farmLands || []); setLoading(false) })
+      .then(d => { setLands(d.farms || d.data || d.farmLands || []); setLoading(false) })
       .catch(() => setLoading(false))
   }, [farmerId])
 
@@ -560,28 +677,32 @@ function FarmLandsTab({ farmerId, onRefresh }: { farmerId: string; onRefresh: ()
   if (lands.length === 0) return <EmptyTabCard icon={MapPin} title="Farm Lands" description="No farm lands registered yet" />
 
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="text-sm flex items-center gap-2">
-          <MapPin className="w-4 h-4 text-primary" /> Farm Lands ({lands.length})
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-3">
-          {lands.map((land: any) => (
-            <div key={land.id} className="p-3 rounded-lg border bg-muted/20">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium">{land.name || land.farmName || 'Unnamed Farm'}</p>
-                  <p className="text-xs text-muted-foreground">{land.size || land.farmSize ? `${land.size || land.farmSize} ha` : ''} {land.location ? `· ${land.location}` : ''}</p>
-                </div>
-                <Badge variant="outline" className="text-[10px]">{land.status || 'Active'}</Badge>
-              </div>
+    <div className="space-y-3">
+      {lands.map((land: any) => (
+        <Card key={land.id} className="card-hover">
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <MapPin className="w-4 h-4 text-primary" /> {land.name || 'Unnamed Farm'}
+              </CardTitle>
+              <Badge variant="outline" className="text-[10px]">{land.isActive === false ? 'Inactive' : 'Active'}</Badge>
             </div>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <InfoField label="Area (ha)" value={land.sizeHectares ? String(land.sizeHectares) : '—'} />
+              <InfoField label="Ownership" value={land.landOwnership || '—'} />
+              <InfoField label="Soil Fertility" value={land.soilFertility || '—'} />
+              <InfoField label="Water Source" value={land.waterSource || '—'} />
+              <InfoField label="Topology" value={land.landTopology || '—'} />
+              <InfoField label="Irrigation" value={land.irrigationType || '—'} />
+              <InfoField label="Cultivations" value={land._count?.cultivations ? String(land._count.cultivations) : '0'} />
+              <InfoField label="GPS Polygon" value={land._count?.polygonPoints ? 'Mapped' : 'None'} />
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
   )
 }
 

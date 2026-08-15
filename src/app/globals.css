@@ -136,3 +136,115 @@
 ::-webkit-scrollbar-thumb:hover {
   background: oklch(0.6 0.1 152 / 50%);
 }
+
+/* ─── Form Design System Animations ─────────────────────────────────── */
+
+/* Fade in on mount — used by form sections, dialog content */
+@keyframes form-fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-form-fade-in {
+  animation: form-fade-in 0.3s ease-out forwards;
+}
+
+/* Slide up — used by tab content switches */
+@keyframes form-slide-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-form-slide-up {
+  animation: form-slide-up 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Shimmer — used by loading skeletons */
+@keyframes form-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.animate-form-shimmer {
+  background: linear-gradient(90deg, var(--muted) 25%, var(--muted-foreground) 50%, var(--muted) 75%);
+  background-size: 200% 100%;
+  animation: form-shimmer 1.5s ease-in-out infinite;
+}
+
+/* Scale in — used by dialog/modal content */
+@keyframes form-scale-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+.animate-form-scale-in {
+  animation: form-scale-in 0.2s ease-out forwards;
+}
+
+/* Pulse glow — used by required field indicators */
+@keyframes form-pulse-glow {
+  0%, 100% { box-shadow: 0 0 0 0 oklch(0.5 0.2 152 / 0%); }
+  50% { box-shadow: 0 0 0 3px oklch(0.7 0.15 152 / 20%); }
+}
+.animate-form-pulse-glow:focus {
+  animation: form-pulse-glow 2s ease-in-out infinite;
+}
+
+/* ─── Form Field Styling ────────────────────────────────────────────── */
+
+/* Consistent input height + focus ring */
+.form-input-base {
+  @apply h-10 text-sm rounded-lg border-border bg-background transition-all duration-200;
+  @apply focus:ring-2 focus:ring-primary/20 focus:border-primary;
+}
+
+/* Form field label — proper case, consistent size */
+.form-label-base {
+  @apply text-xs font-medium text-foreground/80 mb-1.5 block;
+  text-transform: capitalize;
+  letter-spacing: 0.01em;
+}
+
+/* Required asterisk */
+.form-required {
+  @apply text-destructive ml-0.5;
+}
+
+/* Error message */
+.form-error-msg {
+  @apply text-xs text-destructive mt-1 flex items-center gap-1;
+}
+
+/* Form section card */
+.form-section-card {
+  @apply rounded-xl border border-border/60 bg-card shadow-sm overflow-hidden;
+}
+
+/* Form section header */
+.form-section-header {
+  @apply px-4 py-3 border-b border-border/40 bg-muted/30;
+}
+
+/* Form section body */
+.form-section-body {
+  @apply p-4 space-y-4;
+}
+
+/* Tab content transition wrapper */
+.form-tab-content {
+  animation: form-slide-up 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Button hover lift */
+.btn-hover-lift {
+  @apply transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0;
+}
+
+/* Card hover effect */
+.card-hover {
+  @apply transition-all duration-300 hover:shadow-lg hover:border-primary/30;
+}
+
+/* Stagger animation delay helpers */
+.stagger-1 { animation-delay: 0.05s; }
+.stagger-2 { animation-delay: 0.1s; }
+.stagger-3 { animation-delay: 0.15s; }
+.stagger-4 { animation-delay: 0.2s; }
+.stagger-5 { animation-delay: 0.25s; }
+.stagger-6 { animation-delay: 0.3s; }

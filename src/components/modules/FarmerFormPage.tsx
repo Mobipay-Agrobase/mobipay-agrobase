@@ -26,6 +26,7 @@ import { toast } from 'sonner'
 import { CatalogSelect } from '@/components/ui/catalog-select'
 import { AssetMultiSelect } from '@/components/ui/asset-multi-select'
 import { LocationPicker } from '@/components/ui/location-picker'
+import { FormField as DSFormField, FormActions } from '@/components/ui/form-design-system'
 
 interface Farmer {
   id: string; firstName: string; lastName: string; phone: string
@@ -436,22 +437,22 @@ function AddFarmerForm({ onClose, initialData, farmerId }: { onClose: () => void
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-4 animate-form-fade-in">
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="flex-wrap h-auto">
-          <TabsTrigger value="enrollment" className="text-xs gap-1.5"><FileSpreadsheet className="w-3.5 h-3.5" /> Enrollment</TabsTrigger>
-          <TabsTrigger value="personal" className="text-xs gap-1.5"><Users className="w-3.5 h-3.5" /> Personal</TabsTrigger>
-          <TabsTrigger value="contact" className="text-xs gap-1.5"><Phone className="w-3.5 h-3.5" /> Contact</TabsTrigger>
-          <TabsTrigger value="family" className="text-xs gap-1.5"><Users className="w-3.5 h-3.5" /> Family</TabsTrigger>
-          <TabsTrigger value="assets" className="text-xs gap-1.5"><Star className="w-3.5 h-3.5" /> Assets</TabsTrigger>
-          <TabsTrigger value="finance" className="text-xs gap-1.5"><DollarSign className="w-3.5 h-3.5" /> Finance</TabsTrigger>
-          <TabsTrigger value="insurance" className="text-xs gap-1.5"><Shield className="w-3.5 h-3.5" /> Insurance</TabsTrigger>
-          <TabsTrigger value="equipment" className="text-xs gap-1.5"><Sprout className="w-3.5 h-3.5" /> Equipment</TabsTrigger>
-          <TabsTrigger value="animals" className="text-xs gap-1.5"><Activity className="w-3.5 h-3.5" /> Animals</TabsTrigger>
-        </TabsList>
+        <div className='flex flex-wrap gap-1 p-1 rounded-xl bg-muted/50 border border-border/40'>
+          <TabsTrigger value="enrollment" className="text-xs gap-1.5 rounded-lg"><FileSpreadsheet className="w-3.5 h-3.5" /> Enrollment</TabsTrigger>
+          <TabsTrigger value="personal" className="text-xs gap-1.5 rounded-lg"><Users className="w-3.5 h-3.5" /> Personal</TabsTrigger>
+          <TabsTrigger value="contact" className="text-xs gap-1.5 rounded-lg"><Phone className="w-3.5 h-3.5" /> Contact</TabsTrigger>
+          <TabsTrigger value="family" className="text-xs gap-1.5 rounded-lg"><Users className="w-3.5 h-3.5" /> Family</TabsTrigger>
+          <TabsTrigger value="assets" className="text-xs gap-1.5 rounded-lg"><Star className="w-3.5 h-3.5" /> Assets</TabsTrigger>
+          <TabsTrigger value="finance" className="text-xs gap-1.5 rounded-lg"><DollarSign className="w-3.5 h-3.5" /> Finance</TabsTrigger>
+          <TabsTrigger value="insurance" className="text-xs gap-1.5 rounded-lg"><Shield className="w-3.5 h-3.5" /> Insurance</TabsTrigger>
+          <TabsTrigger value="equipment" className="text-xs gap-1.5 rounded-lg"><Sprout className="w-3.5 h-3.5" /> Equipment</TabsTrigger>
+          <TabsTrigger value="animals" className="text-xs gap-1.5 rounded-lg"><Activity className="w-3.5 h-3.5" /> Animals</TabsTrigger>
+        </div>
 
         {/* ── Tab 1: Enrollment ── */}
-        <TabsContent value="enrollment" className="mt-4 space-y-4">
+        <TabsContent value="enrollment" className="mt-4 space-y-4 form-tab-content">
           <div className="grid grid-cols-2 gap-3">
             <FormField label="Enrollment Date">
               <Input type="date" value={form.enrollmentDate} readOnly />
@@ -550,7 +551,7 @@ function AddFarmerForm({ onClose, initialData, farmerId }: { onClose: () => void
         </TabsContent>
 
         {/* ── Tab 2: Personal Information ── */}
-        <TabsContent value="personal" className="mt-4 space-y-4">
+        <TabsContent value="personal" className="mt-4 space-y-4 form-tab-content">
           <div className="grid grid-cols-2 gap-3">
             <FormField label="Full Name *" required>
               <Input value={form.firstName} onChange={e => update('firstName', e.target.value)} required />
@@ -604,7 +605,7 @@ function AddFarmerForm({ onClose, initialData, farmerId }: { onClose: () => void
         </TabsContent>
 
         {/* ── Tab 3: Contact Information ── */}
-        <TabsContent value="contact" className="mt-4 space-y-4">
+        <TabsContent value="contact" className="mt-4 space-y-4 form-tab-content">
           <LocationPicker
             value={{
               country: 'Uganda',
@@ -638,7 +639,7 @@ function AddFarmerForm({ onClose, initialData, farmerId }: { onClose: () => void
         </TabsContent>
 
         {/* ── Tab 4: Family Information ── */}
-        <TabsContent value="family" className="mt-4 space-y-4">
+        <TabsContent value="family" className="mt-4 space-y-4 form-tab-content">
           <FormField label="Spouse Name">
             <Input value={form.spouseName} onChange={e => update('spouseName', e.target.value)} />
           </FormField>
@@ -656,7 +657,7 @@ function AddFarmerForm({ onClose, initialData, farmerId }: { onClose: () => void
         </TabsContent>
 
         {/* ── Tab 5: Asset Information ── */}
-        <TabsContent value="assets" className="mt-4 space-y-4">
+        <TabsContent value="assets" className="mt-4 space-y-4 form-tab-content">
           <div className="grid grid-cols-2 gap-3">
             <FormField label="Housing Ownership">
               <CatalogSelect category="housing_ownership" value={form.housingOwnership} onValueChange={v => update('housingOwnership', v)} placeholder="Select" />
@@ -714,7 +715,7 @@ function AddFarmerForm({ onClose, initialData, farmerId }: { onClose: () => void
         </TabsContent>
 
         {/* ── Tab 6: Finance Information ── */}
-        <TabsContent value="finance" className="mt-4 space-y-4">
+        <TabsContent value="finance" className="mt-4 space-y-4 form-tab-content">
           {/* Bank Accounts (multi-entry) */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
@@ -843,7 +844,7 @@ function AddFarmerForm({ onClose, initialData, farmerId }: { onClose: () => void
         </TabsContent>
 
         {/* ── Tab 7: Insurance Information (multi-entry) ── */}
-        <TabsContent value="insurance" className="mt-4 space-y-4">
+        <TabsContent value="insurance" className="mt-4 space-y-4 form-tab-content">
           <div className="flex items-center justify-between">
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Insurance Records</p>
             <Button type="button" variant="outline" size="sm" onClick={addInsurance} className="gap-1 h-7 text-xs">
@@ -896,7 +897,7 @@ function AddFarmerForm({ onClose, initialData, farmerId }: { onClose: () => void
         </TabsContent>
 
         {/* ── Tab 8: Farm Equipment (multi-entry) ── */}
-        <TabsContent value="equipment" className="mt-4 space-y-4">
+        <TabsContent value="equipment" className="mt-4 space-y-4 form-tab-content">
           <div className="flex items-center justify-between">
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Farm Equipment</p>
             <Button type="button" variant="outline" size="sm" onClick={addEquipment} className="gap-1 h-7 text-xs">
@@ -932,7 +933,7 @@ function AddFarmerForm({ onClose, initialData, farmerId }: { onClose: () => void
         </TabsContent>
 
         {/* ── Tab 9: Animal Husbandry (multi-entry) ── */}
-        <TabsContent value="animals" className="mt-4 space-y-4">
+        <TabsContent value="animals" className="mt-4 space-y-4 form-tab-content">
           <div className="flex items-center justify-between">
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Animal Husbandry</p>
             <Button type="button" variant="outline" size="sm" onClick={addAnimal} className="gap-1 h-7 text-xs">
@@ -981,12 +982,12 @@ function AddFarmerForm({ onClose, initialData, farmerId }: { onClose: () => void
 
       {/* Bottom action bar */}
       <div className="sticky bottom-0 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="flex items-center justify-end gap-2 px-4 py-3">
-          <Button type="button" variant="outline" onClick={onClose}>
+        <div className="flex items-center justify-end gap-3 px-4 py-3 border-t border-border/40 mt-6">
+          <Button type="button" variant="outline" onClick={onClose} className="gap-2 btn-hover-lift" disabled={saving}>
             Cancel
           </Button>
-          <Button type="submit" disabled={saving} className="gap-2">
-            {saving && <Loader2 className="w-4 h-4 animate-spin" />} {isEdit ? 'Update Farmer' : 'Register Farmer'}
+          <Button type="submit" disabled={saving} className="gap-2 btn-hover-lift min-w-[140px]">
+            {saving ? (<><Loader2 className="w-4 h-4 animate-spin" /> Saving...</>) : (isEdit ? 'Update Farmer' : 'Register Farmer')}
           </Button>
         </div>
       </div>
@@ -994,11 +995,6 @@ function AddFarmerForm({ onClose, initialData, farmerId }: { onClose: () => void
   )
 }
 
-function FormField({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
-  return (
-    <div className="space-y-1.5">
-      <Label className="text-xs">{label}{required && ' *'}</Label>
-      {children}
-    </div>
-  )
-}
+// FormField is now imported from the design system (DSFormField)
+// Local alias for backward compatibility with existing JSX
+const FormField = DSFormField

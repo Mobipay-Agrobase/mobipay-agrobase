@@ -44,6 +44,7 @@ const SYSTEM_ROUTES = [
   '/api/credit-score/',  // credit scoring — auth-only (tenant-scoped inside)
   '/api/credit-scores',  // same
   '/api/dashboard',      // dashboard stats — auth-only (tenant-scoped inside)
+  '/api/dashboard/',     // dashboard sub-routes (stats, ekibbo-analytics) — auth-only
   '/api/reports/',       // reports — permission checked via 'reports:read' but route prefix differs
   '/api/impact/',        // impact routes — auth-only
   '/api/satellite/',     // satellite routes — auth-only

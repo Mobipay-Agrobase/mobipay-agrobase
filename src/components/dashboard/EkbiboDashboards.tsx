@@ -40,7 +40,7 @@ import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip, Cell } from 'recharts'
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip, Cell, ScatterChart, Scatter, ZAxis } from 'recharts'
 import { formatDistanceToNow } from 'date-fns'
 
 const COLORS = ['#059669', '#10b981', '#34d399', '#6ee7b7', '#a7f3d0', '#06b6d4', '#0ea5e9', '#3b82f6', '#8b5cf6', '#a855f7']
@@ -192,11 +192,81 @@ function useDashboardStats() {
 
 // ─── 1. EKB_MD — Managing Director Dashboard ──────────────────────────────
 
+/**
+ * FarmGeoMap — renders farm locations as a scatter plot using Recharts.
+ * Each dot is a farm, positioned by its GPS coordinates.
+ * Tooltip shows farmer name, farm name, and size.
+ *
+ * Uses Recharts ScatterChart instead of Leaflet to avoid the heavy
+ * dependency + SSR issues. The scatter plot auto-scales to the data's
+ * lat/lng range and shows a grid for orientation.
+ */
+function FarmGeoMap({ locations }: { locations: Array<{ lat: number; lng: number; farmerName: string; farmName: string; farmerCode: string; size: number | null }> }) {
+  if (!locations || locations.length === 0) {
+    return <div className="text-center py-8 text-muted-foreground text-sm">No farm locations mapped</div>
+  }
+
+  const data = locations.map(l => ({
+    lng: l.lng,
+    lat: l.lat,
+    farmerName: l.farmerName,
+    farmName: l.farmName,
+    farmerCode: l.farmerCode,
+    size: l.size || 1,
+    z: Math.max(20, Math.min(200, (l.size || 1) * 50)),
+  }))
+
+  return (
+    <div className="h-[400px] w-full">
+      <ResponsiveContainer width="100%" height="100%">
+        <ScatterChart margin={{ top: 20, right: 20, bottom: 40, left: 20 }}>
+          <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+          <XAxis
+            type="number"
+            dataKey="lng"
+            name="Longitude"
+            domain={['dataMin - 0.01', 'dataMax + 0.01']}
+            tick={{ fontSize: 10 }}
+            label={{ value: 'Longitude', position: 'bottom', offset: 10, style: { fontSize: 11, fill: '#888' } }}
+          />
+          <YAxis
+            type="number"
+            dataKey="lat"
+            name="Latitude"
+            domain={['dataMin - 0.01', 'dataMax + 0.01']}
+            tick={{ fontSize: 10 }}
+            label={{ value: 'Latitude', angle: -90, position: 'left', offset: 0, style: { fontSize: 11, fill: '#888' } }}
+          />
+          <ZAxis type="number" dataKey="z" range={[20, 200]} />
+          <Tooltip
+            cursor={{ strokeDasharray: '3 3' }}
+            content={({ active, payload }) => {
+              if (!active || !payload?.length) return null
+              const d = payload[0].payload
+              return (
+                <div className="bg-background border rounded-lg p-2 shadow-lg text-xs">
+                  <p className="font-bold">{d.farmName}</p>
+                  <p className="text-muted-foreground">{d.farmerName} ({d.farmerCode})</p>
+                  <p className="text-muted-foreground">Size: {d.size ? `${d.size} ha` : '—'}</p>
+                  <p className="text-muted-foreground">GPS: {d.lat.toFixed(4)}, {d.lng.toFixed(4)}</p>
+                </div>
+              )
+            }}
+          />
+          <Scatter data={data} fill="#059669" fillOpacity={0.6} />
+        </ScatterChart>
+      </ResponsiveContainer>
+    </div>
+  )
+}
+
 export function EkbMdDashboard() {
   const { stats, monthlyRegs, loading } = useDashboardStats()
   const [purchases, setPurchases] = useState<any[]>([])
   const [sales, setSales] = useState<any[]>([])
   const [approvalCount, setApprovalCount] = useState(0)
+  const [analytics, setAnalytics] = useState<any>(null)
+  const [geoLevel, setGeoLevel] = useState('district')
 
   useEffect(() => {
     fetchJson('/api/purchases?limit=200').then(d => {
@@ -205,10 +275,12 @@ export function EkbMdDashboard() {
     fetchJson('/api/sales?limit=200').then(d => {
       setSales(Array.isArray(d?.data) ? d.data : [])
     })
-    // Fetch pending approvals from the same source as the Approval Hub
     fetchJson('/api/approvals').then(d => {
       const list = Array.isArray(d?.data) ? d.data : []
       setApprovalCount(list.filter((a: any) => a.status === 'PENDING' || a.status === 'SUBMITTED').length)
+    })
+    fetchJson('/api/dashboard/ekibbo-analytics').then(d => {
+      setAnalytics(d || null)
     })
   }, [])
 
@@ -425,6 +497,203 @@ export function EkbMdDashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* ─── Location-wise Farmer Count Drilldown ─── */}
+      {analytics?.locationHierarchy && (
+        <Card>
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base">Farmer Distribution by Location</CardTitle>
+              <div className="flex gap-1">
+                {['country', 'province', 'district', 'commune', 'villageName'].map(level => (
+                  <button
+                    key={level}
+                    onClick={() => setGeoLevel(level)}
+                    className={cn(
+                      'px-2 py-0.5 rounded text-[10px] font-medium capitalize transition-colors',
+                      geoLevel === level
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                    )}
+                  >
+                    {level === 'villageName' ? 'Village' : level}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {(() => {
+              const data = analytics.locationHierarchy[geoLevel] || []
+              if (data.length === 0) {
+                return <div className="text-center py-8 text-muted-foreground text-sm">No location data available</div>
+              }
+              return (
+                <div className="h-[300px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={data.slice(0, 15)} layout="vertical" margin={{ left: 10, right: 20, top: 5, bottom: 5 }}>
+                      <CartesianGrid horizontal={false} strokeDasharray="3 3" opacity={0.3} />
+                      <XAxis type="number" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+                      <YAxis type="category" dataKey="label" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} width={100} />
+                      <Tooltip cursor={{ fill: '#f1f5f9' }} formatter={(v: any) => [`${v} farmers`, 'Count']} />
+                      <Bar dataKey="count" radius={[0, 6, 6, 0]}>
+                        {data.slice(0, 15).map((_: any, i: number) => (
+                          <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              )
+            })()}
+            {analytics.locationHierarchy.totalFarmers > 0 && (
+              <p className="text-xs text-muted-foreground text-center mt-2">
+                {analytics.locationHierarchy[geoLevel]?.length || 0} {geoLevel === 'villageName' ? 'villages' : geoLevel + 's'} ·
+                {' '}{analytics.locationHierarchy.totalFarmers} total farmers
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ─── Farm Land Geolocation Map ─── */}
+      {analytics?.farmLocations && analytics.farmLocations.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <MapPin className="w-4 h-4 text-primary" />
+              Farm Land Locations ({analytics.farmLocations.length} farms mapped)
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <FarmGeoMap locations={analytics.farmLocations} />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ─── Purchase Trends (6 months) + Commodity Mix ─── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {analytics?.purchaseTrends && analytics.purchaseTrends.length > 0 && (
+          <Card>
+            <CardHeader className="pb-2"><CardTitle className="text-base">Purchase Trends (6 Months)</CardTitle></CardHeader>
+            <CardContent>
+              <div className="h-[260px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={analytics.purchaseTrends}>
+                    <CartesianGrid vertical={false} strokeDasharray="3 3" opacity={0.3} />
+                    <XAxis dataKey="month" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+                    <Tooltip
+                      formatter={(v: any, name: string) => {
+                        if (name === 'value') return [fmtUGX(v), 'Value']
+                        return [fmtNum(v), 'Volume (kg)']
+                      }}
+                    />
+                    <Bar dataKey="volume" fill="#3b82f6" radius={[6, 6, 0, 0]} name="volume" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {analytics?.commodityMix && analytics.commodityMix.length > 0 && (
+          <Card>
+            <CardHeader className="pb-2"><CardTitle className="text-base">Farmer Crop Distribution</CardTitle></CardHeader>
+            <CardContent>
+              <div className="h-[260px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={analytics.commodityMix} layout="vertical" margin={{ left: 10, right: 20, top: 5, bottom: 5 }}>
+                    <CartesianGrid horizontal={false} strokeDasharray="3 3" opacity={0.3} />
+                    <XAxis type="number" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+                    <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} width={80} />
+                    <Tooltip cursor={{ fill: '#f1f5f9' }} formatter={(v: any) => [`${v} farmers`, 'Count']} />
+                    <Bar dataKey="count" radius={[0, 6, 6, 0]}>
+                      {analytics.commodityMix.map((_: any, i: number) => (
+                        <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
+      {/* ─── Farmer Growth (cumulative) + Top Villages ─── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {analytics?.farmerGrowth && analytics.farmerGrowth.length > 0 && (
+          <Card>
+            <CardHeader className="pb-2"><CardTitle className="text-base">Farmer Growth (12 Months)</CardTitle></CardHeader>
+            <CardContent>
+              <div className="h-[220px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={analytics.farmerGrowth}>
+                    <CartesianGrid vertical={false} strokeDasharray="3 3" opacity={0.3} />
+                    <XAxis dataKey="month" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+                    <Tooltip
+                      formatter={(v: any, name: string) => {
+                        if (name === 'totalFarmers') return [fmtNum(v), 'Cumulative']
+                        return [v, 'New']
+                      }}
+                    />
+                    <Bar dataKey="newFarmers" fill="#a7f3d0" radius={[4, 4, 0, 0]} name="newFarmers" />
+                    <Bar dataKey="totalFarmers" fill="#059669" radius={[4, 4, 0, 0]} name="totalFarmers" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {analytics?.topVillages && analytics.topVillages.length > 0 && (
+          <Card>
+            <CardHeader className="pb-2"><CardTitle className="text-base">Top Villages by Farmer Count</CardTitle></CardHeader>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader><TableRow>
+                  <TableHead>Village</TableHead>
+                  <TableHead>District</TableHead>
+                  <TableHead className="text-right">Farmers</TableHead>
+                </TableRow></TableHeader>
+                <TableBody>
+                  {analytics.topVillages.map((v: any, i: number) => (
+                    <TableRow key={i}>
+                      <TableCell className="font-medium text-sm">{v.village}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{v.district}</TableCell>
+                      <TableCell className="text-right text-sm font-bold">{v.count}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
+      {/* ─── Gender by District ─── */}
+      {analytics?.genderByDistrict && analytics.genderByDistrict.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-base">Gender Distribution by District</CardTitle></CardHeader>
+          <CardContent>
+            <div className="h-[260px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={analytics.genderByDistrict}>
+                  <CartesianGrid vertical={false} strokeDasharray="3 3" opacity={0.3} />
+                  <XAxis dataKey="district" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} angle={-15} textAnchor="end" height={50} />
+                  <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <Tooltip cursor={{ fill: '#f1f5f9' }} />
+                  <Bar dataKey="male" stackId="a" fill="#3b82f6" name="Male" radius={[0, 0, 0, 0]} />
+                  <Bar dataKey="female" stackId="a" fill="#ec4899" name="Female" radius={[6, 6, 0, 0]} />
+                  <Bar dataKey="other" stackId="a" fill="#a855f7" name="Other" radius={[6, 6, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }

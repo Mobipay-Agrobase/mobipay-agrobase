@@ -27,6 +27,7 @@ const MASTER_DATA_KEYS = [
   'crop-variety',
   'field-staff',
   'cooperatives',
+  'farmer-groups',
   'farmer-mapping',
 ] as const
 import { useIsEkibboTenant } from '@/hooks/use-is-ekibbo'
@@ -57,6 +58,7 @@ const FarmLandDetailPage = lazy(() => import('@/components/modules/FarmLandDetai
 const CultivationFormPage = lazy(() => import('@/components/modules/CultivationFormPage'))
 const CultivationDetailPage = lazy(() => import('@/components/modules/CultivationDetailPage'))
 const CatalogManager = lazy(() => import('@/components/modules/CatalogManager'))
+const FarmerGroupsView = lazy(() => import('@/components/modules/FarmerGroupsView'))
 const DataQualityView = lazy(() => import('@/components/admin/DataQualityView'))
 const MasterDataView = lazy(() => import('@/components/modules/MasterDataView'))
 const FarmerMappingView = lazy(() => import('@/components/modules/FarmerMappingView'))
@@ -203,6 +205,7 @@ function ModuleRouter() {
       return <CultivationDetailPage key={selectedCultivationId} cultivationId={selectedCultivationId} onBack={() => useAppStore.getState().setActiveModule('cultivations')} />
     }
     case 'catalog-manager': return <CatalogManager />
+    case 'farmer-groups': return <FarmerGroupsView />
     case 'data-quality': return <DataQualityView />
     case 'master-data': return <MasterDataView kind="crop" />
     case 'season-master': return <MasterDataView kind="season" />

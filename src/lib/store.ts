@@ -24,7 +24,7 @@ export type ModuleKey =
   // Master data (seasons, crops, seeds, fertilizers, catalog)
   'season-master' | 'crop-master' | 'seed-master' | 'fertilizer-master' | 'master-data' |
   'equipment-master' | 'pesticide-master' | 'weed-master' | 'disease-master' | 'pest-master' | 'soiltype-master' |
-  'location-master' | 'field-staff' | 'cooperatives' | 'farmer-mapping' |
+  'location-master' | 'field-staff' | 'cooperatives' | 'farmer-groups' | 'farmer-mapping' |
   'farmer-detail' | 'farmer-create' | 'farmer-edit' |
   'farmland-detail' | 'farmland-create' | 'farmland-edit' |
   'cultivation-detail' | 'cultivation-create' | 'cultivation-edit' |

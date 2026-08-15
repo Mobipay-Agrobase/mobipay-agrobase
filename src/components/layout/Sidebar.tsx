@@ -74,6 +74,7 @@ const ALL_MODULES: NavItem[] = [
   { key: 'location-master', label: 'Location Master', icon: MapPin, group: 'Master Data', permModule: 'farmers' },
   { key: 'field-staff', label: 'Field Staff', icon: Users, group: 'Master Data', permModule: 'farmers' },
   { key: 'cooperatives', label: 'Cooperative Master', icon: Landmark, group: 'Master Data', permModule: 'farmers' },
+  { key: 'farmer-groups', label: 'Farmer Groups', icon: UsersRound, group: 'Master Data', permModule: 'farmers' },
   { key: 'farmer-mapping', label: 'Officer–Farmer Mapping', icon: UserCog, group: 'Master Data', permModule: 'farmers' },
   // Supply Chain
   { key: 'input-aggregation', label: 'Input Aggregation', icon: Package, group: 'Supply Chain', permModule: 'input_aggregation' },

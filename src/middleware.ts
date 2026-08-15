@@ -51,6 +51,7 @@ const SYSTEM_ROUTES = [
   '/api/master',         // master data (crops, seeds, fertilizers, soil types) — auth-only, tenant-scoped inside
   '/api/cooperatives',   // cooperatives — permission checked inside the route handler (farmers:create OR users:read)
   '/api/field-staff',    // field staff — permission checked inside the route handler (same pattern)
+  '/api/farmer-groups',  // farmer groups — auth-only (tenant-scoped inside)
   '/api/data-quality',   // data quality report — auth-only (admin-only inside)
   '/api/crop-varieties', // crop variety master — auth-only (farmer module)
   '/api/attachments',    // attachments — auth-only (permission checked inside route handler)

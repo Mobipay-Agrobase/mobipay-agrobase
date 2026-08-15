@@ -275,7 +275,7 @@ export default function FarmLandsView() {
                       <TableCell className="hidden xl:table-cell">
                         {(f._count?.polygonPoints ?? f.polygonPoints?.length ?? 0) >= 3 ? (
                           <Badge className="bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300 text-[10px]">
-                            <MapPin className="w-3 h-3 mr-1" /> {f._count?.polygonPoints ?? f.polygonPoints?.length ?? 0} pts
+                            <MapPin className="w-3 h-3 mr-1" /> Mapped
                           </Badge>
                         ) : <span className="text-xs text-muted-foreground">No polygon</span>}
                       </TableCell>
@@ -523,7 +523,7 @@ function FarmLandCreateForm({ farmerId: preselectFarmerId, editFarm, onSaved }: 
           {polygonArea > 0 && (
             <div className="mt-3 p-3 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800">
               <p className="text-sm font-medium text-emerald-900 dark:text-emerald-200">
-                Auto-calculated area: <strong>{polygonArea} hectares</strong> from {polygonPoints.length} polygon points
+                Auto-calculated area: <strong>{polygonArea} hectares</strong>
               </p>
             </div>
           )}
@@ -796,7 +796,7 @@ function FarmLandDetail({ farm, onBack }: { farm: FarmLand; onBack: () => void }
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <Card><CardContent className="p-4 text-center"><Ruler className="w-5 h-5 mx-auto text-blue-600 mb-1" /><p className="text-xs text-muted-foreground">Total Area</p><p className="text-lg font-bold">{farm.sizeHectares?.toFixed(2) ?? '—'} ha</p></CardContent></Card>
         <Card><CardContent className="p-4 text-center"><Sprout className="w-5 h-5 mx-auto text-emerald-600 mb-1" /><p className="text-xs text-muted-foreground">Cultivations</p><p className="text-lg font-bold">{cultivations.length}</p></CardContent></Card>
-        <Card><CardContent className="p-4 text-center"><MapPin className="w-5 h-5 mx-auto text-purple-600 mb-1" /><p className="text-xs text-muted-foreground">GPS Points</p><p className="text-lg font-bold">{polygonPoints.length}</p></CardContent></Card>
+        <Card><CardContent className="p-4 text-center"><MapPin className="w-5 h-5 mx-auto text-purple-600 mb-1" /><p className="text-xs text-muted-foreground">GPS Polygon</p><p className="text-lg font-bold">{hasPolygon ? 'Mapped' : 'None'}</p></CardContent></Card>
         <Card><CardContent className="p-4 text-center"><UsersIcon className="w-5 h-5 mx-auto text-amber-600 mb-1" /><p className="text-xs text-muted-foreground">Total Workers</p><p className="text-lg font-bold">{(farm.fullTimeWorkers || 0) + (farm.partTimeWorkers || 0) + (farm.seasonalWorkers || 0) + (farm.familyWorkers || 0)}</p></CardContent></Card>
       </div>
 

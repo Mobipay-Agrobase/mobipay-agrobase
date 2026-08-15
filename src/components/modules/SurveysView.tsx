@@ -77,6 +77,7 @@ export default function SurveysView() {
   const [viewResponsesFor, setViewResponsesFor] = useState<Survey | null>(null)
   const [responsesForSurvey, setResponsesForSurvey] = useState<SurveyResponse[]>([])
   const [loadingResponses, setLoadingResponses] = useState(false)
+  const [viewDetailFor, setViewDetailFor] = useState<Survey | null>(null)
 
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -270,6 +271,9 @@ export default function SurveysView() {
                       ) : null}
                     </div>
                     <div className="mt-3 flex flex-wrap gap-1">
+                      <Button variant="outline" size="sm" onClick={() => setViewDetailFor(survey)} className="gap-1 h-7">
+                        <FileText className="w-3.5 h-3.5" /> View Details
+                      </Button>
                       <Button variant="outline" size="sm" onClick={() => handleViewResponses(survey)} className="gap-1 h-7">
                         <Eye className="w-3.5 h-3.5" /> View Responses
                       </Button>
@@ -421,6 +425,43 @@ export default function SurveysView() {
             initial={editingSurvey}
             onSave={() => { setShowCreateSurvey(false); setEditingSurvey(null); fetchData() }}
           />
+        </DialogContent>
+      </Dialog>
+
+      {/* Survey Detail dialog — shows all questions */}
+      <Dialog open={!!viewDetailFor} onOpenChange={(open) => { if (!open) setViewDetailFor(null) }}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{viewDetailFor?.title}</DialogTitle>
+            <CardDescription>{viewDetailFor?.description || 'No description'}</CardDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            {viewDetailFor?.questions.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">This survey has no questions yet.</p>
+            ) : (
+              viewDetailFor?.questions.map((q, i) => (
+                <div key={q.id} className="border rounded-lg p-3 bg-muted/20">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Badge variant="outline" className="text-[10px]">Q{i + 1}</Badge>
+                        <Badge variant="secondary" className="text-[10px]">{q.type}</Badge>
+                        {q.required && <Badge className="text-[10px] bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300">Required</Badge>}
+                      </div>
+                      <p className="text-sm font-medium">{q.text}</p>
+                      {q.options && q.options.length > 0 && (
+                        <div className="mt-2 flex flex-wrap gap-1">
+                          {q.options.map((opt, j) => (
+                            <Badge key={j} variant="outline" className="text-[10px]">{opt}</Badge>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
         </DialogContent>
       </Dialog>
 

@@ -439,7 +439,7 @@ function AddFarmerForm({ onClose, initialData, farmerId }: { onClose: () => void
   return (
     <form onSubmit={handleSubmit} className="space-y-4 animate-form-fade-in">
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <div className='flex flex-wrap gap-1 p-1 rounded-xl bg-muted/50 border border-border/40'>
+        <TabsList className="flex-wrap h-auto gap-1 p-1 rounded-xl bg-muted/50 border border-border/40">
           <TabsTrigger value="enrollment" className="text-xs gap-1.5 rounded-lg"><FileSpreadsheet className="w-3.5 h-3.5" /> Enrollment</TabsTrigger>
           <TabsTrigger value="personal" className="text-xs gap-1.5 rounded-lg"><Users className="w-3.5 h-3.5" /> Personal</TabsTrigger>
           <TabsTrigger value="contact" className="text-xs gap-1.5 rounded-lg"><Phone className="w-3.5 h-3.5" /> Contact</TabsTrigger>
@@ -449,7 +449,7 @@ function AddFarmerForm({ onClose, initialData, farmerId }: { onClose: () => void
           <TabsTrigger value="insurance" className="text-xs gap-1.5 rounded-lg"><Shield className="w-3.5 h-3.5" /> Insurance</TabsTrigger>
           <TabsTrigger value="equipment" className="text-xs gap-1.5 rounded-lg"><Sprout className="w-3.5 h-3.5" /> Equipment</TabsTrigger>
           <TabsTrigger value="animals" className="text-xs gap-1.5 rounded-lg"><Activity className="w-3.5 h-3.5" /> Animals</TabsTrigger>
-        </div>
+        </TabsList>
 
         {/* ── Tab 1: Enrollment ── */}
         <TabsContent value="enrollment" className="mt-4 space-y-4 form-tab-content">

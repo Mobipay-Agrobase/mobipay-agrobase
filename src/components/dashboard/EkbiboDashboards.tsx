@@ -40,7 +40,7 @@ import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip, Cell, ScatterChart, Scatter, ZAxis } from 'recharts'
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip, Cell } from 'recharts'
 import { formatDistanceToNow } from 'date-fns'
 
 const COLORS = ['#059669', '#10b981', '#34d399', '#6ee7b7', '#a7f3d0', '#06b6d4', '#0ea5e9', '#3b82f6', '#8b5cf6', '#a855f7']
@@ -193,69 +193,53 @@ function useDashboardStats() {
 // ─── 1. EKB_MD — Managing Director Dashboard ──────────────────────────────
 
 /**
- * FarmGeoMap — renders farm locations as a scatter plot using Recharts.
- * Each dot is a farm, positioned by its GPS coordinates.
- * Tooltip shows farmer name, farm name, and size.
- *
- * Uses Recharts ScatterChart instead of Leaflet to avoid the heavy
- * dependency + SSR issues. The scatter plot auto-scales to the data's
- * lat/lng range and shows a grid for orientation.
+ * FarmGeoMap — renders farm locations on an embedded OpenStreetMap.
+ * Uses an OSM iframe with a bounding box that fits all farm coordinates.
+ * Also shows a list of farm names below the map for quick reference.
  */
 function FarmGeoMap({ locations }: { locations: Array<{ lat: number; lng: number; farmerName: string; farmName: string; farmerCode: string; size: number | null }> }) {
   if (!locations || locations.length === 0) {
     return <div className="text-center py-8 text-muted-foreground text-sm">No farm locations mapped</div>
   }
 
-  const data = locations.map(l => ({
-    lng: l.lng,
-    lat: l.lat,
-    farmerName: l.farmerName,
-    farmName: l.farmName,
-    farmerCode: l.farmerCode,
-    size: l.size || 1,
-    z: Math.max(20, Math.min(200, (l.size || 1) * 50)),
-  }))
+  // Calculate bounding box
+  const lats = locations.map(l => l.lat)
+  const lngs = locations.map(l => l.lng)
+  const minLat = Math.min(...lats) - 0.005
+  const maxLat = Math.max(...lats) + 0.005
+  const minLng = Math.min(...lngs) - 0.005
+  const maxLng = Math.max(...lngs) + 0.005
+  const centerLat = (minLat + maxLat) / 2
+  const centerLng = (minLng + maxLng) / 2
+
+  // Build OSM embed URL with marker overlays
+  const markerParams = locations.slice(0, 50).map(l =>
+    `marker=${l.lat},${l.lng}`
+  ).join('&')
+  const bbox = `${minLng},${minLat},${maxLng},${maxLat}`
+  const osmUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${centerLat},${centerLng}&${markerParams}`
 
   return (
-    <div className="h-[400px] w-full">
-      <ResponsiveContainer width="100%" height="100%">
-        <ScatterChart margin={{ top: 20, right: 20, bottom: 40, left: 20 }}>
-          <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-          <XAxis
-            type="number"
-            dataKey="lng"
-            name="Longitude"
-            domain={['dataMin - 0.01', 'dataMax + 0.01']}
-            tick={{ fontSize: 10 }}
-            label={{ value: 'Longitude', position: 'bottom', offset: 10, style: { fontSize: 11, fill: '#888' } }}
-          />
-          <YAxis
-            type="number"
-            dataKey="lat"
-            name="Latitude"
-            domain={['dataMin - 0.01', 'dataMax + 0.01']}
-            tick={{ fontSize: 10 }}
-            label={{ value: 'Latitude', angle: -90, position: 'left', offset: 0, style: { fontSize: 11, fill: '#888' } }}
-          />
-          <ZAxis type="number" dataKey="z" range={[20, 200]} />
-          <Tooltip
-            cursor={{ strokeDasharray: '3 3' }}
-            content={({ active, payload }) => {
-              if (!active || !payload?.length) return null
-              const d = payload[0].payload
-              return (
-                <div className="bg-background border rounded-lg p-2 shadow-lg text-xs">
-                  <p className="font-bold">{d.farmName}</p>
-                  <p className="text-muted-foreground">{d.farmerName} ({d.farmerCode})</p>
-                  <p className="text-muted-foreground">Size: {d.size ? `${d.size} ha` : '—'}</p>
-                  <p className="text-muted-foreground">GPS: {d.lat.toFixed(4)}, {d.lng.toFixed(4)}</p>
-                </div>
-              )
-            }}
-          />
-          <Scatter data={data} fill="#059669" fillOpacity={0.6} />
-        </ScatterChart>
-      </ResponsiveContainer>
+    <div className="space-y-3">
+      <div className="rounded-lg overflow-hidden border border-border/40">
+        <iframe
+          src={osmUrl}
+          className="w-full h-[400px] border-0"
+          loading="lazy"
+          title="Farm Locations Map"
+        />
+      </div>
+      <div className="flex items-center justify-between text-xs text-muted-foreground">
+        <span>{locations.length} farms with GPS coordinates</span>
+        <a
+          href={`https://www.openstreetmap.org/?mlat=${centerLat}&mlon=${centerLng}#map=14/${centerLat}/${centerLng}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-primary hover:underline flex items-center gap-1"
+        >
+          <MapPin className="w-3 h-3" /> Open in OpenStreetMap
+        </a>
+      </div>
     </div>
   )
 }

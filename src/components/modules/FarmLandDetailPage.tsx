@@ -60,6 +60,7 @@ interface FarmLandDetail {
     season: string
     cultivationAreaHa: number | null
   }>
+  polygonPoints?: Array<{ id: string; latitude: number; longitude: number; pointOrder: number; altitude?: number | null }>
 }
 
 interface Props {
@@ -209,6 +210,20 @@ export function FarmLandDetailPage({ farmLandId, onBack }: Props) {
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Farm Boundary Map */}
+              {farmLand.polygonPoints && farmLand.polygonPoints.length >= 3 && (
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <MapPin className="w-4 h-4 text-primary" /> Farm Boundary ({farmLand.polygonPoints.length} points)
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <FarmPolygonOSM polygonPoints={farmLand.polygonPoints} farmName={farmLand.name} />
+                  </CardContent>
+                </Card>
+              )}
             </TabsContent>
 
             {/* Soil & Irrigation Tab */}
@@ -346,6 +361,54 @@ function InfoField({ label, value }: { label: string; value: string | null | und
     <div>
       <p className="text-xs text-muted-foreground">{label}</p>
       <p className="text-sm font-medium mt-0.5">{value || '—'}</p>
+    </div>
+  )
+}
+
+/**
+ * FarmPolygonOSM — renders a farm's polygon on an embedded OpenStreetMap.
+ * Calculates a bounding box from the polygon points and shows all markers.
+ */
+function FarmPolygonOSM({ polygonPoints, farmName }: { polygonPoints: Array<{ latitude: number; longitude: number; pointOrder: number }>; farmName: string }) {
+  if (!polygonPoints || polygonPoints.length < 3) {
+    return <div className="text-center py-8 text-muted-foreground text-sm">No polygon data</div>
+  }
+
+  const sorted = [...polygonPoints].sort((a, b) => a.pointOrder - b.pointOrder)
+  const lats = sorted.map(p => p.latitude)
+  const lngs = sorted.map(p => p.longitude)
+  const minLat = Math.min(...lats) - 0.002
+  const maxLat = Math.max(...lats) + 0.002
+  const minLng = Math.min(...lngs) - 0.002
+  const maxLng = Math.max(...lngs) + 0.002
+  const centerLat = (minLat + maxLat) / 2
+  const centerLng = (minLng + maxLng) / 2
+
+  const markerParams = sorted.map(p => `marker=${p.latitude},${p.longitude}`).join('&')
+  const bbox = `${minLng},${minLat},${maxLng},${maxLat}`
+  const osmUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&${markerParams}`
+
+  return (
+    <div className="space-y-3">
+      <div className="rounded-lg overflow-hidden border border-border/40">
+        <iframe
+          src={osmUrl}
+          className="w-full h-[350px] border-0"
+          loading="lazy"
+          title={`Farm Boundary — ${farmName}`}
+        />
+      </div>
+      <div className="flex items-center justify-between text-xs text-muted-foreground">
+        <span>{sorted.length} GPS points · auto-calculated boundary</span>
+        <a
+          href={`https://www.openstreetmap.org/?mlat=${centerLat}&mlon=${centerLng}#map=16/${centerLat}/${centerLng}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-primary hover:underline flex items-center gap-1"
+        >
+          <MapPin className="w-3 h-3" /> Open in OpenStreetMap
+        </a>
+      </div>
     </div>
   )
 }

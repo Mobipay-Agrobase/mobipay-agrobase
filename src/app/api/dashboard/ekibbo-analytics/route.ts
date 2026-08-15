@@ -56,7 +56,7 @@ async function computeFarmLocations(tf: any) {
         id: true, name: true, latitude: true, longitude: true, sizeHectares: true,
         farmer: { select: { firstName: true, lastName: true, farmerCode: true } },
       },
-      take: 500,
+      take: 5000,
     })
     return farms.map(f => ({
       lat: f.latitude,

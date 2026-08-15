@@ -259,7 +259,16 @@ export default function FarmLandsView() {
                 </TableHeader>
                 <TableBody>
                   {filtered.map(f => (
-                    <TableRow key={f.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setSelectedFarm(f)}>
+                    <TableRow key={f.id} className="cursor-pointer hover:bg-muted/50" onClick={async () => {
+                      // Fetch full farm data with polygon points for the detail view
+                      try {
+                        const res = await fetch(`/api/farm-lands/${f.id}`)
+                        const data = await res.json()
+                        setSelectedFarm(data.farm || f)
+                      } catch {
+                        setSelectedFarm(f)
+                      }
+                    }}>
                       <TableCell>
                         <p className="font-medium text-sm">{f.name}</p>
                         {f.landTopology && <p className="text-[10px] text-muted-foreground">{f.landTopology}</p>}

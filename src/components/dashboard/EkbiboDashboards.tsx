@@ -212,8 +212,8 @@ function FarmGeoMap({ locations }: { locations: Array<{ lat: number; lng: number
   const centerLat = (minLat + maxLat) / 2
   const centerLng = (minLng + maxLng) / 2
 
-  // Build OSM embed URL with marker overlays
-  const markerParams = locations.slice(0, 50).map(l =>
+  // Build OSM embed URL with marker overlays (OSM allows many markers)
+  const markerParams = locations.map(l =>
     `marker=${l.lat},${l.lng}`
   ).join('&')
   const bbox = `${minLng},${minLat},${maxLng},${maxLat}`
@@ -546,7 +546,7 @@ export function EkbMdDashboard() {
           <CardHeader className="pb-2">
             <CardTitle className="text-base flex items-center gap-2">
               <MapPin className="w-4 h-4 text-primary" />
-              Farm Land Locations ({analytics.farmLocations.length} farms mapped)
+              Farm Land Locations ({analytics.farmLocations.length} mapped)
             </CardTitle>
           </CardHeader>
           <CardContent>

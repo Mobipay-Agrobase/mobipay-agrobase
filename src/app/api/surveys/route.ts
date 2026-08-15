@@ -27,6 +27,7 @@ export async function GET(request: Request) {
         skip: (page - 1) * limit,
         take: limit,
         include: {
+          questions: { orderBy: { sortOrder: 'asc' } },
           _count: { select: { questions: true, responses: true } },
         },
         orderBy: { createdAt: 'desc' },

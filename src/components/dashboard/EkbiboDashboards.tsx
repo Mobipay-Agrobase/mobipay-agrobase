@@ -546,7 +546,7 @@ export function EkbMdDashboard() {
           <CardHeader className="pb-2">
             <CardTitle className="text-base flex items-center gap-2">
               <MapPin className="w-4 h-4 text-primary" />
-              Farm Land Locations ({analytics.farmLocations.length} mapped)
+              Farm Land Locations
             </CardTitle>
           </CardHeader>
           <CardContent>

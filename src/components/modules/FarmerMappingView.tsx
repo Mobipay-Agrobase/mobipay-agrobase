@@ -25,6 +25,8 @@ export function FarmerMappingView() {
   const [search, setSearch] = useState('')
   const [drafts, setDrafts] = useState<Record<string, { extensionOfficer?: string; cooperativeId?: string }>>({})
   const [saving, setSaving] = useState<string | null>(null)
+  const [page, setPage] = useState(1)
+  const limit = 20
 
   const load = () => {
     setLoading(true)
@@ -57,6 +59,12 @@ export function FarmerMappingView() {
       (f.extensionOfficer || '').toLowerCase().includes(q)
     )
   }, [farmers, search])
+
+  // Reset page when search changes
+  useEffect(() => { setPage(1) }, [search])
+
+  const totalPages = Math.ceil(filtered.length / limit)
+  const paginated = filtered.slice((page - 1) * limit, page * limit)
 
   const saveAssignment = async (f: FarmerRow) => {
     const d = draft(f.id)
@@ -124,10 +132,10 @@ export function FarmerMappingView() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filtered.length === 0 && (
+                {paginated.length === 0 && (
                   <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-8">No farmers to map.</TableCell></TableRow>
                 )}
-                {filtered.map(f => {
+                {paginated.map(f => {
                   const d = draft(f.id)
                   const officerTouched = d.extensionOfficer !== undefined
                   const coopTouched = d.cooperativeId !== undefined
@@ -178,6 +186,17 @@ export function FarmerMappingView() {
               </TableBody>
             </Table>
           </CardContent>
+          {filtered.length > limit && (
+            <div className="flex items-center justify-between px-4 py-3 border-t">
+              <p className="text-sm text-muted-foreground">
+                Showing {(page - 1) * limit + 1}–{Math.min(page * limit, filtered.length)} of {filtered.length}
+              </p>
+              <div className="flex gap-1">
+                <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>Prev</Button>
+                <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}>Next</Button>
+              </div>
+            </div>
+          )}
         </Card>
       )}
     </div>

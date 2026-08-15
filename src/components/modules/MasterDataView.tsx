@@ -139,6 +139,16 @@ const MASTER_KINDS: MasterKind[] = [
 
 export function MasterDataView({ kind }: { kind: string }) {
   const [activeKind, setActiveKind] = useState(kind)
+
+  // Sync activeKind when the kind prop changes (navigating between master pages)
+  useEffect(() => {
+    setActiveKind(kind)
+    setEditing(null)
+    setShowForm(false)
+    setSearch('')
+    setPage(1)
+  }, [kind])
+
   const selected = MASTER_KINDS.find(m => m.key === activeKind) ?? MASTER_KINDS[0]
   const [rows, setRows] = useState<any[]>([])
   const [loading, setLoading] = useState(true)

@@ -76,9 +76,8 @@ export function FieldStaffManagement() {
 
   const fetchCooperatives = useCallback(async () => {
     try {
-      const res = await fetch('/api/catalog?category=cooperative')
-      // Also try direct company listing
-      const coopRes = await fetch('/api/cooperative/list')
+      // Fetch cooperatives from the correct API endpoint
+      const coopRes = await fetch('/api/cooperatives?limit=500')
       if (coopRes.ok) {
         const data = await coopRes.json()
         setCooperatives(data.data || [])

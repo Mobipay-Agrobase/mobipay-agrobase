@@ -13,6 +13,7 @@ import { Separator } from '@/components/ui/separator'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { toast } from 'sonner'
 import { CatalogSelect } from '@/components/ui/catalog-select'
+import { CropVarietySelect } from '@/components/ui/crop-variety-select'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 interface CultivationFormPageProps {
@@ -271,17 +272,19 @@ export default function CultivationFormPage({ mode, cultivationId, farmId }: Cul
                     <FormField label="Harvest Season" required>
                       <CatalogSelect category="rice_crop_season" value={form.harvestSeason} onValueChange={v => update('harvestSeason', v)} placeholder="Select season" />
                     </FormField>
-
-                    <FormField label="Cultivated Crop" required>
-                      <CatalogSelect category="crop_master" value={form.cultivatedCrop} onValueChange={v => update('cultivatedCrop', v)} placeholder="Select crop" />
-                    </FormField>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField label="Crop Variety" required>
-                      <Input value={form.cropVariety} onChange={e => update('cropVariety', e.target.value)} placeholder="e.g. SL28, NERICAT1" />
-                    </FormField>
+                  {/* Crop + Variety cascade dropdown — crop from Crop Master, variety from Crop Variety Master */}
+                  <FormField label="Cultivated Crop &amp; Variety *" required>
+                    <CropVarietySelect
+                      cropValue={form.cultivatedCrop}
+                      onCropChange={v => update('cultivatedCrop', v)}
+                      varietyValue={form.cropVariety}
+                      onVarietyChange={v => update('cropVariety', v)}
+                    />
+                  </FormField>
 
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormField label="Cultivation Area (Ha)" required>
                       <Input type="number" step="0.01" value={form.cultivationAreaHa} onChange={e => update('cultivationAreaHa', e.target.value)} placeholder="0.00" />
                     </FormField>

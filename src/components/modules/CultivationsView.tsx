@@ -23,6 +23,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Separator } from '@/components/ui/separator'
 import { toast } from 'sonner'
 import { CatalogSelect } from '@/components/ui/catalog-select'
+import { CropVarietySelect } from '@/components/ui/crop-variety-select'
 import { useAppStore } from '@/lib/store'
 import { StatCard, StatCardGrid } from '@/components/ui/stat-card'
 
@@ -339,10 +340,17 @@ function CultivationCreateForm({ onSaved, cultivation }: { onSaved: () => void; 
             </SelectContent>
           </Select>
         </div>
-        <div className="space-y-1.5"><Label>Crop Name *</Label><Input value={form.cropName || ''} onChange={e => update('cropName', e.target.value)} placeholder="e.g. Coffee Arabica" /></div>
+        <div className="space-y-1.5">
+          <Label>Crop &amp; Variety *</Label>
+          <CropVarietySelect
+            cropValue={form.cropName || ''}
+            onCropChange={v => update('cropName', v)}
+            varietyValue={form.variety || ''}
+            onVarietyChange={v => update('variety', v)}
+          />
+        </div>
       </div>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="space-y-1.5"><Label>Variety</Label><Input value={form.variety || ''} onChange={e => update('variety', e.target.value)} placeholder="e.g. SL28" /></div>
         <div className="space-y-1.5"><Label>Season</Label>
           <Select value={form.season || ''} onValueChange={v => update('season', v)}>
             <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>

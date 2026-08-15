@@ -10,12 +10,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Plus, Trash2, Pencil, Database, ChevronLeft, ChevronRight, X } from 'lucide-react'
 import { toast } from 'sonner'
 
-type FieldType = 'text' | 'number' | 'date' | 'select'
+type FieldType = 'text' | 'number' | 'date' | 'select' | 'textarea' | 'multiselect-api'
 interface Field {
   name: string
   label: string
   type: FieldType
   options?: string[]
+  apiUrl?: string
+  apiValueField?: string
+  apiLabelField?: string
 }
 
 export interface MasterKind {
@@ -122,13 +125,13 @@ const MASTER_KINDS: MasterKind[] = [
     columns: ['name', 'affectedTypes', 'affectedStage'],
   },
   {
-    key: 'soiltype', label: 'Soil Type Master', description: 'Soil types used in soil analysis criteria.',
+    key: 'soiltype', label: 'Soil Type Master', description: 'Soil types with key regions, fertility and main crops — used in soil analysis criteria.',
     fields: [
       { name: 'name', label: 'Soil Type', type: 'text' },
-      { name: 'keyRegions', label: 'Key Regions', type: 'text' },
-      { name: 'fertility', label: 'Fertility', type: 'select', options: ['High', 'Medium', 'Low', 'Very Low'] },
-      { name: 'mainCrops', label: 'Main Crops', type: 'text' },
-      { name: 'description', label: 'Description', type: 'text' },
+      { name: 'keyRegions', label: 'Key Regions', type: 'multiselect-api', apiUrl: '/api/settings/geo/regions', apiValueField: 'name', apiLabelField: 'name' },
+      { name: 'fertility', label: 'Fertility', type: 'textarea' },
+      { name: 'mainCrops', label: 'Main Crops', type: 'multiselect-api', apiUrl: '/api/master?type=crop&limit=500', apiValueField: 'name', apiLabelField: 'name' },
+      { name: 'description', label: 'Description', type: 'textarea' },
     ],
     columns: ['name', 'keyRegions', 'fertility', 'mainCrops'],
   },
@@ -261,13 +264,22 @@ export function MasterDataView({ kind }: { kind: string }) {
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               {selected.fields.map(f => (
-                <div key={f.name} className="space-y-1.5">
+                <div key={f.name} className={`space-y-1.5 ${f.type === 'textarea' || f.type === 'multiselect-api' ? 'sm:col-span-2' : ''}`}>
                   <Label className="text-xs">{f.label}{f.name === 'name' ? ' *' : ''}</Label>
                   {f.type === 'select' ? (
                     <Select value={form[f.name] || ''} onValueChange={v => up(f.name, v)}>
                       <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
                       <SelectContent>{f.options!.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
                     </Select>
+                  ) : f.type === 'textarea' ? (
+                    <textarea
+                      value={form[f.name] || ''}
+                      onChange={e => up(f.name, e.target.value)}
+                      className="w-full min-h-[60px] px-3 py-2 text-sm border rounded-md bg-background"
+                      placeholder={f.label}
+                    />
+                  ) : f.type === 'multiselect-api' ? (
+                    <MultiSelectApi field={f} value={form[f.name] || ''} onChange={v => up(f.name, v)} />
                   ) : (
                     <Input type={f.type} value={form[f.name] || ''} onChange={e => up(f.name, e.target.value)} className="h-8"
                       placeholder={f.label} />
@@ -301,13 +313,19 @@ export function MasterDataView({ kind }: { kind: string }) {
               <tbody>
                 {rows.map(r => (
                   <tr key={r.id} className="border-b hover:bg-muted/30">
-                    {selected.columns.map(c => (
-                      <td key={c} className="py-2 px-4">
-                        {c === 'fromDate' || c === 'toDate'
-                          ? (r[c] ? String(r[c]).slice(0, 10) : '—')
-                          : String(r[c] ?? '—')}
-                      </td>
-                    ))}
+                    {selected.columns.map(c => {
+                      const val = r[c]
+                      const isLong = typeof val === 'string' && val.length > 40
+                      return (
+                        <td key={c} className="py-2 px-4 max-w-xs">
+                          {c === 'fromDate' || c === 'toDate'
+                            ? (val ? String(val).slice(0, 10) : '—')
+                            : isLong
+                              ? <span className="text-xs" title={String(val)}>{String(val).slice(0, 40)}...</span>
+                              : String(val ?? '—')}
+                        </td>
+                      )
+                    })}
                     <td className="text-right px-4">
                       <Badge variant={r.status === 'INACTIVE' ? 'secondary' : 'default'} className="text-[10px]">{r.status || 'ACTIVE'}</Badge>
                     </td>
@@ -333,6 +351,102 @@ export function MasterDataView({ kind }: { kind: string }) {
           )}
         </CardContent>
       </Card>
+    </div>
+  )
+}
+
+// ─── MultiSelectApi: fetches options from an API, toggle badges, stores as comma-separated string ──
+function MultiSelectApi({ field, value, onChange }: {
+  field: Field
+  value: string
+  onChange: (v: string) => void
+}) {
+  const [options, setOptions] = useState<string[]>([])
+  const [loading, setLoading] = useState(true)
+  const [customInput, setCustomInput] = useState('')
+
+  useEffect(() => {
+    let mounted = true
+    setLoading(true)
+    fetch(field.apiUrl!)
+      .then(r => r.json())
+      .then(d => {
+        if (!mounted) return
+        const rows = d.data || d.catalog || []
+        const valField = field.apiValueField || 'name'
+        const names = rows.map((r: any) => String(r[valField])).filter(Boolean)
+        setOptions(names)
+        setLoading(false)
+      })
+      .catch(() => { if (mounted) { setOptions([]); setLoading(false) } })
+    return () => { mounted = false }
+  }, [field.apiUrl, field.apiValueField])
+
+  const selected = value ? value.split(',').map(s => s.trim()).filter(Boolean) : []
+
+  const toggle = (item: string) => {
+    if (selected.includes(item)) onChange(selected.filter(s => s !== item).join(', '))
+    else onChange([...selected, item].join(', '))
+  }
+
+  const addCustom = () => {
+    const v = customInput.trim()
+    if (!v || selected.includes(v)) { setCustomInput(''); return }
+    onChange([...selected, v].join(', '))
+    setCustomInput('')
+  }
+
+  return (
+    <div className="space-y-2">
+      {selected.length > 0 && (
+        <div className="flex flex-wrap gap-1">
+          {selected.map(s => (
+            <Badge key={s} variant="default" className="text-[10px] gap-1 pr-1">
+              {s}
+              <button type="button" onClick={() => toggle(s)} className="hover:bg-primary-foreground/20 rounded">
+                <X className="w-2.5 h-2.5" />
+              </button>
+            </Badge>
+          ))}
+        </div>
+      )}
+      {loading ? (
+        <p className="text-xs text-muted-foreground">Loading options...</p>
+      ) : (
+        <div className="flex flex-wrap gap-1 max-h-32 overflow-y-auto p-1 border rounded-md bg-muted/20">
+          {options.length === 0 ? (
+            <p className="text-xs text-muted-foreground px-2 py-1">No options found. Type below to add manually.</p>
+          ) : (
+            options.map(item => {
+              const isSelected = selected.includes(item)
+              return (
+                <button
+                  key={item}
+                  type="button"
+                  onClick={() => toggle(item)}
+                  className={`px-2 py-0.5 rounded-full text-[11px] font-medium border transition-colors ${
+                    isSelected
+                      ? 'bg-primary text-primary-foreground border-primary'
+                      : 'bg-background text-muted-foreground border-border hover:border-primary/50'
+                  }`}
+                >
+                  {item}
+                </button>
+              )
+            })
+          )}
+        </div>
+      )}
+      <div className="flex gap-1">
+        <Input
+          value={customInput}
+          onChange={e => setCustomInput(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addCustom() } }}
+          placeholder="Add custom..."
+          className="h-7 text-xs flex-1"
+        />
+        <Button type="button" size="sm" variant="outline" onClick={addCustom} disabled={!customInput.trim()} className="h-7 px-2 text-xs">Add</Button>
+      </div>
     </div>
   )
 }

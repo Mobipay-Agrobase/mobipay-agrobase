@@ -123,6 +123,7 @@ export async function POST(request: Request) {
         enrollmentDate: body.enrollmentDate ? new Date(body.enrollmentDate) : new Date(),
         enrollmentPlace: body.enrollmentPlace,
         icsYear: body.icsYear,
+        farmerRegistrationUnder: body.farmerRegistrationUnder,
         cooperativeId: body.cooperativeId,
         extensionOfficer: body.extensionOfficer,
 

@@ -170,16 +170,17 @@ export function MasterDataView({ kind }: { kind: string }) {
 
   const up = (k: string, v: any) => setForm(p => ({ ...p, [k]: v }))
 
-  const resetForm = () => {
+  const resetForm = (editRow?: any) => {
     const init: Record<string, any> = {}
-    if (editing) {
-      selected.fields.forEach(f => { init[f.name] = editing[f.name] ?? '' })
+    const source = editRow || editing
+    if (source) {
+      selected.fields.forEach(f => { init[f.name] = source[f.name] ?? '' })
     }
     setForm(init)
   }
 
-  const openAdd = () => { setEditing(null); resetForm(); setShowForm(true) }
-  const openEdit = (row: any) => { setEditing(row); resetForm(); setShowForm(true) }
+  const openAdd = () => { setEditing(null); resetForm(null); setShowForm(true) }
+  const openEdit = (row: any) => { setEditing(row); resetForm(row); setShowForm(true) }
 
   const submit = async () => {
     if (!form.name?.trim()) { toast.error('Name is required'); return }

@@ -20,6 +20,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator'
 import { toast } from 'sonner'
 import { EmptyState, exportToCSV } from '@/components/ui/empty-state'
+import { CropProductSelect } from '@/components/ui/crop-product-select'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts'
 
 type RelatedType = 'PURCHASE' | 'CONSIGNMENT' | 'INPUT_REQUEST'
@@ -549,7 +550,9 @@ function AddDeliveryForm({ onClose }: { onClose: () => void }) {
         </Select>
       </div>
       <div className="space-y-1.5"><Label>Related ID</Label><Input value={form.relatedId} onChange={e => update('relatedId', e.target.value)} placeholder="Reference ID" /></div>
-      <div className="space-y-1.5"><Label>Product *</Label><Input value={form.product} onChange={e => update('product', e.target.value)} required /></div>
+      <div className="space-y-1.5"><Label>Product *</Label>
+        <CropProductSelect value={form.product} onChange={v => update('product', v)} required />
+      </div>
       <div className="grid grid-cols-3 gap-3">
         <div className="space-y-1.5"><Label>Quantity</Label><Input type="number" value={form.quantity} onChange={e => update('quantity', e.target.value)} /></div>
         <div className="space-y-1.5"><Label>Unit</Label>

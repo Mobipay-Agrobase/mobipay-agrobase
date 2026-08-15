@@ -136,7 +136,7 @@ function AddFarmerForm({ onClose, initialData, farmerId }: { onClose: () => void
       farmerCode: '',
       isCertified: false,
       certificationType: '',
-      yearOfIcs: '',
+      icsYear: '',
       farmerRegistrationUnder: '',
       cooperative: '',
       cooperativeId: '',
@@ -325,7 +325,7 @@ function AddFarmerForm({ onClose, initialData, farmerId }: { onClose: () => void
         farmerCode: str(form.farmerCode),
         isCertified: bool(form.isCertified),
         certificationType: str(form.certificationType),
-        yearOfIcs: str(form.yearOfIcs),
+        icsYear: str(form.icsYear),
         farmerRegistrationUnder: str(form.farmerRegistrationUnder),
         cooperative: str(form.cooperative),
         cooperativeId: str(form.cooperativeId),
@@ -494,7 +494,7 @@ function AddFarmerForm({ onClose, initialData, farmerId }: { onClose: () => void
                 </Select>
               </FormField>
               <FormField label="Year of ICS">
-                <Select value={form.yearOfIcs} onValueChange={v => update('yearOfIcs', v)}>
+                <Select value={form.icsYear} onValueChange={v => update('icsYear', v)}>
                   <SelectTrigger><SelectValue placeholder="Select year" /></SelectTrigger>
                   <SelectContent>
                     {Array.from({ length: 15 }, (_, i) => new Date().getFullYear() - i).map(y => (

@@ -347,6 +347,7 @@ model FarmerProfile {
   enrollmentDate  DateTime @default(now())
   enrollmentPlace String?  // At Farmer Place / At Cooperative / At Farmer Organization / At Warehouse
   icsYear         String?  // Year of ICS (show when isCertified = true)
+  farmerRegistrationUnder String?  // Agri / Aqua / other registration category
   cooperativeId   String?  // linked cooperative (for FO users)
 
   // ─── ID Proof ───

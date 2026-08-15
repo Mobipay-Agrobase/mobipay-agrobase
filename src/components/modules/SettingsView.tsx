@@ -21,7 +21,6 @@ import { toast } from 'sonner'
 import { useAppStore } from '@/lib/store'
 import { Skeleton } from '@/components/ui/skeleton'
 
-const LocationMaster = lazy(() => import('@/components/admin/LocationMaster').then(m => ({ default: m.LocationMaster })))
 const FieldStaffManagement = lazy(() => import('@/components/admin/FieldStaffManagement').then(m => ({ default: m.FieldStaffManagement })))
 const CooperativeManagement = lazy(() => import('@/components/admin/CooperativeManagement').then(m => ({ default: m.CooperativeManagement })))
 const CatalogManager = lazy(() => import('@/components/modules/CatalogManager'))
@@ -71,7 +70,7 @@ const CURRENCIES: Record<string, string> = { Uganda: 'UGX', Ghana: 'GHS', Kenya:
 export default function SettingsView() {
   const { activeSubTab, setActiveSubTab, user } = useAppStore()
   const isSuperAdmin = user?.role === 'SUPER_ADMIN'
-  const defaultTab = isSuperAdmin ? 'tenants' : 'location-master'
+  const defaultTab = isSuperAdmin ? 'tenants' : 'field-staff'
 
   // Ensure activeTab is always a valid tab for the current user's role
   const adminOnlyTabs = new Set(['tenants', 'users', 'geo', 'modules', 'system'])
@@ -96,7 +95,6 @@ export default function SettingsView() {
           {isSuperAdmin && <TabsTrigger value="tenants" className="gap-1.5"><Building2 className="w-3.5 h-3.5" /> Tenants</TabsTrigger>}
           {isSuperAdmin && <TabsTrigger value="users" className="gap-1.5"><Users className="w-3.5 h-3.5" /> Users</TabsTrigger>}
           {isSuperAdmin && <TabsTrigger value="geo" className="gap-1.5"><MapPin className="w-3.5 h-3.5" /> Geography</TabsTrigger>}
-          <TabsTrigger value="location-master" className="gap-1.5"><MapPin className="w-3.5 h-3.5" /> Location Master</TabsTrigger>
           <TabsTrigger value="field-staff" className="gap-1.5"><UserCheck className="w-3.5 h-3.5" /> Field Staff</TabsTrigger>
           <TabsTrigger value="cooperatives" className="gap-1.5"><Handshake className="w-3.5 h-3.5" /> Cooperatives</TabsTrigger>
           <TabsTrigger value="catalog-master" className="gap-1.5"><Key className="w-3.5 h-3.5" /> Catalog Master</TabsTrigger>
@@ -238,12 +236,6 @@ export default function SettingsView() {
               </CardContent>
             </Card>
           </div>
-        </TabsContent>
-
-        <TabsContent value="location-master" className="mt-4">
-          <Suspense fallback={<div className="space-y-3">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-12 w-full rounded" />)}</div>}>
-            <LocationMaster />
-          </Suspense>
         </TabsContent>
 
         <TabsContent value="field-staff" className="mt-4">

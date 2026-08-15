@@ -20,6 +20,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator'
 import { toast } from 'sonner'
 import { EmptyState, exportToCSV } from '@/components/ui/empty-state'
+import { CropProductSelect } from '@/components/ui/crop-product-select'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 
 interface Consignment {
@@ -465,7 +466,9 @@ function AddConsignmentForm({ onClose, initial }: { onClose: () => void; initial
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="space-y-1.5"><Label>Product *</Label><Input value={form.product} onChange={e => update('product', e.target.value)} placeholder="e.g., Arabica Coffee Grade A" required /></div>
+      <div className="space-y-1.5"><Label>Product *</Label>
+        <CropProductSelect value={form.product} onChange={v => update('product', v)} required />
+      </div>
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5"><Label>Quantity *</Label><Input type="number" value={form.quantity} onChange={e => update('quantity', e.target.value)} required /></div>
         <div className="space-y-1.5"><Label>Unit</Label>

@@ -5,7 +5,7 @@ import { useAppStore } from '@/lib/store'
 import { cn } from '@/lib/utils'
 import {
   Search, Plus, FileText, Users, Calendar, CheckCircle, Clock, X, Loader2,
-  Eye, Trash2, Pencil, AlertCircle, ChevronDown, ChevronUp, ListChecks, ClipboardList
+  Eye, Trash2, Pencil, AlertCircle, ChevronDown, ChevronUp, ListChecks, ClipboardList, Share2
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -122,6 +122,17 @@ export default function SurveysView() {
       fetchData()
     } catch {
       toast.error('Failed to delete survey')
+    }
+  }
+
+  const handleShareLink = (survey: Survey) => {
+    const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://mobipay-agrobase.vercel.app'
+    const link = `${baseUrl}/survey/${survey.id}`
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(link)
+      toast.success(`Share link copied to clipboard: ${link}`)
+    } else {
+      toast.info(`Share this link: ${link}`)
     }
   }
 
@@ -264,6 +275,9 @@ export default function SurveysView() {
                       </Button>
                       <Button variant="outline" size="sm" onClick={() => { setEditingSurvey(survey); setShowCreateSurvey(false) }} className="gap-1 h-7">
                         <Pencil className="w-3.5 h-3.5" /> Edit
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => handleShareLink(survey)} className="gap-1 h-7">
+                        <Share2 className="w-3.5 h-3.5" /> Share Link
                       </Button>
                       <Button variant="ghost" size="sm" onClick={() => handleDelete(survey.id)} className="gap-1 h-7 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20">
                         <Trash2 className="w-3.5 h-3.5" /> Delete

@@ -1,14 +1,19 @@
 import { db } from '@/lib/db'
 import { getTenantContext } from '@/lib/tenant'
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
     const ctx = await getTenantContext()
 
-    // Fetch pending purchases
+    // Fetch pending purchases — match both status='PENDING' and approvalStatus='SUBMITTED'
     const pendingPurchases = await db.purchase.findMany({
-      where: { status: 'PENDING', farmer: { tenantId: ctx.tenantId } },
+      where: {
+        OR: [
+          { status: 'PENDING', farmer: { tenantId: ctx.tenantId } },
+          { approvalStatus: 'SUBMITTED', tenantId: ctx.tenantId },
+        ],
+      },
       include: { farmer: true },
       orderBy: { createdAt: 'desc' },
     })
@@ -34,9 +39,30 @@ export async function GET(request: Request) {
         applicant: p.farmer
           ? `${p.farmer.firstName} ${p.farmer.lastName}`
           : 'Unknown',
+        applicantPhone: p.farmer?.phone || undefined,
         amount: p.totalAmount,
         date: p.createdAt,
         status: p.status,
+        // Detailed purchase fields for the approval detail view
+        details: {
+          commodity: p.commodity,
+          variety: p.variety,
+          quantity: p.quantity,
+          unitPrice: p.unitPrice,
+          totalAmount: p.totalAmount,
+          netWeight: p.netWeight,
+          moistureReading: p.moistureReading,
+          defectCount: p.defectCount,
+          qualityDeduction: p.qualityDeduction,
+          dailyPrice: p.dailyPrice,
+          loanDeduction: p.loanDeduction,
+          inputDeduction: p.inputDeduction,
+          momoCharges: p.momoCharges,
+          momoTax: p.momoTax,
+          netPayment: p.netPayment,
+          approvalStatus: p.approvalStatus,
+          farmerCode: p.farmer?.farmerCode,
+        },
       })),
       ...pendingLoans.map((l) => ({
         id: l.id,
@@ -80,7 +106,7 @@ export async function GET(request: Request) {
  *   Approve or reject a pending item.
  *   Body: { id, type, action: 'APPROVE' | 'REJECT', reason? }
  */
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
     const ctx = await getTenantContext()
     const body = await request.json()
@@ -93,7 +119,21 @@ export async function POST(request: Request) {
     const newStatus = action === 'APPROVE' ? 'APPROVED' : 'REJECTED'
 
     if (type === 'PURCHASE') {
-      await db.purchase.update({ where: { id }, data: { status: newStatus } })
+      // Use the purchases PATCH endpoint which triggers ledger entries,
+      // traceability batch, and impact events on approval.
+      const approvalStatus = action === 'APPROVE' ? 'APPROVED' : 'REJECTED'
+      const purchaseRes = await fetch(`${request.nextUrl.origin}/api/purchases`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', ...Object.fromEntries(request.headers) },
+        body: JSON.stringify({ id, status: newStatus, approvalStatus }),
+      })
+      if (!purchaseRes.ok) {
+        // Fallback: direct update
+        await db.purchase.update({
+          where: { id },
+          data: { status: newStatus, approvalStatus, approvedById: ctx.userId, approvedAt: new Date() },
+        })
+      }
     } else if (type === 'LOAN') {
       await db.loanApplication.update({ where: { id }, data: { status: newStatus } })
     } else if (type === 'INPUT_REQUEST') {

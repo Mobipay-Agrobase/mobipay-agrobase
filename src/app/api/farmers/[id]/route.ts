@@ -59,7 +59,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     const scalar: Record<string, unknown> = {}
     const textFields = [
       'farmerCode', 'nationalIdType', 'education', 'maritalStatus', 'memberType',
-      'enrollmentPlace', 'icsYear', 'cooperativeId', 'extensionOfficer', 'guardianName', 'photoUrl',
+      'enrollmentPlace', 'icsYear', 'farmerRegistrationUnder', 'cooperativeId', 'extensionOfficer', 'guardianName', 'photoUrl',
       'country', 'province', 'district', 'commune', 'villageName', 'villageId', 'zipCode',
       'spouseName', 'housingOwnership', 'houseType', 'bankName', 'bankBranch',
       'loanTakenFrom', 'loanPurpose', 'loanInterestPeriod', 'landOwnershipInfo',

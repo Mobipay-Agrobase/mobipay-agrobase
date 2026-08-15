@@ -84,7 +84,7 @@ const ALL_MODULES: NavItem[] = [
   { key: 'sales', label: 'Sales', icon: Receipt, group: 'Supply Chain', permModule: 'sales' },
   { key: 'deliveries', label: 'Deliveries', icon: Truck, group: 'Supply Chain', permModule: 'deliveries' },
   { key: 'consignments', label: 'Consignments', icon: Truck, group: 'Supply Chain', permModule: 'consignments' },
-  { key: 'trace', label: 'Traceability', icon: Map, group: 'Supply Chain', permModule: 'trace' },
+  { key: 'trace', label: 'Batch Traceability', icon: Map, group: 'Supply Chain', permModule: 'trace' },
   // Plot-Level Traceability is a heavy operational tool — restrict to admins,
   // ops managers and field officers. Finance / finance-assistant / MEC should NOT see it.
   { key: 'plots', label: 'Plot-Level Trace', icon: MapPin, group: 'Supply Chain', permModule: 'trace'},

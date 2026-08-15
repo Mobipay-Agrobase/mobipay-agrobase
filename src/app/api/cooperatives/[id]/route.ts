@@ -12,7 +12,9 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   try {
     const { id } = await params
     const ctx = await getTenantContext()
-    if (!hasPermission(ctx.role, 'users:read')) {
+    const canReadUsers = hasPermission(ctx.role, 'users:read')
+    const canManageFarmers = hasPermission(ctx.role, 'farmers:create') || hasPermission(ctx.role, 'farmers:update')
+    if (!canReadUsers && !canManageFarmers) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
@@ -50,8 +52,10 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   try {
     const { id } = await params
     const ctx = await getTenantContext()
-    if (!hasPermission(ctx.role, 'users:update')) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    const canUpdateUsers = hasPermission(ctx.role, 'users:update')
+    const canManageFarmers = hasPermission(ctx.role, 'farmers:create') || hasPermission(ctx.role, 'farmers:update')
+    if (!canUpdateUsers && !canManageFarmers) {
+      return NextResponse.json({ error: 'Forbidden — insufficient permissions' }, { status: 403 })
     }
 
     const body = await req.json()
@@ -90,8 +94,10 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   try {
     const { id } = await params
     const ctx = await getTenantContext()
-    if (!hasPermission(ctx.role, 'users:delete')) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    const canDeleteUsers = hasPermission(ctx.role, 'users:delete')
+    const canManageFarmers = hasPermission(ctx.role, 'farmers:create') || hasPermission(ctx.role, 'farmers:update')
+    if (!canDeleteUsers && !canManageFarmers) {
+      return NextResponse.json({ error: 'Forbidden — insufficient permissions' }, { status: 403 })
     }
 
     const existing = await db.company.findFirst({

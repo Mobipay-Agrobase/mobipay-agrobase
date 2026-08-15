@@ -3,6 +3,7 @@ import { safeFetch, extractArray } from '@/lib/safe-fetch'
 
 import React, { useEffect, useState, useCallback } from 'react'
 import { cn } from '@/lib/utils'
+import { useAppStore } from '@/lib/store'
 import {
   GraduationCap, Calendar, MapPin, Users, Plus, Clock, CheckCircle, Eye,
   Trash2, Pencil, X, Loader2, UserCheck, AlertCircle, ListChecks, Save,
@@ -91,10 +92,9 @@ const typeColor: Record<string, string> = {
 }
 
 export default function TrainingView() {
+  const { setActiveModule, setSelectedTrainingId } = useAppStore()
   const [trainings, setTrainings] = useState<Training[]>([])
   const [loading, setLoading] = useState(true)
-  const [showCreate, setShowCreate] = useState(false)
-  const [editing, setEditing] = useState<Training | null>(null)
   const [detail, setDetail] = useState<Training | null>(null)
   const [activeTab, setActiveTab] = useState<'list' | 'flow'>('list')
 
@@ -164,7 +164,7 @@ export default function TrainingView() {
             <Button variant="outline" size="sm" onClick={() => exportToCSV(trainings, 'trainings')} disabled={trainings.length === 0} className="gap-2">
               <Download className="w-4 h-4" /> Export CSV
             </Button>
-            <Button onClick={() => { setEditing(null); setShowCreate(true) }} className="gap-2">
+            <Button onClick={() => { setSelectedTrainingId(null); setActiveModule('training-create') }} className="gap-2">
               <Plus className="w-4 h-4" /> Schedule Training
             </Button>
           </div>
@@ -193,7 +193,7 @@ export default function TrainingView() {
                         {t.trainerName && <p className="text-xs text-muted-foreground">Trainer: {t.trainerName}</p>}
                       </div>
                       <div className="flex gap-1">
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setEditing(t); setShowCreate(true) }}>
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setSelectedTrainingId(t.id); setActiveModule('training-edit') }}>
                           <Pencil className="w-3.5 h-3.5" />
                         </Button>
                         <Button variant="ghost" size="icon" className="h-7 w-7 text-red-600 hover:text-red-700" onClick={() => handleDelete(t.id)}>
@@ -228,22 +228,7 @@ export default function TrainingView() {
         </TabsContent>
       </Tabs>
 
-      {/* Create / Edit Dialog */}
-      <Dialog open={showCreate} onOpenChange={setShowCreate}>
-        <DialogContent className="max-w-2xl max-h-[92vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{editing ? 'Edit Training' : 'Schedule New Training'}</DialogTitle>
-            <CardDescription>Define who conducts it, when, where, and what materials are needed.</CardDescription>
-          </DialogHeader>
-          <TrainingForm
-            training={editing}
-            onClose={() => { setShowCreate(false); setEditing(null) }}
-            onSaved={() => { setShowCreate(false); setEditing(null); fetchTrainings() }}
-          />
-        </DialogContent>
-      </Dialog>
-
-      {/* Detail / Enrollment Dialog */}
+      {/* Detail / Enrollment Dialog — kept as dialog for now (view-only, not create/edit) */}
       <Dialog open={!!detail} onOpenChange={(open) => !open && setDetail(null)}>
         <DialogContent className="max-w-4xl max-h-[92vh] overflow-y-auto">
           <DialogHeader><DialogTitle>Training Details &amp; Enrollment</DialogTitle></DialogHeader>

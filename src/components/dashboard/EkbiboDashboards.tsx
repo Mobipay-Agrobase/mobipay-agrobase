@@ -212,8 +212,10 @@ function FarmGeoMap({ locations }: { locations: Array<{ lat: number; lng: number
   const centerLat = (minLat + maxLat) / 2
   const centerLng = (minLng + maxLng) / 2
 
-  // Build OSM embed URL — use bounding box + single center marker only
-  // (adding hundreds of marker params causes "URI Too Long" error)
+  // Build OSM embed URL — use bounding box + center marker
+  // Use layer=mapnik (default street view with labels)
+  // For satellite view, OSM doesn't provide it directly — use the standard
+  // mapnik layer which shows street names + place labels
   const bbox = `${minLng},${minLat},${maxLng},${maxLat}`
   const osmUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${centerLat},${centerLng}`
 
@@ -227,16 +229,29 @@ function FarmGeoMap({ locations }: { locations: Array<{ lat: number; lng: number
           title="Farm Locations Map"
         />
       </div>
+      {/* Show farm count + a scrollable list of farm names with coordinates */}
       <div className="flex items-center justify-between text-xs text-muted-foreground">
-        <span>{locations.length} farms with GPS coordinates</span>
+        <span>{locations.length} farms with GPS coordinates (map shows center of cluster)</span>
         <a
-          href={`https://www.openstreetmap.org/?mlat=${centerLat}&mlon=${centerLng}#map=14/${centerLat}/${centerLng}`}
+          href={`https://www.openstreetmap.org/?mlat=${centerLat}&mlon=${centerLng}#map=12/${centerLat}/${centerLng}`}
           target="_blank"
           rel="noopener noreferrer"
           className="text-primary hover:underline flex items-center gap-1"
         >
           <MapPin className="w-3 h-3" /> Open in OpenStreetMap
         </a>
+      </div>
+      {/* Compact farm list */}
+      <div className="max-h-32 overflow-y-auto rounded-lg border border-border/40 p-2 space-y-1">
+        {locations.slice(0, 20).map((l, i) => (
+          <div key={i} className="flex items-center justify-between text-[11px] py-0.5 px-1 hover:bg-muted/30 rounded">
+            <span className="font-medium truncate">{l.farmName}</span>
+            <span className="text-muted-foreground shrink-0 ml-2">{l.farmerName}</span>
+          </div>
+        ))}
+        {locations.length > 20 && (
+          <p className="text-[10px] text-muted-foreground text-center pt-1">+ {locations.length - 20} more farms</p>
+        )}
       </div>
     </div>
   )

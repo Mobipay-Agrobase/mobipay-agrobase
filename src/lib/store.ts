@@ -28,6 +28,7 @@ export type ModuleKey =
   'farmer-detail' | 'farmer-create' | 'farmer-edit' |
   'farmland-detail' | 'farmland-create' | 'farmland-edit' |
   'cultivation-detail' | 'cultivation-create' | 'cultivation-edit' |
+  'training-create' | 'training-edit' | 'training-detail' |
   'roles-permissions' |
   'super-admin-overview' | 'super-admin-tenants' | 'super-admin-revenue' | 'super-admin-impact' | 'super-admin-users' | 'super-admin-mobile' | 'super-admin-config' | 'super-admin-module-store' | 'reset-dashboard' | 'reset-beneficiaries' | 'reset-vouchers' | 'reset-merchants' | 'reset-cash' | 'reset-reports'
 
@@ -52,6 +53,7 @@ interface AppState {
   selectedFarmId: string | null
   selectedFarmLandId: string | null
   selectedCultivationId: string | null
+  selectedTrainingId: string | null
   selectedVslaGroupId: string | null
   user: AuthUser | null
   setActiveModule: (m: ModuleKey) => void
@@ -61,6 +63,7 @@ interface AppState {
   setSelectedFarmId: (id: string | null) => void
   setSelectedFarmLandId: (id: string | null) => void
   setSelectedCultivationId: (id: string | null) => void
+  setSelectedTrainingId: (id: string | null) => void
   setSelectedVslaGroupId: (id: string | null) => void
   setUser: (user: AuthUser | null) => void
 }
@@ -73,6 +76,7 @@ export const useAppStore = create<AppState>((set) => ({
   selectedFarmId: null,
   selectedFarmLandId: null,
   selectedCultivationId: null,
+  selectedTrainingId: null,
   selectedVslaGroupId: null,
   user: null,
   setActiveModule: (m) => set((state) => ({
@@ -90,6 +94,7 @@ export const useAppStore = create<AppState>((set) => ({
   setSelectedFarmId: (id) => set({ selectedFarmId: id }),
   setSelectedFarmLandId: (id) => set({ selectedFarmLandId: id }),
   setSelectedCultivationId: (id) => set({ selectedCultivationId: id }),
+  setSelectedTrainingId: (id) => set({ selectedTrainingId: id }),
   setSelectedVslaGroupId: (id) => set({ selectedVslaGroupId: id }),
   setUser: (user) => set({ user }),
 }))

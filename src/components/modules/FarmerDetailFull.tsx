@@ -13,6 +13,7 @@ import {
   ArrowLeft, Plus, Trash2, Banknote, Shield, Tractor, Users,
   Loader2, Save, MapPin, QrCode, TrendingUp, ShoppingCart,
   CreditCard, FileText, Landmark, Pencil, User, Wallet,
+  ChevronDown, Sprout,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAppStore } from '@/lib/store'
@@ -25,6 +26,7 @@ interface FarmerDetail {
   firstName: string
   lastName: string
   phone: string
+  status: string
   gender: string | null
   dateOfBirth: string | null
   education: string | null
@@ -117,14 +119,7 @@ interface Props {
 
 const TAB_CONFIG = [
   { value: 'profile', label: 'Profile', icon: User },
-  { value: 'family', label: 'Family', icon: Users },
-  { value: 'finance', label: 'Finance', icon: Banknote },
-  { value: 'bank', label: 'Bank Accounts', icon: Landmark },
-  { value: 'insurance', label: 'Insurance', icon: Shield },
-  { value: 'livestock', label: 'Livestock', icon: Users },
-  { value: 'equipment', label: 'Equipment', icon: Tractor },
   { value: 'farm-lands', label: 'Farm Lands', icon: MapPin },
-  { value: 'qrcode', label: 'QR Code', icon: QrCode },
   { value: 'credit', label: 'Credit Score', icon: TrendingUp },
   { value: 'sales', label: 'Sales', icon: ShoppingCart },
   { value: 'purchases', label: 'Purchases', icon: FileText },
@@ -179,396 +174,70 @@ export function FarmerDetailFull({ farmerId, onBack }: Props) {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header */}
-      <div className="border-b bg-card px-6 py-4 shrink-0">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" onClick={onBack} className="h-9 w-9">
+      {/* Hero Card with farmer info + QR code */}
+      <div className="shrink-0 p-4 lg:p-6 pb-0">
+        <div className="rounded-2xl overflow-hidden shadow-lg bg-gradient-to-br from-emerald-600 to-emerald-800">
+          <div className="p-5 flex items-center gap-4">
+            <Button variant="ghost" size="icon" onClick={onBack} className="text-white hover:bg-white/10 h-9 w-9 shrink-0">
               <ArrowLeft className="w-5 h-5" />
             </Button>
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-sm font-bold text-primary">
-                {farmer.firstName?.[0]}{farmer.lastName?.[0]}
+            <div className="w-14 h-14 rounded-full bg-white/20 flex items-center justify-center text-xl font-bold text-white shrink-0">
+              {farmer.firstName?.[0]}{farmer.lastName?.[0]}
+            </div>
+            <div className="flex-1 min-w-0">
+              <h1 className="text-xl font-bold text-white truncate">{farmer.firstName} {farmer.lastName}</h1>
+              <div className="flex flex-wrap items-center gap-2 mt-1">
+                {farmer.farmerCode && <span className="text-xs px-2 py-0.5 rounded-full bg-white/15 text-white">{farmer.farmerCode}</span>}
+                {farmer.isCertified && <span className="text-xs px-2 py-0.5 rounded-full bg-yellow-400/20 text-yellow-200">Certified: {farmer.certificationType || 'Yes'}</span>}
+                <span className={`text-xs px-2 py-0.5 rounded-full ${farmer.status === 'ACTIVE' ? 'bg-green-400/20 text-green-200' : 'bg-gray-400/20 text-gray-200'}`}>{farmer.status || 'ACTIVE'}</span>
               </div>
-              <div>
-                <h1 className="text-lg font-bold tracking-tight">
-                  {farmer.firstName} {farmer.lastName}
-                </h1>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  {farmer.farmerCode && <Badge variant="outline" className="text-[10px] font-mono">{farmer.farmerCode}</Badge>}
-                  {farmer.phone && <span>{farmer.phone}</span>}
-                  {farmer.district && <span className="hidden sm:inline">· {farmer.district}</span>}
-                  {farmer.villageName && <span className="hidden md:inline">· {farmer.villageName}</span>}
-                </div>
+              <div className="flex flex-wrap items-center gap-3 mt-1 text-xs text-white/70">
+                {farmer.district && <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {farmer.district}</span>}
+                {farmer.farmSize != null && <span className="flex items-center gap-1"><Sprout className="w-3 h-3" /> {farmer.farmSize} ha</span>}
+              </div>
+            </div>
+            <Button variant="ghost" size="sm" onClick={handleEdit} className="text-white hover:bg-white/10 gap-1.5 shrink-0">
+              <Pencil className="w-4 h-4" /> Edit
+            </Button>
+            <div className="shrink-0 bg-white p-2 rounded-lg">
+              <div className="w-16 h-16 flex items-center justify-center">
+                <QrCode className="w-12 h-12 text-gray-800" />
               </div>
             </div>
           </div>
-          <Button variant="outline" size="sm" onClick={handleEdit} className="gap-1.5">
-            <Pencil className="w-3.5 h-3.5" /> Edit
-          </Button>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 overflow-hidden flex flex-col p-4 lg:p-6 pt-4">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
-          <div className="border-b bg-card/50 px-6 shrink-0">
-            <TabsList className="h-auto gap-0 bg-transparent p-0 -mb-px">
-              {TAB_CONFIG.map(tab => {
-                const Icon = tab.icon
-                let count: number | undefined
-                if (tab.value === 'bank') count = bankCount
-                if (tab.value === 'insurance') count = insuranceCount
-                if (tab.value === 'livestock') count = animalCount
-                if (tab.value === 'equipment') count = equipmentCount
+          <TabsList className="flex-wrap h-auto gap-1 p-1 rounded-xl bg-muted/50 border border-border/40">
+            {TAB_CONFIG.map(tab => {
+              const Icon = tab.icon
+              return (
+                <TabsTrigger key={tab.value} value={tab.value} className="text-xs gap-1.5 rounded-lg">
+                  <Icon className="w-3.5 h-3.5" /> {tab.label}
+                </TabsTrigger>
+              )
+            })}
+          </TabsList>
 
-                return (
-                  <TabsTrigger
-                    key={tab.value}
-                    value={tab.value}
-                    className="relative rounded-none border-b-2 border-transparent bg-transparent px-4 py-3 text-sm font-medium text-muted-foreground transition-none data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-none gap-1.5"
-                  >
-                    <Icon className="w-3.5 h-3.5" />
-                    <span className="hidden sm:inline">{tab.label}</span>
-                    {count !== undefined && count > 0 && (
-                      <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-[10px]">{count}</Badge>
-                    )}
-                  </TabsTrigger>
-                )
-              })}
-            </TabsList>
-          </div>
-
-          <div className="flex-1 overflow-auto p-6">
-            {/* Profile Tab */}
-            <TabsContent value="profile" className="mt-0 space-y-4">
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm flex items-center gap-2">
-                    <User className="w-4 h-4 text-primary" /> Personal Information
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <InfoField label="Full Name" value={`${farmer.firstName} ${farmer.lastName}`} />
-                    <InfoField label="Phone" value={farmer.phone} />
-                    <InfoField label="Gender" value={farmer.gender} />
-                    <InfoField label="Date of Birth" value={farmer.dateOfBirth ? new Date(farmer.dateOfBirth).toLocaleDateString() : ''} />
-                    <InfoField label="Education" value={farmer.education} />
-                    <InfoField label="Marital Status" value={farmer.maritalStatus} />
-                    <InfoField label="Email" value={farmer.email} />
-                    <InfoField label="National ID" value={farmer.nationalIdNo ? `${farmer.nationalIdType || ''} - ${farmer.nationalIdNo}` : ''} />
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm flex items-center gap-2">
-                    <MapPin className="w-4 h-4 text-primary" /> Location & Farm
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <InfoField label="Country" value={farmer.country} />
-                    <InfoField label="Province" value={farmer.province} />
-                    <InfoField label="District" value={farmer.district} />
-                    <InfoField label="Sub-county" value={farmer.commune} />
-                    <InfoField label="Village" value={farmer.villageName} />
-                    <InfoField label="GPS Coordinates" value={farmer.gpsLatitude && farmer.gpsLongitude ? `${farmer.gpsLatitude.toFixed(6)}, ${farmer.gpsLongitude.toFixed(6)}` : ''} />
-                    <InfoField label="Farm Size (ha)" value={farmer.farmSize ? String(farmer.farmSize) : ''} />
-                    <InfoField label="Land Ownership" value={farmer.farmOwnership} />
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm flex items-center gap-2">
-                    <FileText className="w-4 h-4 text-primary" /> Enrollment Details
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <InfoField label="Enrollment Date" value={farmer.enrollmentDate ? new Date(farmer.enrollmentDate).toLocaleDateString() : ''} />
-                    <InfoField label="Enrollment Place" value={farmer.enrollmentPlace} />
-                    <InfoField label="Registration Under" value={farmer.farmerRegistrationUnder} />
-                    <InfoField label="Cooperative" value={farmer.cooperative} />
-                    <InfoField label="Field Officer" value={farmer.fieldOfficer} />
-                    <InfoField label="Extension Officer" value={farmer.extensionOfficer} />
-                    <InfoField label="Certified Farmer" value={farmer.isCertified ? 'Yes' : 'No'} />
-                    {farmer.isCertified && <InfoField label="Certification Type" value={farmer.certificationType} />}
-                  </div>
-                </CardContent>
-              </Card>
+          <div className="flex-1 overflow-auto mt-4 space-y-4 form-tab-content" key={activeTab}>
+            <TabsContent value="profile" className="mt-0 space-y-3">
+              <ProfileAccordion farmer={farmer} onRefresh={load} />
             </TabsContent>
-
-            {/* Family Tab */}
-            <TabsContent value="family" className="mt-0 space-y-4">
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm flex items-center gap-2">
-                    <Users className="w-4 h-4 text-primary" /> Family Information
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <InfoField label="Spouse Name" value={farmer.spouseName} />
-                    <InfoField label="Family Members" value={farmer.familyMembers ? String(farmer.familyMembers) : ''} />
-                    <InfoField label="Children under 18" value={farmer.childrenUnder18 ? String(farmer.childrenUnder18) : ''} />
-                    <InfoField label="School Going Children" value={farmer.schoolGoingChildren ? String(farmer.schoolGoingChildren) : ''} />
-                    <InfoField label="Housing Ownership" value={farmer.housingOwnership} />
-                    <InfoField label="House Type" value={farmer.houseType} />
-                    <InfoField label="Meals per Day" value={farmer.mealsPerDay} />
-                    <InfoField label="Fuel Type" value={farmer.fuelType} />
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* Finance Tab */}
-            <TabsContent value="finance" className="mt-0 space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm flex items-center gap-2">
-                      <Banknote className="w-4 h-4 text-primary" /> Income
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      <div className="flex justify-between items-center p-3 rounded-lg bg-muted/50">
-                        <span className="text-sm text-muted-foreground">Monthly Income</span>
-                        <span className="text-sm font-semibold">{farmer.monthlyHouseholdIncome ? `UGX ${farmer.monthlyHouseholdIncome.toLocaleString()}` : '—'}</span>
-                      </div>
-                      <div className="flex justify-between items-center p-3 rounded-lg bg-muted/50">
-                        <span className="text-sm text-muted-foreground">Annual Income</span>
-                        <span className="text-sm font-semibold">{farmer.annualHouseholdIncome ? `UGX ${farmer.annualHouseholdIncome.toLocaleString()}` : '—'}</span>
-                      </div>
-                      <div className="flex justify-between items-center p-3 rounded-lg bg-muted/50">
-                        <span className="text-sm text-muted-foreground">Primary Income Source</span>
-                        <span className="text-sm font-semibold">{farmer.primaryIncomeSource || '—'}</span>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm flex items-center gap-2">
-                      <CreditCard className="w-4 h-4 text-primary" /> Loan Information
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      <div className="flex justify-between items-center p-3 rounded-lg bg-muted/50">
-                        <span className="text-sm text-muted-foreground">Loan Taken Last Year</span>
-                        <Badge variant={farmer.loanTakenLastYear ? 'default' : 'secondary'} className="text-[10px]">
-                          {farmer.loanTakenLastYear ? 'Yes' : 'No'}
-                        </Badge>
-                      </div>
-                      {farmer.loanTakenLastYear && (
-                        <>
-                          <div className="flex justify-between items-center p-3 rounded-lg bg-muted/50">
-                            <span className="text-sm text-muted-foreground">Loan Amount</span>
-                            <span className="text-sm font-semibold">{farmer.loanAmount ? `UGX ${farmer.loanAmount.toLocaleString()}` : '—'}</span>
-                          </div>
-                          <div className="flex justify-between items-center p-3 rounded-lg bg-muted/50">
-                            <span className="text-sm text-muted-foreground">Loan From</span>
-                            <span className="text-sm font-semibold">{farmer.loanTakenFrom || '—'}</span>
-                          </div>
-                          <div className="flex justify-between items-center p-3 rounded-lg bg-muted/50">
-                            <span className="text-sm text-muted-foreground">Interest Rate</span>
-                            <span className="text-sm font-semibold">{farmer.loanInterestPct ? `${farmer.loanInterestPct}%` : '—'}</span>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Active VSLA Loans + outstanding balance — EKIBBO requirement */}
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm flex items-center gap-2">
-                      <Wallet className="w-4 h-4 text-primary" /> Active Loan Balance
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {(() => {
-                      const loans = (farmer as any).vslaLoans || []
-                      const active = loans.filter((l: any) => ['DISBURSED', 'OUTSTANDING', 'OVERDUE'].includes(l.status))
-                      if (active.length === 0) {
-                        return <p className="text-xs text-muted-foreground italic">No active loans.</p>
-                      }
-                      return (
-                        <div className="space-y-2">
-                          {active.map((l: any) => {
-                            const totalRepayable = Number(l.totalRepayable ?? l.amount) || 0
-                            const repaid = Number(l.amountRepaid) || 0
-                            const outstanding = Math.max(0, totalRepayable - repaid)
-                            return (
-                              <div key={l.id} className="p-3 rounded-lg bg-muted/50">
-                                <div className="flex justify-between mb-1">
-                                  <span className="text-xs text-muted-foreground">
-                                    {l.vslaGroup?.name || 'VSLA Loan'} · {l.status}
-                                  </span>
-                                  <Badge variant={outstanding > 0 ? 'default' : 'secondary'} className="text-[10px]">
-                                    {outstanding > 0 ? 'Outstanding' : 'Repaid'}
-                                  </Badge>
-                                </div>
-                                <div className="grid grid-cols-3 gap-2 text-xs">
-                                  <div>
-                                    <p className="text-muted-foreground">Principal</p>
-                                    <p className="font-medium">UGX {(Number(l.amount) || 0).toLocaleString()}</p>
-                                  </div>
-                                  <div>
-                                    <p className="text-muted-foreground">Repaid</p>
-                                    <p className="font-medium text-emerald-600">UGX {(Number(l.amountRepaid) || 0).toLocaleString()}</p>
-                                  </div>
-                                  <div>
-                                    <p className="text-muted-foreground">Balance</p>
-                                    <p className="font-bold text-red-600">UGX {outstanding.toLocaleString()}</p>
-                                  </div>
-                                </div>
-                              </div>
-                            )
-                          })}
-                        </div>
-                      )
-                    })()}
-                  </CardContent>
-                </Card>
-              </div>
-            </TabsContent>
-
-            {/* Bank Accounts Tab */}
-            <TabsContent value="bank" className="mt-0">
-              <MultiEntrySection
-                title="Bank Accounts"
-                icon={Landmark}
-                farmerId={farmer.id}
-                endpoint="bank-accounts"
-                dataKey="accounts"
-                items={farmer.farmerBankAccounts || []}
-                fields={[
-                  { name: 'accountType', label: 'Account Type', type: 'select', options: ['Savings', 'Current', 'Fixed Deposit'] },
-                  { name: 'accountNo', label: 'Account Number', type: 'text', required: true },
-                  { name: 'bankName', label: 'Bank Name', type: 'text', required: true },
-                  { name: 'branchDetails', label: 'Branch', type: 'text' },
-                  { name: 'sortCode', label: 'Sort Code', type: 'text' },
-                  { name: 'isPrimary', label: 'Primary Account', type: 'checkbox' },
-                ]}
-                onRefresh={load}
-              />
-            </TabsContent>
-
-            {/* Insurance Tab */}
-            <TabsContent value="insurance" className="mt-0">
-              <MultiEntrySection
-                title="Insurance Records"
-                icon={Shield}
-                farmerId={farmer.id}
-                endpoint="insurances"
-                dataKey="insurances"
-                items={farmer.farmerInsurances || []}
-                fields={[
-                  { name: 'insuranceType', label: 'Insurance Type', type: 'select', options: ['Life', 'Health', 'Crop', 'Social', 'Other'], required: true },
-                  { name: 'provider', label: 'Provider', type: 'text' },
-                  { name: 'amount', label: 'Amount', type: 'number' },
-                  { name: 'enrolledDate', label: 'Enrolled Date', type: 'date' },
-                  { name: 'endDate', label: 'End Date', type: 'date' },
-                ]}
-                onRefresh={load}
-              />
-            </TabsContent>
-
-            {/* Livestock Tab */}
-            <TabsContent value="livestock" className="mt-0">
-              <MultiEntrySection
-                title="Animal Husbandry"
-                icon={Users}
-                farmerId={farmer.id}
-                endpoint="animals"
-                dataKey="animals"
-                items={farmer.farmerAnimals || []}
-                fields={[
-                  { name: 'animalType', label: 'Animal Type', type: 'select', options: ['Cattle', 'Goat', 'Sheep', 'Poultry', 'Pigs', 'Rabbits', 'Fish', 'Bees'], required: true },
-                  { name: 'count', label: 'Count', type: 'number', required: true },
-                  { name: 'breedName', label: 'Breed', type: 'text' },
-                  { name: 'fodder', label: 'Fodder', type: 'text' },
-                  { name: 'animalHousing', label: 'Housing', type: 'text' },
-                  { name: 'revenue', label: 'Revenue (UGX)', type: 'number' },
-                  { name: 'animalForGrowth', label: 'Purpose', type: 'select', options: ['Meat', 'Milk', 'Eggs', 'Draught', 'Breeding', 'Other'] },
-                ]}
-                onRefresh={load}
-              />
-            </TabsContent>
-
-            {/* Equipment Tab */}
-            <TabsContent value="equipment" className="mt-0">
-              <MultiEntrySection
-                title="Farm Equipment"
-                icon={Tractor}
-                farmerId={farmer.id}
-                endpoint="equipment"
-                dataKey="equipment"
-                items={farmer.farmerEquipment || []}
-                fields={[
-                  { name: 'equipmentName', label: 'Equipment Name', type: 'text', required: true },
-                  { name: 'count', label: 'Count', type: 'number', required: true },
-                  { name: 'yearOfManufacture', label: 'Year of Manufacture', type: 'number' },
-                  { name: 'yearOfPurchase', label: 'Year of Purchase', type: 'number' },
-                ]}
-                onRefresh={load}
-              />
-            </TabsContent>
-
-            {/* Farm Lands Tab */}
             <TabsContent value="farm-lands" className="mt-0">
               <FarmLandsTab farmerId={farmer.id} onRefresh={load} />
             </TabsContent>
-
-            {/* QR Code Tab */}
-            <TabsContent value="qrcode" className="mt-0">
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm flex items-center gap-2">
-                    <QrCode className="w-4 h-4 text-primary" /> Farmer QR Code
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="flex flex-col items-center py-8">
-                  <div className="w-48 h-48 bg-muted/50 rounded-xl flex items-center justify-center border-2 border-dashed">
-                    <div className="text-center">
-                      <QrCode className="w-16 h-16 mx-auto text-muted-foreground/40" />
-                      <p className="text-xs text-muted-foreground mt-2">QR Code</p>
-                      <p className="text-[10px] text-muted-foreground font-mono">{farmer.farmerCode || farmer.id.slice(0, 8)}</p>
-                    </div>
-                  </div>
-                  <p className="text-sm text-muted-foreground mt-4">Scan to view farmer profile</p>
-                  <Button variant="outline" size="sm" className="mt-3 gap-1.5">
-                    <QrCode className="w-3.5 h-3.5" /> Download QR
-                  </Button>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* Credit Score Tab */}
             <TabsContent value="credit" className="mt-0">
               <CreditScoreTab farmerId={farmer.id} />
             </TabsContent>
-
-            {/* Sales Tab */}
             <TabsContent value="sales" className="mt-0">
               <SalesTab farmerId={farmer.id} />
             </TabsContent>
-
-            {/* Purchases Tab */}
             <TabsContent value="purchases" className="mt-0">
               <PurchasesTab farmerId={farmer.id} />
             </TabsContent>
-
-            {/* Ledger Tab */}
             <TabsContent value="ledger" className="mt-0">
               <LedgerTab farmerId={farmer.id} />
             </TabsContent>
@@ -578,6 +247,151 @@ export function FarmerDetailFull({ farmerId, onBack }: Props) {
     </div>
   )
 }
+
+/* --- ProfileAccordion --- */
+function ProfileAccordion({ farmer, onRefresh }: { farmer: FarmerDetail; onRefresh: () => void }) {
+  const [open, setOpen] = useState<string | null>('personal')
+  const toggle = (id: string) => setOpen(open === id ? null : id)
+  const sections = [
+    { id: 'personal', label: 'Personal & Enrollment', icon: User },
+    { id: 'family', label: 'Family Information', icon: Users },
+    { id: 'finance', label: 'Finance & Loans', icon: Banknote },
+    { id: 'bank', label: 'Bank Accounts', icon: Landmark, count: farmer.farmerBankAccounts?.length || 0 },
+    { id: 'insurance', label: 'Insurance', icon: Shield, count: farmer.farmerInsurances?.length || 0 },
+    { id: 'livestock', label: 'Livestock', icon: Users, count: farmer.farmerAnimals?.length || 0 },
+    { id: 'equipment', label: 'Equipment', icon: Tractor, count: farmer.farmerEquipment?.length || 0 },
+  ]
+  return (
+    <div className="space-y-2">
+      {sections.map(sec => {
+        const Icon = sec.icon
+        const isOpen = open === sec.id
+        return (
+          <div key={sec.id} className="rounded-xl border border-border/60 overflow-hidden">
+            <button onClick={() => toggle(sec.id)} className="w-full flex items-center justify-between px-4 py-3 hover:bg-muted/30 transition-colors">
+              <div className="flex items-center gap-2">
+                <Icon className="w-4 h-4 text-primary" />
+                <span className="text-sm font-medium">{sec.label}</span>
+                {sec.count != null && sec.count > 0 && <Badge variant="secondary" className="text-[10px]">{sec.count}</Badge>}
+              </div>
+              <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+            </button>
+            {isOpen && (
+              <div className="p-4 border-t border-border/40 animate-form-fade-in">
+                {sec.id === 'personal' && <PersonalSection farmer={farmer} />}
+                {sec.id === 'family' && <FamilySection farmer={farmer} />}
+                {sec.id === 'finance' && <FinanceSection farmer={farmer} />}
+                {sec.id === 'bank' && <MultiEntrySection title="Bank Accounts" icon={Landmark} farmerId={farmer.id} endpoint="bank-accounts" dataKey="accounts" items={farmer.farmerBankAccounts || []} fields={[{ name: 'accountType', label: 'Account Type', type: 'select', options: ['Savings', 'Current', 'Fixed Deposit'] }, { name: 'accountNo', label: 'Account Number', type: 'text', required: true }, { name: 'bankName', label: 'Bank Name', type: 'text', required: true }, { name: 'branchDetails', label: 'Branch', type: 'text' }, { name: 'sortCode', label: 'Sort Code', type: 'text' }, { name: 'isPrimary', label: 'Primary Account', type: 'checkbox' }]} onRefresh={onRefresh} />}
+                {sec.id === 'insurance' && <MultiEntrySection title="Insurance Records" icon={Shield} farmerId={farmer.id} endpoint="insurances" dataKey="insurances" items={farmer.farmerInsurances || []} fields={[{ name: 'insuranceType', label: 'Insurance Type', type: 'select', options: ['Life', 'Health', 'Crop', 'Social', 'Other'], required: true }, { name: 'provider', label: 'Provider', type: 'text' }, { name: 'amount', label: 'Amount', type: 'number' }, { name: 'enrolledDate', label: 'Enrolled Date', type: 'date' }, { name: 'endDate', label: 'End Date', type: 'date' }]} onRefresh={onRefresh} />}
+                {sec.id === 'livestock' && <MultiEntrySection title="Animal Husbandry" icon={Users} farmerId={farmer.id} endpoint="animals" dataKey="animals" items={farmer.farmerAnimals || []} fields={[{ name: 'animalType', label: 'Animal Type', type: 'select', options: ['Cattle', 'Goat', 'Sheep', 'Poultry', 'Pigs', 'Rabbits', 'Fish', 'Bees'], required: true }, { name: 'count', label: 'Count', type: 'number', required: true }, { name: 'breedName', label: 'Breed', type: 'text' }, { name: 'fodder', label: 'Fodder', type: 'text' }, { name: 'animalHousing', label: 'Housing', type: 'text' }, { name: 'revenue', label: 'Revenue (UGX)', type: 'number' }, { name: 'animalForGrowth', label: 'Purpose', type: 'select', options: ['Meat', 'Milk', 'Eggs', 'Draught', 'Breeding', 'Other'] }]} onRefresh={onRefresh} />}
+                {sec.id === 'equipment' && <MultiEntrySection title="Farm Equipment" icon={Tractor} farmerId={farmer.id} endpoint="equipment" dataKey="equipment" items={farmer.farmerEquipment || []} fields={[{ name: 'equipmentName', label: 'Equipment Name', type: 'text', required: true }, { name: 'count', label: 'Count', type: 'number', required: true }, { name: 'yearOfManufacture', label: 'Year of Manufacture', type: 'number' }, { name: 'yearOfPurchase', label: 'Year of Purchase', type: 'number' }]} onRefresh={onRefresh} />}
+              </div>
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+function PersonalSection({ farmer }: { farmer: FarmerDetail }) {
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <InfoField label="Full Name" value={`${farmer.firstName} ${farmer.lastName}`} />
+        <InfoField label="Phone" value={farmer.phone} />
+        <InfoField label="Gender" value={farmer.gender} />
+        <InfoField label="Date of Birth" value={farmer.dateOfBirth ? new Date(farmer.dateOfBirth).toLocaleDateString() : ''} />
+        <InfoField label="Education" value={farmer.education} />
+        <InfoField label="Marital Status" value={farmer.maritalStatus} />
+        <InfoField label="Email" value={farmer.email} />
+        <InfoField label="National ID" value={farmer.nationalIdNo ? `${farmer.nationalIdType || ''} - ${farmer.nationalIdNo}` : ''} />
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <InfoField label="Country" value={farmer.country} />
+        <InfoField label="Province" value={farmer.province} />
+        <InfoField label="District" value={farmer.district} />
+        <InfoField label="Sub-county" value={farmer.commune} />
+        <InfoField label="Village" value={farmer.villageName} />
+        <InfoField label="GPS" value={farmer.gpsLatitude && farmer.gpsLongitude ? `${farmer.gpsLatitude.toFixed(6)}, ${farmer.gpsLongitude.toFixed(6)}` : ''} />
+        <InfoField label="Farm Size (ha)" value={farmer.farmSize ? String(farmer.farmSize) : ''} />
+        <InfoField label="Land Ownership" value={farmer.farmOwnership} />
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <InfoField label="Enrollment Date" value={farmer.enrollmentDate ? new Date(farmer.enrollmentDate).toLocaleDateString() : ''} />
+        <InfoField label="Enrollment Place" value={farmer.enrollmentPlace} />
+        <InfoField label="Registration Under" value={farmer.farmerRegistrationUnder} />
+        <InfoField label="Cooperative" value={farmer.cooperative} />
+        <InfoField label="Field Officer" value={farmer.fieldOfficer} />
+        <InfoField label="Extension Officer" value={farmer.extensionOfficer} />
+        <InfoField label="Certified" value={farmer.isCertified ? 'Yes' : 'No'} />
+        {farmer.isCertified && <InfoField label="Certification Type" value={farmer.certificationType} />}
+      </div>
+    </div>
+  )
+}
+
+function FamilySection({ farmer }: { farmer: FarmerDetail }) {
+  return (
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <InfoField label="Spouse Name" value={farmer.spouseName} />
+      <InfoField label="Family Members" value={farmer.familyMembers ? String(farmer.familyMembers) : ''} />
+      <InfoField label="Children under 18" value={farmer.childrenUnder18 ? String(farmer.childrenUnder18) : ''} />
+      <InfoField label="School Going" value={farmer.schoolGoingChildren ? String(farmer.schoolGoingChildren) : ''} />
+      <InfoField label="Housing Ownership" value={farmer.housingOwnership} />
+      <InfoField label="House Type" value={farmer.houseType} />
+      <InfoField label="Meals per Day" value={farmer.mealsPerDay} />
+      <InfoField label="Fuel Type" value={farmer.fuelType} />
+    </div>
+  )
+}
+
+function FinanceSection({ farmer }: { farmer: FarmerDetail }) {
+  const loans = (farmer as any).vslaLoans || []
+  const activeLoans = loans.filter((l: any) => ['DISBURSED', 'OUTSTANDING', 'OVERDUE'].includes(l.status))
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <p className="text-xs font-semibold text-muted-foreground uppercase">Income</p>
+          <div className="flex justify-between p-2 rounded-lg bg-muted/30"><span className="text-sm text-muted-foreground">Monthly</span><span className="text-sm font-medium">{farmer.monthlyHouseholdIncome ? `UGX ${farmer.monthlyHouseholdIncome.toLocaleString()}` : '—'}</span></div>
+          <div className="flex justify-between p-2 rounded-lg bg-muted/30"><span className="text-sm text-muted-foreground">Annual</span><span className="text-sm font-medium">{farmer.annualHouseholdIncome ? `UGX ${farmer.annualHouseholdIncome.toLocaleString()}` : '—'}</span></div>
+          <div className="flex justify-between p-2 rounded-lg bg-muted/30"><span className="text-sm text-muted-foreground">Source</span><span className="text-sm font-medium">{farmer.primaryIncomeSource || '—'}</span></div>
+        </div>
+        <div className="space-y-2">
+          <p className="text-xs font-semibold text-muted-foreground uppercase">Loan History</p>
+          <div className="flex justify-between p-2 rounded-lg bg-muted/30"><span className="text-sm text-muted-foreground">Loan Taken</span><Badge variant={farmer.loanTakenLastYear ? 'default' : 'secondary'} className="text-[10px]">{farmer.loanTakenLastYear ? 'Yes' : 'No'}</Badge></div>
+          {farmer.loanTakenLastYear && <>
+            <div className="flex justify-between p-2 rounded-lg bg-muted/30"><span className="text-sm text-muted-foreground">Amount</span><span className="text-sm font-medium">{farmer.loanAmount ? `UGX ${farmer.loanAmount.toLocaleString()}` : '—'}</span></div>
+            <div className="flex justify-between p-2 rounded-lg bg-muted/30"><span className="text-sm text-muted-foreground">From</span><span className="text-sm font-medium">{farmer.loanTakenFrom || '—'}</span></div>
+          </>}
+        </div>
+      </div>
+      {activeLoans.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-xs font-semibold text-muted-foreground uppercase">Active VSLA Loans</p>
+          {activeLoans.map((l: any) => {
+            const outstanding = Math.max(0, (l.totalRepayable ?? l.amount) - (l.amountRepaid || 0))
+            return (
+              <div key={l.id} className="p-3 rounded-lg bg-muted/30">
+                <div className="flex justify-between mb-1">
+                  <span className="text-xs text-muted-foreground">{l.vslaGroup?.name || 'VSLA Loan'} · {l.status}</span>
+                  <Badge variant={outstanding > 0 ? 'default' : 'secondary'} className="text-[10px]">{outstanding > 0 ? 'Outstanding' : 'Repaid'}</Badge>
+                </div>
+                <div className="grid grid-cols-3 gap-2 text-xs">
+                  <div><p className="text-muted-foreground">Principal</p><p className="font-medium">UGX {(l.amount || 0).toLocaleString()}</p></div>
+                  <div><p className="text-muted-foreground">Repaid</p><p className="font-medium text-emerald-600">UGX {(l.amountRepaid || 0).toLocaleString()}</p></div>
+                  <div><p className="text-muted-foreground">Balance</p><p className="font-bold text-red-600">UGX {outstanding.toLocaleString()}</p></div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
 
 /* ─── Sub-tabs ────────────────────────────────────────────────────── */
 

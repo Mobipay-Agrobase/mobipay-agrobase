@@ -112,8 +112,6 @@ const ALL_MODULES: NavItem[] = [
   // Billing — only visible to roles with billing:read permission OR admins.
   // Field roles (extension, finance assistant, MEC, agent, farmer, vsla) must NOT see billing.
   { key: 'billing', label: 'Billing & Usage', icon: DollarSign, group: 'Admin', permModule: 'billing'},
-  // Settings — admin-only. Field/finance/MEC staff should not configure tenants.
-  { key: 'settings', label: 'Settings', icon: Settings, group: 'Admin'},
   // Profile — everyone gets this.
   { key: 'profile', label: 'Profile', icon: Stethoscope, group: 'Admin', alwaysVisible: true },
   // Roles & Permissions — admin-only reference page.

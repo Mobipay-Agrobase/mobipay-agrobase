@@ -239,16 +239,6 @@ export function MasterDataView({ kind }: { kind: string }) {
         <p className="text-sm text-muted-foreground">{selected.description}</p>
       </div>
 
-      {/* Kind tabs */}
-      <div className="flex flex-wrap gap-2">
-        {MASTER_KINDS.map(k => (
-          <Button key={k.key} variant={k.key === selected.key ? 'default' : 'outline'} size="sm"
-            onClick={() => { setActiveKind(k.key); setEditing(null); setShowForm(false); setSearch(''); setPage(1) }}>
-            {k.label}
-          </Button>
-        ))}
-      </div>
-
       <div className="flex flex-col sm:flex-row gap-2 items-end">
         <div className="relative flex-1">
           <Input placeholder="Search..." value={search} onChange={e => setSearch(e.target.value)} className="pl-8 h-9" />

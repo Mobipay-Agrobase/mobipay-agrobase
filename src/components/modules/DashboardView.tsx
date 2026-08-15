@@ -7,7 +7,9 @@ import {
   Users, PiggyBank, DollarSign, Store, ArrowUpRight, ArrowDownRight,
   Activity, Loader2, TrendingUp, UserCheck, GraduationCap, AlertCircle,
   Calendar, MapPin, Sprout, ShoppingCart, Receipt, Award, Leaf, Target,
-  Building2, CreditCard, FileText, TrendingDown, CheckCircle, Clock
+  Building2, CreditCard, FileText, TrendingDown, CheckCircle, Clock,
+  Wallet, RefreshCw, Landmark, PieChart as PieChartIcon, BarChart3, Inbox,
+  ChevronDown
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -153,6 +155,204 @@ function StatCard({ label, value, icon: Icon, color, trend }: {
   )
 }
 
+// ─── Shared Dashboard Layout Components ───────────────────────────
+
+/**
+ * DashboardSection — a consistent wrapper that groups related KPIs,
+ * charts, and tables under a single labelled header. Eliminates the
+ * "mixed charts" problem by giving every domain its own labelled home.
+ *
+ * Props:
+ *  - onViewAll:   when set, renders a "View all →" button on the right
+ *                  side of the header that deep-links to the relevant
+ *                  module page (e.g. farmers, vsla, reports). Uses a
+ *                  callback rather than a URL because this app navigates
+ *                  via the Zustand `setActiveModule` store action, not
+ *                  via URL routing.
+ *  - viewAllLabel: override the default "View all" label.
+ *  - collapsible:  when true, renders a chevron toggle that collapses
+ *                  the section body. Useful for power users who want
+ *                  to focus on one domain at a time. Default state is
+ *                  open; persistence is handled by the caller via
+ *                  `defaultCollapsed`.
+ *  - defaultCollapsed: starting collapsed state (only used when
+ *                  `collapsible` is true).
+ */
+function DashboardSection({
+  icon: Icon,
+  title,
+  description,
+  accent = 'bg-primary/10 text-primary',
+  right,
+  onViewAll,
+  viewAllLabel = 'View all',
+  collapsible = false,
+  defaultCollapsed = false,
+  children,
+}: {
+  icon: any
+  title: string
+  description?: string
+  accent?: string
+  right?: React.ReactNode
+  onViewAll?: () => void
+  viewAllLabel?: string
+  collapsible?: boolean
+  defaultCollapsed?: boolean
+  children: React.ReactNode
+}) {
+  const [collapsed, setCollapsed] = useState(defaultCollapsed)
+
+  // Compose the right-side cluster: caller-provided `right` node + View all button + collapse toggle.
+  // stopPropagation prevents the cluster's interactive elements (buttons) from
+  // bubbling up to the section header's collapse-on-click handler.
+  const rightCluster = (
+    <div
+      className="flex items-center gap-3 flex-wrap"
+      onClick={collapsible ? (e) => e.stopPropagation() : undefined}
+    >
+      {right}
+      {onViewAll && (
+        <button
+          type="button"
+          onClick={onViewAll}
+          className="inline-flex items-center gap-0.5 text-[11px] font-medium text-primary hover:underline"
+        >
+          {viewAllLabel}
+          <ArrowUpRight className="w-3 h-3" />
+        </button>
+      )}
+      {collapsible && (
+        <button
+          type="button"
+          onClick={() => setCollapsed(c => !c)}
+          aria-label={collapsed ? `Expand ${title}` : `Collapse ${title}`}
+          aria-expanded={!collapsed}
+          className="inline-flex items-center justify-center w-6 h-6 rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+        >
+          <ChevronDown className={cn('w-4 h-4 transition-transform', collapsed && '-rotate-90')} />
+        </button>
+      )}
+    </div>
+  )
+
+  return (
+    <section className="space-y-3">
+      <div
+        className={cn(
+          'flex items-center justify-between gap-3 flex-wrap',
+          collapsible && 'cursor-pointer select-none',
+        )}
+        onClick={collapsible ? () => setCollapsed(c => !c) : undefined}
+      >
+        <div className="flex items-center gap-3">
+          <div className={cn('w-9 h-9 rounded-lg flex items-center justify-center shrink-0', accent)}>
+            <Icon className="w-4 h-4" />
+          </div>
+          <div>
+            <h3 className="text-sm font-semibold tracking-tight leading-tight">{title}</h3>
+            {description && (
+              <p className="text-xs text-muted-foreground leading-tight mt-0.5">{description}</p>
+            )}
+          </div>
+        </div>
+        {rightCluster}
+      </div>
+      {!collapsed && children}
+    </section>
+  )
+}
+
+/**
+ * MiniStat — a compact sub-stat tile used inside grouped sections.
+ * Pairs a small icon + label with a big value and optional hint line.
+ */
+function MiniStat({
+  label,
+  value,
+  icon: Icon,
+  color = 'text-muted-foreground',
+  hint,
+}: {
+  label: string
+  value: React.ReactNode
+  icon: any
+  color?: string
+  hint?: React.ReactNode
+}) {
+  return (
+    <Card className="overflow-hidden">
+      <CardContent className="p-4">
+        <div className="flex items-center gap-2 text-muted-foreground">
+          <Icon className={cn('w-3.5 h-3.5', color)} />
+          <span className="text-xs font-medium">{label}</span>
+        </div>
+        <p className="text-xl font-bold mt-2 leading-none">{value}</p>
+        {hint && <div className="mt-2 text-[11px] text-muted-foreground">{hint}</div>}
+      </CardContent>
+    </Card>
+  )
+}
+
+/**
+ * LoanPortfolioCard — visualises the loan portfolio breakdown as
+ * a stacked horizontal progress bar + legend. Replaces the old
+ * inline badge soup with a single, scannable visual.
+ */
+function LoanPortfolioCard({
+  total, active, completed, overdue, pending,
+}: {
+  total: number
+  active: number
+  completed: number
+  overdue: number
+  pending: number
+}) {
+  const safeTotal = Math.max(total, 1) // avoid divide-by-zero when total is 0
+  const segments = [
+    { label: 'Active', value: active, color: 'bg-amber-500', text: 'text-amber-600' },
+    { label: 'Repaid', value: completed, color: 'bg-emerald-500', text: 'text-emerald-600' },
+    { label: 'Overdue', value: overdue, color: 'bg-red-500', text: 'text-red-600' },
+    { label: 'Pending', value: pending, color: 'bg-slate-400', text: 'text-slate-500' },
+  ]
+  return (
+    <Card>
+      <CardContent className="p-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-xs font-medium text-muted-foreground">Loan Portfolio</p>
+            <p className="text-2xl font-bold mt-0.5">{total}</p>
+          </div>
+          <FileText className="w-5 h-5 text-muted-foreground/60" />
+        </div>
+        {/* Stacked bar */}
+        <div className="h-2.5 rounded-full bg-muted overflow-hidden flex">
+          {segments.map(seg => (
+            seg.value > 0 && (
+              <div
+                key={seg.label}
+                className={cn('h-full transition-all', seg.color)}
+                style={{ width: `${(seg.value / safeTotal) * 100}%` }}
+                title={`${seg.label}: ${seg.value}`}
+              />
+            )
+          ))}
+        </div>
+        {/* Legend */}
+        <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
+          {segments.map(seg => (
+            <div key={seg.label} className="flex items-center gap-1.5 text-xs">
+              <span className={cn('w-2 h-2 rounded-sm', seg.color)} />
+              <span className="text-muted-foreground">{seg.label}</span>
+              <span className={cn('ml-auto font-semibold', seg.text)}>{seg.value}</span>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
 // ─── Tenant Admin Dashboard ───────────────────────────────────────
 
 interface DashboardStats {
@@ -166,13 +366,17 @@ interface MonthlyReg { month: string; count: number }
 interface VslaSavingsRow { name: string; total: number }
 
 function TenantAdminDashboard() {
+  const setActiveModule = useAppStore(s => s.setActiveModule)
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [monthlyRegs, setMonthlyRegs] = useState<MonthlyReg[]>([])
   const [vslaSavings, setVslaSavings] = useState<VslaSavingsRow[]>([])
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (opts?: { silent?: boolean }) => {
+    if (opts?.silent) setRefreshing(true); else setLoading(true)
     try {
       const res = await fetch('/api/dashboard/stats')
       if (!res.ok) throw new Error('Failed')
@@ -186,10 +390,12 @@ function TenantAdminDashboard() {
       setTransactions(data.recentTransactions || [])
       setMonthlyRegs(data.monthlyRegistrations || [])
       setVslaSavings(data.vslaSavingsByGroup || [])
+      setLastUpdated(new Date())
     } catch (e) {
       console.error(e)
     } finally {
       setLoading(false)
+      setRefreshing(false)
     }
   }, [])
 
@@ -199,113 +405,289 @@ function TenantAdminDashboard() {
   if (!stats) return <DashboardError />
 
   const s = stats
-  const fmt = (num: number) => 'UGX ' + num.toLocaleString()
-  const lineConfig: ChartConfig = { value: { label: 'Farmers', color: 'var(--chart-1)' } }
+  const fmtMoney = (num: number) => 'UGX ' + num.toLocaleString()
+  const fmtCompact = (num: number) => {
+    if (num >= 1_000_000) return `${(num / 1_000_000).toFixed(1)}M`
+    if (num >= 1_000) return `${(num / 1_000).toFixed(0)}k`
+    return String(num)
+  }
+  const lineConfig: ChartConfig = { count: { label: 'Farmers', color: 'var(--chart-1)' } }
   const savingsConfig: ChartConfig = { total: { label: 'Savings (UGX)', color: 'var(--chart-2)' } }
+  const totalGender = s.maleCount + s.femaleCount
+  const malePct = totalGender ? Math.round((s.maleCount / totalGender) * 100) : 0
+  const femalePct = totalGender ? 100 - malePct : 0
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-bold">Tenant Dashboard</h2>
-        <p className="text-sm text-muted-foreground">Overview of your cooperative/organization</p>
+    <div className="space-y-8">
+      {/* ─── Page Header ─── */}
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h2 className="text-xl font-bold tracking-tight">Tenant Dashboard</h2>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Overview of your cooperative / organization
+            {lastUpdated && (
+              <span className="ml-2 text-xs text-muted-foreground/70">
+                · Updated {formatDistanceToNow(lastUpdated, { addSuffix: true })}
+              </span>
+            )}
+          </p>
+        </div>
+        <button
+          onClick={() => fetchData({ silent: true })}
+          disabled={refreshing}
+          className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-md border bg-background hover:bg-accent transition-colors disabled:opacity-50"
+        >
+          <RefreshCw className={cn('w-3.5 h-3.5', refreshing && 'animate-spin')} />
+          {refreshing ? 'Refreshing…' : 'Refresh'}
+        </button>
       </div>
 
-      {/* Stat Cards */}
+      {/* ─── Hero KPI Strip ─── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard label="Total Farmers" value={s.farmerCount.toLocaleString()} icon={Users} color="bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600" trend="+12%" />
-        <StatCard label="VSLA Groups" value={s.vslaCount} icon={PiggyBank} color="bg-blue-50 dark:bg-blue-950/40 text-blue-600" />
-        <StatCard label="Active Loans" value={s.activeLoanCount} icon={DollarSign} color="bg-amber-50 dark:bg-amber-950/40 text-amber-600" />
+        <StatCard label="Total Savings" value={fmtCompact(s.totalSavings)} icon={Wallet} color="bg-blue-50 dark:bg-blue-950/40 text-blue-600" />
+        <StatCard label="Active Loans" value={s.activeLoanCount} icon={CreditCard} color="bg-amber-50 dark:bg-amber-950/40 text-amber-600" />
         <StatCard label="Market Listings" value={s.marketListings} icon={Store} color="bg-purple-50 dark:bg-purple-950/40 text-purple-600" />
       </div>
 
-      {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      {/* ─── Section 1 · Farmer Network ─── */}
+      <DashboardSection
+        icon={Users}
+        title="Farmer Network"
+        description="Registry composition and monthly growth"
+        accent="bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600"
+        collapsible
+        onViewAll={() => setActiveModule('farmers')}
+        viewAllLabel="Open Farmer Profiling"
+        right={
+          <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+            <span className="inline-flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-blue-500" />Male {malePct}%</span>
+            <span className="inline-flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-pink-500" />Female {femalePct}%</span>
+          </div>
+        }
+      >
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          {/* Mini stats column */}
+          <div className="grid grid-cols-2 gap-4 lg:col-span-1">
+            <MiniStat
+              label="Total Farmers"
+              value={s.farmerCount.toLocaleString()}
+              icon={Users}
+              color="text-emerald-600"
+              hint={
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                    M {s.maleCount}
+                  </span>
+                  <span className="inline-flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-pink-500" />
+                    F {s.femaleCount}
+                  </span>
+                </div>
+              }
+            />
+            <MiniStat
+              label="Farmer Groups"
+              value={s.groupCount}
+              icon={Users}
+              color="text-indigo-600"
+              hint="Active groupings"
+            />
+            {/* Gender split bar */}
+            <Card className="col-span-2">
+              <CardContent className="p-4 space-y-2">
+                <p className="text-xs font-medium text-muted-foreground">Gender Distribution</p>
+                <div className="h-2.5 rounded-full bg-muted overflow-hidden flex">
+                  <div className="h-full bg-blue-500" style={{ width: `${malePct}%` }} />
+                  <div className="h-full bg-pink-500" style={{ width: `${femalePct}%` }} />
+                </div>
+                <div className="flex justify-between text-[11px] text-muted-foreground">
+                  <span><span className="font-semibold text-blue-600">{s.maleCount}</span> Male ({malePct}%)</span>
+                  <span><span className="font-semibold text-pink-600">{s.femaleCount}</span> Female ({femalePct}%)</span>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Registration chart */}
+          <Card className="lg:col-span-2">
+            <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
+              <div>
+                <CardTitle className="text-sm">Farmer Registrations · Last 12 months</CardTitle>
+                <p className="text-[11px] text-muted-foreground mt-0.5">Monthly new active farmer registrations</p>
+              </div>
+              <BarChart3 className="w-4 h-4 text-muted-foreground/60" />
+            </CardHeader>
+            <CardContent>
+              <ChartContainer config={lineConfig} className="h-[240px] w-full">
+                <BarChart data={monthlyRegs.map(m => ({ ...m, month: formatMonth(m.month) }))}>
+                  <CartesianGrid vertical={false} strokeDasharray="3 3" opacity={0.3} />
+                  <XAxis dataKey="month" tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 12 }} axisLine={false} tickLine={false} allowDecimals={false} />
+                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <Bar dataKey="count" fill="var(--chart-1)" radius={[6, 6, 0, 0]} />
+                </BarChart>
+              </ChartContainer>
+            </CardContent>
+          </Card>
+        </div>
+      </DashboardSection>
+
+      {/* ─── Section 2 · Financial Health ─── */}
+      <DashboardSection
+        icon={Landmark}
+        title="Financial Health"
+        description="VSLA savings pool and loan portfolio composition"
+        accent="bg-blue-50 dark:bg-blue-950/40 text-blue-600"
+        collapsible
+        onViewAll={() => setActiveModule('vsla')}
+        viewAllLabel="Open VSLA Management"
+        right={
+          <Badge variant="outline" className="text-[11px] font-normal">
+            <PiggyBank className="w-3 h-3 mr-1" />
+            {s.vslaCount} VSLA groups
+          </Badge>
+        }
+      >
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          {/* VSLA Savings by group chart */}
+          <Card className="lg:col-span-2">
+            <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
+              <div>
+                <CardTitle className="text-sm">VSLA Savings by Group · Top 10</CardTitle>
+                <p className="text-[11px] text-muted-foreground mt-0.5">
+                  Cumulative completed savings · Total {fmtMoney(s.totalSavings)}
+                </p>
+              </div>
+              <PieChartIcon className="w-4 h-4 text-muted-foreground/60" />
+            </CardHeader>
+            <CardContent>
+              {vslaSavings.length === 0 ? (
+                <div className="text-center py-12 text-sm text-muted-foreground">
+                  <PiggyBank className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                  No VSLA savings recorded yet
+                </div>
+              ) : (
+                <ChartContainer config={savingsConfig} className="h-[260px] w-full">
+                  <BarChart data={vslaSavings} layout="vertical" margin={{ left: 0, right: 16 }}>
+                    <CartesianGrid horizontal={false} strokeDasharray="3 3" opacity={0.3} />
+                    <XAxis type="number" tick={{ fontSize: 11 }} tickFormatter={(v: number) => fmtCompact(v)} axisLine={false} tickLine={false} />
+                    <YAxis dataKey="name" type="category" tick={{ fontSize: 11 }} width={110} axisLine={false} tickLine={false} />
+                    <ChartTooltip content={<ChartTooltipContent formatter={(v: any) => fmtMoney(Number(v))} />} />
+                    <Bar dataKey="total" fill="var(--chart-2)" radius={[0, 6, 6, 0]}>
+                      {vslaSavings.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                    </Bar>
+                  </BarChart>
+                </ChartContainer>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Loan portfolio card + total savings */}
+          <div className="space-y-4">
+            <LoanPortfolioCard
+              total={s.loanCount}
+              active={s.activeLoanCount}
+              completed={s.completedLoans}
+              overdue={s.overdueLoans}
+              pending={s.pendingLoans}
+            />
+            <Card>
+              <CardContent className="p-4 flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground">Total Savings Pool</p>
+                  <p className="text-2xl font-bold mt-1">{fmtMoney(s.totalSavings)}</p>
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    Across {s.vslaCount} VSLA {s.vslaCount === 1 ? 'group' : 'groups'}
+                  </p>
+                </div>
+                <div className="w-11 h-11 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 flex items-center justify-center shrink-0">
+                  <Wallet className="w-5 h-5" />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </DashboardSection>
+
+      {/* ─── Section 3 · Programs & Market ─── */}
+      <DashboardSection
+        icon={Sprout}
+        title="Programs & Market"
+        description="Capacity-building activities and market activity"
+        accent="bg-purple-50 dark:bg-purple-950/40 text-purple-600"
+        collapsible
+        onViewAll={() => setActiveModule('training')}
+        viewAllLabel="Open Training & Groups"
+      >
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <MiniStat label="VSLA Groups" value={s.vslaCount} icon={PiggyBank} color="text-blue-600" hint="Active savings groups" />
+          <MiniStat label="Trainings" value={s.trainingCount} icon={GraduationCap} color="text-purple-600" hint="Total conducted" />
+          <MiniStat label="Market Listings" value={s.marketListings} icon={Store} color="text-pink-600" hint="Currently available" />
+          <MiniStat label="Farmer Groups" value={s.groupCount} icon={Users} color="text-indigo-600" hint="Active cooperatives" />
+        </div>
+      </DashboardSection>
+
+      {/* ─── Section 4 · Geographic Distribution ─── */}
+      <DashboardSection
+        icon={MapPin}
+        title="Geographic Distribution"
+        description="Farmer plot locations and district-level density"
+        accent="bg-teal-50 dark:bg-teal-950/40 text-teal-600"
+        collapsible
+        defaultCollapsed
+        onViewAll={() => setActiveModule('farm-lands')}
+        viewAllLabel="Open Farm Land Registry"
+      >
+        <MapDashboard />
+      </DashboardSection>
+
+      {/* ─── Section 5 · Recent Activity ─── */}
+      <DashboardSection
+        icon={Activity}
+        title="Recent Activity"
+        description="Latest payments and VSLA transactions"
+        accent="bg-slate-100 dark:bg-slate-900/40 text-slate-600"
+        collapsible
+        onViewAll={() => setActiveModule('payments')}
+        viewAllLabel="Open Payments"
+        right={transactions.length > 0 && (
+          <Badge variant="outline" className="text-[11px] font-normal">
+            <Clock className="w-3 h-3 mr-1" />
+            Last {Math.min(transactions.length, 8)} of {transactions.length}
+          </Badge>
+        )}
+      >
         <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-base">Farmer Registrations</CardTitle></CardHeader>
-          <CardContent>
-            <ChartContainer config={lineConfig} className="h-[260px] w-full">
-              <BarChart data={monthlyRegs.map(m => ({ ...m, month: formatMonth(m.month) }))}>
-                <CartesianGrid vertical={false} strokeDasharray="3 3" opacity={0.3} />
-                <XAxis dataKey="month" tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
-                <ChartTooltip content={<ChartTooltipContent />} />
-                <Bar dataKey="count" fill="var(--chart-1)" radius={[6, 6, 0, 0]} />
-              </BarChart>
-            </ChartContainer>
+          <CardContent className="p-0">
+            {transactions.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground text-sm">
+                <Inbox className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                No recent transactions
+              </div>
+            ) : (
+              <Table>
+                <TableHeader><TableRow>
+                  <TableHead className="w-[110px]">Type</TableHead><TableHead>Recipient</TableHead>
+                  <TableHead className="text-right">Amount</TableHead><TableHead className="w-[140px]">Date</TableHead><TableHead className="w-[110px]">Status</TableHead>
+                </TableRow></TableHeader>
+                <TableBody>
+                  {transactions.slice(0, 8).map(tx => (
+                    <TableRow key={tx.id}>
+                      <TableCell><Badge variant="outline" className="text-[10px] font-mono">{tx.type || 'PAYMENT'}</Badge></TableCell>
+                      <TableCell className="font-medium text-sm">{tx.recipientName}</TableCell>
+                      <TableCell className="text-right text-sm font-medium">{fmtMoney(tx.amount)}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">{formatDistanceToNow(new Date(tx.createdAt), { addSuffix: true })}</TableCell>
+                      <TableCell><Badge className={cn('text-[10px]', statusColor[tx.status] || 'bg-gray-100')}>{tx.status}</Badge></TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-base">VSLA Savings by Group</CardTitle></CardHeader>
-          <CardContent>
-            <ChartContainer config={savingsConfig} className="h-[260px] w-full">
-              <BarChart data={vslaSavings} layout="vertical">
-                <CartesianGrid horizontal={false} strokeDasharray="3 3" opacity={0.3} />
-                <XAxis type="number" tick={{ fontSize: 11 }} tickFormatter={(v: number) => `${(v / 1000).toFixed(0)}k`} />
-                <YAxis dataKey="name" type="category" tick={{ fontSize: 11 }} width={100} />
-                <ChartTooltip content={<ChartTooltipContent />} />
-                <Bar dataKey="total" fill="var(--chart-2)" radius={[0, 6, 6, 0]}>
-                  {vslaSavings.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-                </Bar>
-              </BarChart>
-            </ChartContainer>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Secondary Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card><CardContent className="p-4">
-          <p className="text-xs text-muted-foreground mb-1">Gender Split</p>
-          <div className="flex items-center gap-3">
-            <div className="flex -space-x-1">
-              <div className="w-7 h-7 rounded-full bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center text-[10px] font-bold text-blue-700 dark:text-blue-300">{s.maleCount}</div>
-              <div className="w-7 h-7 rounded-full bg-pink-100 dark:bg-pink-900/50 flex items-center justify-center text-[10px] font-bold text-pink-700 dark:text-pink-300">{s.femaleCount}</div>
-            </div>
-            <div className="text-xs"><span className="text-blue-600 font-medium">M {s.maleCount}</span><span className="text-muted-foreground mx-1">/</span><span className="text-pink-600 font-medium">F {s.femaleCount}</span></div>
-          </div>
-        </CardContent></Card>
-        <Card><CardContent className="p-4"><p className="text-xs text-muted-foreground mb-1">Farmer Groups</p><p className="text-xl font-bold">{s.groupCount}</p></CardContent></Card>
-        <Card><CardContent className="p-4"><p className="text-xs text-muted-foreground mb-1">Trainings</p><p className="text-xl font-bold">{s.trainingCount}</p></CardContent></Card>
-        <Card><CardContent className="p-4">
-          <p className="text-xs text-muted-foreground mb-1">Loan Portfolio</p>
-          <div className="flex flex-wrap gap-1 mt-1">
-            <Badge variant="outline" className="text-[10px]">Total: {s.loanCount}</Badge>
-            <Badge className="text-[10px] bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">Done: {s.completedLoans}</Badge>
-            <Badge className="text-[10px] bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300">Overdue: {s.overdueLoans}</Badge>
-          </div>
-        </CardContent></Card>
-      </div>
-
-      {/* Farmer Distribution Map */}
-      <MapDashboard />
-
-      {/* Recent Activity */}
-      <Card>
-        <CardHeader className="pb-2"><CardTitle className="text-base">Recent Activity</CardTitle></CardHeader>
-        <CardContent>
-          {transactions.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground text-sm">No recent transactions</div>
-          ) : (
-            <Table>
-              <TableHeader><TableRow>
-                <TableHead className="w-[100px]">Type</TableHead><TableHead>Recipient</TableHead>
-                <TableHead className="text-right">Amount</TableHead><TableHead>Date</TableHead><TableHead className="w-[100px]">Status</TableHead>
-              </TableRow></TableHeader>
-              <TableBody>
-                {transactions.slice(0, 8).map(tx => (
-                  <TableRow key={tx.id}>
-                    <TableCell><Badge variant="outline" className="text-[10px] font-mono">{tx.type || 'PAYMENT'}</Badge></TableCell>
-                    <TableCell className="font-medium text-sm">{tx.recipientName}</TableCell>
-                    <TableCell className="text-right text-sm font-medium">{fmt(tx.amount)}</TableCell>
-                    <TableCell className="text-xs text-muted-foreground">{formatDistanceToNow(new Date(tx.createdAt), { addSuffix: true })}</TableCell>
-                    <TableCell><Badge className={cn('text-[10px]', statusColor[tx.status] || 'bg-gray-100')}>{tx.status}</Badge></TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+      </DashboardSection>
     </div>
   )
 }
@@ -398,107 +780,293 @@ function CountryAdminDashboard() {
 // ─── Super Admin Dashboard ────────────────────────────────────────
 
 function SuperAdminDashboard() {
+  const setActiveModule = useAppStore(s => s.setActiveModule)
   const [data, setData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
 
-  useEffect(() => {
-    fetch('/api/admin/dashboard')
-      .then(r => r.ok ? r.json() : null)
-      .then(d => { setData(d); setLoading(false) })
-      .catch(() => setLoading(false))
+  const fetchData = useCallback(async (opts?: { silent?: boolean }) => {
+    if (opts?.silent) setRefreshing(true); else setLoading(true)
+    try {
+      const res = await fetch('/api/admin/dashboard')
+      if (!res.ok) { setData(null); return }
+      const d = await res.json()
+      setData(d)
+      setLastUpdated(new Date())
+    } catch {
+      setData(null)
+    } finally {
+      setLoading(false)
+      setRefreshing(false)
+    }
   }, [])
+
+  useEffect(() => { fetchData() }, [fetchData])
 
   if (loading) return <DashboardSkeleton />
   if (!data) return <DashboardError />
 
   const countryData = Object.entries(data.tenants?.byCountry || {}).map(([name, value]) => ({ name, value: value as number }))
   const planData = Object.entries(data.revenue?.byPlan || {}).map(([name, value]) => ({ name, value: value as number }))
+  const fmtMoney = (n: number) => `$${(n || 0).toLocaleString()}`
+  const fmtMrr = (n: number) => `$${((n || 0) / 1000).toFixed(1)}K`
+  const newFarmers30d = data.recentActivity?.newFarmers || 0
+  const newTenants30d = data.recentActivity?.newTenants || 0
+  const newLoans30d = data.recentActivity?.newLoans || 0
+  const newPayments30d = data.recentActivity?.newPayments || 0
+  const totalRecent = newFarmers30d + newTenants30d + newLoans30d + newPayments30d
+  const safeRecentTotal = Math.max(totalRecent, 1)
+  const recentSegments = [
+    { label: 'Farmers', value: newFarmers30d, color: 'bg-emerald-500', text: 'text-emerald-600' },
+    { label: 'Tenants', value: newTenants30d, color: 'bg-blue-500', text: 'text-blue-600' },
+    { label: 'Loans', value: newLoans30d, color: 'bg-amber-500', text: 'text-amber-600' },
+    { label: 'Payments', value: newPayments30d, color: 'bg-purple-500', text: 'text-purple-600' },
+  ]
+  const countryConfig: ChartConfig = { value: { label: 'Tenants', color: 'var(--chart-3)' } }
+  const planConfig: ChartConfig = { value: { label: 'Subscriptions', color: 'var(--chart-4)' } }
+  const recentTenants = data.tenants?.recent || []
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-bold">Platform Overview</h2>
-        <p className="text-sm text-muted-foreground">Cross-tenant platform metrics across all countries</p>
+    <div className="space-y-8">
+      {/* ─── Page Header ─── */}
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h2 className="text-xl font-bold tracking-tight">Platform Overview</h2>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Cross-tenant platform metrics across all countries
+            {lastUpdated && (
+              <span className="ml-2 text-xs text-muted-foreground/70">
+                · Updated {formatDistanceToNow(lastUpdated, { addSuffix: true })}
+              </span>
+            )}
+          </p>
+        </div>
+        <button
+          onClick={() => fetchData({ silent: true })}
+          disabled={refreshing}
+          className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-md border bg-background hover:bg-accent transition-colors disabled:opacity-50"
+        >
+          <RefreshCw className={cn('w-3.5 h-3.5', refreshing && 'animate-spin')} />
+          {refreshing ? 'Refreshing…' : 'Refresh'}
+        </button>
       </div>
 
-      {/* KPIs */}
+      {/* ─── Hero KPI Strip ─── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard label="Active Tenants" value={data.tenants?.active || 0} icon={Building2} color="bg-blue-50 dark:bg-blue-950/40 text-blue-600" />
         <StatCard label="Total Farmers" value={(data.farmers?.total || 0).toLocaleString()} icon={Users} color="bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600" />
-        <StatCard label="MRR" value={`$${((data.revenue?.mrr || 0) / 1000).toFixed(1)}K`} icon={DollarSign} color="bg-amber-50 dark:bg-amber-950/40 text-amber-600" />
+        <StatCard label="MRR" value={fmtMrr(data.revenue?.mrr || 0)} icon={DollarSign} color="bg-amber-50 dark:bg-amber-950/40 text-amber-600" />
         <StatCard label="EUDR Compliance" value={`${data.compliance?.eudrRate || 0}%`} icon={CheckCircle} color="bg-purple-50 dark:bg-purple-950/40 text-purple-600" />
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="Impact Events" value={data.impact?.totalImpactEvents || 0} icon={Activity} color="bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600" />
-        <StatCard label="Carbon Credits" value={data.impact?.carbonCreditsIssued || 0} icon={Leaf} color="bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600" />
-        <StatCard label="Active Subscriptions" value={data.revenue?.activeSubscriptions || 0} icon={CreditCard} color="bg-pink-50 dark:bg-pink-950/40 text-pink-600" />
-        <StatCard label="VSLA Groups" value={data.platform?.activeVslaGroups || 0} icon={PiggyBank} color="bg-cyan-50 dark:bg-cyan-950/40 text-cyan-600" />
-      </div>
+      {/* ─── Section 1 · Tenant Distribution ─── */}
+      <DashboardSection
+        icon={Building2}
+        title="Tenant Distribution"
+        description="Active tenants by country and subscription plan"
+        accent="bg-blue-50 dark:bg-blue-950/40 text-blue-600"
+        collapsible
+        onViewAll={() => setActiveModule('super-admin-tenants')}
+        viewAllLabel="Open Tenants"
+        right={
+          <Badge variant="outline" className="text-[11px] font-normal">
+            <Building2 className="w-3 h-3 mr-1" />
+            {data.tenants?.active || 0} active
+          </Badge>
+        }
+      >
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Country breakdown pie */}
+          <Card>
+            <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
+              <div>
+                <CardTitle className="text-sm">Tenants by Country</CardTitle>
+                <p className="text-[11px] text-muted-foreground mt-0.5">
+                  {countryData.length} {countryData.length === 1 ? 'country' : 'countries'} · {data.tenants?.active || 0} tenants
+                </p>
+              </div>
+              <MapPin className="w-4 h-4 text-muted-foreground/60" />
+            </CardHeader>
+            <CardContent>
+              {countryData.length === 0 ? (
+                <div className="text-center py-12 text-sm text-muted-foreground">
+                  <MapPin className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                  No tenant data yet
+                </div>
+              ) : (
+                <ChartContainer config={countryConfig} className="h-[220px] w-full">
+                  <PieChart>
+                    <Pie data={countryData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label={(e: any) => e.name}>
+                      {countryData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                    </Pie>
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                  </PieChart>
+                </ChartContainer>
+              )}
+            </CardContent>
+          </Card>
 
-      {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-base">Tenants by Country</CardTitle></CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={200}>
-              <PieChart>
-                <Pie data={countryData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80}>
-                  {countryData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-base">Subscriptions by Plan</CardTitle></CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={200}>
-              <PieChart>
-                <Pie data={planData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80}>
-                  {planData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-base">Recent Activity (30d)</CardTitle></CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex items-center justify-between"><span className="text-sm text-muted-foreground">New farmers</span><span className="font-bold">{data.recentActivity?.newFarmers || 0}</span></div>
-            <div className="flex items-center justify-between"><span className="text-sm text-muted-foreground">New tenants</span><span className="font-bold">{data.recentActivity?.newTenants || 0}</span></div>
-            <div className="flex items-center justify-between"><span className="text-sm text-muted-foreground">New loans</span><span className="font-bold">{data.recentActivity?.newLoans || 0}</span></div>
-            <div className="flex items-center justify-between"><span className="text-sm text-muted-foreground">New payments</span><span className="font-bold">{data.recentActivity?.newPayments || 0}</span></div>
-          </CardContent>
-        </Card>
-      </div>
+          {/* Plan breakdown pie */}
+          <Card>
+            <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
+              <div>
+                <CardTitle className="text-sm">Subscriptions by Plan</CardTitle>
+                <p className="text-[11px] text-muted-foreground mt-0.5">
+                  {planData.length} {planData.length === 1 ? 'plan' : 'plans'} · {data.revenue?.activeSubscriptions || 0} active
+                </p>
+              </div>
+              <CreditCard className="w-4 h-4 text-muted-foreground/60" />
+            </CardHeader>
+            <CardContent>
+              {planData.length === 0 ? (
+                <div className="text-center py-12 text-sm text-muted-foreground">
+                  <CreditCard className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                  No subscription data yet
+                </div>
+              ) : (
+                <ChartContainer config={planConfig} className="h-[220px] w-full">
+                  <PieChart>
+                    <Pie data={planData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label={(e: any) => e.name}>
+                      {planData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                    </Pie>
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                  </PieChart>
+                </ChartContainer>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </DashboardSection>
 
-      {/* Recent Tenants Table */}
-      <Card>
-        <CardHeader className="pb-2"><CardTitle className="text-base">Recently Onboarded Tenants</CardTitle></CardHeader>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader><TableRow>
-              <TableHead>Name</TableHead><TableHead>Type</TableHead><TableHead>Country</TableHead>
-              <TableHead className="text-right">Users</TableHead><TableHead className="text-right">Farmers</TableHead><TableHead className="text-center">Status</TableHead>
-            </TableRow></TableHeader>
-            <TableBody>
-              {(data.tenants?.recent || []).map((t: any) => (
-                <TableRow key={t.id}>
-                  <TableCell className="font-medium text-sm">{t.name}</TableCell>
-                  <TableCell className="text-sm">{t.type}</TableCell>
-                  <TableCell className="text-sm">{t.country || '—'}</TableCell>
-                  <TableCell className="text-right text-sm">{t._count?.users || 0}</TableCell>
-                  <TableCell className="text-right text-sm">{t._count?.farmerProfiles || 0}</TableCell>
-                  <TableCell className="text-center"><Badge variant={t.isActive ? 'default' : 'secondary'} className="text-[10px]">{t.isActive ? 'Active' : 'Suspended'}</Badge></TableCell>
-                </TableRow>
+      {/* ─── Section 2 · Revenue & Subscriptions ─── */}
+      <DashboardSection
+        icon={DollarSign}
+        title="Revenue & Subscriptions"
+        description="MRR, active subscriptions, and revenue by plan"
+        accent="bg-amber-50 dark:bg-amber-950/40 text-amber-600"
+        collapsible
+        onViewAll={() => setActiveModule('super-admin-revenue')}
+        viewAllLabel="Open Revenue"
+      >
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <MiniStat label="MRR" value={fmtMrr(data.revenue?.mrr || 0)} icon={DollarSign} color="text-amber-600" hint="Monthly recurring revenue" />
+          <MiniStat label="Active Subscriptions" value={data.revenue?.activeSubscriptions || 0} icon={CreditCard} color="text-pink-600" hint="Across all tenants" />
+          <MiniStat label="Active Tenants" value={data.tenants?.active || 0} icon={Building2} color="text-blue-600" hint="Paying + trial" />
+          <MiniStat label="ARPU" value={fmtMoney((data.revenue?.mrr || 0) / Math.max(data.tenants?.active || 1, 1))} icon={TrendingUp} color="text-emerald-600" hint="Avg revenue / tenant" />
+        </div>
+      </DashboardSection>
+
+      {/* ─── Section 3 · Platform Impact ─── */}
+      <DashboardSection
+        icon={Leaf}
+        title="Platform Impact"
+        description="Carbon credits, impact events, EUDR compliance"
+        accent="bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600"
+        collapsible
+        onViewAll={() => setActiveModule('super-admin-impact')}
+        viewAllLabel="Open Impact"
+      >
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <MiniStat label="Impact Events" value={data.impact?.totalImpactEvents || 0} icon={Activity} color="text-indigo-600" hint="Total tracked" />
+          <MiniStat label="Carbon Credits" value={data.impact?.carbonCreditsIssued || 0} icon={Leaf} color="text-emerald-600" hint="Issued (tCO₂e)" />
+          <MiniStat label="EUDR Compliance" value={`${data.compliance?.eudrRate || 0}%`} icon={CheckCircle} color="text-purple-600" hint="Of active farmers" />
+          <MiniStat label="VSLA Groups" value={data.platform?.activeVslaGroups || 0} icon={PiggyBank} color="text-cyan-600" hint="Across all tenants" />
+        </div>
+      </DashboardSection>
+
+      {/* ─── Section 4 · Recent Activity (30d) ─── */}
+      <DashboardSection
+        icon={Activity}
+        title="Recent Activity · 30 days"
+        description="Net-new entities across the platform in the last 30 days"
+        accent="bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600"
+        collapsible
+        right={
+          <Badge variant="outline" className="text-[11px] font-normal">
+            <Clock className="w-3 h-3 mr-1" />
+            {totalRecent} events
+          </Badge>
+        }
+      >
+        <Card>
+          <CardContent className="p-4 space-y-3">
+            {/* Stacked bar */}
+            <div className="h-2.5 rounded-full bg-muted overflow-hidden flex">
+              {recentSegments.map(seg => (
+                seg.value > 0 && (
+                  <div
+                    key={seg.label}
+                    className={cn('h-full transition-all', seg.color)}
+                    style={{ width: `${(seg.value / safeRecentTotal) * 100}%` }}
+                    title={`${seg.label}: ${seg.value}`}
+                  />
+                )
               ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+            </div>
+            {/* Legend + values */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {recentSegments.map(seg => (
+                <div key={seg.label} className="flex items-center gap-2">
+                  <span className={cn('w-2 h-2 rounded-sm', seg.color)} />
+                  <div className="flex-1">
+                    <p className="text-[11px] text-muted-foreground">{seg.label}</p>
+                    <p className={cn('text-base font-bold leading-tight', seg.text)}>{seg.value}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </DashboardSection>
+
+      {/* ─── Section 5 · Recently Onboarded Tenants ─── */}
+      <DashboardSection
+        icon={Building2}
+        title="Recently Onboarded Tenants"
+        description="Latest tenants added to the platform"
+        accent="bg-slate-100 dark:bg-slate-900/40 text-slate-600"
+        collapsible
+        defaultCollapsed
+        onViewAll={() => setActiveModule('super-admin-tenants')}
+        viewAllLabel="Open Tenants"
+        right={recentTenants.length > 0 && (
+          <Badge variant="outline" className="text-[11px] font-normal">
+            <Clock className="w-3 h-3 mr-1" />
+            Last {Math.min(recentTenants.length, 10)} of {recentTenants.length}
+          </Badge>
+        )}
+      >
+        <Card>
+          <CardContent className="p-0">
+            {recentTenants.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground text-sm">
+                <Inbox className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                No recently onboarded tenants
+              </div>
+            ) : (
+              <Table>
+                <TableHeader><TableRow>
+                  <TableHead>Name</TableHead><TableHead>Type</TableHead><TableHead>Country</TableHead>
+                  <TableHead className="text-right">Users</TableHead><TableHead className="text-right">Farmers</TableHead><TableHead className="text-center">Status</TableHead>
+                </TableRow></TableHeader>
+                <TableBody>
+                  {recentTenants.slice(0, 10).map((t: any) => (
+                    <TableRow key={t.id}>
+                      <TableCell className="font-medium text-sm">{t.name}</TableCell>
+                      <TableCell className="text-sm">{t.type}</TableCell>
+                      <TableCell className="text-sm">{t.country || '—'}</TableCell>
+                      <TableCell className="text-right text-sm">{t._count?.users || 0}</TableCell>
+                      <TableCell className="text-right text-sm">{t._count?.farmerProfiles || 0}</TableCell>
+                      <TableCell className="text-center"><Badge variant={t.isActive ? 'default' : 'secondary'} className="text-[10px]">{t.isActive ? 'Active' : 'Suspended'}</Badge></TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
+      </DashboardSection>
     </div>
   )
 }

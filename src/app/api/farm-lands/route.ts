@@ -53,13 +53,17 @@ export async function GET(request: Request) {
       db.farmLand.count({ where }),
     ])
 
-    // Parse JSON fields
+    // Parse JSON fields — safely handle both JSON arrays and plain strings
+    const safeParse = (v: string | null): any => {
+      if (!v) return []
+      try { return JSON.parse(v) } catch { return v }
+    }
     const farmsParsed = farms.map(f => ({
       ...f,
-      approachRoad: f.approachRoad ? JSON.parse(f.approachRoad) : [],
-      landGradient: f.landGradient ? JSON.parse(f.landGradient) : [],
-      irrigationSource: f.irrigationSource ? JSON.parse(f.irrigationSource) : [],
-      soilCriteria: f.soilCriteria ? JSON.parse(f.soilCriteria) : [],
+      approachRoad: safeParse(f.approachRoad),
+      landGradient: safeParse(f.landGradient),
+      irrigationSource: safeParse(f.irrigationSource),
+      soilCriteria: safeParse(f.soilCriteria),
     }))
 
     return NextResponse.json({ farms: farmsParsed, total, page, totalPages: Math.ceil(total / limit) })

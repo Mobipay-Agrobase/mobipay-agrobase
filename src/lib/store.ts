@@ -99,6 +99,7 @@ export const useAppStore = create<AppState>((set) => ({
 export const EKB_HIDDEN_MODULES = [
   'marketplace', 'payments', 'loans',           // Core Operations
   'carbon', 'crop-insurance',                    // Farm Management
+  'crop-stages',                                 // Farm Management — not relevant to EKIBBO
   'impact-assessment',                           // Intelligence
   'communication', 'feedback', 'channel-sim',    // Engagement
   'mfi',                                         // Finance

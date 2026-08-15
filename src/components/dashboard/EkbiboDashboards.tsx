@@ -196,6 +196,7 @@ export function EkbMdDashboard() {
   const { stats, monthlyRegs, loading } = useDashboardStats()
   const [purchases, setPurchases] = useState<any[]>([])
   const [sales, setSales] = useState<any[]>([])
+  const [approvalCount, setApprovalCount] = useState(0)
 
   useEffect(() => {
     fetchJson('/api/purchases?limit=200').then(d => {
@@ -203,6 +204,11 @@ export function EkbMdDashboard() {
     })
     fetchJson('/api/sales?limit=200').then(d => {
       setSales(Array.isArray(d?.data) ? d.data : [])
+    })
+    // Fetch pending approvals from the same source as the Approval Hub
+    fetchJson('/api/approvals').then(d => {
+      const list = Array.isArray(d?.data) ? d.data : []
+      setApprovalCount(list.filter((a: any) => a.status === 'PENDING' || a.status === 'SUBMITTED').length)
     })
   }, [])
 
@@ -232,7 +238,7 @@ export function EkbMdDashboard() {
   const totalPurchaseValue = Object.values(purchaseByCommodity).reduce((sum, v) => sum + v.value, 0)
   const totalSalesVolume = Object.values(salesByCommodity).reduce((sum, v) => sum + v.volume, 0)
   const totalSalesValue = Object.values(salesByCommodity).reduce((sum, v) => sum + v.value, 0)
-  const pendingApprovals = purchases.filter(p => p.approvalStatus === 'SUBMITTED').length
+  const pendingApprovals = approvalCount
 
   // Chart data
   const purchaseChart = Object.entries(purchaseByCommodity).map(([name, v]) => ({ name, volume: Math.round(v.volume), value: Math.round(v.value / 1000) }))

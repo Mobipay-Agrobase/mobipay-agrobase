@@ -24,12 +24,16 @@ export async function GET(
     return NextResponse.json({ error: 'Farm land not found' }, { status: 404 })
   }
 
+  const safeParse = (v: string | null): any => {
+    if (!v) return []
+    try { return JSON.parse(v) } catch { return v }
+  }
   const farmParsed = {
     ...farm,
-    approachRoad: farm.approachRoad ? JSON.parse(farm.approachRoad) : [],
-    landGradient: farm.landGradient ? JSON.parse(farm.landGradient) : [],
-    irrigationSource: farm.irrigationSource ? JSON.parse(farm.irrigationSource) : [],
-    soilCriteria: farm.soilCriteria ? JSON.parse(farm.soilCriteria) : [],
+    approachRoad: safeParse(farm.approachRoad),
+    landGradient: safeParse(farm.landGradient),
+    irrigationSource: safeParse(farm.irrigationSource),
+    soilCriteria: safeParse(farm.soilCriteria),
   }
 
   return NextResponse.json({ farm: farmParsed })

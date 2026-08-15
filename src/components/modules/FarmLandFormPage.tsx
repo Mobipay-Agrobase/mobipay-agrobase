@@ -307,10 +307,10 @@ export default function FarmLandFormPage({ mode, farmLandId, farmerId }: FarmLan
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={handleBack}>Cancel</Button>
-            <Button size="sm" onClick={handleSubmit} disabled={saving} className="gap-2">
+            <Button variant="outline" size="sm" onClick={handleBack} className="btn-hover-lift">Cancel</Button>
+            <Button size="sm" onClick={handleSubmit} disabled={saving} className="gap-2 btn-hover-lift min-w-[100px]">
               {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-              {isEditing ? 'Update' : 'Save'}
+              {saving ? 'Saving...' : isEditing ? 'Update' : 'Save'}
             </Button>
           </div>
         </div>
@@ -325,7 +325,7 @@ export default function FarmLandFormPage({ mode, farmLandId, farmerId }: FarmLan
         ) : (
           <form onSubmit={handleSubmit} className="p-4 md:p-6 space-y-6">
             <Tabs defaultValue="field">
-              <TabsList className="h-auto flex-wrap">
+              <TabsList className="h-auto flex-wrap p-1 rounded-xl bg-muted/50 border border-border/40">
                 <TabsTrigger value="field" className="text-xs gap-1.5"><Sprout className="w-3.5 h-3.5" /> Field/Farm Info</TabsTrigger>
                 <TabsTrigger value="soil" className="text-xs gap-1.5"><Droplets className="w-3.5 h-3.5" /> Soil &amp; Irrigation</TabsTrigger>
                 <TabsTrigger value="labour" className="text-xs gap-1.5"><Users className="w-3.5 h-3.5" /> Labour</TabsTrigger>
@@ -335,7 +335,7 @@ export default function FarmLandFormPage({ mode, farmLandId, farmerId }: FarmLan
               </TabsList>
 
               {/* Section 1: Field/Farm Information */}
-              <TabsContent value="field" className="mt-4 space-y-4">
+              <TabsContent value="field" className="mt-4 space-y-4 form-tab-content">
                 <Card>
                   <CardHeader className="pb-3">
                     <CardTitle className="text-sm flex items-center gap-2">
@@ -457,7 +457,7 @@ export default function FarmLandFormPage({ mode, farmLandId, farmerId }: FarmLan
               </TabsContent>
 
               {/* Section 2: Soil and Irrigation Information */}
-              <TabsContent value="soil" className="mt-4 space-y-4">
+              <TabsContent value="soil" className="mt-4 space-y-4 form-tab-content">
                 <Card>
                   <CardHeader className="pb-3">
                     <CardTitle className="text-sm flex items-center gap-2">
@@ -501,7 +501,7 @@ export default function FarmLandFormPage({ mode, farmLandId, farmerId }: FarmLan
               </TabsContent>
 
               {/* Section 3: Farm Labour Information */}
-              <TabsContent value="labour" className="mt-4 space-y-4">
+              <TabsContent value="labour" className="mt-4 space-y-4 form-tab-content">
                 <Card>
                   <CardHeader className="pb-3">
                     <CardTitle className="text-sm flex items-center gap-2">
@@ -532,7 +532,7 @@ export default function FarmLandFormPage({ mode, farmLandId, farmerId }: FarmLan
               </TabsContent>
 
               {/* Section 4 & 5: Conversion Information & Status */}
-              <TabsContent value="conversion" className="mt-4 space-y-4">
+              <TabsContent value="conversion" className="mt-4 space-y-4 form-tab-content">
                 <Card>
                   <CardHeader className="pb-3">
                     <CardTitle className="text-sm flex items-center gap-2">
@@ -618,7 +618,7 @@ export default function FarmLandFormPage({ mode, farmLandId, farmerId }: FarmLan
               </TabsContent>
 
               {/* Section 6: Soil Analysis Information */}
-              <TabsContent value="soil-analysis" className="mt-4 space-y-4">
+              <TabsContent value="soil-analysis" className="mt-4 space-y-4 form-tab-content">
                 <Card>
                   <CardHeader className="pb-3">
                     <div className="flex items-center justify-between">
@@ -723,7 +723,7 @@ export default function FarmLandFormPage({ mode, farmLandId, farmerId }: FarmLan
               </TabsContent>
 
               {/* GPS Polygon Mapping */}
-              <TabsContent value="polygon" className="mt-4 space-y-4">
+              <TabsContent value="polygon" className="mt-4 space-y-4 form-tab-content">
                 <Card>
                   <CardHeader className="pb-3">
                     <CardTitle className="text-sm flex items-center gap-2">

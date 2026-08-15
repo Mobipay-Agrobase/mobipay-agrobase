@@ -14,6 +14,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { toast } from 'sonner'
 import { CatalogSelect } from '@/components/ui/catalog-select'
 import { CropVarietySelect } from '@/components/ui/crop-variety-select'
+import { FormField as DSFormField } from '@/components/ui/form-design-system'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 interface CultivationFormPageProps {
@@ -211,12 +212,12 @@ export default function CultivationFormPage({ mode, cultivationId, farmId }: Cul
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button type="button" variant="outline" size="sm" onClick={handleBack}>
+            <Button type="button" variant="outline" size="sm" onClick={handleBack} className="btn-hover-lift">
               Cancel
             </Button>
-            <Button type="submit" size="sm" disabled={saving} className="gap-2" form="cultivation-form">
-              {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-              <Save className="w-4 h-4" /> Save
+            <Button type="submit" size="sm" disabled={saving} className="gap-2 btn-hover-lift min-w-[100px]" form="cultivation-form">
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              {saving ? 'Saving...' : 'Save'}
             </Button>
           </div>
         </div>
@@ -232,7 +233,7 @@ export default function CultivationFormPage({ mode, cultivationId, farmId }: Cul
           </div>
         ) : (
           <div className="p-4 md:p-6">
-            <form id="cultivation-form" onSubmit={handleSubmit} className="space-y-6">
+            <form id="cultivation-form" onSubmit={handleSubmit} className="space-y-6 animate-form-fade-in">
               {/* Section 1: Cultivation Information */}
               <Card>
                 <CardHeader className="pb-4">
@@ -430,14 +431,8 @@ export default function CultivationFormPage({ mode, cultivationId, farmId }: Cul
   )
 }
 
-function FormField({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
-  return (
-    <div className="space-y-1.5">
-      <Label className="text-xs">{label}{required && ' *'}</Label>
-      {children}
-    </div>
-  )
-}
+// FormField is now imported from the design system (DSFormField)
+const FormField = DSFormField
 
 function cn(...classes: (string | boolean | undefined | null)[]) {
   return classes.filter(Boolean).join(' ')

@@ -256,7 +256,7 @@ export function MasterDataView({ kind }: { kind: string }) {
             <div className="grid gap-3 sm:grid-cols-2">
               {selected.fields.map(f => (
                 <div key={f.name} className={`space-y-1.5 ${f.type === 'textarea' || f.type === 'multiselect-api' ? 'sm:col-span-2' : ''}`}>
-                  <Label className="text-xs">{f.label}{f.name === 'name' ? ' *' : ''}</Label>
+                  <Label className="form-label-base">{f.label}{f.name === 'name' ? <span className="form-required">*</span> : ''}</Label>
                   {f.type === 'select' ? (
                     <Select value={form[f.name] || ''} onValueChange={v => up(f.name, v)}>
                       <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
@@ -280,7 +280,7 @@ export function MasterDataView({ kind }: { kind: string }) {
             </div>
             <div className="flex justify-end gap-2">
               <Button size="sm" variant="outline" onClick={() => setShowForm(false)}>Cancel</Button>
-              <Button size="sm" onClick={submit} disabled={saving}>{saving ? 'Saving...' : 'Save'}</Button>
+              <Button size="sm" onClick={submit} disabled={saving} className="btn-hover-lift min-w-[80px]">{saving ? 'Saving...' : 'Save'}</Button>
             </div>
           </CardContent>
         </Card>

@@ -27,13 +27,15 @@
  */
 
 import React, { useEffect, useState, useCallback } from 'react'
+import { useAppStore } from '@/lib/store'
 import { cn } from '@/lib/utils'
 import {
   Users, ShoppingCart, Receipt, DollarSign, TrendingUp, TrendingDown,
   Activity, Loader2, GraduationCap, AlertCircle, MapPin, Leaf,
   CheckCircle, Clock, FileText, MessageSquare, Shield, PiggyBank,
   CreditCard, Package, Sprout, UserCheck, BarChart3, Building2,
-  ArrowUpRight, ArrowDownRight, Send, ClipboardCheck, Calendar
+  ArrowUpRight, ArrowDownRight, Send, ClipboardCheck, Calendar,
+  ChevronDown, RefreshCw, Inbox
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -146,6 +148,158 @@ function DashHeader({ title, subtitle }: { title: string; subtitle: string }) {
   )
 }
 
+// ─── New shared primitives (mirrors the DashboardView.tsx pattern) ────────
+
+/**
+ * EkbDashboardSection — labelled wrapper that groups related KPIs, charts,
+ * and tables under a single header. Supports View-all deep-links (via the
+ * Zustand setActiveModule store action) and a collapsible variant.
+ */
+function EkbDashboardSection({
+  icon: Icon,
+  title,
+  description,
+  accent = 'bg-primary/10 text-primary',
+  right,
+  onViewAll,
+  viewAllLabel = 'View all',
+  collapsible = false,
+  defaultCollapsed = false,
+  children,
+}: {
+  icon: any
+  title: string
+  description?: string
+  accent?: string
+  right?: React.ReactNode
+  onViewAll?: () => void
+  viewAllLabel?: string
+  collapsible?: boolean
+  defaultCollapsed?: boolean
+  children: React.ReactNode
+}) {
+  const [collapsed, setCollapsed] = useState(defaultCollapsed)
+  const rightCluster = (
+    <div
+      className="flex items-center gap-3 flex-wrap"
+      onClick={collapsible ? (e) => e.stopPropagation() : undefined}
+    >
+      {right}
+      {onViewAll && (
+        <button
+          type="button"
+          onClick={onViewAll}
+          className="inline-flex items-center gap-0.5 text-[11px] font-medium text-primary hover:underline"
+        >
+          {viewAllLabel}
+          <ArrowUpRight className="w-3 h-3" />
+        </button>
+      )}
+      {collapsible && (
+        <button
+          type="button"
+          onClick={() => setCollapsed(c => !c)}
+          aria-label={collapsed ? `Expand ${title}` : `Collapse ${title}`}
+          aria-expanded={!collapsed}
+          className="inline-flex items-center justify-center w-6 h-6 rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+        >
+          <ChevronDown className={cn('w-4 h-4 transition-transform', collapsed && '-rotate-90')} />
+        </button>
+      )}
+    </div>
+  )
+  return (
+    <section className="space-y-3">
+      <div
+        className={cn(
+          'flex items-center justify-between gap-3 flex-wrap',
+          collapsible && 'cursor-pointer select-none',
+        )}
+        onClick={collapsible ? () => setCollapsed(c => !c) : undefined}
+      >
+        <div className="flex items-center gap-3">
+          <div className={cn('w-9 h-9 rounded-lg flex items-center justify-center shrink-0', accent)}>
+            <Icon className="w-4 h-4" />
+          </div>
+          <div>
+            <h3 className="text-sm font-semibold tracking-tight leading-tight">{title}</h3>
+            {description && (
+              <p className="text-xs text-muted-foreground leading-tight mt-0.5">{description}</p>
+            )}
+          </div>
+        </div>
+        {rightCluster}
+      </div>
+      {!collapsed && children}
+    </section>
+  )
+}
+
+/**
+ * EkbMiniStat — compact sub-stat tile for in-section KPIs.
+ */
+function EkbMiniStat({
+  label, value, icon: Icon, color = 'text-muted-foreground', hint,
+}: {
+  label: string; value: React.ReactNode; icon: any; color?: string; hint?: React.ReactNode
+}) {
+  return (
+    <Card className="overflow-hidden">
+      <CardContent className="p-4">
+        <div className="flex items-center gap-2 text-muted-foreground">
+          <Icon className={cn('w-3.5 h-3.5', color)} />
+          <span className="text-xs font-medium">{label}</span>
+        </div>
+        <p className="text-xl font-bold mt-2 leading-none">{value}</p>
+        {hint && <div className="mt-2 text-[11px] text-muted-foreground">{hint}</div>}
+      </CardContent>
+    </Card>
+  )
+}
+
+/**
+ * EkbPageHeader — page-level header with title, last-updated timestamp,
+ * and silent Refresh button.
+ */
+function EkbPageHeader({
+  title, subtitle, lastUpdated, refreshing, onRefresh,
+}: {
+  title: string; subtitle: string; lastUpdated: Date | null; refreshing: boolean; onRefresh: () => void
+}) {
+  return (
+    <div className="flex items-start justify-between gap-4 flex-wrap">
+      <div>
+        <h2 className="text-xl font-bold tracking-tight">{title}</h2>
+        <p className="text-sm text-muted-foreground mt-0.5">
+          {subtitle}
+          {lastUpdated && (
+            <span className="ml-2 text-xs text-muted-foreground/70">
+              · Updated {formatDistanceToNow(lastUpdated, { addSuffix: true })}
+            </span>
+          )}
+        </p>
+      </div>
+      <button
+        onClick={onRefresh}
+        disabled={refreshing}
+        className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-md border bg-background hover:bg-accent transition-colors disabled:opacity-50"
+      >
+        <RefreshCw className={cn('w-3.5 h-3.5', refreshing && 'animate-spin')} />
+        {refreshing ? 'Refreshing…' : 'Refresh'}
+      </button>
+    </div>
+  )
+}
+
+function EmptyState({ message }: { message: string }) {
+  return (
+    <div className="text-center py-12 text-muted-foreground text-sm">
+      <Inbox className="w-8 h-8 mx-auto mb-2 opacity-30" />
+      {message}
+    </div>
+  )
+}
+
 // ─── Shared API fetchers ──────────────────────────────────────────────────
 
 interface DashboardStats {
@@ -166,13 +320,16 @@ async function fetchJson(url: string): Promise<any | null> {
   }
 }
 
-/** Shared hook: load /api/dashboard/stats with null-safe fallback. */
+/** Shared hook: load /api/dashboard/stats with null-safe fallback + manual refresh. */
 function useDashboardStats() {
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [monthlyRegs, setMonthlyRegs] = useState<MonthlyReg[]>([])
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
 
-  const fetch = useCallback(async () => {
+  const fetch = useCallback(async (opts?: { silent?: boolean }) => {
+    if (opts?.silent) setRefreshing(true); else setLoading(true)
     const data = await fetchJson('/api/dashboard/stats')
     if (data) {
       setStats(data.stats || {
@@ -182,12 +339,14 @@ function useDashboardStats() {
         loanCount: 0, completedLoans: 0, overdueLoans: 0, pendingLoans: 0,
       })
       setMonthlyRegs(data.monthlyRegistrations || [])
+      setLastUpdated(new Date())
     }
     setLoading(false)
+    setRefreshing(false)
   }, [])
 
   useEffect(() => { fetch() }, [fetch])
-  return { stats, monthlyRegs, loading }
+  return { stats, monthlyRegs, loading, refreshing, lastUpdated, refresh: fetch }
 }
 
 // ─── 1. EKB_MD — Managing Director Dashboard ──────────────────────────────
@@ -258,28 +417,39 @@ function FarmGeoMap({ locations }: { locations: Array<{ lat: number; lng: number
 }
 
 export function EkbMdDashboard() {
-  const { stats, monthlyRegs, loading } = useDashboardStats()
+  const setActiveModule = useAppStore(s => s.setActiveModule)
+  const { stats, monthlyRegs, loading, refreshing, lastUpdated, refresh } = useDashboardStats()
   const [purchases, setPurchases] = useState<any[]>([])
   const [sales, setSales] = useState<any[]>([])
   const [approvalCount, setApprovalCount] = useState(0)
   const [analytics, setAnalytics] = useState<any>(null)
   const [geoLevel, setGeoLevel] = useState('district')
+  const [analyticsRefreshing, setAnalyticsRefreshing] = useState(false)
+  const [analyticsUpdated, setAnalyticsUpdated] = useState<Date | null>(null)
 
-  useEffect(() => {
-    fetchJson('/api/purchases?limit=200').then(d => {
-      setPurchases(Array.isArray(d?.data) ? d.data : [])
-    })
-    fetchJson('/api/sales?limit=200').then(d => {
-      setSales(Array.isArray(d?.data) ? d.data : [])
-    })
-    fetchJson('/api/approvals').then(d => {
-      const list = Array.isArray(d?.data) ? d.data : []
-      setApprovalCount(list.filter((a: any) => a.status === 'PENDING' || a.status === 'SUBMITTED').length)
-    })
-    fetchJson('/api/dashboard/ekibbo-analytics').then(d => {
-      setAnalytics(d || null)
-    })
+  const fetchAux = useCallback(async (opts?: { silent?: boolean }) => {
+    if (opts?.silent) setAnalyticsRefreshing(true)
+    const [p, s, a, an] = await Promise.all([
+      fetchJson('/api/purchases?limit=200'),
+      fetchJson('/api/sales?limit=200'),
+      fetchJson('/api/approvals'),
+      fetchJson('/api/dashboard/ekibbo-analytics'),
+    ])
+    setPurchases(Array.isArray(p?.data) ? p.data : [])
+    setSales(Array.isArray(s?.data) ? s.data : [])
+    const aList = Array.isArray(a?.data) ? a.data : []
+    setApprovalCount(aList.filter((x: any) => x.status === 'PENDING' || x.status === 'SUBMITTED').length)
+    setAnalytics(an || null)
+    setAnalyticsUpdated(new Date())
+    setAnalyticsRefreshing(false)
   }, [])
+
+  useEffect(() => { fetchAux() }, [fetchAux])
+
+  const handleRefresh = useCallback(() => {
+    refresh({ silent: true })
+    fetchAux({ silent: true })
+  }, [refresh, fetchAux])
 
   if (loading) return <DashSkeleton />
   if (!stats) return <DashError />
@@ -318,10 +488,16 @@ export function EkbMdDashboard() {
   const lineConfig: ChartConfig = { value: { label: 'Farmers', color: 'var(--chart-2)' } }
 
   return (
-    <div className="space-y-6">
-      <DashHeader title="Managing Director Overview" subtitle="Volumes, value chains, and financial performance" />
+    <div className="space-y-8">
+      <EkbPageHeader
+        title="Managing Director Overview"
+        subtitle="Volumes, value chains, and financial performance"
+        lastUpdated={lastUpdated || analyticsUpdated}
+        refreshing={refreshing || analyticsRefreshing}
+        onRefresh={handleRefresh}
+      />
 
-      {/* KPI Row 1 — Volumes & Values */}
+      {/* ─── Hero KPI Strip — Volumes & Values ─── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard label="Total Purchased (kg)" value={fmtNum(totalPurchaseVolume)} icon={ShoppingCart} color="bg-blue-50 dark:bg-blue-950/40 text-blue-600" />
         <StatCard label="Purchase Value" value={fmtUGX(totalPurchaseValue)} icon={DollarSign} color="bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600" />
@@ -329,368 +505,454 @@ export function EkbMdDashboard() {
         <StatCard label="Sales Revenue" value={fmtUGX(totalSalesValue)} icon={TrendingUp} color="bg-amber-50 dark:bg-amber-950/40 text-amber-600" />
       </div>
 
-      {/* KPI Row 2 — Operations */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="Total Farmers" value={fmtNum(stats.farmerCount)} icon={Users} color="bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600" />
-        <StatCard label="Pending Approvals" value={pendingApprovals} icon={Clock} color="bg-amber-50 dark:bg-amber-950/40 text-amber-600" />
-        <StatCard label="Active Loans" value={stats.activeLoanCount} icon={CreditCard} color="bg-teal-50 dark:bg-teal-950/40 text-teal-600" />
-        <StatCard label="Trainings" value={stats.trainingCount} icon={GraduationCap} color="bg-cyan-50 dark:bg-cyan-950/40 text-cyan-600" />
-      </div>
+      {/* ─── Section 1 · Operations Snapshot ─── */}
+      <EkbDashboardSection
+        icon={Users}
+        title="Operations Snapshot"
+        description="Farmer network, approvals queue, and training activity"
+        accent="bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600"
+        collapsible
+        onViewAll={() => setActiveModule('farmers')}
+        viewAllLabel="Open Farmer Profiling"
+      >
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <EkbMiniStat label="Total Farmers" value={fmtNum(stats.farmerCount)} icon={Users} color="text-emerald-600" hint="Registered in your tenant" />
+          <EkbMiniStat label="Pending Approvals" value={pendingApprovals} icon={Clock} color="text-amber-600" hint="Awaiting your review" />
+          <EkbMiniStat label="Active Loans" value={stats.activeLoanCount} icon={CreditCard} color="text-teal-600" hint="Disbursed + outstanding" />
+          <EkbMiniStat label="Trainings" value={stats.trainingCount} icon={GraduationCap} color="text-cyan-600" hint="Total conducted" />
+        </div>
+      </EkbDashboardSection>
 
-      {/* Volume by Value Chain — Purchases */}
-      <Card>
-        <CardHeader className="pb-2"><CardTitle className="text-base">Purchase Volume by Value Chain (kg)</CardTitle></CardHeader>
-        <CardContent>
-          {purchaseChart.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground text-sm">No purchases recorded yet</div>
-          ) : (
-            <ChartContainer config={volumeConfig} className="h-[260px] w-full">
-              <BarChart data={purchaseChart}>
-                <CartesianGrid vertical={false} strokeDasharray="3 3" opacity={0.3} />
-                <XAxis dataKey="name" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
-                <ChartTooltip content={<ChartTooltipContent />} />
-                <Bar dataKey="volume" fill="var(--chart-1)" radius={[6, 6, 0, 0]}>
-                  {purchaseChart.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-                </Bar>
-              </BarChart>
-            </ChartContainer>
-          )}
-        </CardContent>
-      </Card>
+      {/* ─── Section 2 · Purchase Performance ─── */}
+      <EkbDashboardSection
+        icon={ShoppingCart}
+        title="Purchase Performance"
+        description="Volume and value by commodity value chain"
+        accent="bg-blue-50 dark:bg-blue-950/40 text-blue-600"
+        collapsible
+        onViewAll={() => setActiveModule('purchases')}
+        viewAllLabel="Open Purchases"
+        right={
+          <Badge variant="outline" className="text-[11px] font-normal">
+            <ShoppingCart className="w-3 h-3 mr-1" />
+            {purchases.length} purchases
+          </Badge>
+        }
+      >
+        <div className="space-y-4">
+          <Card>
+            <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
+              <CardTitle className="text-sm">Purchase Volume by Value Chain (kg)</CardTitle>
+              <BarChart3 className="w-4 h-4 text-muted-foreground/60" />
+            </CardHeader>
+            <CardContent>
+              {purchaseChart.length === 0 ? (
+                <EmptyState message="No purchases recorded yet" />
+              ) : (
+                <ChartContainer config={volumeConfig} className="h-[260px] w-full">
+                  <BarChart data={purchaseChart}>
+                    <CartesianGrid vertical={false} strokeDasharray="3 3" opacity={0.3} />
+                    <XAxis dataKey="name" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Bar dataKey="volume" fill="var(--chart-1)" radius={[6, 6, 0, 0]}>
+                      {purchaseChart.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                    </Bar>
+                  </BarChart>
+                </ChartContainer>
+              )}
+            </CardContent>
+          </Card>
 
-      {/* Volume by Value Chain — Sales */}
-      <Card>
-        <CardHeader className="pb-2"><CardTitle className="text-base">Sales Volume by Value Chain (kg)</CardTitle></CardHeader>
-        <CardContent>
-          {salesChart.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground text-sm">No sales recorded yet</div>
-          ) : (
-            <ChartContainer config={salesConfig} className="h-[260px] w-full">
-              <BarChart data={salesChart}>
-                <CartesianGrid vertical={false} strokeDasharray="3 3" opacity={0.3} />
-                <XAxis dataKey="name" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
-                <ChartTooltip content={<ChartTooltipContent />} />
-                <Bar dataKey="volume" fill="var(--chart-3)" radius={[6, 6, 0, 0]}>
-                  {salesChart.map((_, i) => <Cell key={i} fill={COLORS[(i + 3) % COLORS.length]} />)}
-                </Bar>
-              </BarChart>
-            </ChartContainer>
-          )}
-        </CardContent>
-      </Card>
+          <Card>
+            <CardHeader className="pb-2"><CardTitle className="text-sm">Purchase Summary by Value Chain</CardTitle></CardHeader>
+            <CardContent className="p-0">
+              {Object.keys(purchaseByCommodity).length === 0 ? (
+                <EmptyState message="No purchases recorded yet" />
+              ) : (
+                <Table>
+                  <TableHeader><TableRow>
+                    <TableHead>Value Chain</TableHead>
+                    <TableHead className="text-right">Transactions</TableHead>
+                    <TableHead className="text-right">Total Volume (kg)</TableHead>
+                    <TableHead className="text-right">Avg per Txn (kg)</TableHead>
+                    <TableHead className="text-right">Total Value (UGX)</TableHead>
+                    <TableHead className="text-right">Avg Price/kg</TableHead>
+                  </TableRow></TableHeader>
+                  <TableBody>
+                    {Object.entries(purchaseByCommodity)
+                      .sort(([, a], [, b]) => b.volume - a.volume)
+                      .map(([commodity, v]) => (
+                        <TableRow key={commodity}>
+                          <TableCell className="font-medium text-sm">{commodity}</TableCell>
+                          <TableCell className="text-right text-sm">{v.count}</TableCell>
+                          <TableCell className="text-right text-sm font-medium">{fmtNum(v.volume)}</TableCell>
+                          <TableCell className="text-right text-sm">{fmtNum(v.volume / v.count)}</TableCell>
+                          <TableCell className="text-right text-sm font-medium">{fmtUGX(v.value)}</TableCell>
+                          <TableCell className="text-right text-sm">{v.volume > 0 ? fmtUGX(v.value / v.volume) : '—'}</TableCell>
+                        </TableRow>
+                      ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </EkbDashboardSection>
 
-      {/* Purchase Summary by Commodity Table */}
-      <Card>
-        <CardHeader className="pb-2"><CardTitle className="text-base">Purchase Summary by Value Chain</CardTitle></CardHeader>
-        <CardContent className="p-0">
-          {Object.keys(purchaseByCommodity).length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground text-sm">No purchases recorded yet</div>
-          ) : (
-            <Table>
-              <TableHeader><TableRow>
-                <TableHead>Value Chain</TableHead>
-                <TableHead className="text-right">Transactions</TableHead>
-                <TableHead className="text-right">Total Volume (kg)</TableHead>
-                <TableHead className="text-right">Avg per Txn (kg)</TableHead>
-                <TableHead className="text-right">Total Value (UGX)</TableHead>
-                <TableHead className="text-right">Avg Price/kg</TableHead>
-              </TableRow></TableHeader>
-              <TableBody>
-                {Object.entries(purchaseByCommodity)
-                  .sort(([, a], [, b]) => b.volume - a.volume)
-                  .map(([commodity, v]) => (
-                    <TableRow key={commodity}>
-                      <TableCell className="font-medium text-sm">{commodity}</TableCell>
-                      <TableCell className="text-right text-sm">{v.count}</TableCell>
-                      <TableCell className="text-right text-sm font-medium">{fmtNum(v.volume)}</TableCell>
-                      <TableCell className="text-right text-sm">{fmtNum(v.volume / v.count)}</TableCell>
-                      <TableCell className="text-right text-sm font-medium">{fmtUGX(v.value)}</TableCell>
-                      <TableCell className="text-right text-sm">{v.volume > 0 ? fmtUGX(v.value / v.volume) : '—'}</TableCell>
-                    </TableRow>
-                  ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+      {/* ─── Section 3 · Sales Performance ─── */}
+      <EkbDashboardSection
+        icon={Receipt}
+        title="Sales Performance"
+        description="Volume and revenue by commodity value chain"
+        accent="bg-purple-50 dark:bg-purple-950/40 text-purple-600"
+        collapsible
+        onViewAll={() => setActiveModule('sales')}
+        viewAllLabel="Open Sales"
+        right={
+          <Badge variant="outline" className="text-[11px] font-normal">
+            <Receipt className="w-3 h-3 mr-1" />
+            {sales.length} sales
+          </Badge>
+        }
+      >
+        <div className="space-y-4">
+          <Card>
+            <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
+              <CardTitle className="text-sm">Sales Volume by Value Chain (kg)</CardTitle>
+              <BarChart3 className="w-4 h-4 text-muted-foreground/60" />
+            </CardHeader>
+            <CardContent>
+              {salesChart.length === 0 ? (
+                <EmptyState message="No sales recorded yet" />
+              ) : (
+                <ChartContainer config={salesConfig} className="h-[260px] w-full">
+                  <BarChart data={salesChart}>
+                    <CartesianGrid vertical={false} strokeDasharray="3 3" opacity={0.3} />
+                    <XAxis dataKey="name" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Bar dataKey="volume" fill="var(--chart-3)" radius={[6, 6, 0, 0]}>
+                      {salesChart.map((_, i) => <Cell key={i} fill={COLORS[(i + 3) % COLORS.length]} />)}
+                    </Bar>
+                  </BarChart>
+                </ChartContainer>
+              )}
+            </CardContent>
+          </Card>
 
-      {/* Sales Summary by Commodity Table */}
-      <Card>
-        <CardHeader className="pb-2"><CardTitle className="text-base">Sales Summary by Value Chain</CardTitle></CardHeader>
-        <CardContent className="p-0">
-          {Object.keys(salesByCommodity).length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground text-sm">No sales recorded yet</div>
-          ) : (
-            <Table>
-              <TableHeader><TableRow>
-                <TableHead>Value Chain</TableHead>
-                <TableHead className="text-right">Transactions</TableHead>
-                <TableHead className="text-right">Total Volume (kg)</TableHead>
-                <TableHead className="text-right">Total Value (UGX)</TableHead>
-                <TableHead className="text-right">Avg Price/kg</TableHead>
-              </TableRow></TableHeader>
-              <TableBody>
-                {Object.entries(salesByCommodity)
-                  .sort(([, a], [, b]) => b.volume - a.volume)
-                  .map(([commodity, v]) => (
-                    <TableRow key={commodity}>
-                      <TableCell className="font-medium text-sm">{commodity}</TableCell>
-                      <TableCell className="text-right text-sm">{v.count}</TableCell>
-                      <TableCell className="text-right text-sm font-medium">{fmtNum(v.volume)}</TableCell>
-                      <TableCell className="text-right text-sm font-medium">{fmtUGX(v.value)}</TableCell>
-                      <TableCell className="text-right text-sm">{v.volume > 0 ? fmtUGX(v.value / v.volume) : '—'}</TableCell>
-                    </TableRow>
-                  ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+          <Card>
+            <CardHeader className="pb-2"><CardTitle className="text-sm">Sales Summary by Value Chain</CardTitle></CardHeader>
+            <CardContent className="p-0">
+              {Object.keys(salesByCommodity).length === 0 ? (
+                <EmptyState message="No sales recorded yet" />
+              ) : (
+                <Table>
+                  <TableHeader><TableRow>
+                    <TableHead>Value Chain</TableHead>
+                    <TableHead className="text-right">Transactions</TableHead>
+                    <TableHead className="text-right">Total Volume (kg)</TableHead>
+                    <TableHead className="text-right">Total Value (UGX)</TableHead>
+                    <TableHead className="text-right">Avg Price/kg</TableHead>
+                  </TableRow></TableHeader>
+                  <TableBody>
+                    {Object.entries(salesByCommodity)
+                      .sort(([, a], [, b]) => b.volume - a.volume)
+                      .map(([commodity, v]) => (
+                        <TableRow key={commodity}>
+                          <TableCell className="font-medium text-sm">{commodity}</TableCell>
+                          <TableCell className="text-right text-sm">{v.count}</TableCell>
+                          <TableCell className="text-right text-sm font-medium">{fmtNum(v.volume)}</TableCell>
+                          <TableCell className="text-right text-sm font-medium">{fmtUGX(v.value)}</TableCell>
+                          <TableCell className="text-right text-sm">{v.volume > 0 ? fmtUGX(v.value / v.volume) : '—'}</TableCell>
+                        </TableRow>
+                      ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </EkbDashboardSection>
 
-      {/* Farmer Registrations + Loan Portfolio */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-base">Farmer Registrations (Monthly)</CardTitle></CardHeader>
-          <CardContent>
-            <ChartContainer config={lineConfig} className="h-[220px] w-full">
-              <BarChart data={monthlyRegs.map(m => ({ ...m, month: formatMonth(m.month) }))}>
-                <CartesianGrid vertical={false} strokeDasharray="3 3" opacity={0.3} />
-                <XAxis dataKey="month" tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
-                <ChartTooltip content={<ChartTooltipContent />} />
-                <Bar dataKey="count" fill="var(--chart-2)" radius={[6, 6, 0, 0]} />
-              </BarChart>
-            </ChartContainer>
-          </CardContent>
-        </Card>
+      {/* ─── Section 4 · Farmer Network & Loan Portfolio ─── */}
+      <EkbDashboardSection
+        icon={Users}
+        title="Farmer Network & Loan Portfolio"
+        description="Monthly registration trend and loan portfolio composition"
+        accent="bg-teal-50 dark:bg-teal-950/40 text-teal-600"
+        collapsible
+        onViewAll={() => setActiveModule('vsla')}
+        viewAllLabel="Open VSLA Management"
+      >
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <Card>
+            <CardHeader className="pb-2"><CardTitle className="text-sm">Farmer Registrations (Monthly)</CardTitle></CardHeader>
+            <CardContent>
+              <ChartContainer config={lineConfig} className="h-[220px] w-full">
+                <BarChart data={monthlyRegs.map(m => ({ ...m, month: formatMonth(m.month) }))}>
+                  <CartesianGrid vertical={false} strokeDasharray="3 3" opacity={0.3} />
+                  <XAxis dataKey="month" tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
+                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <Bar dataKey="count" fill="var(--chart-2)" radius={[6, 6, 0, 0]} />
+                </BarChart>
+              </ChartContainer>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-base">Loan Portfolio Health</CardTitle></CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Total Loans</span>
-              <span className="font-bold">{stats.loanCount}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Active</span>
-              <Badge className="bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">{stats.activeLoanCount}</Badge>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Repaid</span>
-              <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">{stats.completedLoans}</Badge>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Overdue</span>
-              <Badge className="bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300">{stats.overdueLoans}</Badge>
-            </div>
-            <div className="pt-3 border-t">
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-muted-foreground">Gender Split</span>
-                <span><span className="text-blue-600 font-medium">M {stats.maleCount}</span> / <span className="text-pink-600 font-medium">F {stats.femaleCount}</span></span>
+          <Card>
+            <CardHeader className="pb-2"><CardTitle className="text-sm">Loan Portfolio Health</CardTitle></CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Total Loans</span>
+                <span className="font-bold">{stats.loanCount}</span>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* ─── Location-wise Farmer Count Drilldown ─── */}
-      {analytics?.locationHierarchy && (
-        <Card>
-          <CardHeader className="pb-2">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-base">Farmer Distribution by Location</CardTitle>
-              <div className="flex gap-1">
-                {['country', 'province', 'district', 'commune', 'villageName'].map(level => (
-                  <button
-                    key={level}
-                    onClick={() => setGeoLevel(level)}
-                    className={cn(
-                      'px-2 py-0.5 rounded text-[10px] font-medium capitalize transition-colors',
-                      geoLevel === level
-                        ? 'bg-primary text-primary-foreground'
-                        : 'bg-muted text-muted-foreground hover:bg-muted/80'
-                    )}
-                  >
-                    {level === 'villageName' ? 'Village' : level}
-                  </button>
-                ))}
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Active</span>
+                <Badge className="bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">{stats.activeLoanCount}</Badge>
               </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {(() => {
-              const data = analytics.locationHierarchy[geoLevel] || []
-              if (data.length === 0) {
-                return <div className="text-center py-8 text-muted-foreground text-sm">No location data available</div>
-              }
-              return (
-                <div className="h-[300px] w-full">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Repaid</span>
+                <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">{stats.completedLoans}</Badge>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Overdue</span>
+                <Badge className="bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300">{stats.overdueLoans}</Badge>
+              </div>
+              <div className="pt-3 border-t">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">Gender Split</span>
+                  <span><span className="text-blue-600 font-medium">M {stats.maleCount}</span> / <span className="text-pink-600 font-medium">F {stats.femaleCount}</span></span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </EkbDashboardSection>
+
+      {/* ─── Section 5 · Geographic Distribution ─── */}
+      <EkbDashboardSection
+        icon={MapPin}
+        title="Geographic Distribution"
+        description="Farmer density by location level + farm-level geolocation map"
+        accent="bg-amber-50 dark:bg-amber-950/40 text-amber-600"
+        collapsible
+        defaultCollapsed
+        onViewAll={() => setActiveModule('farm-lands')}
+        viewAllLabel="Open Farm Land Registry"
+      >
+        <div className="space-y-4">
+          {/* ─── Location-wise Farmer Count Drilldown ─── */}
+          {analytics?.locationHierarchy && (
+            <Card>
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm">Farmer Distribution by Location</CardTitle>
+                  <div className="flex gap-1">
+                    {['country', 'province', 'district', 'commune', 'villageName'].map(level => (
+                      <button
+                        key={level}
+                        onClick={() => setGeoLevel(level)}
+                        className={cn(
+                          'px-2 py-0.5 rounded text-[10px] font-medium capitalize transition-colors',
+                          geoLevel === level
+                            ? 'bg-primary text-primary-foreground'
+                            : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                        )}
+                      >
+                        {level === 'villageName' ? 'Village' : level}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {(() => {
+                  const data = analytics.locationHierarchy[geoLevel] || []
+                  if (data.length === 0) {
+                    return <EmptyState message="No location data available" />
+                  }
+                  return (
+                    <div className="h-[300px] w-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={data.slice(0, 15)} layout="vertical" margin={{ left: 10, right: 20, top: 5, bottom: 5 }}>
+                          <CartesianGrid horizontal={false} strokeDasharray="3 3" opacity={0.3} />
+                          <XAxis type="number" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+                          <YAxis type="category" dataKey="label" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} width={100} />
+                          <Tooltip cursor={{ fill: '#f1f5f9' }} formatter={(v: any) => [`${v} farmers`, 'Count']} />
+                          <Bar dataKey="count" radius={[0, 6, 6, 0]}>
+                            {data.slice(0, 15).map((_: any, i: number) => (
+                              <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                            ))}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  )
+                })()}
+                {analytics.locationHierarchy.totalFarmers > 0 && (
+                  <p className="text-xs text-muted-foreground text-center mt-2">
+                    {analytics.locationHierarchy[geoLevel]?.length || 0} {geoLevel === 'villageName' ? 'villages' : geoLevel + 's'} ·
+                    {' '}{analytics.locationHierarchy.totalFarmers} total farmers
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* ─── Farm Land Geolocation Map ─── */}
+          {analytics?.farmLocations && analytics.farmLocations.length > 0 && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <MapPin className="w-4 h-4 text-primary" />
+                  Farm Land Locations
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <FarmGeoMap locations={analytics.farmLocations} />
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </EkbDashboardSection>
+
+      {/* ─── Section 6 · Trends & Crop Mix ─── */}
+      <EkbDashboardSection
+        icon={TrendingUp}
+        title="Trends & Crop Mix"
+        description="6-month purchase trends, farmer growth, and commodity distribution"
+        accent="bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600"
+        collapsible
+        defaultCollapsed
+      >
+        <div className="space-y-4">
+          {/* ─── Purchase Trends (6 months) + Commodity Mix ─── */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {analytics?.purchaseTrends && analytics.purchaseTrends.length > 0 && (
+              <Card>
+                <CardHeader className="pb-2"><CardTitle className="text-sm">Purchase Trends (6 Months)</CardTitle></CardHeader>
+                <CardContent>
+                  <div className="h-[260px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={analytics.purchaseTrends}>
+                        <CartesianGrid vertical={false} strokeDasharray="3 3" opacity={0.3} />
+                        <XAxis dataKey="month" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+                        <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+                        <Tooltip
+                          formatter={(v: any, name: string) => {
+                            if (name === 'value') return [fmtUGX(v), 'Value']
+                            return [fmtNum(v), 'Volume (kg)']
+                          }}
+                        />
+                        <Bar dataKey="volume" fill="#3b82f6" radius={[6, 6, 0, 0]} name="volume" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {analytics?.commodityMix && analytics.commodityMix.length > 0 && (
+              <Card>
+                <CardHeader className="pb-2"><CardTitle className="text-sm">Farmer Crop Distribution</CardTitle></CardHeader>
+                <CardContent>
+                  <div className="h-[260px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={analytics.commodityMix} layout="vertical" margin={{ left: 10, right: 20, top: 5, bottom: 5 }}>
+                        <CartesianGrid horizontal={false} strokeDasharray="3 3" opacity={0.3} />
+                        <XAxis type="number" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+                        <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} width={80} />
+                        <Tooltip cursor={{ fill: '#f1f5f9' }} formatter={(v: any) => [`${v} farmers`, 'Count']} />
+                        <Bar dataKey="count" radius={[0, 6, 6, 0]}>
+                          {analytics.commodityMix.map((_: any, i: number) => (
+                            <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+
+          {/* ─── Farmer Growth (cumulative) + Top Villages ─── */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {analytics?.farmerGrowth && analytics.farmerGrowth.length > 0 && (
+              <Card>
+                <CardHeader className="pb-2"><CardTitle className="text-sm">Farmer Growth (12 Months)</CardTitle></CardHeader>
+                <CardContent>
+                  <div className="h-[220px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={analytics.farmerGrowth}>
+                        <CartesianGrid vertical={false} strokeDasharray="3 3" opacity={0.3} />
+                        <XAxis dataKey="month" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
+                        <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+                        <Tooltip
+                          formatter={(v: any, name: string) => {
+                            if (name === 'totalFarmers') return [fmtNum(v), 'Cumulative']
+                            return [v, 'New']
+                          }}
+                        />
+                        <Bar dataKey="newFarmers" fill="#a7f3d0" radius={[4, 4, 0, 0]} name="newFarmers" />
+                        <Bar dataKey="totalFarmers" fill="#059669" radius={[4, 4, 0, 0]} name="totalFarmers" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {analytics?.topVillages && analytics.topVillages.length > 0 && (
+              <Card>
+                <CardHeader className="pb-2"><CardTitle className="text-sm">Top Villages by Farmer Count</CardTitle></CardHeader>
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader><TableRow>
+                      <TableHead>Village</TableHead>
+                      <TableHead>District</TableHead>
+                      <TableHead className="text-right">Farmers</TableHead>
+                    </TableRow></TableHeader>
+                    <TableBody>
+                      {analytics.topVillages.map((v: any, i: number) => (
+                        <TableRow key={i}>
+                          <TableCell className="font-medium text-sm">{v.village}</TableCell>
+                          <TableCell className="text-sm text-muted-foreground">{v.district}</TableCell>
+                          <TableCell className="text-right text-sm font-bold">{v.count}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+
+          {/* ─── Gender by District ─── */}
+          {analytics?.genderByDistrict && analytics.genderByDistrict.length > 0 && (
+            <Card>
+              <CardHeader className="pb-2"><CardTitle className="text-sm">Gender Distribution by District</CardTitle></CardHeader>
+              <CardContent>
+                <div className="h-[260px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={data.slice(0, 15)} layout="vertical" margin={{ left: 10, right: 20, top: 5, bottom: 5 }}>
-                      <CartesianGrid horizontal={false} strokeDasharray="3 3" opacity={0.3} />
-                      <XAxis type="number" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
-                      <YAxis type="category" dataKey="label" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} width={100} />
-                      <Tooltip cursor={{ fill: '#f1f5f9' }} formatter={(v: any) => [`${v} farmers`, 'Count']} />
-                      <Bar dataKey="count" radius={[0, 6, 6, 0]}>
-                        {data.slice(0, 15).map((_: any, i: number) => (
-                          <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                        ))}
-                      </Bar>
+                    <BarChart data={analytics.genderByDistrict}>
+                      <CartesianGrid vertical={false} strokeDasharray="3 3" opacity={0.3} />
+                      <XAxis dataKey="district" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} angle={-15} textAnchor="end" height={50} />
+                      <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+                      <Tooltip cursor={{ fill: '#f1f5f9' }} />
+                      <Bar dataKey="male" stackId="a" fill="#3b82f6" name="Male" radius={[0, 0, 0, 0]} />
+                      <Bar dataKey="female" stackId="a" fill="#ec4899" name="Female" radius={[6, 6, 0, 0]} />
+                      <Bar dataKey="other" stackId="a" fill="#a855f7" name="Other" radius={[6, 6, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
-              )
-            })()}
-            {analytics.locationHierarchy.totalFarmers > 0 && (
-              <p className="text-xs text-muted-foreground text-center mt-2">
-                {analytics.locationHierarchy[geoLevel]?.length || 0} {geoLevel === 'villageName' ? 'villages' : geoLevel + 's'} ·
-                {' '}{analytics.locationHierarchy.totalFarmers} total farmers
-              </p>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* ─── Farm Land Geolocation Map ─── */}
-      {analytics?.farmLocations && analytics.farmLocations.length > 0 && (
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center gap-2">
-              <MapPin className="w-4 h-4 text-primary" />
-              Farm Land Locations
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <FarmGeoMap locations={analytics.farmLocations} />
-          </CardContent>
-        </Card>
-      )}
-
-      {/* ─── Purchase Trends (6 months) + Commodity Mix ─── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {analytics?.purchaseTrends && analytics.purchaseTrends.length > 0 && (
-          <Card>
-            <CardHeader className="pb-2"><CardTitle className="text-base">Purchase Trends (6 Months)</CardTitle></CardHeader>
-            <CardContent>
-              <div className="h-[260px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={analytics.purchaseTrends}>
-                    <CartesianGrid vertical={false} strokeDasharray="3 3" opacity={0.3} />
-                    <XAxis dataKey="month" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
-                    <Tooltip
-                      formatter={(v: any, name: string) => {
-                        if (name === 'value') return [fmtUGX(v), 'Value']
-                        return [fmtNum(v), 'Volume (kg)']
-                      }}
-                    />
-                    <Bar dataKey="volume" fill="#3b82f6" radius={[6, 6, 0, 0]} name="volume" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {analytics?.commodityMix && analytics.commodityMix.length > 0 && (
-          <Card>
-            <CardHeader className="pb-2"><CardTitle className="text-base">Farmer Crop Distribution</CardTitle></CardHeader>
-            <CardContent>
-              <div className="h-[260px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={analytics.commodityMix} layout="vertical" margin={{ left: 10, right: 20, top: 5, bottom: 5 }}>
-                    <CartesianGrid horizontal={false} strokeDasharray="3 3" opacity={0.3} />
-                    <XAxis type="number" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
-                    <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} width={80} />
-                    <Tooltip cursor={{ fill: '#f1f5f9' }} formatter={(v: any) => [`${v} farmers`, 'Count']} />
-                    <Bar dataKey="count" radius={[0, 6, 6, 0]}>
-                      {analytics.commodityMix.map((_: any, i: number) => (
-                        <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-      </div>
-
-      {/* ─── Farmer Growth (cumulative) + Top Villages ─── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {analytics?.farmerGrowth && analytics.farmerGrowth.length > 0 && (
-          <Card>
-            <CardHeader className="pb-2"><CardTitle className="text-base">Farmer Growth (12 Months)</CardTitle></CardHeader>
-            <CardContent>
-              <div className="h-[220px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={analytics.farmerGrowth}>
-                    <CartesianGrid vertical={false} strokeDasharray="3 3" opacity={0.3} />
-                    <XAxis dataKey="month" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
-                    <Tooltip
-                      formatter={(v: any, name: string) => {
-                        if (name === 'totalFarmers') return [fmtNum(v), 'Cumulative']
-                        return [v, 'New']
-                      }}
-                    />
-                    <Bar dataKey="newFarmers" fill="#a7f3d0" radius={[4, 4, 0, 0]} name="newFarmers" />
-                    <Bar dataKey="totalFarmers" fill="#059669" radius={[4, 4, 0, 0]} name="totalFarmers" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {analytics?.topVillages && analytics.topVillages.length > 0 && (
-          <Card>
-            <CardHeader className="pb-2"><CardTitle className="text-base">Top Villages by Farmer Count</CardTitle></CardHeader>
-            <CardContent className="p-0">
-              <Table>
-                <TableHeader><TableRow>
-                  <TableHead>Village</TableHead>
-                  <TableHead>District</TableHead>
-                  <TableHead className="text-right">Farmers</TableHead>
-                </TableRow></TableHeader>
-                <TableBody>
-                  {analytics.topVillages.map((v: any, i: number) => (
-                    <TableRow key={i}>
-                      <TableCell className="font-medium text-sm">{v.village}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{v.district}</TableCell>
-                      <TableCell className="text-right text-sm font-bold">{v.count}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        )}
-      </div>
-
-      {/* ─── Gender by District ─── */}
-      {analytics?.genderByDistrict && analytics.genderByDistrict.length > 0 && (
-        <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-base">Gender Distribution by District</CardTitle></CardHeader>
-          <CardContent>
-            <div className="h-[260px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={analytics.genderByDistrict}>
-                  <CartesianGrid vertical={false} strokeDasharray="3 3" opacity={0.3} />
-                  <XAxis dataKey="district" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} angle={-15} textAnchor="end" height={50} />
-                  <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
-                  <Tooltip cursor={{ fill: '#f1f5f9' }} />
-                  <Bar dataKey="male" stackId="a" fill="#3b82f6" name="Male" radius={[0, 0, 0, 0]} />
-                  <Bar dataKey="female" stackId="a" fill="#ec4899" name="Female" radius={[6, 6, 0, 0]} />
-                  <Bar dataKey="other" stackId="a" fill="#a855f7" name="Other" radius={[6, 6, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </EkbDashboardSection>
     </div>
   )
 }

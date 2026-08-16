@@ -102,8 +102,34 @@ export default function SurveysView() {
         _count: s._count,
       }))
       setSurveys(normalized)
-      // Responses are no longer fetched up-front — see per-survey "View Responses" button.
-      setResponses([])
+      // Fetch responses for ALL surveys that have responses, in parallel,
+      // then merge into a single flat list for the "Responses" tab.
+      // Previously this was set to [] which made the Responses tab permanently empty.
+      const surveysWithResponses = normalized.filter(s => s.responseCount > 0)
+      if (surveysWithResponses.length === 0) {
+        setResponses([])
+      } else {
+        const allResponses = await Promise.all(
+          surveysWithResponses.map(async s => {
+            try {
+              const data = await safeFetch(`/api/surveys/${s.id}/responses?limit=500`)
+              const arr = extractArray(data, 'data', 'responses')
+              return arr.map((r: any) => ({
+                id: r.id,
+                surveyId: s.id,
+                surveyTitle: s.title,
+                farmerName: r.respondentId || 'Anonymous',
+                farmerCode: '',
+                answers: typeof r.answers === 'string' ? safeJsonParse(r.answers) : (r.answers || {}),
+                submittedAt: r.createdAt ? new Date(r.createdAt).toISOString().split('T')[0] : '',
+              }))
+            } catch {
+              return []
+            }
+          })
+        )
+        setResponses(allResponses.flat())
+      }
     } catch {
       setSurveys([])
       setResponses([])
@@ -176,6 +202,17 @@ export default function SurveysView() {
   })
 
   const totalResponses = surveys.reduce((sum, s) => sum + s.responseCount, 0)
+
+  // Build a question-id → question-text lookup map from all loaded surveys.
+  // Used to render response answers with human-readable question text instead
+  // of the raw question ID (which looks like "cmsvjzdig0002l404veg74e6u").
+  const questionMap: Record<string, string> = {}
+  for (const s of surveys) {
+    for (const q of s.questions) {
+      questionMap[q.id] = q.text
+    }
+  }
+  const questionText = (id: string) => questionMap[id] || `Question ${id.slice(-6)}`
   const activeSurveys = surveys.filter(s => s.status === 'ACTIVE').length
 
   const statusPieData = [
@@ -401,8 +438,8 @@ export default function SurveysView() {
                 <div className="space-y-3">
                   {Object.entries(selectedResponse.answers).map(([key, value]) => (
                     value && (
-                      <div key={key} className="flex gap-3">
-                        <Badge variant="outline" className="text-[10px] h-fit shrink-0">{key.toUpperCase()}</Badge>
+                      <div key={key} className="flex flex-col gap-1 border-l-2 border-primary/30 pl-3">
+                        <p className="text-xs font-medium text-muted-foreground">{questionText(key)}</p>
                         <p className="text-sm">{Array.isArray(value) ? value.join(', ') : String(value)}</p>
                       </div>
                     )
@@ -491,11 +528,11 @@ export default function SurveysView() {
                       <p className="font-medium text-sm">{r.farmerName}</p>
                       <p className="text-xs text-muted-foreground">{r.submittedAt}</p>
                     </div>
-                    <div className="space-y-1">
+                    <div className="space-y-1.5">
                       {Object.entries(r.answers).map(([key, value]) => (
-                        <div key={key} className="text-xs">
-                          <span className="text-muted-foreground">{key}:</span>{' '}
-                          <span>{Array.isArray(value) ? value.join(', ') : String(value)}</span>
+                        <div key={key} className="text-xs border-l-2 border-primary/30 pl-2">
+                          <p className="text-muted-foreground font-medium">{questionText(key)}</p>
+                          <p className="text-foreground">{Array.isArray(value) ? value.join(', ') : String(value)}</p>
                         </div>
                       ))}
                     </div>

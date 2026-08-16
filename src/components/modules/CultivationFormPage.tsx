@@ -73,13 +73,17 @@ export default function CultivationFormPage({ mode, cultivationId, farmId }: Cul
   const sowingCost = form.sowingChargesBy === 'hectare' ? areaHa * charges : hours * charges
 
   useEffect(() => {
-    fetch('/api/farm-lands')
+    // Fetch up to 1000 farm lands so the dropdown includes the cultivation's
+    // existing farm (which may be anywhere in the tenant's full set — Eric's
+    // tenant has 1237 farms, so the default limit=20 is way too small and
+    // the Select shows empty because the selected farmId isn't in the list).
+    fetch('/api/farm-lands?limit=1000')
       .then(r => r.json())
       .then(data => {
         const farmList = data.farms || data.data || []
         setFarms(farmList)
       })
-      .catch(() => {})
+      .catch((err) => console.error('Failed to load farm list for dropdown:', err))
   }, [])
 
   useEffect(() => {

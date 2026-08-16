@@ -90,6 +90,23 @@ interface SoilAnalysis {
   uom?: string | null
 }
 
+/**
+ * normalizeMulti — accepts either a string ("a, b, c"), an array (["a","b"]),
+ * or null/undefined, and returns a clean string[] of non-empty trimmed values.
+ *
+ * The farm-lands detail API JSON.parses approachRoad / landGradient /
+ * irrigationSource into arrays when they were stored as JSON arrays, but
+ * leaves them as raw strings when they were stored as plain comma-separated
+ * strings. This helper handles both shapes so the form's setXxxValues()
+ * never crashes with ".split is not a function".
+ */
+function normalizeMulti(v: unknown): string[] {
+  if (!v) return []
+  if (Array.isArray(v)) return v.map(x => String(x).trim()).filter(Boolean)
+  if (typeof v === 'string') return v.split(',').map(x => x.trim()).filter(Boolean)
+  return []
+}
+
 const LAND_OWNERSHIP = ['Owned', 'Rent', 'Lease']
 const TOPOLOGY = ['Valley', 'Plains', 'Plateaus']
 const WATER_SOURCES = ['Well', 'Bore Well', 'Pump']
@@ -183,16 +200,19 @@ export default function FarmLandFormPage({ mode, farmLandId, farmerId }: FarmLan
             })))
           }
           if (data.approachRoad) {
-            setApproachRoadValues(data.approachRoad.split(',').map(v => v.trim()).filter(Boolean))
+            setApproachRoadValues(normalizeMulti(data.approachRoad))
           }
           if (data.landGradient) {
-            setLandGradientValues(data.landGradient.split(',').map(v => v.trim()).filter(Boolean))
+            setLandGradientValues(normalizeMulti(data.landGradient))
           }
           if (data.irrigationSource) {
-            setIrrigationSourceValues(data.irrigationSource.split(',').map(v => v.trim()).filter(Boolean))
+            setIrrigationSourceValues(normalizeMulti(data.irrigationSource))
           }
         })
-        .catch(() => toast.error('Failed to load farm land data'))
+        .catch((err) => {
+          console.error('Farm land load error:', err)
+          toast.error('Failed to load farm land data')
+        })
         .finally(() => setLoadingFarm(false))
     }
   }, [mode, farmLandId])

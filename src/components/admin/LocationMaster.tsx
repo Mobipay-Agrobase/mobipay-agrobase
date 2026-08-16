@@ -4,7 +4,8 @@ import React, { useState, useEffect, useCallback } from 'react'
 import { cn } from '@/lib/utils'
 import {
   MapPin, ChevronRight, ChevronDown, Plus, Pencil, Trash2,
-  Globe, Building2, Map, Trees, Home, Landmark, TreePine, Loader2
+  Globe, Building2, Map, Trees, Home, Landmark, TreePine, Loader2,
+  Search, X
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -52,6 +53,16 @@ export function LocationMaster() {
   // Parent options for the create dialog — keyed by level so we can lazy-load
   // each level's options only when the user picks that level's parent.
   const [parentOptions, setParentOptions] = useState<Record<number, GeoEntity[]>>({})
+
+  // ─── Search state ──────────────────────────────────────────────────────
+  // Cross-hierarchy search via /api/settings/geo/search?q=...&level=...
+  // Lets users find any village/district/etc. by name without manually
+  // expanding 7 levels of the tree.
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchLevel, setSearchLevel] = useState<string>('all') // 'all' | 'region' | 'subRegion' | ... | 'village'
+  const [searchResults, setSearchResults] = useState<any[]>([])
+  const [searching, setSearching] = useState(false)
+  const [searchActive, setSearchActive] = useState(false)
 
   // child endpoint + parent query param per level
   const childEndpoint = (level: number) => {
@@ -123,6 +134,38 @@ export function LocationMaster() {
     setExpandedIds(new Set())
     setLoading(true)
     fetchRegions()
+  }
+
+  // ─── Cross-hierarchy search ─────────────────────────────────────────────
+  // Debounced: waits 350ms after the user stops typing, then hits
+  // /api/settings/geo/search?q=...&level=...
+  useEffect(() => {
+    const q = searchQuery.trim()
+    // If the query is too short, clear search results and show the tree
+    if (q.length < 2) {
+      setSearchResults([])
+      setSearchActive(false)
+      return
+    }
+    setSearchActive(true)
+    setSearching(true)
+    const handle = setTimeout(() => {
+      const params = new URLSearchParams({ q, limit: '100' })
+      if (searchLevel !== 'all') params.set('level', searchLevel)
+      fetch(`/api/settings/geo/search?${params.toString()}`)
+        .then(r => r.ok ? r.json() : { data: [] })
+        .then(d => setSearchResults(d.data || []))
+        .catch(() => setSearchResults([]))
+        .finally(() => setSearching(false))
+    }, 350)
+    return () => clearTimeout(handle)
+  }, [searchQuery, searchLevel])
+
+  const clearSearch = () => {
+    setSearchQuery('')
+    setSearchLevel('all')
+    setSearchResults([])
+    setSearchActive(false)
   }
 
   const toggleExpand = (level: number, entity: GeoEntity) => {
@@ -370,12 +413,81 @@ export function LocationMaster() {
           <MapPin className="w-5 h-5" />
           Location Master
         </CardTitle>
-        <Button size="sm" onClick={openAddAnyDialog}>
-          <Plus className="w-4 h-4 mr-1" /> Add Location
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="outline" onClick={reload} title="Refresh">
+            <Loader2 className={cn('w-4 h-4', !loading && 'hidden')} />
+            {!loading && <MapPin className="w-4 h-4" />}
+            <span className="ml-1 hidden sm:inline">Refresh</span>
+          </Button>
+          <Button size="sm" onClick={openAddAnyDialog}>
+            <Plus className="w-4 h-4 mr-1" /> Add Location
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
-        {regions.length === 0 ? (
+        {/* ─── Search Bar + Level Filter ─── */}
+        <div className="mb-4 space-y-2">
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by name (e.g. village, district, parish)…"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 pr-9"
+              />
+              {searchQuery && (
+                <button
+                  onClick={clearSearch}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  aria-label="Clear search"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+            <Select value={searchLevel} onValueChange={setSearchLevel}>
+              <SelectTrigger className="w-[160px] shrink-0">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All levels</SelectItem>
+                <SelectItem value="region">Region</SelectItem>
+                <SelectItem value="subRegion">Sub-Region</SelectItem>
+                <SelectItem value="district">District</SelectItem>
+                <SelectItem value="county">County</SelectItem>
+                <SelectItem value="subCounty">Sub-County</SelectItem>
+                <SelectItem value="parish">Parish</SelectItem>
+                <SelectItem value="village">Village</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          {searchActive && (
+            <p className="text-xs text-muted-foreground">
+              {searching ? 'Searching…' : `${searchResults.length} ${searchResults.length === 1 ? 'result' : 'results'}${searchLevel !== 'all' ? ` in ${LEVEL_CONFIG.find(c => c.key === searchLevel)?.label || searchLevel}` : ''} for "${searchQuery}"`}
+            </p>
+          )}
+        </div>
+
+        {/* ─── Search Results (when searching) OR Tree (default) ─── */}
+        {searchActive ? (
+          <div className="space-y-1">
+            {searching ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
+                <p className="text-sm">Searching locations…</p>
+              </div>
+            ) : searchResults.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <Search className="w-10 h-10 mx-auto mb-2 opacity-40" />
+                <p className="text-sm">No locations found matching "{searchQuery}".</p>
+                <p className="text-xs mt-1">Try a different name or clear the search to browse the tree.</p>
+              </div>
+            ) : (
+              searchResults.map((r) => <SearchResultRow key={`${r.level}-${r.id}`} result={r} />)
+            )}
+          </div>
+        ) : regions.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
             <MapPin className="w-12 h-12 mx-auto mb-2 opacity-50" />
             <p>No regions configured yet.</p>
@@ -552,5 +664,55 @@ export function LocationMaster() {
         </Dialog>
       </CardContent>
     </Card>
+  )
+}
+
+/**
+ * SearchResultRow — renders a single search hit with its full parent chain
+ * as breadcrumbs. Each breadcrumb is a small Badge so the hierarchy is
+ * scannable at a glance. The matched level is highlighted.
+ */
+function SearchResultRow({ result }: { result: any }) {
+  const LEVEL_LABELS: Record<string, string> = {
+    region: "Region", subRegion: "Sub-Region", district: "District",
+    county: "County", subCounty: "Sub-County", parish: "Parish", village: "Village",
+  }
+  const LEVEL_ICONS: Record<string, any> = {
+    region: Globe, subRegion: Map, district: Building2, county: Trees,
+    subCounty: Landmark, parish: TreePine, village: Home,
+  }
+  const Icon = LEVEL_ICONS[result.level] || MapPin
+
+  // Build the breadcrumb chain in order: region > subRegion > ... > matched level
+  const chain: Array<{ level: string; name: string }> = []
+  const order = ["region", "subRegion", "district", "county", "subCounty", "parish", "village"]
+  for (const lvl of order) {
+    const node = result[lvl]
+    if (node && node.name) chain.push({ level: lvl, name: node.name })
+    if (lvl === result.level) break
+  }
+
+  return (
+    <div className="flex items-start gap-2 py-2 px-3 rounded-lg border hover:bg-muted/40 transition-colors">
+      <div className="w-8 h-8 rounded-md bg-primary/10 text-primary flex items-center justify-center shrink-0 mt-0.5">
+        <Icon className="w-4 h-4" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-sm font-medium">{result.name}</span>
+          <Badge variant="secondary" className="text-[10px]">{LEVEL_LABELS[result.level] || result.level}</Badge>
+        </div>
+        {chain.length > 1 && (
+          <div className="flex items-center gap-1 mt-1 flex-wrap text-[11px] text-muted-foreground">
+            {chain.slice(0, -1).map((c, i) => (
+              <span key={i} className="inline-flex items-center gap-1">
+                <span>{c.name}</span>
+                <ChevronRight className="w-2.5 h-2.5" />
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
   )
 }

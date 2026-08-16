@@ -260,7 +260,9 @@ function CultivationCreateForm({ onSaved, cultivation }: { onSaved: () => void; 
   const isEdit = !!cultivation
 
   useEffect(() => {
-    fetch('/api/farm-lands')
+    // Fetch up to 1000 farm lands so the dropdown includes the cultivation's
+    // existing farm (which may be anywhere in the tenant's full set).
+    fetch('/api/farm-lands?limit=1000')
       .then(r => r.json())
       .then(data => {
         const farmList = data.farms || []

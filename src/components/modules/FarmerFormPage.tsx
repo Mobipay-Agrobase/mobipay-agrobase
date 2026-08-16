@@ -209,6 +209,30 @@ function AddFarmerForm({ onClose, initialData, farmerId }: { onClose: () => void
           defaults[k] = initialData[k as keyof Farmer]
         }
       })
+      // Defensive coercion: ensure all array-typed fields are actually arrays.
+      // The detail API (/api/farmers/[id]) historically returned JSON-stored
+      // fields as raw strings, which crashed form.bankAccounts.map() with
+      // "R.bankAccounts.map is not a function". Even with the API now fixed,
+      // we coerce here as defense-in-depth so a future API regression can't
+      // take down the edit form.
+      const arrayFields: (keyof typeof defaults)[] = [
+        'bankAccounts', 'insurances', 'farmEquipments', 'animals',
+        'consumerElectronics', 'vehicles', 'assets',
+        'mainCrops', 'livestockTypes',
+      ]
+      arrayFields.forEach(k => {
+        const v = defaults[k]
+        if (Array.isArray(v)) return
+        if (typeof v === 'string') {
+          try { defaults[k] = JSON.parse(v) } catch { defaults[k] = [] }
+          if (!Array.isArray(defaults[k])) defaults[k] = []
+        } else if (v == null) {
+          defaults[k] = []
+        } else {
+          // object or other — wrap in array only if it's not already iterable
+          defaults[k] = []
+        }
+      })
       // Normalize date inputs to yyyy-MM-dd (the DB returns full ISO timestamps,
       // which <input type="date"> rejects).
       const dateFields: (keyof typeof defaults)[] = ['dateOfBirth', 'enrollmentDate', 'loanRepaymentDate']

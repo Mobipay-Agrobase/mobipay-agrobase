@@ -27,9 +27,24 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   })
   if (!farmer) return NextResponse.json({ error: 'Farmer not found' }, { status: 404 })
 
-  // P7: Decrypt PII fields for the response
+  // Parse JSON string fields stored in the DB into proper arrays/objects.
+  // The LIST endpoint (/api/farmers) already does this; the detail endpoint
+  // must do the same or the edit form's bankAccounts.map() / etc. will crash
+  // with "X.map is not a function" because the raw Prisma value is a string.
+  const parseJson = (raw: string | null | undefined, fallback: any) => {
+    if (!raw) return fallback
+    try { return JSON.parse(raw) } catch { return fallback }
+  }
   const farmerDecrypted = {
     ...farmer,
+    consumerElectronics: parseJson(farmer.consumerElectronics, []),
+    vehicle: parseJson(farmer.vehicle, []),
+    bankAccounts: parseJson(farmer.bankAccounts, []),
+    insuranceData: parseJson(farmer.insuranceData, []),
+    farmEquipment: parseJson(farmer.farmEquipment, []),
+    mainCrops: parseJson(farmer.mainCrops, []),
+    livestockTypes: parseJson(farmer.livestockTypes, []),
+    // P7: Decrypt PII fields for the response
     phone: farmer.phone && farmer.phone.startsWith('enc:v1:') ? decryptField(farmer.phone) : farmer.phone,
     nationalIdNo: farmer.nationalIdNo ? decryptField(farmer.nationalIdNo) : null,
     bankAccountNo: farmer.bankAccountNo ? decryptField(farmer.bankAccountNo) : null,

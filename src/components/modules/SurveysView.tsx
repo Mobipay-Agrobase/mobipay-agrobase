@@ -127,6 +127,10 @@ export default function SurveysView() {
   }
 
   const handleShareLink = (survey: Survey) => {
+    if (survey.status !== 'ACTIVE') {
+      toast.error('Only ACTIVE surveys can be shared. Publish the survey first.')
+      return
+    }
     const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://mobipay-agrobase.vercel.app'
     const link = `${baseUrl}/survey/${survey.id}`
     if (navigator.clipboard) {

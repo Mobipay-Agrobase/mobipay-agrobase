@@ -1,7 +1,6 @@
 import { db } from '@/lib/db'
 import { NextRequest, NextResponse } from 'next/server'
 import { getTenantContext, buildTenantFilter } from '@/lib/tenant'
-import { Prisma } from '@prisma/client'
 
 /**
  * GET /api/dashboard/ekibbo-loyalty?from=YYYY-MM-DD&to=YYYY-MM-DD
@@ -230,6 +229,11 @@ export async function GET(req: NextRequest) {
  * Compute monthly loyalty trend over the period.
  * Returns [{ month: 'YYYY-MM', loyal, active, rate }] for each month
  * from `from` to `to`.
+ *
+ * Uses Prisma's findMany (not raw SQL) so tenant filtering is handled
+ * automatically by the where clause — no manual SQL tenant condition
+ * needed. Slightly less efficient than a single raw GROUP BY query,
+ * but much safer and easier to maintain.
  */
 async function computeMonthlyTrend(
   saleWhere: any,
@@ -239,88 +243,67 @@ async function computeMonthlyTrend(
   from: Date,
   to: Date,
 ) {
-  // Use raw SQL for efficiency — one query per month would be N requests.
-  // We'll fetch monthly sales + monthly input purchases + monthly attendances
-  // + monthly farm visits, all grouped by month, then merge in JS.
-  const tenantCondition = saleWhere.tenantId
-    ? Prisma.sql`AND s."tenantId" = ${saleWhere.tenantId.in ? Prisma.join(saleWhere.tenantId.in, ',', '(', ')') : saleWhere.tenantId}`
-    : Prisma.empty
+  // Fetch all engagements in the period with their timestamps, then
+  // bucket by month in JS.
+  const [sales, inputs, attendances, visits] = await Promise.all([
+    db.sale.findMany({
+      where: { ...saleWhere, farmerId: { not: null } },
+      select: { farmerId: true, createdAt: true },
+    }),
+    db.inputDistribution.findMany({
+      where: inputWhere,
+      select: { farmerId: true, distributionDate: true },
+    }),
+    db.trainingAttendance.findMany({
+      where: attendanceWhere,
+      select: { farmerId: true, training: { select: { date: true } } },
+    }),
+    db.farmVisit.findMany({
+      where: { ...farmVisitWhere, farmerId: { not: null } },
+      select: { farmerId: true, visitDate: true },
+    }),
+  ])
 
-  // Monthly sales per farmer (PRODUCE only, COMPLETED only)
-  const monthlySales = await db.$queryRaw<{ month: string; farmerId: string; cnt: number }[]>(Prisma.sql`
-    SELECT to_char(s."createdAt", 'YYYY-MM') AS month,
-           s."farmerId" AS "farmerId",
-           COUNT(*)::int AS cnt
-    FROM "Sale" s
-    WHERE s."category" = 'PRODUCE'
-      AND s."status" = 'COMPLETED'
-      AND s."farmerId" IS NOT NULL
-      AND s."createdAt" >= ${from}
-      AND s."createdAt" <= ${to}
-      ${tenantCondition}
-    GROUP BY month, s."farmerId"
-  `)
+  const monthKey = (d: Date) => `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`
 
-  // Monthly input distributions per farmer
-  const monthlyInputs = await db.$queryRaw<{ month: string; farmerId: string }[]>(Prisma.sql`
-    SELECT to_char(i."distributionDate", 'YYYY-MM') AS month,
-           i."farmerId" AS "farmerId"
-    FROM "InputDistribution" i
-    WHERE i."distributionDate" >= ${from}
-      AND i."distributionDate" <= ${to}
-      ${tenantCondition}
-    GROUP BY month, i."farmerId"
-  `)
+  // Build month → { sellers: Set<farmerId>, active: Set<farmerId> }
+  const monthsMap = new Map<string, { sellers: Set<string>; active: Set<string> }>()
+  const ensure = (month: string) => {
+    if (!monthsMap.has(month)) monthsMap.set(month, { sellers: new Set(), active: new Set() })
+    return monthsMap.get(month)!
+  }
 
-  // Monthly training attendances per farmer
-  const monthlyTrainings = await db.$queryRaw<{ month: string; farmerId: string }[]>(Prisma.sql`
-    SELECT to_char(t."date", 'YYYY-MM') AS month,
-           ta."farmerId" AS "farmerId"
-    FROM "TrainingAttendance" ta
-    JOIN "Training" t ON t.id = ta."trainingId"
-    WHERE ta.attended = true
-      AND t."date" >= ${from}
-      AND t."date" <= ${to}
-      ${tenantCondition}
-    GROUP BY month, ta."farmerId"
-  `)
-
-  // Monthly farm visits per farmer
-  const monthlyVisits = await db.$queryRaw<{ month: string; farmerId: string }[]>(Prisma.sql`
-    SELECT to_char(fv."visitDate", 'YYYY-MM') AS month,
-           fv."farmerId" AS "farmerId"
-    FROM "FarmVisit" fv
-    JOIN "FarmerProfile" fp ON fp.id = fv."farmerId"
-    WHERE fv."visitDate" >= ${from}
-      AND fv."visitDate" <= ${to}
-      ${tenantCondition}
-    GROUP BY month, fv."farmerId"
-  `)
-
-  // Build month → { sellers, active } maps
-  const months = new Set<string>()
-  for (const r of monthlySales) months.add(r.month)
-  for (const r of monthlyInputs) months.add(r.month)
-  for (const r of monthlyTrainings) months.add(r.month)
-  for (const r of monthlyVisits) months.add(r.month)
+  for (const s of sales) {
+    if (!s.farmerId) continue
+    const m = monthKey(s.createdAt)
+    const e = ensure(m)
+    e.sellers.add(s.farmerId)
+    e.active.add(s.farmerId)
+  }
+  for (const i of inputs) {
+    const m = monthKey(i.distributionDate)
+    ensure(m).active.add(i.farmerId)
+  }
+  for (const a of attendances) {
+    const m = monthKey(a.training.date)
+    ensure(m).active.add(a.farmerId)
+  }
+  for (const v of visits) {
+    if (!v.farmerId) continue
+    const m = monthKey(v.visitDate)
+    ensure(m).active.add(v.farmerId)
+  }
 
   const trend: Array<{ month: string; loyal: number; active: number; rate: number | null }> = []
-  for (const month of [...months].sort()) {
-    const sellers = new Set<string>()
-    for (const r of monthlySales) if (r.month === month) sellers.add(r.farmerId)
-    const active = new Set<string>(sellers)
-    for (const r of monthlyInputs) if (r.month === month) active.add(r.farmerId)
-    for (const r of monthlyTrainings) if (r.month === month) active.add(r.farmerId)
-    for (const r of monthlyVisits) if (r.month === month) active.add(r.farmerId)
-    const loyal = sellers.size
-    const activeCount = active.size
+  for (const [month, e] of [...monthsMap.entries()].sort(([a], [b]) => a.localeCompare(b))) {
+    const loyal = e.sellers.size
+    const active = e.active.size
     trend.push({
       month,
       loyal,
-      active: activeCount,
-      rate: activeCount > 0 ? Math.round((loyal / activeCount) * 1000) / 10 : null,
+      active,
+      rate: active > 0 ? Math.round((loyal / active) * 1000) / 10 : null,
     })
   }
-
   return trend
 }

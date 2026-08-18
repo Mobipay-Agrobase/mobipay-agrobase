@@ -35,7 +35,7 @@ import {
   CheckCircle, Clock, FileText, MessageSquare, Shield, PiggyBank,
   CreditCard, Package, Sprout, UserCheck, BarChart3, Building2,
   ArrowUpRight, ArrowDownRight, Send, ClipboardCheck, Calendar,
-  ChevronDown, RefreshCw, Inbox
+  ChevronDown, RefreshCw, Inbox, Heart, Download
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -427,6 +427,44 @@ export function EkbMdDashboard() {
   const [analyticsRefreshing, setAnalyticsRefreshing] = useState(false)
   const [analyticsUpdated, setAnalyticsUpdated] = useState<Date | null>(null)
 
+  // ─── Loyalty state (Phase 1) ────────────────────────────────────────────
+  // Loyalty KPI + secondary metrics, fetched from /api/dashboard/ekibbo-loyalty
+  // with a date-range filter. Default period = year-to-date.
+  const [loyalty, setLoyalty] = useState<any>(null)
+  const [loyaltyPeriod, setLoyaltyPeriod] = useState<string>('ytd') // 'ytd' | '30d' | '90d' | 'all'
+  const [loyaltyRefreshing, setLoyaltyRefreshing] = useState(false)
+  const [loyaltyUpdated, setLoyaltyUpdated] = useState<Date | null>(null)
+
+  const fetchLoyalty = useCallback(async (period: string, opts?: { silent?: boolean }) => {
+    if (opts?.silent) setLoyaltyRefreshing(true)
+    try {
+      const now = new Date()
+      let from: string, to: string
+      if (period === 'ytd') {
+        from = `${now.getUTCFullYear()}-01-01`
+        to = now.toISOString().split('T')[0]
+      } else if (period === '30d') {
+        const d = new Date(now.getTime() - 30 * 86400000)
+        from = d.toISOString().split('T')[0]
+        to = now.toISOString().split('T')[0]
+      } else if (period === '90d') {
+        const d = new Date(now.getTime() - 90 * 86400000)
+        from = d.toISOString().split('T')[0]
+        to = now.toISOString().split('T')[0]
+      } else { // 'all'
+        from = '2020-01-01'
+        to = now.toISOString().split('T')[0]
+      }
+      const data = await fetchJson(`/api/dashboard/ekibbo-loyalty?from=${from}&to=${to}`)
+      setLoyalty(data || null)
+      setLoyaltyUpdated(new Date())
+    } catch {
+      setLoyalty(null)
+    } finally {
+      setLoyaltyRefreshing(false)
+    }
+  }, [])
+
   const fetchAux = useCallback(async (opts?: { silent?: boolean }) => {
     if (opts?.silent) setAnalyticsRefreshing(true)
     const [p, s, a, an] = await Promise.all([
@@ -444,12 +482,43 @@ export function EkbMdDashboard() {
     setAnalyticsRefreshing(false)
   }, [])
 
-  useEffect(() => { fetchAux() }, [fetchAux])
+  useEffect(() => {
+    fetchAux()
+    fetchLoyalty(loyaltyPeriod)
+  }, [fetchAux, fetchLoyalty, loyaltyPeriod])
 
   const handleRefresh = useCallback(() => {
     refresh({ silent: true })
     fetchAux({ silent: true })
-  }, [refresh, fetchAux])
+    fetchLoyalty(loyaltyPeriod, { silent: true })
+  }, [refresh, fetchAux, fetchLoyalty, loyaltyPeriod])
+
+  const handleLoyaltyPeriodChange = useCallback((p: string) => {
+    setLoyaltyPeriod(p)
+    // The useEffect above will refetch when loyaltyPeriod changes
+  }, [])
+
+  const handleLoyaltyExport = useCallback(() => {
+    const now = new Date()
+    let from: string, to: string
+    if (loyaltyPeriod === 'ytd') {
+      from = `${now.getUTCFullYear()}-01-01`
+      to = now.toISOString().split('T')[0]
+    } else if (loyaltyPeriod === '30d') {
+      const d = new Date(now.getTime() - 30 * 86400000)
+      from = d.toISOString().split('T')[0]
+      to = now.toISOString().split('T')[0]
+    } else if (loyaltyPeriod === '90d') {
+      const d = new Date(now.getTime() - 90 * 86400000)
+      from = d.toISOString().split('T')[0]
+      to = now.toISOString().split('T')[0]
+    } else {
+      from = '2020-01-01'
+      to = now.toISOString().split('T')[0]
+    }
+    // Open the export URL in a new tab — browser will download the CSV
+    window.open(`/api/dashboard/ekibbo-loyalty/export?from=${from}&to=${to}`, '_blank')
+  }, [loyaltyPeriod])
 
   if (loading) return <DashSkeleton />
   if (!stats) return <DashError />
@@ -673,6 +742,164 @@ export function EkbMdDashboard() {
             </CardContent>
           </Card>
         </div>
+      </EkbDashboardSection>
+
+      {/* ─── Section 3.5 · Customer Loyalty (Phase 1) ─── */}
+      <EkbDashboardSection
+        icon={Heart}
+        title="Customer Loyalty"
+        description="Farmers who sold produce to EKiBBO + repeat-seller + engagement signals"
+        accent="bg-rose-50 dark:bg-rose-950/40 text-rose-600"
+        collapsible
+        right={
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-0.5 bg-muted rounded-md p-0.5">
+              {([['30d', '30 days'], ['90d', '90 days'], ['ytd', 'YTD'], ['all', 'All time']] as const).map(([key, label]) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => handleLoyaltyPeriodChange(key)}
+                  className={cn(
+                    'px-2 py-0.5 rounded text-[10px] font-medium transition-colors',
+                    loyaltyPeriod === key
+                      ? 'bg-background text-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
+                  )}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            {loyaltyUpdated && (
+              <span className="text-[10px] text-muted-foreground hidden md:inline">
+                Updated {formatDistanceToNow(loyaltyUpdated, { addSuffix: true })}
+              </span>
+            )}
+            <button
+              type="button"
+              onClick={handleLoyaltyExport}
+              className="inline-flex items-center gap-0.5 text-[11px] font-medium px-2 py-1 rounded-md border bg-background hover:bg-accent transition-colors"
+              title="Download per-farmer loyalty breakdown as CSV"
+            >
+              <Download className="w-3 h-3" /> CSV
+            </button>
+          </div>
+        }
+      >
+        {loyaltyRefreshing && !loyalty ? (
+          <Card><CardContent className="p-8 text-center">
+            <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-muted-foreground" />
+            <p className="text-sm text-muted-foreground">Computing loyalty metrics…</p>
+          </CardContent></Card>
+        ) : !loyalty ? (
+          <Card><CardContent className="p-8 text-center text-muted-foreground">
+            <Heart className="w-8 h-8 mx-auto mb-2 opacity-30" />
+            <p className="text-sm">No loyalty data available for the selected period.</p>
+          </CardContent></Card>
+        ) : (
+          <div className="space-y-4">
+            {/* ─── Hero KPI: Loyalty Rate ─── */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              <Card className="lg:col-span-1">
+                <CardContent className="p-5">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground">Loyal Farmer Rate</p>
+                      <p className="text-3xl font-bold mt-1">
+                        {loyalty.kpi.loyalFarmerRate === null ? '—' : `${loyalty.kpi.loyalFarmerRate}%`}
+                      </p>
+                      <p className="text-[11px] text-muted-foreground mt-1">
+                        {loyalty.kpi.loyalFarmerCount} of {loyalty.kpi.activeFarmerCount} active farmers
+                      </p>
+                    </div>
+                    <div className="w-11 h-11 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-600 flex items-center justify-center shrink-0">
+                      <Heart className="w-5 h-5" />
+                    </div>
+                  </div>
+                  {/* Progress bar: loyal / active */}
+                  {loyalty.kpi.activeFarmerCount > 0 && (
+                    <div className="mt-3">
+                      <div className="h-2.5 rounded-full bg-muted overflow-hidden">
+                        <div className="h-full bg-rose-500" style={{ width: `${loyalty.kpi.loyalFarmerRate}%` }} />
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card className="lg:col-span-2">
+                <CardContent className="p-5">
+                  <p className="text-xs font-medium text-muted-foreground mb-3">Loyalty Breakdown</p>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div>
+                      <p className="text-[11px] text-muted-foreground">Loyal Farmers</p>
+                      <p className="text-xl font-bold text-rose-600">{loyalty.kpi.loyalFarmerCount}</p>
+                      <p className="text-[10px] text-muted-foreground">sold ≥1 produce</p>
+                    </div>
+                    <div>
+                      <p className="text-[11px] text-muted-foreground">Repeat Sellers</p>
+                      <p className="text-xl font-bold text-amber-600">{loyalty.kpi.repeatSellerCount}</p>
+                      <p className="text-[10px] text-muted-foreground">
+                        {loyalty.kpi.repeatSellerRate === null ? '—' : `${loyalty.kpi.repeatSellerRate}% of loyal`}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[11px] text-muted-foreground">Active Farmers</p>
+                      <p className="text-xl font-bold text-blue-600">{loyalty.kpi.activeFarmerCount}</p>
+                      <p className="text-[10px] text-muted-foreground">any engagement</p>
+                    </div>
+                    <div>
+                      <p className="text-[11px] text-muted-foreground">Avg Sales / Farmer</p>
+                      <p className="text-xl font-bold text-emerald-600">{loyalty.engagement.avgSalesPerFarmer}</p>
+                      <p className="text-[10px] text-muted-foreground">among loyal</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* ─── Engagement signals ─── */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <EkbMiniStat label="Total Sales" value={loyalty.engagement.totalSalesCount} icon={ShoppingCart} color="text-blue-600" hint="Produce sold" />
+              <EkbMiniStat label="Multi-Crop Farmers" value={loyalty.engagement.multiCropFarmerCount} icon={Leaf} color="text-emerald-600" hint="≥2 distinct crops" />
+              <EkbMiniStat label="Input Buyers" value={loyalty.engagement.inputPurchaseFarmerCount} icon={Package} color="text-amber-600" hint="took inputs" />
+              <EkbMiniStat label="Training Attendees" value={loyalty.engagement.trainingFarmerCount} icon={GraduationCap} color="text-purple-600" hint="attended ≥1" />
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <EkbMiniStat label="Farm Visits" value={loyalty.engagement.farmVisitFarmerCount} icon={MapPin} color="text-teal-600" hint="≥1 visit" />
+              <EkbMiniStat label="Crops Sold" value={loyalty.engagement.cropsSoldCount} icon={Sprout} color="text-indigo-600" hint="distinct products" />
+              <EkbMiniStat label="Loyal Farmers" value={loyalty.kpi.loyalFarmerCount} icon={Heart} color="text-rose-600" hint="≥1 sale" />
+              <EkbMiniStat label="Repeat Sellers" value={loyalty.kpi.repeatSellerCount} icon={RefreshCw} color="text-amber-700" hint="≥2 sales" />
+            </div>
+
+            {/* ─── Monthly trend mini-chart ─── */}
+            {loyalty.trend && loyalty.trend.length > 0 && (
+              <Card>
+                <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
+                  <div>
+                    <CardTitle className="text-sm">Monthly Loyalty Trend</CardTitle>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                      Loyal farmers (sold) vs. active farmers (any engagement) per month
+                    </p>
+                  </div>
+                  <BarChart3 className="w-4 h-4 text-muted-foreground/60" />
+                </CardHeader>
+                <CardContent>
+                  <ChartContainer config={{ loyal: { label: 'Loyal', color: 'var(--chart-1)' }, active: { label: 'Active', color: 'var(--chart-3)' } }} className="h-[220px] w-full">
+                    <BarChart data={loyalty.trend}>
+                      <CartesianGrid vertical={false} strokeDasharray="3 3" opacity={0.3} />
+                      <XAxis dataKey="month" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+                      <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
+                      <ChartTooltip content={<ChartTooltipContent />} />
+                      <Bar dataKey="active" fill="var(--chart-3)" radius={[4, 4, 0, 0]} name="Active" />
+                      <Bar dataKey="loyal" fill="var(--chart-1)" radius={[4, 4, 0, 0]} name="Loyal" />
+                    </BarChart>
+                  </ChartContainer>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        )}
       </EkbDashboardSection>
 
       {/* ─── Section 4 · Farmer Network & Loan Portfolio ─── */}

@@ -37,6 +37,8 @@ const SYSTEM_ROUTES = [
   '/api/admin/simulate/', // simulation status check runs on every page load — auth-only, not module-gated
   '/api/mobile/',        // mobile API routes — permission checked inside each route handler
   '/api/channel/',       // USSD/IVR/SMS channel routes — permission checked inside each route handler
+  '/api/vsla-v2/',       // VSLA V2 API routes — permission checked inside each route handler (hasPermission(ctx.role, 'vsla:read'))
+  '/api/vsla-v3/',       // VSLA V3 API routes — same pattern
   '/api/notifications',  // notification routes — auth-only
   '/api/support/',       // support ticket routes — auth-only
   '/api/branding',       // branding config — auth-only

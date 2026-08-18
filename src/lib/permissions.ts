@@ -263,6 +263,7 @@ const ROLE_PERMISSIONS: RolePerms = {
     'training:read', 'training:create',
     'surveys:read', 'surveys:create',
     'profile:read', 'profile:update',
+    'users:read', 'users:create', 'users:update', 'users:delete',
   ],
   // ─── VSLA V2 Roles (SRS compliant) ───
   // VSLA Officer: Company/tenant field agent who manages groups, assigns key holders,

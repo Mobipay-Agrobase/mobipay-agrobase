@@ -17,6 +17,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAppStore } from '@/lib/store'
+import { useIsEkibboTenant } from '@/hooks/use-is-ekibbo'
 
 const safeVal = (v: unknown): string => (v != null && v !== '' ? String(v) : '')
 
@@ -127,7 +128,11 @@ const TAB_CONFIG = [
 ]
 
 export function FarmerDetailFull({ farmerId, onBack }: Props) {
-  const { setActiveModule, setSelectedFarmerId } = useAppStore()
+  const { setActiveModule, setSelectedFarmerId, user } = useAppStore()
+  // EKIBBO-ONLY: the LoyaltyBadge is exclusive to the EKIBBO tenant.
+  // Other tenants don't see the badge at all (the API also returns null
+  // for the loyalty block when not on EKIBBO, so this is defense-in-depth).
+  const isEkibbo = useIsEkibboTenant(user?.role)
   const [farmer, setFarmer] = useState<FarmerDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('profile')
@@ -242,11 +247,11 @@ export function FarmerDetailFull({ farmerId, onBack }: Props) {
                 </div>
               </div>
 
-              {/* Right side: loyalty badge + credit score circle + QR code */}
+              {/* Right side: loyalty badge (EKIBBO only) + credit score circle + QR code */}
               {/* On mobile: smaller circles (w-16) + smaller QR (w-12); on sm+: full size (w-20) + QR (w-16) */}
               <div className="flex items-center justify-end gap-1.5 sm:gap-3 shrink-0">
-                {/* Loyalty Badge — Phase 2 */}
-                <LoyaltyBadge farmerId={farmer.id} />
+                {/* Loyalty Badge — Phase 2 (EKIBBO only) */}
+                {isEkibbo && <LoyaltyBadge farmerId={farmer.id} />}
                 {/* Credit Score Circle */}
                 <CreditScoreCircle farmerId={farmer.id} />
                 {/* QR Code — real scannable QR linking to public farmer page */}

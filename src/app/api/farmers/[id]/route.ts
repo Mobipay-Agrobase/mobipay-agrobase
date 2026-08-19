@@ -2,6 +2,7 @@ import { db } from '@/lib/db'
 import { NextRequest, NextResponse } from 'next/server'
 import { getTenantContext, buildTenantFilter } from '@/lib/tenant'
 import { decryptField, encryptField } from '@/lib/security/field-crypto'
+import { isEkibboTenant } from '@/lib/ekibbo'
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -52,67 +53,67 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   }
 
   // ─── Inline loyalty summary (year-to-date) ─────────────────────────────
-  // Mobile + web farmer-detail pages both call /api/farmers/[id] — by
-  // embedding the loyalty summary here, the mobile app gets loyalty data
-  // in the SAME fetch it already makes (no extra API call needed).
-  // For a richer per-stage breakdown, the dedicated
-  // GET /api/farmers/[id]/loyalty endpoint can be called separately.
+  // EKIBBO-ONLY feature — the loyalty block is only embedded when the
+  // caller's tenant is the EKIBBO tenant (type=EXPORTER). Other tenants
+  // get loyalty=null and the farmer detail page hides the loyalty badge.
   let loyaltySummary: any = null
-  try {
-    const now = new Date()
-    const ytdFrom = new Date(Date.UTC(now.getUTCFullYear(), 0, 1))
-    const farmerFilter = { farmerId: id }
-    const [sales, inputs, trainings, visits] = await Promise.all([
-      db.sale.findMany({
-        where: { ...tf, ...farmerFilter, category: 'PRODUCE', status: 'COMPLETED', createdAt: { gte: ytdFrom, lte: now } },
-        select: { product: true, totalAmount: true },
-      }),
-      db.inputDistribution.findMany({
-        where: { ...tf, ...farmerFilter, distributionDate: { gte: ytdFrom, lte: now } },
-        select: { id: true },
-      }),
-      db.trainingAttendance.findMany({
-        where: { ...farmerFilter, training: { ...tf, date: { gte: ytdFrom, lte: now } }, attended: true },
-        select: { id: true },
-      }),
-      db.farmVisit.findMany({
-        where: { ...farmerFilter, visitDate: { gte: ytdFrom, lte: now } },
-        select: { id: true },
-      }),
-    ])
+  if (await isEkibboTenant(ctx)) {
+    try {
+      const now = new Date()
+      const ytdFrom = new Date(Date.UTC(now.getUTCFullYear(), 0, 1))
+      const farmerFilter = { farmerId: id }
+      const [sales, inputs, trainings, visits] = await Promise.all([
+        db.sale.findMany({
+          where: { ...tf, ...farmerFilter, category: 'PRODUCE', status: 'COMPLETED', createdAt: { gte: ytdFrom, lte: now } },
+          select: { product: true, totalAmount: true },
+        }),
+        db.inputDistribution.findMany({
+          where: { ...tf, ...farmerFilter, distributionDate: { gte: ytdFrom, lte: now } },
+          select: { id: true },
+        }),
+        db.trainingAttendance.findMany({
+          where: { ...farmerFilter, training: { ...tf, date: { gte: ytdFrom, lte: now } }, attended: true },
+          select: { id: true },
+        }),
+        db.farmVisit.findMany({
+          where: { ...farmerFilter, visitDate: { gte: ytdFrom, lte: now } },
+          select: { id: true },
+        }),
+      ])
 
-    const salesCount = sales.length
-    const stageSale = salesCount >= 1
-    const stageRepeat = salesCount >= 2
-    const stageInput = inputs.length >= 1
-    const stageTraining = trainings.length >= 1 || visits.length >= 1
-    const stages = [stageTraining, stageInput, stageSale, stageRepeat].filter(Boolean).length
+      const salesCount = sales.length
+      const stageSale = salesCount >= 1
+      const stageRepeat = salesCount >= 2
+      const stageInput = inputs.length >= 1
+      const stageTraining = trainings.length >= 1 || visits.length >= 1
+      const stages = [stageTraining, stageInput, stageSale, stageRepeat].filter(Boolean).length
 
-    const cropsSet = new Set<string>()
-    let totalSalesValue = 0
-    for (const s of sales) {
-      if (s.product) cropsSet.add(s.product)
-      totalSalesValue += s.totalAmount || 0
+      const cropsSet = new Set<string>()
+      let totalSalesValue = 0
+      for (const s of sales) {
+        if (s.product) cropsSet.add(s.product)
+        totalSalesValue += s.totalAmount || 0
+      }
+
+      const tierLabels = ['New', 'Engaged', 'Active', 'Loyal', 'Champion']
+      loyaltySummary = {
+        stages,
+        stageFlags: { training: stageTraining, input: stageInput, sale: stageSale, repeat: stageRepeat },
+        counts: {
+          salesCount,
+          cropsSold: cropsSet.size,
+          inputPurchases: inputs.length,
+          trainingsAttended: trainings.length,
+          farmVisits: visits.length,
+        },
+        totalSalesValueUGX: Math.round(totalSalesValue),
+        isLoyal: stageSale,
+        label: tierLabels[stages],
+      }
+    } catch (e) {
+      // Loyalty computation should never break the farmer-detail fetch
+      console.error('Inline loyalty summary error:', e)
     }
-
-    const tierLabels = ['New', 'Engaged', 'Active', 'Loyal', 'Champion']
-    loyaltySummary = {
-      stages,
-      stageFlags: { training: stageTraining, input: stageInput, sale: stageSale, repeat: stageRepeat },
-      counts: {
-        salesCount,
-        cropsSold: cropsSet.size,
-        inputPurchases: inputs.length,
-        trainingsAttended: trainings.length,
-        farmVisits: visits.length,
-      },
-      totalSalesValueUGX: Math.round(totalSalesValue),
-      isLoyal: stageSale,
-      label: tierLabels[stages],
-    }
-  } catch (e) {
-    // Loyalty computation should never break the farmer-detail fetch
-    console.error('Inline loyalty summary error:', e)
   }
 
   return NextResponse.json({ data: { ...farmerDecrypted, loyalty: loyaltySummary } })

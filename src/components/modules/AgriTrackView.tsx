@@ -14,6 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useAppStore } from '@/lib/store'
+import { useIsEkibboTenant } from '@/hooks/use-is-ekibbo'
 
 interface CreditScoreData {
   id: string
@@ -54,6 +55,11 @@ export default function AgriTrackView() {
   const [businessData, setBusinessData] = useState<any>(null)
   const [activeTab, setActiveTab] = useState(activeSubTab || 'credit-scores')
   const [search, setSearch] = useState('')
+
+  // EKIBBO-ONLY: the Loyalty vs Credit tab is exclusive to the EKIBBO tenant.
+  // Other tenants don't see the tab at all.
+  const { user } = useAppStore()
+  const isEkibbo = useIsEkibboTenant(user?.role)
 
   // Loyalty data — fetched alongside credit scores so the comparison tab
   // can show credit score vs loyalty tier side-by-side.
@@ -162,7 +168,7 @@ export default function AgriTrackView() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <TabsList>
             <TabsTrigger value="credit-scores" className="gap-1.5"><CreditCard className="w-3.5 h-3.5" /> Credit Scores</TabsTrigger>
-            <TabsTrigger value="loyalty-vs-credit" className="gap-1.5"><Heart className="w-3.5 h-3.5" /> Loyalty vs Credit</TabsTrigger>
+            {isEkibbo && <TabsTrigger value="loyalty-vs-credit" className="gap-1.5"><Heart className="w-3.5 h-3.5" /> Loyalty vs Credit</TabsTrigger>}
             <TabsTrigger value="business" className="gap-1.5"><BarChart3 className="w-3.5 h-3.5" /> Business Tracking</TabsTrigger>
           </TabsList>
           {activeTab === 'credit-scores' && (
@@ -236,7 +242,8 @@ export default function AgriTrackView() {
           </Card>
         </TabsContent>
 
-        {/* ─── Loyalty vs Credit Comparison ─── */}
+        {/* ─── Loyalty vs Credit Comparison (EKIBBO only) ─── */}
+        {isEkibbo && (
         <TabsContent value="loyalty-vs-credit" className="mt-4 space-y-4">
           <Card>
             <CardHeader className="pb-2">
@@ -351,6 +358,7 @@ export default function AgriTrackView() {
             </CardContent>
           </Card>
         </TabsContent>
+        )}
 
         <TabsContent value="business" className="mt-4 space-y-4">
           {/* KPI Cards */}

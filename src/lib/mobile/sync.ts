@@ -369,7 +369,21 @@ export class MobileSyncEngine {
   // --- Mobile Dashboard (single-call optimized) ---
 
   async getMobileDashboard(tenantId: string, userId: string) {
-    const [farmerCount, purchaseStats, activeShipments, pendingNotifications, loyaltyStats] = await Promise.all([
+    // ─── Loyalty KPIs (year-to-date) ─────────────────────────────────────
+    // EKIBBO-ONLY feature — only compute for the EKIBBO tenant (type=EXPORTER).
+    // Other tenants get loyalty=null and the mobile dashboard hides the
+    // loyalty section. We check the tenant type via isEkibboTenantById.
+    let loyaltyStats: any = null
+    try {
+      const { isEkibboTenantById } = await import('@/lib/ekibbo')
+      if (await isEkibboTenantById(tenantId)) {
+        loyaltyStats = await this.computeLoyaltyKpis(tenantId)
+      }
+    } catch (e) {
+      console.error('Mobile dashboard loyalty gate error:', e)
+    }
+
+    const [farmerCount, purchaseStats, activeShipments, pendingNotifications] = await Promise.all([
       db.farmerProfile.count({ where: { tenantId, status: 'ACTIVE' } }),
       db.purchase.aggregate({
         where: { farmer: { tenantId }, status: 'APPROVED' },
@@ -378,10 +392,6 @@ export class MobileSyncEngine {
       }),
       db.shipment.count({ where: { tenantId, status: 'IN_TRANSIT' } }),
       db.notification.count({ where: { tenantId, userId, status: 'PENDING' } }),
-      // Loyalty KPIs (year-to-date) — exposes the same Phase 1 metrics the
-      // web dashboard shows, so the mobile dashboard can render a loyalty
-      // card without an extra API round-trip.
-      this.computeLoyaltyKpis(tenantId),
     ])
 
     return {

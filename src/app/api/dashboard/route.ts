@@ -2,6 +2,7 @@ import { db } from '@/lib/db'
 import { NextResponse } from 'next/server'
 import { getTenantContext, buildTenantFilter } from '@/lib/tenant'
 import { mobileSyncEngine } from '@/lib/mobile/sync'
+import { isEkibboTenant } from '@/lib/ekibbo'
 
 /**
  * GET /api/dashboard
@@ -93,12 +94,12 @@ export async function GET() {
     }))
 
     // ─── Loyalty KPIs (year-to-date) ───────────────────────────────────────
-    // Added for the mobile dashboard — reuses the same computation as
-    // /api/mobile/dashboard (MobileSyncEngine.computeLoyaltyKpis) so the
-    // numbers stay consistent across web + mobile.
-    // Only compute for tenant-scoped users (not SUPER_ADMIN who sees all tenants).
+    // EKIBBO-ONLY feature — the loyalty block is only returned when the
+    // caller's tenant is the EKIBBO tenant (type=EXPORTER). Other tenants
+    // (Kilimotrust, SAA-WFP-AMS, Agrobase VSLA, etc.) get loyalty=null
+    // and the mobile/web dashboard hides the loyalty section.
     let loyaltyStats: any = null
-    if (ctx.tenantId) {
+    if (ctx.tenantId && await isEkibboTenant(ctx)) {
       try {
         loyaltyStats = await mobileSyncEngine.computeLoyaltyKpis(ctx.tenantId)
       } catch (e) {

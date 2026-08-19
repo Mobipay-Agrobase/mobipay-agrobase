@@ -1,6 +1,7 @@
 import { db } from '@/lib/db'
 import { NextRequest, NextResponse } from 'next/server'
 import { getTenantContext, buildTenantFilter } from '@/lib/tenant'
+import { isEkibboTenant } from '@/lib/ekibbo'
 
 /**
  * GET /api/dashboard/ekibbo-loyalty?from=YYYY-MM-DD&to=YYYY-MM-DD
@@ -49,6 +50,14 @@ export async function GET(req: NextRequest) {
   try {
     const ctx = await getTenantContext(req)
     const tf = buildTenantFilter(ctx, 'tenantId') as any
+
+    // ─── EKIBBO-ONLY feature gate ────────────────────────────────────────
+    // Loyalty is exclusive to the EKIBBO tenant (type=EXPORTER). Return 404
+    // for any other tenant so the feature is completely invisible.
+    // SUPER_ADMIN bypasses (can view loyalty for any tenant when analyzing).
+    if (!(await isEkibboTenant(ctx))) {
+      return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    }
 
     const { searchParams } = new URL(req.url)
     const now = new Date()

@@ -13,7 +13,7 @@ import {
   ArrowLeft, Plus, Trash2, Banknote, Shield, Tractor, Users,
   Loader2, Save, MapPin, QrCode, TrendingUp, ShoppingCart,
   CreditCard, FileText, Landmark, Pencil, User, Wallet,
-  ChevronDown, Sprout, Printer, Share2,
+  ChevronDown, Sprout, Printer, Share2, Heart, GraduationCap, Package, RefreshCw,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAppStore } from '@/lib/store'
@@ -118,12 +118,12 @@ interface Props {
 }
 
 const TAB_CONFIG = [
-  { value: 'profile', label: 'Profile', icon: User },
-  { value: 'farm-lands', label: 'Farm Lands', icon: MapPin },
-  { value: 'credit', label: 'Credit Score', icon: TrendingUp },
-  { value: 'sales', label: 'Sales', icon: ShoppingCart },
-  { value: 'purchases', label: 'Purchases', icon: FileText },
-  { value: 'ledger', label: 'Ledger', icon: CreditCard },
+  { value: 'profile', label: 'Profile', shortLabel: 'Profile', icon: User },
+  { value: 'farm-lands', label: 'Farm Lands', shortLabel: 'Farms', icon: MapPin },
+  { value: 'credit', label: 'Credit Score', shortLabel: 'Credit', icon: TrendingUp },
+  { value: 'sales', label: 'Sales', shortLabel: 'Sales', icon: ShoppingCart },
+  { value: 'purchases', label: 'Purchases', shortLabel: 'Purch', icon: FileText },
+  { value: 'ledger', label: 'Ledger', shortLabel: 'Ledger', icon: CreditCard },
 ]
 
 export function FarmerDetailFull({ farmerId, onBack }: Props) {
@@ -188,72 +188,78 @@ export function FarmerDetailFull({ farmerId, onBack }: Props) {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Hero Card — green gradient with credit score circle, QR, badges, actions */}
-      <div className="shrink-0 p-4 lg:p-6 pb-0">
+      {/* Hero Card — green gradient with credit score circle, loyalty badge, QR, badges, actions */}
+      <div className="shrink-0 p-3 sm:p-4 lg:p-6 pb-0">
         <div className="relative rounded-2xl overflow-hidden shadow-xl bg-gradient-to-br from-emerald-700 via-emerald-600 to-teal-700">
           {/* Decorative bubble shapes */}
           <div className="absolute top-0 right-0 w-48 h-48 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/4" />
           <div className="absolute bottom-0 left-1/3 w-32 h-32 bg-white/5 rounded-full translate-y-1/2" />
 
-          <div className="relative p-5">
+          <div className="relative p-4 sm:p-5">
             {/* Top row: back + identity + actions */}
-            <div className="flex items-start gap-4">
-              <Button variant="ghost" size="icon" onClick={onBack} className="text-white hover:bg-white/10 h-9 w-9 shrink-0 mt-1">
-                <ArrowLeft className="w-5 h-5" />
-              </Button>
+            {/* On mobile: stack vertically; on sm+: single row */}
+            <div className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4">
+              <div className="flex items-start gap-3 sm:gap-4">
+                <Button variant="ghost" size="icon" onClick={onBack} className="text-white hover:bg-white/10 h-9 w-9 shrink-0 mt-1">
+                  <ArrowLeft className="w-5 h-5" />
+                </Button>
 
-              {/* Avatar with verification badge */}
-              <div className="relative shrink-0">
-                <div className="w-16 h-16 rounded-full bg-white/20 backdrop-blur flex items-center justify-center text-2xl font-bold text-white border-2 border-white/30">
-                  {farmer.firstName?.[0]}{farmer.lastName?.[0]}
-                </div>
-                {farmer.isCertified && (
-                  <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-yellow-400 rounded-full flex items-center justify-center border-2 border-emerald-700">
-                    <Shield className="w-3 h-3 text-emerald-800" />
+                {/* Avatar with verification badge */}
+                <div className="relative shrink-0">
+                  <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-white/20 backdrop-blur flex items-center justify-center text-xl sm:text-2xl font-bold text-white border-2 border-white/30">
+                    {farmer.firstName?.[0]}{farmer.lastName?.[0]}
                   </div>
-                )}
-              </div>
-
-              {/* Name + badges + metadata */}
-              <div className="flex-1 min-w-0">
-                <h1 className="text-xl font-bold text-white truncate">{farmer.firstName} {farmer.lastName}</h1>
-                <div className="flex flex-wrap items-center gap-2 mt-1.5">
-                  {farmer.farmerCode && (
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-white/15 text-white flex items-center gap-1">
-                      <QrCode className="w-3 h-3" /> {farmer.farmerCode}
-                    </span>
-                  )}
                   {farmer.isCertified && (
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-yellow-400/20 text-yellow-200 border border-yellow-400/30">
-                      {farmer.certificationType || 'Certified'}
-                    </span>
+                    <div className="absolute -bottom-1 -right-1 w-5 h-5 sm:w-6 sm:h-6 bg-yellow-400 rounded-full flex items-center justify-center border-2 border-emerald-700">
+                      <Shield className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-emerald-800" />
+                    </div>
                   )}
-                  <span className={`text-xs px-2 py-0.5 rounded-full ${farmer.status === 'ACTIVE' ? 'bg-green-400/20 text-green-200 border border-green-400/30' : 'bg-gray-400/20 text-gray-200'}`}>
-                    ● {farmer.status || 'ACTIVE'}
-                  </span>
                 </div>
-                <div className="flex flex-wrap items-center gap-3 mt-2 text-xs text-white/70">
-                  {farmer.district && <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {farmer.district}</span>}
-                  {farmer.villageName && <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {farmer.villageName}</span>}
-                  {farmer.farmSize != null && <span className="flex items-center gap-1"><Sprout className="w-3 h-3" /> {farmer.farmSize} ha</span>}
+
+                {/* Name + badges + metadata */}
+                <div className="flex-1 min-w-0">
+                  <h1 className="text-lg sm:text-xl font-bold text-white truncate">{farmer.firstName} {farmer.lastName}</h1>
+                  <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mt-1.5">
+                    {farmer.farmerCode && (
+                      <span className="text-[10px] sm:text-xs px-2 py-0.5 rounded-full bg-white/15 text-white flex items-center gap-1">
+                        <QrCode className="w-2.5 h-2.5 sm:w-3 sm:h-3" /> {farmer.farmerCode}
+                      </span>
+                    )}
+                    {farmer.isCertified && (
+                      <span className="text-[10px] sm:text-xs px-2 py-0.5 rounded-full bg-yellow-400/20 text-yellow-200 border border-yellow-400/30">
+                        {farmer.certificationType || 'Certified'}
+                      </span>
+                    )}
+                    <span className={`text-[10px] sm:text-xs px-2 py-0.5 rounded-full ${farmer.status === 'ACTIVE' ? 'bg-green-400/20 text-green-200 border border-green-400/30' : 'bg-gray-400/20 text-gray-200'}`}>
+                      ● {farmer.status || 'ACTIVE'}
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-2 text-[10px] sm:text-xs text-white/70">
+                    {farmer.district && <span className="flex items-center gap-1"><MapPin className="w-2.5 h-2.5 sm:w-3 sm:h-3" /> {farmer.district}</span>}
+                    {farmer.villageName && <span className="flex items-center gap-1"><MapPin className="w-2.5 h-2.5 sm:w-3 sm:h-3" /> {farmer.villageName}</span>}
+                    {farmer.farmSize != null && <span className="flex items-center gap-1"><Sprout className="w-2.5 h-2.5 sm:w-3 sm:h-3" /> {farmer.farmSize} ha</span>}
+                  </div>
                 </div>
               </div>
 
-              {/* Right side: credit score circle + QR code */}
-              <div className="flex items-center gap-3 shrink-0">
+              {/* Right side: loyalty badge + credit score circle + QR code */}
+              {/* On mobile: align to the right of the row; on sm+: shrink-0 column */}
+              <div className="flex items-center justify-end gap-2 sm:gap-3 shrink-0 sm:mt-0">
+                {/* Loyalty Badge — Phase 2 */}
+                <LoyaltyBadge farmerId={farmer.id} />
                 {/* Credit Score Circle */}
                 <CreditScoreCircle farmerId={farmer.id} />
-                {/* QR Code */}
-                <div className="bg-white p-1.5 rounded-lg shadow-md">
-                  <div className="w-16 h-16 flex items-center justify-center">
-                    <QrCode className="w-12 h-12 text-gray-800" />
+                {/* QR Code — hidden on very small screens to save space */}
+                <div className="hidden sm:block bg-white p-1.5 rounded-lg shadow-md">
+                  <div className="w-14 h-14 sm:w-16 sm:h-16 flex items-center justify-center">
+                    <QrCode className="w-10 h-10 sm:w-12 sm:h-12 text-gray-800" />
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Action buttons row */}
-            <div className="flex items-center justify-end gap-2 mt-4">
+            {/* Action buttons row — wraps on mobile */}
+            <div className="flex items-center justify-end gap-1.5 sm:gap-2 mt-3 sm:mt-4 flex-wrap">
               <Button variant="ghost" size="sm" onClick={handleEdit} className="text-white hover:bg-white/10 gap-1.5">
                 <Pencil className="w-3.5 h-3.5" /> Edit
               </Button>
@@ -269,14 +275,14 @@ export function FarmerDetailFull({ farmerId, onBack }: Props) {
       </div>
 
       {/* Tabs */}
-      <div className="flex-1 overflow-hidden flex flex-col p-4 lg:p-6 pt-4">
+      <div className="flex-1 overflow-hidden flex flex-col p-3 sm:p-4 lg:p-6 pt-3 sm:pt-4">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
-          <TabsList className="flex-wrap h-auto gap-1 p-1 rounded-xl bg-muted/50 border border-border/40">
+          <TabsList className="flex-wrap h-auto gap-1 p-1 rounded-xl bg-muted/50 border border-border/40 overflow-x-auto">
             {TAB_CONFIG.map(tab => {
               const Icon = tab.icon
               return (
-                <TabsTrigger key={tab.value} value={tab.value} className="text-xs gap-1.5 rounded-lg">
-                  <Icon className="w-3.5 h-3.5" /> {tab.label}
+                <TabsTrigger key={tab.value} value={tab.value} className="text-xs gap-1.5 rounded-lg whitespace-nowrap">
+                  <Icon className="w-3.5 h-3.5 shrink-0" /> <span className="hidden sm:inline">{tab.label}</span><span className="sm:hidden">{tab.shortLabel || tab.label.slice(0, 4)}</span>
                 </TabsTrigger>
               )
             })}
@@ -360,6 +366,89 @@ function CreditScoreCircle({ farmerId }: { farmerId: string }) {
       <div className="relative text-center">
         <p className="text-xl font-bold text-white">{score}</p>
         <p className="text-[8px] text-white/60 uppercase tracking-wide">Score</p>
+      </div>
+    </div>
+  )
+}
+
+/* --- LoyaltyBadge — 0–4 stage cycle indicator for the hero card --- */
+/* Shows the farmer's loyalty tier (New/Engaged/Active/Loyal/Champion) as a
+   visual badge with 4 progress dots + a tooltip-style breakdown on hover. */
+function LoyaltyBadge({ farmerId }: { farmerId: string }) {
+  const [data, setData] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetch(`/api/farmers/${farmerId}/loyalty`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { setData(d); setLoading(false) })
+      .catch(() => setLoading(false))
+  }, [farmerId])
+
+  if (loading) {
+    return (
+      <div className="w-20 h-20 rounded-full bg-white/10 backdrop-blur flex items-center justify-center">
+        <Loader2 className="w-5 h-5 text-white/50 animate-spin" />
+      </div>
+    )
+  }
+
+  if (!data) {
+    return (
+      <div className="w-20 h-20 rounded-full bg-white/10 backdrop-blur flex items-center justify-center border-2 border-white/20">
+        <div className="text-center">
+          <Heart className="w-4 h-4 text-white/40 mx-auto mb-0.5" />
+          <p className="text-[9px] text-white/50">No data</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Tier visual config
+  const tiers = [
+    { label: 'New', color: 'bg-slate-400', ring: 'border-slate-300/50', glow: 'from-slate-400/20 to-slate-500/20' },
+    { label: 'Engaged', color: 'bg-blue-400', ring: 'border-blue-300/50', glow: 'from-blue-400/20 to-blue-500/20' },
+    { label: 'Active', color: 'bg-amber-400', ring: 'border-amber-300/50', glow: 'from-amber-400/20 to-orange-500/20' },
+    { label: 'Loyal', color: 'bg-emerald-400', ring: 'border-emerald-300/50', glow: 'from-emerald-400/20 to-teal-500/20' },
+    { label: 'Champion', color: 'bg-rose-400', ring: 'border-rose-300/50', glow: 'from-rose-400/20 to-pink-500/20' },
+  ]
+  const tier = tiers[data.stages] || tiers[0]
+
+  return (
+    <div className={`w-20 h-20 rounded-full bg-gradient-to-br ${tier.glow} backdrop-blur flex items-center justify-center border-2 ${tier.ring} relative group`}>
+      <div className="relative text-center">
+        <Heart className={`w-5 h-5 mx-auto mb-0.5 ${tier.color} fill-current`} />
+        <p className="text-[9px] font-bold text-white uppercase tracking-wide leading-tight">{tier.label}</p>
+        <p className="text-[8px] text-white/60">{data.stages}/4</p>
+      </div>
+      {/* 4 progress dots around the top of the badge */}
+      <div className="absolute -top-0.5 left-1/2 -translate-x-1/2 flex gap-0.5">
+        {[0, 1, 2, 3].map(i => (
+          <div
+            key={i}
+            className={`w-1.5 h-1.5 rounded-full ${i < data.stages ? tier.color : 'bg-white/20'}`}
+          />
+        ))}
+      </div>
+      {/* Hover tooltip with stage breakdown */}
+      <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20">
+        <div className="bg-gray-900 text-white text-xs rounded-lg px-3 py-2 shadow-xl whitespace-nowrap">
+          <p className="font-semibold mb-1">{tier.label} ({data.stages}/4 stages)</p>
+          <div className="space-y-0.5 text-[10px]">
+            <p className={data.stageFlags.training ? 'text-emerald-300' : 'text-white/40'}>
+              {data.stageFlags.training ? '✓' : '○'} Training/Visit ({data.counts.trainingsAttended + data.counts.farmVisits})
+            </p>
+            <p className={data.stageFlags.input ? 'text-emerald-300' : 'text-white/40'}>
+              {data.stageFlags.input ? '✓' : '○'} Input Uptake ({data.counts.inputPurchases})
+            </p>
+            <p className={data.stageFlags.sale ? 'text-emerald-300' : 'text-white/40'}>
+              {data.stageFlags.sale ? '✓' : '○'} Sold Produce ({data.counts.salesCount})
+            </p>
+            <p className={data.stageFlags.repeat ? 'text-emerald-300' : 'text-white/40'}>
+              {data.stageFlags.repeat ? '✓' : '○'} Repeat Seller
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   )

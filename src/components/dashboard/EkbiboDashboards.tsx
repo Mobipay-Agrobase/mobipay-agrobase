@@ -212,19 +212,19 @@ function EkbDashboardSection({
     <section className="space-y-3">
       <div
         className={cn(
-          'flex items-center justify-between gap-3 flex-wrap',
+          'flex items-center justify-between gap-2 sm:gap-3 flex-wrap',
           collapsible && 'cursor-pointer select-none',
         )}
         onClick={collapsible ? () => setCollapsed(c => !c) : undefined}
       >
-        <div className="flex items-center gap-3">
-          <div className={cn('w-9 h-9 rounded-lg flex items-center justify-center shrink-0', accent)}>
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          <div className={cn('w-8 h-8 sm:w-9 sm:h-9 rounded-lg flex items-center justify-center shrink-0', accent)}>
             <Icon className="w-4 h-4" />
           </div>
-          <div>
-            <h3 className="text-sm font-semibold tracking-tight leading-tight">{title}</h3>
+          <div className="min-w-0">
+            <h3 className="text-sm font-semibold tracking-tight leading-tight truncate">{title}</h3>
             {description && (
-              <p className="text-xs text-muted-foreground leading-tight mt-0.5">{description}</p>
+              <p className="text-[11px] sm:text-xs text-muted-foreground leading-tight mt-0.5 hidden sm:block">{description}</p>
             )}
           </div>
         </div>
@@ -435,6 +435,11 @@ export function EkbMdDashboard() {
   const [loyaltyRefreshing, setLoyaltyRefreshing] = useState(false)
   const [loyaltyUpdated, setLoyaltyUpdated] = useState<Date | null>(null)
 
+  // ─── Loyalty Cycle state (Phase 2) ─────────────────────────────────────
+  // Engagement-depth distribution: how many farmers completed 0/1/2/3/4 stages
+  // of the loyalty cycle (Training → Input → Sale → Repeat).
+  const [cycle, setCycle] = useState<any>(null)
+
   const fetchLoyalty = useCallback(async (period: string, opts?: { silent?: boolean }) => {
     if (opts?.silent) setLoyaltyRefreshing(true)
     try {
@@ -456,10 +461,13 @@ export function EkbMdDashboard() {
         to = now.toISOString().split('T')[0]
       }
       const data = await fetchJson(`/api/dashboard/ekibbo-loyalty?from=${from}&to=${to}`)
+      const cycleData = await fetchJson(`/api/dashboard/ekibbo-loyalty/cycle?from=${from}&to=${to}`)
       setLoyalty(data || null)
+      setCycle(cycleData || null)
       setLoyaltyUpdated(new Date())
     } catch {
       setLoyalty(null)
+      setCycle(null)
     } finally {
       setLoyaltyRefreshing(false)
     }
@@ -901,6 +909,101 @@ export function EkbMdDashboard() {
           </div>
         )}
       </EkbDashboardSection>
+
+      {/* ─── Section 3.6 · Loyalty Cycle (Phase 2) ─── */}
+      {cycle && cycle.totals.engagedFarmers > 0 && (
+        <EkbDashboardSection
+          icon={RefreshCw}
+          title="Loyalty Cycle — Engagement Depth"
+          description="Farmers who completed 0–4 stages: Training → Input → Sale → Repeat"
+          accent="bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600"
+          collapsible
+          defaultCollapsed
+          right={
+            <Badge variant="outline" className="text-[11px] font-normal">
+              Avg {cycle.totals.avgStagesCompleted}/4 stages
+            </Badge>
+          }
+        >
+          <div className="space-y-4">
+            {/* ─── Distribution bars ─── */}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm">Stage Distribution</CardTitle>
+                <p className="text-[11px] text-muted-foreground mt-0.5">
+                  {cycle.totals.engagedFarmers} engaged farmers · {cycle.totals.fullCycleFarmers} completed all 4 stages ({cycle.totals.engagedFarmers > 0 ? Math.round((cycle.totals.fullCycleFarmers / cycle.totals.engagedFarmers) * 100) : 0}%)
+                </p>
+              </CardHeader>
+              <CardContent className="space-y-2.5">
+                {cycle.distribution.map((d: any) => {
+                  const tierLabels = ['New', 'Engaged', 'Active', 'Loyal', 'Champion']
+                  const tierColors = ['bg-slate-400', 'bg-blue-500', 'bg-amber-500', 'bg-emerald-500', 'bg-rose-500']
+                  const tierTextColors = ['text-slate-600', 'text-blue-600', 'text-amber-600', 'text-emerald-600', 'text-rose-600']
+                  const maxCount = Math.max(...cycle.distribution.map((x: any) => x.count), 1)
+                  return (
+                    <div key={d.stages} className="flex items-center gap-3">
+                      <div className="w-20 shrink-0">
+                        <span className={cn('text-xs font-medium', tierTextColors[d.stages])}>
+                          {tierLabels[d.stages]}
+                        </span>
+                        <p className="text-[10px] text-muted-foreground">{d.stages}/4 stages</p>
+                      </div>
+                      <div className="flex-1 h-7 bg-muted rounded-md overflow-hidden relative">
+                        <div
+                          className={cn('h-full transition-all', tierColors[d.stages])}
+                          style={{ width: `${(d.count / maxCount) * 100}%` }}
+                        />
+                        <span className="absolute inset-0 flex items-center px-3 text-xs font-medium text-white mix-blend-difference">
+                          {d.count} ({d.pct}%)
+                        </span>
+                      </div>
+                    </div>
+                  )
+                })}
+              </CardContent>
+            </Card>
+
+            {/* ─── Funnel ─── */}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm">Engagement Funnel</CardTitle>
+                <p className="text-[11px] text-muted-foreground mt-0.5">
+                  How many farmers progressed through each stage of the cycle
+                </p>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {[
+                    { label: 'Training / Farm Visit', count: cycle.funnel.training, icon: GraduationCap, color: 'bg-purple-500', text: 'text-purple-600' },
+                    { label: 'Input Uptake', count: cycle.funnel.input, icon: Package, color: 'bg-amber-500', text: 'text-amber-600' },
+                    { label: 'Sold Produce', count: cycle.funnel.sale, icon: ShoppingCart, color: 'bg-blue-500', text: 'text-blue-600' },
+                    { label: 'Repeat Seller', count: cycle.funnel.repeat, icon: RefreshCw, color: 'bg-emerald-500', text: 'text-emerald-600' },
+                  ].map((stage, i) => {
+                    const maxCount = cycle.funnel.training || 1
+                    const pct = cycle.totals.engagedFarmers > 0 ? Math.round((stage.count / cycle.totals.engagedFarmers) * 100) : 0
+                    return (
+                      <div key={i} className="flex items-center gap-3">
+                        <div className={cn('w-8 h-8 rounded-md flex items-center justify-center shrink-0', stage.color, 'bg-opacity-15')}>
+                          <stage.icon className={cn('w-4 h-4', stage.text)} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between mb-0.5">
+                            <span className="text-xs font-medium truncate">{stage.label}</span>
+                            <span className={cn('text-xs font-bold ml-2 shrink-0', stage.text)}>{stage.count} ({pct}%)</span>
+                          </div>
+                          <div className="h-2 bg-muted rounded-full overflow-hidden">
+                            <div className={cn('h-full transition-all', stage.color)} style={{ width: `${(stage.count / maxCount) * 100}%` }} />
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </EkbDashboardSection>
+      )}
 
       {/* ─── Section 4 · Farmer Network & Loan Portfolio ─── */}
       <EkbDashboardSection

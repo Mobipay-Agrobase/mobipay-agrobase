@@ -324,7 +324,7 @@ function AuthenticatedApp() {
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
           <TopBar simulationStatus={simStatus} onSimulationChange={refreshSim} />
           <main className="flex-1 overflow-y-auto">
-            <div className="p-4 lg:p-6 max-w-[1600px] mx-auto">
+            <div className="p-3 sm:p-4 lg:p-6 max-w-[1600px] mx-auto">
               <Suspense fallback={<ModuleLoader />}>
                 <ModuleRouter />
               </Suspense>

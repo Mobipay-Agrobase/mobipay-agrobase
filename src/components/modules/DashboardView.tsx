@@ -240,19 +240,19 @@ function DashboardSection({
     <section className="space-y-3">
       <div
         className={cn(
-          'flex items-center justify-between gap-3 flex-wrap',
+          'flex items-center justify-between gap-2 sm:gap-3 flex-wrap',
           collapsible && 'cursor-pointer select-none',
         )}
         onClick={collapsible ? () => setCollapsed(c => !c) : undefined}
       >
-        <div className="flex items-center gap-3">
-          <div className={cn('w-9 h-9 rounded-lg flex items-center justify-center shrink-0', accent)}>
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          <div className={cn('w-8 h-8 sm:w-9 sm:h-9 rounded-lg flex items-center justify-center shrink-0', accent)}>
             <Icon className="w-4 h-4" />
           </div>
-          <div>
-            <h3 className="text-sm font-semibold tracking-tight leading-tight">{title}</h3>
+          <div className="min-w-0">
+            <h3 className="text-sm font-semibold tracking-tight leading-tight truncate">{title}</h3>
             {description && (
-              <p className="text-xs text-muted-foreground leading-tight mt-0.5">{description}</p>
+              <p className="text-[11px] sm:text-xs text-muted-foreground leading-tight mt-0.5 hidden sm:block">{description}</p>
             )}
           </div>
         </div>

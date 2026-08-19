@@ -4,7 +4,7 @@ import { safeFetch, extractArray } from '@/lib/safe-fetch'
 import React, { useEffect, useState, useCallback } from 'react'
 import { cn } from '@/lib/utils'
 import {
-  Target, Star, TrendingUp, Users, CreditCard, BarChart3, Award
+  Target, Star, TrendingUp, Users, CreditCard, BarChart3, Award, Heart
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -55,6 +55,11 @@ export default function AgriTrackView() {
   const [activeTab, setActiveTab] = useState(activeSubTab || 'credit-scores')
   const [search, setSearch] = useState('')
 
+  // Loyalty data — fetched alongside credit scores so the comparison tab
+  // can show credit score vs loyalty tier side-by-side.
+  // Keyed by farmerId for O(1) lookup when rendering the comparison table.
+  const [loyaltyMap, setLoyaltyMap] = useState<Record<string, any>>({})
+
   const fetchScores = useCallback(async () => {
     try {
       const data = await safeFetch('/api/credit-scores')
@@ -62,6 +67,25 @@ export default function AgriTrackView() {
       const list = extractArray(data, 'scores', 'data')
       if (list.length > 0) {
         setScores(list)
+
+        // Fetch loyalty for each farmer in parallel (cheap YTD computation).
+        // Builds a farmerId → loyalty map for the comparison tab.
+        const farmerIds = list.map((s: any) => s.farmerId).filter(Boolean)
+        const loyaltyEntries = await Promise.all(
+          farmerIds.map(async (fid: string) => {
+            try {
+              const l = await safeFetch(`/api/farmers/${fid}/loyalty`)
+              return [fid, l] as [string, any]
+            } catch {
+              return [fid, null] as [string, any]
+            }
+          })
+        )
+        const map: Record<string, any> = {}
+        for (const [fid, l] of loyaltyEntries) {
+          if (l) map[fid] = l
+        }
+        setLoyaltyMap(map)
         setLoading(false)
         return
       }
@@ -138,6 +162,7 @@ export default function AgriTrackView() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <TabsList>
             <TabsTrigger value="credit-scores" className="gap-1.5"><CreditCard className="w-3.5 h-3.5" /> Credit Scores</TabsTrigger>
+            <TabsTrigger value="loyalty-vs-credit" className="gap-1.5"><Heart className="w-3.5 h-3.5" /> Loyalty vs Credit</TabsTrigger>
             <TabsTrigger value="business" className="gap-1.5"><BarChart3 className="w-3.5 h-3.5" /> Business Tracking</TabsTrigger>
           </TabsList>
           {activeTab === 'credit-scores' && (
@@ -207,6 +232,122 @@ export default function AgriTrackView() {
                   )}
                 </TableBody>
               </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ─── Loyalty vs Credit Comparison ─── */}
+        <TabsContent value="loyalty-vs-credit" className="mt-4 space-y-4">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Heart className="w-4 h-4 text-rose-500" /> Farmer Profile Comparison
+              </CardTitle>
+              <CardDescription>
+                Credit score (financial discipline) vs Loyalty tier (engagement depth) — side-by-side
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Farmer</TableHead>
+                    <TableHead className="text-right">Credit Score</TableHead>
+                    <TableHead>Credit Rating</TableHead>
+                    <TableHead className="text-right">Loyalty Stages</TableHead>
+                    <TableHead>Loyalty Tier</TableHead>
+                    <TableHead>Engagement</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredScores.length === 0 ? (
+                    <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">No farmers found</TableCell></TableRow>
+                  ) : (
+                    filteredScores.map(s => {
+                      const loyalty = loyaltyMap[s.farmerId]
+                      const stages = loyalty?.stages ?? 0
+                      const loyaltyLabel = loyalty?.label ?? 'New'
+                      const tierColors = ['bg-slate-100 text-slate-700', 'bg-blue-100 text-blue-700', 'bg-amber-100 text-amber-700', 'bg-emerald-100 text-emerald-700', 'bg-rose-100 text-rose-700']
+                      const creditScore = s.totalScore || 0
+                      // Insight: does credit score align with loyalty?
+                      // High credit + high loyalty = "Aligned" (green)
+                      // High credit + low loyalty = "At Risk" (amber) — creditworthy but not engaged
+                      // Low credit + high loyalty = "Nurture" (blue) — engaged but financially weak
+                      // Low credit + low loyalty = "Watch" (slate)
+                      let insightLabel = 'Watch', insightColor = 'bg-slate-100 text-slate-700'
+                      const highCredit = creditScore >= 600
+                      const highLoyalty = stages >= 3
+                      if (highCredit && highLoyalty) { insightLabel = 'Aligned'; insightColor = 'bg-emerald-100 text-emerald-700' }
+                      else if (highCredit && !highLoyalty) { insightLabel = 'At Risk'; insightColor = 'bg-amber-100 text-amber-700' }
+                      else if (!highCredit && highLoyalty) { insightLabel = 'Nurture'; insightColor = 'bg-blue-100 text-blue-700' }
+
+                      return (
+                        <TableRow key={s.id}>
+                          <TableCell className="font-medium text-sm">
+                            <div className="flex items-center gap-2">
+                              <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary">
+                                {(s.farmer?.firstName || '?')[0]}{(s.farmer?.lastName || '?')[0]}
+                              </div>
+                              {s.farmer?.firstName ?? s.applicantName ?? 'Unknown'} {s.farmer?.lastName ?? ''}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <span className={cn('font-bold', scoreColor(creditScore))}>
+                              {creditScore || '—'}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <Badge className={cn('text-[10px]', scoreBadge(creditScore))}>
+                              {scoreLabel(creditScore)}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <span className="font-bold text-rose-600">{stages}/4</span>
+                          </TableCell>
+                          <TableCell>
+                            <Badge className={cn('text-[10px]', tierColors[stages] || tierColors[0])}>
+                              {loyaltyLabel}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge className={cn('text-[10px]', insightColor)}>
+                              {insightLabel}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+
+          {/* Insight legend */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm">Engagement Insights</CardTitle>
+              <CardDescription>How to read the comparison</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+                <div className="flex items-start gap-2 p-2 rounded-md bg-emerald-50 dark:bg-emerald-950/30">
+                  <Badge className="text-[10px] bg-emerald-100 text-emerald-700">Aligned</Badge>
+                  <span className="text-muted-foreground">High credit + high loyalty — ideal farmers</span>
+                </div>
+                <div className="flex items-start gap-2 p-2 rounded-md bg-amber-50 dark:bg-amber-950/30">
+                  <Badge className="text-[10px] bg-amber-100 text-amber-700">At Risk</Badge>
+                  <span className="text-muted-foreground">Creditworthy but not engaged — may churn</span>
+                </div>
+                <div className="flex items-start gap-2 p-2 rounded-md bg-blue-50 dark:bg-blue-950/30">
+                  <Badge className="text-[10px] bg-blue-100 text-blue-700">Nurture</Badge>
+                  <span className="text-muted-foreground">Engaged but financially weak — support needed</span>
+                </div>
+                <div className="flex items-start gap-2 p-2 rounded-md bg-slate-50 dark:bg-slate-900/30">
+                  <Badge className="text-[10px] bg-slate-100 text-slate-700">Watch</Badge>
+                  <span className="text-muted-foreground">Low credit + low loyalty — monitor closely</span>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

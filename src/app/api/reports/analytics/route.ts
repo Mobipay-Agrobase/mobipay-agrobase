@@ -25,6 +25,19 @@ export async function GET() {
     const tf = buildTenantFilter(ctx, 'tenantId')
     const farmerWhere = { ...tf, status: 'ACTIVE' as const }
 
+    // Check which modules the tenant has enabled — only compute the
+    // corresponding analytics blocks if the module is entitled.
+    // SUPER_ADMIN bypasses (sees all blocks for cross-tenant analysis).
+    let enabledModules = new Set<string>()
+    if (!ctx.isSuperAdmin && ctx.tenantId) {
+      const entitlements = await db.moduleEntitlement.findMany({
+        where: { tenantId: ctx.tenantId, isEnabled: true },
+        select: { moduleCode: true },
+      })
+      enabledModules = new Set(entitlements.map(e => e.moduleCode.toUpperCase()))
+    }
+    const hasVsla = ctx.isSuperAdmin || enabledModules.has('VSLA')
+
     const [
       overview,
       demographics,
@@ -41,7 +54,9 @@ export async function GET() {
       computeCrops(farmerWhere),
       computeGeography(farmerWhere),
       computeFarmArea(farmerWhere),
-      computeVsla(ctx),
+      // Only compute VSLA block if the tenant has the VSLA module.
+      // Returns null otherwise — frontend hides the VSLA tab when null.
+      hasVsla ? computeVsla(ctx) : Promise.resolve(null),
       computeFinancial(ctx, tf),
       computeTraining(tf),
       computeCredit(ctx),

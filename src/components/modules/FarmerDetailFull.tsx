@@ -249,12 +249,26 @@ export function FarmerDetailFull({ farmerId, onBack }: Props) {
                 <LoyaltyBadge farmerId={farmer.id} />
                 {/* Credit Score Circle */}
                 <CreditScoreCircle farmerId={farmer.id} />
-                {/* QR Code — visible on all screens, smaller on mobile */}
-                <div className="bg-white p-1 sm:p-1.5 rounded-lg shadow-md shrink-0">
-                  <div className="w-11 h-11 sm:w-16 sm:h-16 flex items-center justify-center">
-                    <QrCode className="w-8 h-8 sm:w-12 sm:h-12 text-gray-800" />
-                  </div>
-                </div>
+                {/* QR Code — real scannable QR linking to public farmer page */}
+                {/* Uses api.qrserver.com (free, no install) to generate the QR image.
+                    The QR encodes the /farmer/[id] public URL which shows masked data. */}
+                <a
+                  href={`${typeof window !== 'undefined' ? window.location.origin : 'https://mobipay-agrobase.vercel.app'}/farmer/${farmerId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title="Scan to view public profile (sensitive data masked)"
+                  className="bg-white p-1 sm:p-1.5 rounded-lg shadow-md shrink-0 hover:shadow-lg transition-shadow cursor-pointer block"
+                >
+                  <img
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=120x120&margin=0&data=${encodeURIComponent(
+                      `${typeof window !== 'undefined' ? window.location.origin : 'https://mobipay-agrobase.vercel.app'}/farmer/${farmerId}`
+                    )}`}
+                    alt="QR code linking to public farmer profile"
+                    className="w-11 h-11 sm:w-16 sm:h-16"
+                    width={64}
+                    height={64}
+                  />
+                </a>
               </div>
             </div>
 

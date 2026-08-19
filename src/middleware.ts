@@ -19,7 +19,7 @@ const PUBLIC_ROUTES = [
   '/api/health',
   '/api/route', // basic health check
   '/api/ussd/', // USSD callback — public (members authenticate via Member ID + PIN)
-  '/api/public/', // public survey fetch + submit (for /survey/[id] page)
+  '/api/public/', // public survey fetch + submit + public farmer profile (for QR code scanning)
 ]
 
 // Routes that only need auth (no tenant isolation) — system-level

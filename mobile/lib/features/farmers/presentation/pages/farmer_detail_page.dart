@@ -217,30 +217,12 @@ class _FarmerDetailPageState extends State<FarmerDetailPage> {
               ],
             ),
           ),
-          // Loyalty donut badge on the right (matches web hero card design)
-          if (stages != null)
-            LoyaltyBadge(stages: stages, size: 56)
-          else
-            // Placeholder circle when no loyalty data yet
-            Container(
-              width: 56,
-              height: 56,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.grey.shade200,
-                border: Border.all(color: Colors.grey.shade300, width: 2),
-              ),
-              child: const Center(
-                child: Text(
-                  '—',
-                  style: TextStyle(
-                    color: Colors.grey,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-            ),
+          // Loyalty donut badge on the right (matches web hero card design).
+          // Only shown when the API returns loyalty data (EKIBBO tenant only —
+          // the backend returns loyalty=null for non-EKIBBO tenants).
+          // For non-EKIBBO tenants, nothing is rendered here (no placeholder).
+          if (loyaltyJson != null && stages != null)
+            LoyaltyBadge(stages: stages, size: 56),
         ],
       ),
     );

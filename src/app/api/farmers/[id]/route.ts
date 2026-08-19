@@ -51,7 +51,71 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     email: farmer.email ? decryptField(farmer.email) : null,
   }
 
-  return NextResponse.json({ data: farmerDecrypted })
+  // ─── Inline loyalty summary (year-to-date) ─────────────────────────────
+  // Mobile + web farmer-detail pages both call /api/farmers/[id] — by
+  // embedding the loyalty summary here, the mobile app gets loyalty data
+  // in the SAME fetch it already makes (no extra API call needed).
+  // For a richer per-stage breakdown, the dedicated
+  // GET /api/farmers/[id]/loyalty endpoint can be called separately.
+  let loyaltySummary: any = null
+  try {
+    const now = new Date()
+    const ytdFrom = new Date(Date.UTC(now.getUTCFullYear(), 0, 1))
+    const farmerFilter = { farmerId: id }
+    const [sales, inputs, trainings, visits] = await Promise.all([
+      db.sale.findMany({
+        where: { ...tf, ...farmerFilter, category: 'PRODUCE', status: 'COMPLETED', createdAt: { gte: ytdFrom, lte: now } },
+        select: { product: true, totalAmount: true },
+      }),
+      db.inputDistribution.findMany({
+        where: { ...tf, ...farmerFilter, distributionDate: { gte: ytdFrom, lte: now } },
+        select: { id: true },
+      }),
+      db.trainingAttendance.findMany({
+        where: { ...farmerFilter, training: { ...tf, date: { gte: ytdFrom, lte: now } }, attended: true },
+        select: { id: true },
+      }),
+      db.farmVisit.findMany({
+        where: { ...farmerFilter, visitDate: { gte: ytdFrom, lte: now } },
+        select: { id: true },
+      }),
+    ])
+
+    const salesCount = sales.length
+    const stageSale = salesCount >= 1
+    const stageRepeat = salesCount >= 2
+    const stageInput = inputs.length >= 1
+    const stageTraining = trainings.length >= 1 || visits.length >= 1
+    const stages = [stageTraining, stageInput, stageSale, stageRepeat].filter(Boolean).length
+
+    const cropsSet = new Set<string>()
+    let totalSalesValue = 0
+    for (const s of sales) {
+      if (s.product) cropsSet.add(s.product)
+      totalSalesValue += s.totalAmount || 0
+    }
+
+    const tierLabels = ['New', 'Engaged', 'Active', 'Loyal', 'Champion']
+    loyaltySummary = {
+      stages,
+      stageFlags: { training: stageTraining, input: stageInput, sale: stageSale, repeat: stageRepeat },
+      counts: {
+        salesCount,
+        cropsSold: cropsSet.size,
+        inputPurchases: inputs.length,
+        trainingsAttended: trainings.length,
+        farmVisits: visits.length,
+      },
+      totalSalesValueUGX: Math.round(totalSalesValue),
+      isLoyal: stageSale,
+      label: tierLabels[stages],
+    }
+  } catch (e) {
+    // Loyalty computation should never break the farmer-detail fetch
+    console.error('Inline loyalty summary error:', e)
+  }
+
+  return NextResponse.json({ data: { ...farmerDecrypted, loyalty: loyaltySummary } })
 }
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {

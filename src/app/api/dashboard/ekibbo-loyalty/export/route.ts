@@ -109,45 +109,111 @@ export async function GET(req: NextRequest) {
     // Build CSV
     const escape = (v: string | null | undefined) => {
       const s = v == null ? '' : String(v)
-      // Escape double-quotes by doubling them; wrap in double-quotes if contains comma/newline/quote
       if (s.includes(',') || s.includes('\n') || s.includes('"')) {
         return `"${s.replace(/"/g, '""')}"`
       }
       return s
     }
 
+    // Compute per-farmer loyalty tier (0-4 stages → New/Engaged/Active/Loyal/Champion)
+    // Matches the /api/farmers/[id]/loyalty endpoint logic exactly.
+    const tierFor = (f: { salesCount: number; inputCount: number; trainingCount: number; farmVisitCount: number }) => {
+      const stageTraining = f.trainingCount >= 1 || f.farmVisitCount >= 1
+      const stageInput = f.inputCount >= 1
+      const stageSale = f.salesCount >= 1
+      const stageRepeat = f.salesCount >= 2
+      const stages = [stageTraining, stageInput, stageSale, stageRepeat].filter(Boolean).length
+      const tierLabels = ['New', 'Engaged', 'Active', 'Loyal', 'Champion']
+      return { stages, tier: tierLabels[stages] }
+    }
+
+    // Human-readable headers (no more cryptic TRUE/FALSE)
     const header = [
-      'farmerCode', 'firstName', 'lastName', 'village', 'district',
-      'salesCount', 'repeatSeller', 'cropsSold', 'multiCrop',
-      'totalSalesValueUGX', 'inputPurchases', 'trainingsAttended',
-      'farmVisits', 'loyal',
+      'Farmer Code',
+      'First Name',
+      'Last Name',
+      'Village',
+      'District',
+      'Loyalty Tier',
+      'Stages Completed',
+      'Loyal (Sold Produce)',
+      'Repeat Seller',
+      'Multi-Crop Seller',
+      'Sales Count',
+      'Crops Sold',
+      'Total Sales Value (UGX)',
+      'Input Purchases',
+      'Trainings Attended',
+      'Farm Visits',
     ].join(',')
 
-    const rows = [...farmers.entries()].map(([fid, f]) => {
+    // Build a row for a single farmer
+    const buildRow = (fid: string, f: any) => {
       const p = profileMap.get(fid)
-      const repeatSeller = f.salesCount >= 2 ? 'TRUE' : 'FALSE'
-      const multiCrop = f.crops.size >= 2 ? 'TRUE' : 'FALSE'
-      const loyal = f.salesCount >= 1 ? 'TRUE' : 'FALSE'
-      const cropsSold = [...f.crops].sort().join(';')
+      const { stages, tier } = tierFor(f)
+      const loyal = f.salesCount >= 1 ? 'Yes' : 'No'
+      const repeatSeller = f.salesCount >= 2 ? 'Yes' : 'No'
+      const multiCrop = f.crops.size >= 2 ? 'Yes' : 'No'
+      const cropsSold = [...f.crops].sort().join('; ')
       return [
         escape(p?.farmerCode),
         escape(p?.firstName),
         escape(p?.lastName),
         escape(p?.villageName),
         escape(p?.district),
-        f.salesCount,
+        tier,
+        `${stages}/4`,
+        loyal,
         repeatSeller,
-        escape(cropsSold),
         multiCrop,
+        f.salesCount,
+        escape(cropsSold),
         Math.round(f.totalSalesValue),
         f.inputCount,
         f.trainingCount,
         f.farmVisitCount,
-        loyal,
       ].join(',')
-    })
+    }
 
-    const csv = [header, ...rows].join('\n')
+    // Split farmers into Loyal (sold produce) and Not Loyal (engaged but no sale)
+    // — much friendlier for EKiBBO to action. They can focus on the Not Loyal
+    // group to convert them into sellers.
+    const allEntries = [...farmers.entries()]
+    const loyalEntries = allEntries.filter(([, f]) => f.salesCount >= 1)
+    const notLoyalEntries = allEntries.filter(([, f]) => f.salesCount < 1)
+
+    // Sort loyal farmers by tier (Champion first), then by sales count desc
+    const loyalRows = loyalEntries
+      .sort(([, a], [, b]) => {
+        const ta = tierFor(a).stages
+        const tb = tierFor(b).stages
+        if (tb !== ta) return tb - ta
+        return b.salesCount - a.salesCount
+      })
+      .map(([fid, f]) => buildRow(fid, f))
+
+    // Sort not-loyal farmers by engagement stages desc (most engaged first)
+    const notLoyalRows = notLoyalEntries
+      .sort(([, a], [, b]) => tierFor(b).stages - tierFor(a).stages)
+      .map(([fid, f]) => buildRow(fid, f))
+
+    const periodLabel = `${from.toISOString().split('T')[0]} to ${to.toISOString().split('T')[0]}`
+
+    const csvParts: string[] = []
+    // Title + summary header
+    csvParts.push(`EKiBBO Customer Loyalty Report`)
+    csvParts.push(`Period,${escape(periodLabel)}`)
+    csvParts.push(`Generated,${escape(new Date().toISOString())}`)
+    csvParts.push(``)
+    csvParts.push(`LOYAL FARMERS (${loyalRows.length}) — sold produce to EKiBBO in the period`)
+    csvParts.push(header)
+    csvParts.push(...loyalRows)
+    csvParts.push(``)
+    csvParts.push(`NOT YET LOYAL (${notLoyalRows.length}) — engaged but have not sold produce yet`)
+    csvParts.push(header)
+    csvParts.push(...notLoyalRows)
+
+    const csv = csvParts.join('\n')
     const filename = `ekibbo-loyalty-${from.toISOString().split('T')[0]}-to-${to.toISOString().split('T')[0]}.csv`
 
     return new NextResponse(csv, {

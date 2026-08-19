@@ -369,7 +369,7 @@ export class MobileSyncEngine {
   // --- Mobile Dashboard (single-call optimized) ---
 
   async getMobileDashboard(tenantId: string, userId: string) {
-    const [farmerCount, purchaseStats, activeShipments, pendingNotifications] = await Promise.all([
+    const [farmerCount, purchaseStats, activeShipments, pendingNotifications, loyaltyStats] = await Promise.all([
       db.farmerProfile.count({ where: { tenantId, status: 'ACTIVE' } }),
       db.purchase.aggregate({
         where: { farmer: { tenantId }, status: 'APPROVED' },
@@ -378,6 +378,10 @@ export class MobileSyncEngine {
       }),
       db.shipment.count({ where: { tenantId, status: 'IN_TRANSIT' } }),
       db.notification.count({ where: { tenantId, userId, status: 'PENDING' } }),
+      // Loyalty KPIs (year-to-date) — exposes the same Phase 1 metrics the
+      // web dashboard shows, so the mobile dashboard can render a loyalty
+      // card without an extra API round-trip.
+      this.computeLoyaltyKpis(tenantId),
     ])
 
     return {
@@ -388,7 +392,84 @@ export class MobileSyncEngine {
       },
       shipments: { inTransit: activeShipments },
       notifications: { pending: pendingNotifications },
+      loyalty: loyaltyStats,
       lastRefreshed: new Date().toISOString(),
+    }
+  }
+
+  /**
+   * Compute Phase 1 loyalty KPIs for the mobile dashboard.
+   * Mirrors /api/dashboard/ekibbo-loyalty (year-to-date default).
+   * Returns null on error so the dashboard never crashes.
+   *
+   * Public so /api/dashboard/route.ts can reuse the same computation
+   * (keeps numbers consistent across web + mobile dashboards).
+   */
+  async computeLoyaltyKpis(tenantId: string) {
+    try {
+      const now = new Date()
+      const ytdFrom = new Date(Date.UTC(now.getUTCFullYear(), 0, 1))
+      const tf = { tenantId }
+
+      const [salesGrouped, inputsGrouped, trainingsGrouped, visitsGrouped] = await Promise.all([
+        db.sale.groupBy({
+          by: ['farmerId'],
+          where: { ...tf, category: 'PRODUCE', status: 'COMPLETED', createdAt: { gte: ytdFrom, lte: now }, farmerId: { not: null } },
+          _count: { _all: true },
+        }),
+        db.inputDistribution.groupBy({
+          by: ['farmerId'],
+          where: { ...tf, distributionDate: { gte: ytdFrom, lte: now } },
+          _count: { _all: true },
+        }),
+        db.trainingAttendance.groupBy({
+          by: ['farmerId'],
+          where: { training: { ...tf, date: { gte: ytdFrom, lte: now } }, attended: true },
+          _count: { _all: true },
+        }),
+        db.farmVisit.groupBy({
+          by: ['farmerId'],
+          where: { farmer: { ...tf }, visitDate: { gte: ytdFrom, lte: now }, farmerId: { not: null } },
+          _count: { _all: true },
+        }),
+      ])
+
+      const sellers = new Set<string>()
+      let repeatSellerCount = 0
+      for (const row of salesGrouped as any[]) {
+        if (!row.farmerId) continue
+        sellers.add(row.farmerId)
+        if (row._count._all >= 2) repeatSellerCount++
+      }
+      const inputBuyers = new Set<string>()
+      for (const row of inputsGrouped as any[]) inputBuyers.add(row.farmerId)
+      const trainingAttendees = new Set<string>()
+      for (const row of trainingsGrouped as any[]) trainingAttendees.add(row.farmerId)
+      const farmVisitFarmers = new Set<string>()
+      for (const row of visitsGrouped as any[]) if (row.farmerId) farmVisitFarmers.add(row.farmerId)
+
+      const activeFarmers = new Set<string>([
+        ...sellers, ...inputBuyers, ...trainingAttendees, ...farmVisitFarmers,
+      ])
+
+      const loyalFarmerCount = sellers.size
+      const activeFarmerCount = activeFarmers.size
+      return {
+        loyalFarmerCount,
+        activeFarmerCount,
+        loyalFarmerRate: activeFarmerCount > 0 ? Math.round((loyalFarmerCount / activeFarmerCount) * 1000) / 10 : null,
+        repeatSellerCount,
+        inputPurchaseFarmerCount: inputBuyers.size,
+        trainingFarmerCount: trainingAttendees.size,
+        farmVisitFarmerCount: farmVisitFarmers.size,
+        period: {
+          from: ytdFrom.toISOString().split('T')[0],
+          to: now.toISOString().split('T')[0],
+        },
+      }
+    } catch (e) {
+      console.error('Mobile loyalty KPI error:', e)
+      return null
     }
   }
 

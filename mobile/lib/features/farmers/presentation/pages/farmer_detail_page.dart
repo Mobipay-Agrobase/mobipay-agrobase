@@ -16,6 +16,7 @@ import '../../../shared/widgets/kpi_card.dart';
 import '../../../shared/widgets/status_badge.dart';
 import '../../../shared/widgets/loading_shimmer.dart';
 import '../../../shared/widgets/empty_state.dart';
+import '../../../shared/widgets/loyalty_badge.dart';
 
 class FarmerDetailPage extends StatefulWidget {
   final String id;
@@ -133,9 +134,13 @@ class _FarmerDetailPageState extends State<FarmerDetailPage> {
     final name = farmer['name'] as String? ?? 'Unknown';
     final initials = _getInitials(name);
     final status = farmer['status'] as String? ?? 'active';
+    // Loyalty data is now embedded in the /api/farmers/[id] response (inline `loyalty` block).
+    // Fall back to a separate `loyalty` field if the older per-farmer endpoint was used.
+    final loyaltyJson = farmer['loyalty'] as Map<String, dynamic>?;
+    final stages = stagesFromLoyaltyJson(loyaltyJson);
 
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -144,18 +149,18 @@ class _FarmerDetailPageState extends State<FarmerDetailPage> {
       child: Row(
         children: [
           CircleAvatar(
-            radius: 36,
+            radius: 32,
             backgroundColor: AppTheme.primaryGreen.withValues(alpha: 0.1),
             child: Text(
               initials,
               style: const TextStyle(
                 color: AppTheme.primaryGreen,
                 fontWeight: FontWeight.w700,
-                fontSize: 24,
+                fontSize: 22,
               ),
             ),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -166,7 +171,7 @@ class _FarmerDetailPageState extends State<FarmerDetailPage> {
                       child: Text(
                         name,
                         style: const TextStyle(
-                          fontSize: 20,
+                          fontSize: 18,
                           fontWeight: FontWeight.w700,
                           color: AppTheme.textPrimary,
                         ),
@@ -179,7 +184,7 @@ class _FarmerDetailPageState extends State<FarmerDetailPage> {
                 Text(
                   'ID: ${farmer['farmerId'] ?? widget.id}',
                   style: const TextStyle(
-                    fontSize: 13,
+                    fontSize: 12,
                     color: AppTheme.textSecondary,
                   ),
                 ),
@@ -187,16 +192,70 @@ class _FarmerDetailPageState extends State<FarmerDetailPage> {
                 Text(
                   'Registered ${_formatDate(farmer['createdAt'] as String?)}',
                   style: const TextStyle(
-                    fontSize: 13,
+                    fontSize: 12,
                     color: AppTheme.textSecondary,
                   ),
                 ),
+                // Loyalty tier subtitle — only if data is present
+                if (loyaltyJson != null && stages != null) ...[
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      Icon(Icons.favorite, size: 12, color: _tierColor(stages)),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${loyaltyJson['label'] ?? 'Loyalty'} · $stages/4 stages',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: _tierColor(stages),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ],
             ),
           ),
+          // Loyalty donut badge on the right (matches web hero card design)
+          if (stages != null)
+            LoyaltyBadge(stages: stages, size: 56)
+          else
+            // Placeholder circle when no loyalty data yet
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.grey.shade200,
+                border: Border.all(color: Colors.grey.shade300, width: 2),
+              ),
+              child: const Center(
+                child: Text(
+                  '—',
+                  style: TextStyle(
+                    color: Colors.grey,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );
+  }
+
+  /// Tier color matching the LoyaltyBadge widget's internal config.
+  Color _tierColor(int stages) {
+    const colors = [
+      Color(0xFF94A3B8), // New — slate
+      Color(0xFF60A5FA), // Engaged — blue
+      Color(0xFFFBBF24), // Active — amber
+      Color(0xFF34D399), // Loyal — emerald
+      Color(0xFFFB7185), // Champion — rose
+    ];
+    return colors[stages.clamp(0, 4)];
   }
 
   Widget _buildContactInfo() {

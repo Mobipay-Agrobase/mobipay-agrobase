@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io' as io;
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -7,6 +8,8 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:pull_to_refresh_flutter3/pull_to_refresh_flutter3.dart';
 import 'package:intl/intl.dart';
+import 'package:path_provider/path_provider.dart' as path_provider;
+import 'package:share_plus/share_plus.dart';
 import '../../../../core/api/api_client.dart';
 import '../../../../core/auth/auth_provider.dart';
 import '../../../../core/sync/offline_repository.dart';
@@ -154,6 +157,12 @@ class _DashboardPageState extends State<DashboardPage> {
           const SizedBox(height: 8),
           _buildKpiGrid(),
           const SizedBox(height: 24),
+          // ─── Loyalty KPI section (Phase 1 + Phase 2) ───
+          // Shown when the mobile dashboard endpoint returns a `loyalty` block.
+          // (Currently only the EKIBBO tenant has loyalty data populated, but the
+          // section gracefully hides itself when loyalty is null.)
+          if (_dashboardData?['loyalty'] != null) _buildLoyaltySection(),
+          if (_dashboardData?['loyalty'] != null) const SizedBox(height: 24),
           _buildLoanPortfolioChart(),
           const SizedBox(height: 24),
           _buildRecentActivity(),
@@ -163,6 +172,237 @@ class _DashboardPageState extends State<DashboardPage> {
         ],
       ),
     );
+  }
+
+  /// Loyalty KPI section — shows the same Phase 1 metrics the web dashboard
+  /// shows (loyal farmer rate, repeat sellers, engagement breakdown) + a
+  /// CSV export button that downloads the per-farmer loyalty report via the
+  /// web's export endpoint.
+  Widget _buildLoyaltySection() {
+    final loyalty = _dashboardData!['loyalty'] as Map<String, dynamic>;
+    final loyalCount = loyalty['loyalFarmerCount'] as int? ?? 0;
+    final activeCount = loyalty['activeFarmerCount'] as int? ?? 0;
+    final rate = loyalty['loyalFarmerRate']; // num or null
+    final repeatCount = loyalty['repeatSellerCount'] as int? ?? 0;
+    final inputBuyers = loyalty['inputPurchaseFarmerCount'] as int? ?? 0;
+    final trainingCount = loyalty['trainingFarmerCount'] as int? ?? 0;
+    final period = loyalty['period'] as Map<String, dynamic>?;
+
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header row: title + export button
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFB7185).withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(Icons.favorite, color: Color(0xFFFB7185), size: 20),
+                    ),
+                    const SizedBox(width: 10),
+                    Text(
+                      'Customer Loyalty',
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: AppTheme.textPrimary,
+                      ),
+                    ),
+                  ],
+                ),
+                // CSV export button
+                IconButton(
+                  icon: const Icon(Icons.download_rounded, size: 20),
+                  color: AppTheme.primaryGreen,
+                  tooltip: 'Export CSV',
+                  onPressed: _exportLoyaltyCsv,
+                  constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                  padding: EdgeInsets.zero,
+                ),
+              ],
+            ),
+            if (period != null) ...[
+              const SizedBox(height: 4),
+              Text(
+                'Year to date (${period['from']} → ${period['to']})',
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: AppTheme.textSecondary,
+                ),
+              ),
+            ],
+            const SizedBox(height: 14),
+            // Hero KPI row: Loyalty rate (big) + progress bar
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Expanded(
+                  flex: 2,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        rate == null ? '—' : '${rate}%',
+                        style: const TextStyle(
+                          fontSize: 32,
+                          fontWeight: FontWeight.w800,
+                          color: AppTheme.textPrimary,
+                          height: 1.0,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '$loyalCount of $activeCount active farmers',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: AppTheme.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  flex: 3,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: LinearProgressIndicator(
+                      value: activeCount > 0 ? (loyalCount / activeCount).toDouble().clamp(0.0, 1.0) : 0,
+                      minHeight: 10,
+                      backgroundColor: Colors.grey.shade200,
+                      valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFFB7185)),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            // Mini stats grid
+            Row(
+              children: [
+                Expanded(child: _buildLoyaltyMiniStat('Repeat Sellers', repeatCount.toString(), const Color(0xFFFBBF24))),
+                const SizedBox(width: 8),
+                Expanded(child: _buildLoyaltyMiniStat('Input Buyers', inputBuyers.toString(), const Color(0xFF60A5FA))),
+                const SizedBox(width: 8),
+                Expanded(child: _buildLoyaltyMiniStat('Trained', trainingCount.toString(), const Color(0xFFA78BFA))),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLoyaltyMiniStat(String label, String value, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        children: [
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: color,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 10,
+              color: AppTheme.textSecondary,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Download the loyalty CSV export via the authenticated API client,
+  /// save it to a temp file, then trigger the native share sheet so the
+  /// user can send it to email / WhatsApp / Files / etc.
+  ///
+  /// Uses the existing ApiClient (which carries the user's auth token) so
+  /// the export works even when the mobile session isn't shared with the
+  /// browser.
+  Future<void> _exportLoyaltyCsv() async {
+    final loyalty = _dashboardData?['loyalty'] as Map<String, dynamic>?;
+    final period = loyalty?['period'] as Map<String, dynamic>?;
+    final from = period?['from'] as String? ?? '';
+    final to = period?['to'] as String? ?? '';
+
+    // Show a loading snackbar — the fetch can take a few seconds for
+    // tenants with many farmers.
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Row(
+          children: [
+            SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+            ),
+            SizedBox(width: 12),
+            Text('Preparing loyalty report…'),
+          ],
+        ),
+        duration: Duration(seconds: 10),
+      ),
+    );
+
+    try {
+      final api = ApiClient();
+      final res = await api.get(
+        '/api/dashboard/ekibbo-loyalty/export?from=$from&to=$to',
+      );
+
+      if (res.statusCode != 200) {
+        throw Exception('HTTP ${res.statusCode}');
+      }
+
+      // Get the temp directory + write the CSV
+      final dir = await path_provider.getTemporaryDirectory();
+      final filename = 'ekibbo-loyalty-$from-to-$to.csv';
+      final file = io.File('${dir.path}/$filename');
+      await file.writeAsString(res.body);
+
+      // Hide the loading snackbar
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
+      // Share the file via the native share sheet (email / WhatsApp / Files)
+      await Share.shareXFiles(
+        [XFile(file.path)],
+        text: 'EKiBBO Customer Loyalty Report ($from to $to)',
+      );
+    } catch (e) {
+      debugPrint('Loyalty CSV export error: $e');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to export loyalty report: $e')),
+      );
+    }
   }
 
   /// Farmer self-service dashboard — shown when the logged-in user is a FARMER

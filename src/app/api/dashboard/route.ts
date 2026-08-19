@@ -1,6 +1,7 @@
 import { db } from '@/lib/db'
 import { NextResponse } from 'next/server'
 import { getTenantContext, buildTenantFilter } from '@/lib/tenant'
+import { mobileSyncEngine } from '@/lib/mobile/sync'
 
 /**
  * GET /api/dashboard
@@ -91,6 +92,20 @@ export async function GET() {
       loans: g._count.loans,
     }))
 
+    // ─── Loyalty KPIs (year-to-date) ───────────────────────────────────────
+    // Added for the mobile dashboard — reuses the same computation as
+    // /api/mobile/dashboard (MobileSyncEngine.computeLoyaltyKpis) so the
+    // numbers stay consistent across web + mobile.
+    // Only compute for tenant-scoped users (not SUPER_ADMIN who sees all tenants).
+    let loyaltyStats: any = null
+    if (ctx.tenantId) {
+      try {
+        loyaltyStats = await mobileSyncEngine.computeLoyaltyKpis(ctx.tenantId)
+      } catch (e) {
+        console.error('Dashboard loyalty KPI error:', e)
+      }
+    }
+
     return NextResponse.json({
       role: ctx.role,
       dashboardType: 'admin',
@@ -104,6 +119,7 @@ export async function GET() {
       monthlyFarmerData,
       vslaSavingsByGroup,
       recentTransactions,
+      loyalty: loyaltyStats,
     })
   } catch (error) {
     return NextResponse.json({ error: 'Failed to fetch dashboard data' }, { status: 500 })

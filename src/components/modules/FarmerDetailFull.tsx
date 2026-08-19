@@ -13,7 +13,7 @@ import {
   ArrowLeft, Plus, Trash2, Banknote, Shield, Tractor, Users,
   Loader2, Save, MapPin, QrCode, TrendingUp, ShoppingCart,
   CreditCard, FileText, Landmark, Pencil, User, Wallet,
-  ChevronDown, Sprout, Printer, Share2, Heart, GraduationCap, Package, RefreshCw,
+  ChevronDown, Sprout, Printer, Share2,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAppStore } from '@/lib/store'
@@ -243,16 +243,16 @@ export function FarmerDetailFull({ farmerId, onBack }: Props) {
               </div>
 
               {/* Right side: loyalty badge + credit score circle + QR code */}
-              {/* On mobile: align to the right of the row; on sm+: shrink-0 column */}
-              <div className="flex items-center justify-end gap-2 sm:gap-3 shrink-0 sm:mt-0">
+              {/* On mobile: smaller circles (w-16) + smaller QR (w-12); on sm+: full size (w-20) + QR (w-16) */}
+              <div className="flex items-center justify-end gap-1.5 sm:gap-3 shrink-0">
                 {/* Loyalty Badge — Phase 2 */}
                 <LoyaltyBadge farmerId={farmer.id} />
                 {/* Credit Score Circle */}
                 <CreditScoreCircle farmerId={farmer.id} />
-                {/* QR Code — hidden on very small screens to save space */}
-                <div className="hidden sm:block bg-white p-1.5 rounded-lg shadow-md">
-                  <div className="w-14 h-14 sm:w-16 sm:h-16 flex items-center justify-center">
-                    <QrCode className="w-10 h-10 sm:w-12 sm:h-12 text-gray-800" />
+                {/* QR Code — visible on all screens, smaller on mobile */}
+                <div className="bg-white p-1 sm:p-1.5 rounded-lg shadow-md shrink-0">
+                  <div className="w-11 h-11 sm:w-16 sm:h-16 flex items-center justify-center">
+                    <QrCode className="w-8 h-8 sm:w-12 sm:h-12 text-gray-800" />
                   </div>
                 </div>
               </div>
@@ -333,7 +333,7 @@ function CreditScoreCircle({ farmerId }: { farmerId: string }) {
 
   if (loading) {
     return (
-      <div className="w-20 h-20 rounded-full bg-white/10 backdrop-blur flex items-center justify-center">
+      <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-white/10 backdrop-blur flex items-center justify-center shrink-0">
         <Loader2 className="w-5 h-5 text-white/50 animate-spin" />
       </div>
     )
@@ -341,10 +341,10 @@ function CreditScoreCircle({ farmerId }: { farmerId: string }) {
 
   if (score == null) {
     return (
-      <div className="w-20 h-20 rounded-full bg-white/10 backdrop-blur flex items-center justify-center border-2 border-white/20">
+      <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-white/10 backdrop-blur flex items-center justify-center border-2 border-white/20 shrink-0">
         <div className="text-center">
-          <p className="text-[10px] text-white/50">No</p>
-          <p className="text-[10px] text-white/50">Score</p>
+          <p className="text-[9px] sm:text-[10px] text-white/50">No</p>
+          <p className="text-[9px] sm:text-[10px] text-white/50">Score</p>
         </div>
       </div>
     )
@@ -356,7 +356,7 @@ function CreditScoreCircle({ farmerId }: { farmerId: string }) {
   const bgGradient = score >= 700 ? 'from-green-400/20 to-emerald-500/20' : score >= 400 ? 'from-amber-400/20 to-orange-500/20' : 'from-red-400/20 to-rose-500/20'
 
   return (
-    <div className={`w-20 h-20 rounded-full bg-gradient-to-br ${bgGradient} backdrop-blur flex items-center justify-center border-2 border-white/30 relative`}>
+    <div className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gradient-to-br ${bgGradient} backdrop-blur flex items-center justify-center border-2 border-white/30 relative shrink-0`}>
       {/* SVG donut ring */}
       <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 80 80">
         <circle cx="40" cy="40" r="36" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="4" />
@@ -364,16 +364,18 @@ function CreditScoreCircle({ farmerId }: { farmerId: string }) {
           strokeDasharray={`${2 * Math.PI * 36 * pct / 100} ${2 * Math.PI * 36}`} />
       </svg>
       <div className="relative text-center">
-        <p className="text-xl font-bold text-white">{score}</p>
-        <p className="text-[8px] text-white/60 uppercase tracking-wide">Score</p>
+        <p className="text-lg sm:text-xl font-bold text-white">{score}</p>
+        <p className="text-[7px] sm:text-[8px] text-white/60 uppercase tracking-wide">Score</p>
       </div>
     </div>
   )
 }
 
 /* --- LoyaltyBadge — 0–4 stage cycle indicator for the hero card --- */
-/* Shows the farmer's loyalty tier (New/Engaged/Active/Loyal/Champion) as a
-   visual badge with 4 progress dots + a tooltip-style breakdown on hover. */
+/* Clean SVG donut design matching CreditScoreCircle. 4 ring segments —
+   completed stages are tier-colored, incomplete are faint white.
+   Center shows tier label + "X/4". No heart icon (it rendered as a black
+   blob). Hover tooltip shows per-stage breakdown. */
 function LoyaltyBadge({ farmerId }: { farmerId: string }) {
   const [data, setData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
@@ -387,7 +389,7 @@ function LoyaltyBadge({ farmerId }: { farmerId: string }) {
 
   if (loading) {
     return (
-      <div className="w-20 h-20 rounded-full bg-white/10 backdrop-blur flex items-center justify-center">
+      <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-white/10 backdrop-blur flex items-center justify-center shrink-0">
         <Loader2 className="w-5 h-5 text-white/50 animate-spin" />
       </div>
     )
@@ -395,45 +397,69 @@ function LoyaltyBadge({ farmerId }: { farmerId: string }) {
 
   if (!data) {
     return (
-      <div className="w-20 h-20 rounded-full bg-white/10 backdrop-blur flex items-center justify-center border-2 border-white/20">
+      <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-white/10 backdrop-blur flex items-center justify-center border-2 border-white/20 shrink-0">
         <div className="text-center">
-          <Heart className="w-4 h-4 text-white/40 mx-auto mb-0.5" />
-          <p className="text-[9px] text-white/50">No data</p>
+          <p className="text-[9px] text-white/50">No loyalty</p>
+          <p className="text-[9px] text-white/50">data</p>
         </div>
       </div>
     )
   }
 
-  // Tier visual config
+  // Tier config — color is the SVG stroke color (hex), not a tailwind bg class
   const tiers = [
-    { label: 'New', color: 'bg-slate-400', ring: 'border-slate-300/50', glow: 'from-slate-400/20 to-slate-500/20' },
-    { label: 'Engaged', color: 'bg-blue-400', ring: 'border-blue-300/50', glow: 'from-blue-400/20 to-blue-500/20' },
-    { label: 'Active', color: 'bg-amber-400', ring: 'border-amber-300/50', glow: 'from-amber-400/20 to-orange-500/20' },
-    { label: 'Loyal', color: 'bg-emerald-400', ring: 'border-emerald-300/50', glow: 'from-emerald-400/20 to-teal-500/20' },
-    { label: 'Champion', color: 'bg-rose-400', ring: 'border-rose-300/50', glow: 'from-rose-400/20 to-pink-500/20' },
+    { label: 'New', color: '#94a3b8', shortLabel: 'New' },         // slate-400
+    { label: 'Engaged', color: '#60a5fa', shortLabel: 'Engaged' },  // blue-400
+    { label: 'Active', color: '#fbbf24', shortLabel: 'Active' },    // amber-400
+    { label: 'Loyal', color: '#34d399', shortLabel: 'Loyal' },      // emerald-400
+    { label: 'Champion', color: '#fb7185', shortLabel: 'Champ' },   // rose-400
   ]
   const tier = tiers[data.stages] || tiers[0]
+  const stages = data.stages
+
+  // SVG donut: 4 segments of 90° each. Each segment is 25% of the circle.
+  // Completed segments use tier.color, incomplete use rgba(255,255,255,0.15).
+  const radius = 36
+  const circumference = 2 * Math.PI * radius
+  const segmentLength = circumference / 4
+  const gap = 4 // small gap between segments
 
   return (
-    <div className={`w-20 h-20 rounded-full bg-gradient-to-br ${tier.glow} backdrop-blur flex items-center justify-center border-2 ${tier.ring} relative group`}>
-      <div className="relative text-center">
-        <Heart className={`w-5 h-5 mx-auto mb-0.5 ${tier.color} fill-current`} />
-        <p className="text-[9px] font-bold text-white uppercase tracking-wide leading-tight">{tier.label}</p>
-        <p className="text-[8px] text-white/60">{data.stages}/4</p>
-      </div>
-      {/* 4 progress dots around the top of the badge */}
-      <div className="absolute -top-0.5 left-1/2 -translate-x-1/2 flex gap-0.5">
-        {[0, 1, 2, 3].map(i => (
-          <div
-            key={i}
-            className={`w-1.5 h-1.5 rounded-full ${i < data.stages ? tier.color : 'bg-white/20'}`}
-          />
-        ))}
+    <div className="relative group shrink-0">
+      <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-white/10 backdrop-blur flex items-center justify-center border-2 border-white/20">
+        <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 80 80">
+          {stages >= 1 && (
+            <circle cx="40" cy="40" r={radius} fill="none" stroke={tier.color} strokeWidth="4" strokeLinecap="round"
+              strokeDasharray={`${segmentLength - gap} ${circumference - segmentLength + gap}`}
+              strokeDashoffset={0} />
+          )}
+          {stages >= 2 && (
+            <circle cx="40" cy="40" r={radius} fill="none" stroke={tier.color} strokeWidth="4" strokeLinecap="round"
+              strokeDasharray={`${segmentLength - gap} ${circumference - segmentLength + gap}`}
+              strokeDashoffset={-(segmentLength)} />
+          )}
+          {stages >= 3 && (
+            <circle cx="40" cy="40" r={radius} fill="none" stroke={tier.color} strokeWidth="4" strokeLinecap="round"
+              strokeDasharray={`${segmentLength - gap} ${circumference - segmentLength + gap}`}
+              strokeDashoffset={-(2 * segmentLength)} />
+          )}
+          {stages >= 4 && (
+            <circle cx="40" cy="40" r={radius} fill="none" stroke={tier.color} strokeWidth="4" strokeLinecap="round"
+              strokeDasharray={`${segmentLength - gap} ${circumference - segmentLength + gap}`}
+              strokeDashoffset={-(3 * segmentLength)} />
+          )}
+          {/* Base ring (faint) */}
+          <circle cx="40" cy="40" r={radius} fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="4" />
+        </svg>
+        <div className="relative text-center">
+          <p className="text-[9px] sm:text-[10px] font-bold text-white uppercase tracking-wide leading-tight">{tier.shortLabel}</p>
+          <p className="text-[8px] sm:text-[9px] text-white/70 font-medium">{stages}/4</p>
+        </div>
       </div>
       {/* Hover tooltip with stage breakdown */}
       <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20">
         <div className="bg-gray-900 text-white text-xs rounded-lg px-3 py-2 shadow-xl whitespace-nowrap">
-          <p className="font-semibold mb-1">{tier.label} ({data.stages}/4 stages)</p>
+          <p className="font-semibold mb-1">{tier.label} ({stages}/4 stages)</p>
           <div className="space-y-0.5 text-[10px]">
             <p className={data.stageFlags.training ? 'text-emerald-300' : 'text-white/40'}>
               {data.stageFlags.training ? '✓' : '○'} Training/Visit ({data.counts.trainingsAttended + data.counts.farmVisits})

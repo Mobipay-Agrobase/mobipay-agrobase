@@ -120,7 +120,9 @@ class AuthState extends ChangeNotifier {
         } catch (_) {
           _error = 'Server error (${res.statusCode}). Try again.';
         }
-        debugPrint('[auth] login failed: ${res.statusCode} ${res.body.substring(0, 200)}');
+        // Safely log the first 200 chars (or fewer if the body is shorter)
+        final bodyPreview = res.body.length > 200 ? res.body.substring(0, 200) : res.body;
+        debugPrint('[auth] login failed: ${res.statusCode} $bodyPreview');
         notifyListeners();
         return false;
       }

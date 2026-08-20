@@ -111,11 +111,12 @@ class ApiClient {
   Future<http.Response> post(String path, {Map<String, dynamic>? body}) async {
     final base = await getBaseUrl();
     final uri = Uri.parse('$base$path');
-    debugPrint('[API] POST $base$path | token=${_token != null ? "yes" : "no"}');
+    final bodyStr = body != null ? jsonEncode(body) : null;
+    debugPrint('[API] POST $base$path | token=${_token != null ? "yes" : "no"} | body=$bodyStr');
     final res = await http.post(uri,
         headers: _headers,
-        body: body != null ? jsonEncode(body) : null);
-    debugPrint('[API] ← ${res.statusCode} ${res.body.length} bytes');
+        body: bodyStr);
+    debugPrint('[API] ← ${res.statusCode} ${res.body}');
     return res;
   }
 

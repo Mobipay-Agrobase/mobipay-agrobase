@@ -53,12 +53,22 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify password
-    const isValid = await verifyPassword(password, user.passwordHash)
+    const { valid: isValid, needsRehash } = await verifyPassword(password, user.passwordHash)
     if (!isValid) {
       return NextResponse.json(
         { error: 'Invalid email or password' },
         { status: 401 }
       )
+    }
+
+    // If the password hash is legacy bcrypt, silently re-hash with Argon2id
+    if (needsRehash) {
+      const { hashPassword } = await import('@/lib/password')
+      const newHash = await hashPassword(password)
+      await db.user.update({
+        where: { id: user.id },
+        data: { passwordHash: newHash },
+      })
     }
 
     // Update last login

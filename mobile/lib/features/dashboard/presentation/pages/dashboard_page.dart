@@ -44,6 +44,19 @@ class _DashboardPageState extends State<DashboardPage> {
     super.dispose();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Listen to auth state changes — when the user logs in, the dashboard
+    // should reload. Without this, the dashboard runs _loadData() on startup
+    // (before login), gets 401, and never retries after login.
+    final auth = context.read<AuthProvider>();
+    if (auth.isAuthenticated && _dashboardData == null && !_loading) {
+      _loading = true;
+      _loadData();
+    }
+  }
+
   Future<void> _loadData() async {
     try {
       // Try online first
@@ -54,7 +67,14 @@ class _DashboardPageState extends State<DashboardPage> {
         if (res.statusCode == 200) {
           setState(() {
             _dashboardData = jsonDecode(res.body);
+            _loading = false;
           });
+        } else if (res.statusCode == 401) {
+          // Not logged in yet — don't set _loading=false so the skeleton
+          // stays visible until auth completes and didChangeDependencies
+          // triggers a reload.
+          debugPrint('[Dashboard] 401 — waiting for login');
+          return;
         }
       } else {
         // Offline: build dashboard from local cache
@@ -71,6 +91,7 @@ class _DashboardPageState extends State<DashboardPage> {
             },
             'offline': true,
           };
+          _loading = false;
         });
       }
     } catch (e) {
@@ -84,10 +105,12 @@ class _DashboardPageState extends State<DashboardPage> {
             'stats': {'farmerCount': farmers.length},
             'offline': true,
           };
+          _loading = false;
         });
-      } catch (_) {}
+      } catch (_) {
+        setState(() => _loading = false);
+      }
     } finally {
-      _loading = false;
       _refreshController.refreshCompleted();
     }
   }

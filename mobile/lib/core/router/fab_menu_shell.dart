@@ -175,18 +175,22 @@ class _FabMenuShellState extends State<FabMenuShell>
         ),
       ),
       // ─── Full-screen body (no bottom bar) ───
+      // Add bottom padding so content doesn't overlap with the FAB
       body: Stack(
         children: [
-          // Content
+          // Content — padded at bottom to avoid FAB overlap
           GestureDetector(
             onTap: _close,
-            child: widget.navigationShell,
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 80),
+              child: widget.navigationShell,
+            ),
           ),
           // Dimmed overlay when menu is open
           AnimatedBuilder(
             animation: _controller,
             builder: (context, _) {
-              final opacity = _controller.value * 0.4;
+              final opacity = (_controller.value * 0.4).clamp(0.0, 1.0);
               if (opacity < 0.01) return const SizedBox.shrink();
               return GestureDetector(
                 onTap: _close,

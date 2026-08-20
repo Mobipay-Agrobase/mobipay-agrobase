@@ -246,7 +246,7 @@ class SyncEngine extends ChangeNotifier {
       final res = await _api.get('/api/vsla/groups');
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
-        final groups = data['groups'] as List<dynamic>? ?? data as List? ?? [];
+        final groups = data['groups'] as List<dynamic>? ?? (data is List ? data : []) ?? [];
         for (final g in groups) {
           await _db.upsertVslaGroups([
             VslaGroupCacheCompanion.insert(
@@ -271,7 +271,7 @@ class SyncEngine extends ChangeNotifier {
       final res = await _api.get('/api/trainings');
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
-        final trainings = data['trainings'] as List<dynamic>? ?? data as List? ?? [];
+        final trainings = data['trainings'] as List<dynamic>? ?? (data is List ? data : []) ?? [];
         for (final t in trainings) {
           await _db.upsertTrainings([
             TrainingCacheCompanion.insert(
@@ -299,7 +299,7 @@ class SyncEngine extends ChangeNotifier {
         final data = jsonDecode(res.body);
         final farmLands = data['farmLands'] as List<dynamic>? ??
             data['data'] as List<dynamic>? ??
-            data as List? ??
+            (data is List ? data : [])
             [];
         for (final fl in farmLands) {
           if (fl['id'] == null) continue;
@@ -326,7 +326,7 @@ class SyncEngine extends ChangeNotifier {
         final data = jsonDecode(res.body);
         final cultivations = data['cultivations'] as List<dynamic>? ??
             data['data'] as List<dynamic>? ??
-            data as List? ??
+            (data is List ? data : [])
             [];
         for (final c in cultivations) {
           if (c['id'] == null) continue;
@@ -355,7 +355,7 @@ class SyncEngine extends ChangeNotifier {
         final data = jsonDecode(res.body);
         final sales = data['sales'] as List<dynamic>? ??
             data['data'] as List<dynamic>? ??
-            data as List? ??
+            (data is List ? data : [])
             [];
         debugPrint('[SyncEngine] Pulled ${sales.length} sales (metadata only)');
       }

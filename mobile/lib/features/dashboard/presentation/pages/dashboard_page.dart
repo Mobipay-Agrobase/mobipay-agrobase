@@ -47,8 +47,11 @@ class _DashboardPageState extends State<DashboardPage> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Watch auth state — when user logs in, reload dashboard
-    final auth = context.watch<AuthState>();
+    // Check auth state — if authenticated and no data loaded yet, load it.
+    // Using context.read here (not watch) because watch is only allowed in build().
+    // The build() method below calls context.watch<AuthState>() which triggers
+    // a rebuild whenever auth changes → didChangeDependencies runs again.
+    final auth = context.read<AuthState>();
     if (auth.isAuthenticated && _dashboardData == null && !_loading) {
       _loading = true;
       _loadData();

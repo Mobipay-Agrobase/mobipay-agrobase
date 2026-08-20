@@ -75,6 +75,7 @@ class _FarmLandsPageState extends State<FarmLandsPage> {
                   ),
                 ),
       floatingActionButton: FloatingActionButton(
+        heroTag: 'farm_lands_fab',
         onPressed: _showCreateDialog,
         backgroundColor: AppTheme.primaryGreen,
         child: const Icon(Icons.add, color: Colors.white),

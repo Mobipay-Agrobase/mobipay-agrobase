@@ -149,24 +149,25 @@ class _SpeedDialFabState extends State<SpeedDialFab>
           },
           child: GestureDetector(
             onTap: _toggle,
-            child: Container(
-              width: 56,
-              height: 56,
-              decoration: BoxDecoration(
+            child: Hero(
+              tag: 'speed_dial_main',
+              child: Material(
                 color: widget.mainColor,
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: widget.mainColor.withValues(alpha: 0.3),
-                    blurRadius: 8,
-                    offset: const Offset(0, 3),
+                shape: const CircleBorder(),
+                elevation: 4,
+                child: Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    color: widget.mainColor,
+                    shape: BoxShape.circle,
                   ),
-                ],
-              ),
-              child: Icon(
-                _isOpen ? Icons.close : widget.mainIcon,
-                color: Colors.white,
-                size: 28,
+                  child: Icon(
+                    _isOpen ? Icons.close : widget.mainIcon,
+                    color: Colors.white,
+                    size: 28,
+                  ),
+                ),
               ),
             ),
           ),

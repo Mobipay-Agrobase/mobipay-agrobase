@@ -178,6 +178,7 @@ class _FarmersPageState extends State<FarmersPage> {
         actions: const [SyncStatusWidget(), SizedBox(width: 12)],
       ),
       floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'farmers_fab',
         onPressed: () => _showRegisterDialog(context),
         backgroundColor: AppTheme.primaryGreen,
         icon: const Icon(Icons.person_add_alt_1, color: Colors.white),

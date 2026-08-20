@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../navigation/dynamic_navigation_service.dart';
 import '../auth/auth_provider.dart';
+import '../widgets/speed_dial_fab.dart';
 
 /// DrawerShell — professional sidebar drawer navigation.
 ///
@@ -211,8 +212,37 @@ class _DrawerShellState extends State<DrawerShell> {
           ),
         ],
       ),
-      // ─── Body (full screen, no FAB) ───
+      // ─── Body (full screen) ───
       body: widget.navigationShell,
+      // ─── Speed-dial FAB (bottom-right) ───
+      // Only shows on the dashboard branch (index 0) so it doesn't
+      // overlap with content on other pages.
+      floatingActionButton: currentBranch == 0
+          ? SpeedDialFab(
+              mainIcon: Icons.add,
+              mainColor: theme.colorScheme.primary,
+              actions: [
+                SpeedDialAction(
+                  icon: Icons.person_add,
+                  label: 'New Farmer',
+                  backgroundColor: const Color(0xFF10B981), // emerald
+                  onTap: () => widget.navigationShell.goBranch(2),
+                ),
+                SpeedDialAction(
+                  icon: Icons.landscape,
+                  label: 'New Farm Land',
+                  backgroundColor: const Color(0xFF3B82F6), // blue
+                  onTap: () => widget.navigationShell.goBranch(3),
+                ),
+                SpeedDialAction(
+                  icon: Icons.spa,
+                  label: 'New Cultivation',
+                  backgroundColor: const Color(0xFFF59E0B), // amber
+                  onTap: () => widget.navigationShell.goBranch(4),
+                ),
+              ],
+            )
+          : null,
     );
   }
 }

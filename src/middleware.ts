@@ -154,10 +154,38 @@ export async function middleware(request: NextRequest) {
   }
 
   // ─── 1. AUTHENTICATION CHECK ─────────────────────────────────────────────
-  const token = await getToken({
+  // First try NextAuth cookie-based auth (web app)
+  let token = await getToken({
     req: request,
     secret: process.env.NEXTAUTH_SECRET,
   })
+
+  // If no NextAuth cookie, try Bearer token (mobile app)
+  // The mobile app authenticates via /api/auth/mobile-login which returns
+  // a base64(userId:role:tenantId:timestamp) token. The middleware decodes
+  // it WITHOUT a DB call (Edge Runtime can't use Prisma).
+  if (!token?.userId) {
+    const authHeader = request.headers.get('authorization')
+    if (authHeader?.startsWith('Bearer ')) {
+      const bearerToken = authHeader.slice(7)
+      try {
+        const decoded = Buffer.from(bearerToken, 'base64').toString('utf-8')
+        const parts = decoded.split(':')
+        if (parts.length >= 4) {
+          const [bearerUserId, bearerRole, bearerTenantId] = parts
+          if (bearerUserId && bearerRole && bearerTenantId) {
+            token = {
+              userId: bearerUserId,
+              role: bearerRole,
+              tenantId: bearerTenantId,
+            } as any
+          }
+        }
+      } catch {
+        // Invalid bearer token — fall through to 401
+      }
+    }
+  }
 
   if (!token?.userId) {
     logAuthFailure(reqCtx)

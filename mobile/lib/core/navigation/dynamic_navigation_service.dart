@@ -122,7 +122,9 @@ class NavConfig {
   }
 
   /// Default config used when the server is unreachable.
-  /// Matches the old hardcoded 13-tab layout for backward compatibility.
+  /// Only includes core modules that every tenant has.
+  /// Module-specific destinations (VSLA, MFI, Carbon, etc.) are added
+  /// by the server's /api/mobile/navigation endpoint when reachable.
   factory NavConfig.defaultConfig() {
     return NavConfig(
       version: 'v1-default',
@@ -134,7 +136,6 @@ class NavConfig {
         NavDestination(key: 'purchases', label: 'Purchase', icon: 'shopping_cart', route: '/purchase/new'),
         NavDestination(key: 'payments', label: 'Pay', icon: 'payment', route: '/payments'),
         NavDestination(key: 'loans', label: 'Loans', icon: 'account_balance_wallet', route: '/loans'),
-        NavDestination(key: 'vsla', label: 'VSLA', icon: 'savings', route: '/vsla'),
         NavDestination(key: 'profile', label: 'Profile', icon: 'person', route: '/profile'),
       ],
       quickActions: [],

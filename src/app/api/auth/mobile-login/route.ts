@@ -67,8 +67,10 @@ export async function POST(request: NextRequest) {
       data: { lastLogin: new Date() },
     })
 
-    // Generate a simple token (base64 of user ID + timestamp)
-    const token = Buffer.from(`${user.id}:${Date.now()}`).toString('base64')
+    // Generate a token containing user info (base64-encoded).
+    // Format: base64(userId:role:tenantId:timestamp)
+    // The middleware decodes this WITHOUT a DB call (Edge Runtime can't use Prisma).
+    const token = Buffer.from(`${user.id}:${user.role}:${user.tenantId}:${Date.now()}`).toString('base64')
 
     return NextResponse.json({
       token,

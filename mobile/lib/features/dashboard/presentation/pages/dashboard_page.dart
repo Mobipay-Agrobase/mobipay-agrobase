@@ -44,20 +44,6 @@ class _DashboardPageState extends State<DashboardPage> {
     super.dispose();
   }
 
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    // Check auth state — if authenticated and no data loaded yet, load it.
-    // Using context.read here (not watch) because watch is only allowed in build().
-    // The build() method below calls context.watch<AuthState>() which triggers
-    // a rebuild whenever auth changes → didChangeDependencies runs again.
-    final auth = context.read<AuthState>();
-    if (auth.isAuthenticated && _dashboardData == null && !_loading) {
-      _loading = true;
-      _loadData();
-    }
-  }
-
   Future<void> _loadData() async {
     try {
       // Try online first
@@ -120,6 +106,18 @@ class _DashboardPageState extends State<DashboardPage> {
   Widget build(BuildContext context) {
     final authProvider = context.watch<AuthState>();
     final user = authProvider.userName;
+
+    // ─── Trigger data load when auth state changes ───
+    // context.watch<AuthState>() above makes this widget rebuild whenever
+    // auth changes. When login completes, isAuthenticated flips to true,
+    // build() re-runs, and we trigger _loadData() here.
+    if (authProvider.isAuthenticated && _dashboardData == null && !_loading) {
+      _loading = true;
+      // Use microtask to avoid calling setState during build
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _loadData();
+      });
+    }
 
     return Scaffold(
       backgroundColor: AppTheme.surfaceLight,

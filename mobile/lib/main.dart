@@ -37,8 +37,12 @@ void main() async {
   // Native background sync requires workmanager plugin which is
   // incompatible with current Flutter version — will be re-added
   // when the plugin is updated.
+  // Runs a sync check every 15 minutes when the app is in foreground.
+  // Only syncs if the user is authenticated (has a token).
   Timer.periodic(const Duration(minutes: 15), (timer) {
-    if (connectivityManager.isOnline && syncEngine.status != SyncStatus.syncing) {
+    if (connectivityManager.isOnline &&
+        syncEngine.status != SyncStatus.syncing &&
+        apiClient.isAuthenticated) {
       syncEngine.syncNow();
     }
   });
@@ -47,10 +51,10 @@ void main() async {
   final lightweightMode = LightweightMode();
   await lightweightMode.initialize();
 
-  // ─── Auto-sync on app launch (if online) ────────────────────
-  if (connectivityManager.isOnline) {
-    syncEngine.syncNow();
-  }
+  // ─── Auto-sync on app launch — ONLY after auth ──────────────
+  // Don't sync on startup — the user isn't logged in yet, so all API
+  // calls return 401. Sync is triggered after login via the auth state
+  // listener in the dashboard page.
 
   runApp(
     MultiProvider(

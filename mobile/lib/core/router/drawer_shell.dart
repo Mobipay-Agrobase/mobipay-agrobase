@@ -117,22 +117,39 @@ class _DrawerShellState extends State<DrawerShell> {
                   ],
                 ),
               ),
-              // Navigation items
+              // Navigation items — Home first, then modules
               Expanded(
-                child: ListView.builder(
+                child: ListView(
                   padding: const EdgeInsets.symmetric(vertical: 8),
-                  itemCount: drawerItems.length,
-                  itemBuilder: (context, index) {
-                    final dest = drawerItems[index];
-                    final branch = _keyToBranchIndex[dest.key] ?? 0;
-                    final isActive = branch == currentBranch;
-                    return _DrawerTile(
-                      icon: dest.iconData,
-                      label: dest.label,
-                      isActive: isActive,
-                      onTap: () => _navigateTo(dest),
-                    );
-                  },
+                  children: [
+                    // Home button (always first)
+                    _DrawerTile(
+                      icon: Icons.dashboard,
+                      label: 'Home',
+                      isActive: currentBranch == 0,
+                      onTap: () {
+                        widget.navigationShell.goBranch(0);
+                        _scaffoldKey.currentState?.closeDrawer();
+                      },
+                    ),
+                    const SizedBox(height: 4),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 16),
+                      child: Divider(height: 1),
+                    ),
+                    const SizedBox(height: 4),
+                    // Module destinations
+                    ...drawerItems.map((dest) {
+                      final branch = _keyToBranchIndex[dest.key] ?? 0;
+                      final isActive = branch == currentBranch;
+                      return _DrawerTile(
+                        icon: dest.iconData,
+                        label: dest.label,
+                        isActive: isActive,
+                        onTap: () => _navigateTo(dest),
+                      );
+                    }),
+                  ],
                 ),
               ),
               // Logout

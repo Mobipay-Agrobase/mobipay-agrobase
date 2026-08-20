@@ -77,6 +77,9 @@ class ApiClient {
   String? _token;
   String? _tenantId;
 
+  /// Returns true if a token is set (user is authenticated).
+  bool get isAuthenticated => _token != null;
+
   Future<void> init() async {
     final prefs = await SharedPreferences.getInstance();
     _token = prefs.getString('auth_token');

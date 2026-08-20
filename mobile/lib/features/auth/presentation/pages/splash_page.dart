@@ -19,15 +19,21 @@ class _SplashPageState extends State<SplashPage> {
   }
 
   Future<void> _navigateNext() async {
-    // Wait for auth state to initialize
-    await Future.delayed(const Duration(milliseconds: 500));
-
-    if (!mounted) return;
-
+    // Wait for AuthState.init() to complete — it restores the session
+    // from SecureStorage. We listen to the auth state instead of using
+    // an arbitrary delay, so the session is properly restored before
+    // deciding where to navigate.
     final auth = context.read<AuthState>();
 
-    // Wait a bit more for the splash animation feel
-    await Future.delayed(const Duration(milliseconds: 1500));
+    // Wait for auth to finish initializing (max 5 seconds)
+    int waited = 0;
+    while (auth.isLoading && waited < 5000) {
+      await Future.delayed(const Duration(milliseconds: 100));
+      waited += 100;
+    }
+
+    // Extra delay for splash animation (only 500ms, not 2s)
+    await Future.delayed(const Duration(milliseconds: 500));
 
     if (!mounted) return;
 
@@ -53,7 +59,7 @@ class _SplashPageState extends State<SplashPage> {
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(24),
               ),
-              child: Icon(
+              child: const Icon(
                 Icons.eco,
                 size: 56,
                 color: AppTheme.primaryGreen,
@@ -64,27 +70,25 @@ class _SplashPageState extends State<SplashPage> {
               'Agrobase',
               style: TextStyle(
                 color: Colors.white,
-                fontSize: 32,
-                fontWeight: FontWeight.w800,
-                letterSpacing: -0.5,
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
               ),
             ),
             const SizedBox(height: 8),
             const Text(
-              'Agricultural Management Platform',
+              'V3 by MobiPay AgroSys',
               style: TextStyle(
-                color: Color(0xFFBBF7D0),
+                color: Colors.white70,
                 fontSize: 14,
-                fontWeight: FontWeight.w400,
               ),
             ),
-            const SizedBox(height: 48),
+            const SizedBox(height: 32),
             const SizedBox(
               width: 24,
               height: 24,
               child: CircularProgressIndicator(
-                strokeWidth: 2.5,
-                valueColor: AlwaysStoppedAnimation<Color>(Colors.white70),
+                color: Colors.white,
+                strokeWidth: 2,
               ),
             ),
           ],

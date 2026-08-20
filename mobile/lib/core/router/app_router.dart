@@ -42,7 +42,7 @@ import '../../features/input_distribution/presentation/pages/input_distribution_
 import '../../features/farmer_ledger/presentation/pages/farmer_ledger_page.dart';
 import '../../features/farmer_ledger/presentation/pages/my_farmer_dashboard_page.dart';
 import '../../core/navigation/dynamic_navigation_service.dart';
-import 'fab_menu_shell.dart';
+import 'drawer_shell.dart';
 
 class AppRouter {
   static final _rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -186,7 +186,7 @@ class AppRouter {
           ),
           StatefulShellRoute.indexedStack(
             builder: (context, state, navigationShell) {
-              return FabMenuShell(navigationShell: navigationShell);
+              return DrawerShell(navigationShell: navigationShell);
             },
             branches: [
               StatefulShellBranch(routes: [

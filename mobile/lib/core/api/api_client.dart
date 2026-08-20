@@ -1,15 +1,19 @@
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 
 class ApiClient {
-  /// Base URL resolved in priority order:
-  /// 1. Compile-time: `flutter run --dart-define=API_BASE_URL=http://...`
-  /// 2. Runtime: stored in SharedPreferences (for app settings screen)
-  /// 3. Default: auto-detected per platform (Android emulator / iOS simulator / physical device)
+  /// Hardcoded production API base URL.
+  /// Change this for local development (e.g. 'http://10.0.2.2:3000' for Android emulator).
+  /// No need to pass --dart-define at runtime — it's baked into the code.
+  static const String _productionBaseUrl = 'https://mobipay-agrobase.vercel.app';
+
+  /// Optional compile-time override (for local dev only):
+  /// flutter run --dart-define=API_BASE_URL=http://10.0.2.2:3000
   static const String _compiledBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: '', // empty = use runtime detection
+    defaultValue: '', // empty = use _productionBaseUrl
   );
 
   static String? _runtimeBaseUrl;
@@ -27,7 +31,7 @@ class ApiClient {
   ///   flutter run --dart-define=API_BASE_URL=https://mobipay-agrobase-git-staging.vercel.app
   static Future<String> getBaseUrl() async {
     String url;
-    // 1. Compile-time override (highest priority)
+    // 1. Compile-time override (for local dev only)
     if (_compiledBaseUrl.isNotEmpty) {
       url = _compiledBaseUrl;
     } else {
@@ -41,12 +45,11 @@ class ApiClient {
           _runtimeBaseUrl = stored;
           url = stored;
         } else {
-          // 3. Default: Vercel production API
-          url = 'https://mobipay-agrobase.vercel.app';
+          // 3. Hardcoded production URL (no runtime flag needed)
+          url = _productionBaseUrl;
         }
       }
     }
-    // Strip trailing slash to avoid double-slash when concatenating with paths
     while (url.endsWith('/')) {
       url = url.substring(0, url.length - 1);
     }
@@ -99,15 +102,21 @@ class ApiClient {
   Future<http.Response> get(String path) async {
     final base = await getBaseUrl();
     final uri = Uri.parse('$base$path');
-    return http.get(uri, headers: _headers);
+    debugPrint('[API] GET $base$path | token=${_token != null ? "yes" : "no"}');
+    final res = await http.get(uri, headers: _headers);
+    debugPrint('[API] ← ${res.statusCode} ${res.body.length} bytes');
+    return res;
   }
 
   Future<http.Response> post(String path, {Map<String, dynamic>? body}) async {
     final base = await getBaseUrl();
     final uri = Uri.parse('$base$path');
-    return http.post(uri,
+    debugPrint('[API] POST $base$path | token=${_token != null ? "yes" : "no"}');
+    final res = await http.post(uri,
         headers: _headers,
         body: body != null ? jsonEncode(body) : null);
+    debugPrint('[API] ← ${res.statusCode} ${res.body.length} bytes');
+    return res;
   }
 
   Future<http.Response> put(String path, {Map<String, dynamic>? body}) async {

@@ -50,7 +50,7 @@ class _DashboardPageState extends State<DashboardPage> {
     // Listen to auth state changes — when the user logs in, the dashboard
     // should reload. Without this, the dashboard runs _loadData() on startup
     // (before login), gets 401, and never retries after login.
-    final auth = context.read<AuthProvider>();
+    final auth = context.read<AuthState>();
     if (auth.isAuthenticated && _dashboardData == null && !_loading) {
       _loading = true;
       _loadData();

@@ -299,8 +299,7 @@ class SyncEngine extends ChangeNotifier {
         final data = jsonDecode(res.body);
         final farmLands = data['farmLands'] as List<dynamic>? ??
             data['data'] as List<dynamic>? ??
-            (data is List ? data : [])
-            [];
+            (data is List ? data : <dynamic>[]);
         for (final fl in farmLands) {
           if (fl['id'] == null) continue;
           await _db.upsertFarmLand(FarmLandCacheCompanion.insert(
@@ -326,8 +325,7 @@ class SyncEngine extends ChangeNotifier {
         final data = jsonDecode(res.body);
         final cultivations = data['cultivations'] as List<dynamic>? ??
             data['data'] as List<dynamic>? ??
-            (data is List ? data : [])
-            [];
+            (data is List ? data : <dynamic>[]);
         for (final c in cultivations) {
           if (c['id'] == null) continue;
           await _db.upsertCultivation(CultivationCacheCompanion.insert(
@@ -355,8 +353,7 @@ class SyncEngine extends ChangeNotifier {
         final data = jsonDecode(res.body);
         final sales = data['sales'] as List<dynamic>? ??
             data['data'] as List<dynamic>? ??
-            (data is List ? data : [])
-            [];
+            (data is List ? data : <dynamic>[]);
         debugPrint('[SyncEngine] Pulled ${sales.length} sales (metadata only)');
       }
     } catch (e) {

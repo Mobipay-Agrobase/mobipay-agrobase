@@ -300,3 +300,18 @@ Work Log:
 User also asked (queued for AFTER mobile build confirms):
 1. Status check of Ekibbo feedback items (purchases/inputs) — implemented in web sprint (53089e9), deployed via Vercel
 2. NEW web requirements: convert all create/edit dialogs → full pages; sales detail pages with payment timeline (step-by-step); e2e traceability for payment/invoice/inventory
+
+---
+Task ID: 15
+Agent: Super Z
+Task: Fix plugin compileSdk override timing (user's 5th build failure) + 16 KB page-size config
+
+Work Log:
+- Root cause of the withPlugin failure: plugins apply com.android.library FIRST, then set their own compileSdk 33 later in their build.gradle → application-time hook fired too early and was overwritten (error returned identically)
+- Correct fix: afterEvaluate (runs after each plugin's build script) guarded by sub.state.executed check — Gradle 9 only rejects afterEvaluate on ALREADY-evaluated projects, which is exactly and only :app here (eagerly evaluated via evaluationDependsOn); :app is skipped anyway since only library plugins need the override
+- 16 KB page sizes (Android 15+): packagingOptions.jniLibs.useLegacyPackaging=false pinned explicitly; NDK r28 pinned (16 KB-aligned .so by default); Flutter engine ≥3.22 16 KB-ready; compileSdk/target 36 cover Android 15/16; minSdk = engine floor (API 21+) covers 99.5%+ devices
+- Braces verified on both gradle files; committed 10379ed, pushed
+
+Stage Summary:
+- The five build failures traced to one root: 2023-era project + 2025 toolchain (Java 25 / Gradle 9 / AGP 8.13 / SDK 36). Each layer only surfaced after the previous one passed.
+- Timing bug was mine — withPlugin registered pre-evaluation; own-build.gradle overwrote it. State-checked afterEvaluate is the community-standard pattern and is Gradle 9-safe.

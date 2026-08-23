@@ -123,13 +123,13 @@ class _InsuranceInfoScreenState extends State<InsuranceInfoScreen> {
           )
         ],
       ),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Expanded(
-              child: _buildFutureFetchData(),
-            ),
+            _buildFutureFetchData(),
             AppButton(
               onTap: () {
                 Navigator.of(context).pushNamed(

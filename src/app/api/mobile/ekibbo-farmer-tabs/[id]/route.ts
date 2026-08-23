@@ -27,9 +27,16 @@ const CATS = [
 ]
 
 function cat(items: Array<{ category: string; value: string; label: string | null }>, category: string) {
-  return items
-    .filter(i => i.category === category)
-    .map((i, idx) => ({ ID: idx + 1, NAME: i.label || i.value, name: i.value }))
+  const seen = new Set<string>()
+  const out: Array<{ ID: number; NAME: string; name: string }> = []
+  for (const i of items) {
+    if (i.category !== category) continue
+    // CatalogMaster holds global + tenant copies of the same value — dedupe
+    if (seen.has(i.value)) continue
+    seen.add(i.value)
+    out.push({ ID: out.length + 1, NAME: i.label || i.value, name: i.value })
+  }
+  return out
 }
 
 function safeJson(raw: string | null): unknown[] {

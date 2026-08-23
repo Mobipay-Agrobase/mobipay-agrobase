@@ -53,6 +53,7 @@ class _FinanceInfoScreenState extends State<FinanceInfoScreen> {
   _getFinanceInfo() async {
     final res =
         await ApiProvider.instance.apiFarmer.getFinanceInfo(widget.farmerId);
+    if (!mounted) return;
     if (res?.data != null) {
       setState(() {
         _financeInfo = res?.data?.financeInfo;

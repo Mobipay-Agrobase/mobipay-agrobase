@@ -35,6 +35,7 @@ class _BankInfoScreenState extends State<BankInfoScreen> {
   _getBankInfo() async {
     final res =
         await ApiProvider.instance.apiFarmer.getBankInfo(widget.farmerId);
+    if (!mounted) return;
     if (res?.data != null) {
       setState(() {
         _accountTypes = res!.data!.dataAccountType ?? [];
@@ -81,14 +82,15 @@ class _BankInfoScreenState extends State<BankInfoScreen> {
                 )
               ],
       ),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Expanded(
-              child: _bankInfos.isEmpty
-                  ? const NoDataView()
-                  : ListView.builder(
+            _bankInfos.isEmpty
+                ? const NoDataView()
+                : ListView.builder(
                       itemCount: _bankInfos.length,
                       shrinkWrap: true,
                       itemBuilder: (_, index) {
@@ -193,7 +195,6 @@ class _BankInfoScreenState extends State<BankInfoScreen> {
                         );
                       },
                     ),
-            ),
             AppButton(
               onTap: () {
                 Navigator.of(context).pushNamed(RouterName.new_bank,

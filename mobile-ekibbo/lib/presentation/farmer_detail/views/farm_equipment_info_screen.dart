@@ -35,6 +35,7 @@ class _FarmEquipmentScreenState extends State<FarmEquipmentScreen> {
   _getEquipmentInfo() async {
     final res =
         await ApiProvider.instance.apiFarmer.getFarmEquipment(widget.farmerId);
+    if (!mounted) return;
     if (res?.data != null) {
       setState(() {
         _equipments = res!.data!.farmEquipment ?? [];
@@ -82,14 +83,15 @@ class _FarmEquipmentScreenState extends State<FarmEquipmentScreen> {
                 )
               ],
       ),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Expanded(
-              child: _equipments.isEmpty
-                  ? const NoDataView()
-                  : ListView.builder(
+            _equipments.isEmpty
+                ? const NoDataView()
+                : ListView.builder(
                       itemCount: _equipments.length,
                       shrinkWrap: true,
                       itemBuilder: (_, index) {
@@ -187,7 +189,6 @@ class _FarmEquipmentScreenState extends State<FarmEquipmentScreen> {
                         );
                       },
                     ),
-            ),
             AppButton(
               onTap: () {
                 Navigator.of(context).pushNamed(RouterName.new_equipment,

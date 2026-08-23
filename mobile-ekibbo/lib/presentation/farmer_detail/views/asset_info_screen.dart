@@ -43,6 +43,7 @@ class _AssetInfoScreenState extends State<AssetInfoScreen> {
   _getAssetInfo() async {
     final res =
         await ApiProvider.instance.apiFarmer.getAssetInfo(widget.farmerId);
+    if (!mounted) return;
     if (res?.data != null) {
       setState(() {
         _consumerElectronics = res!.data!.dataConsumerElectronic ?? [];
@@ -117,9 +118,11 @@ class _AssetInfoScreenState extends State<AssetInfoScreen> {
           )
         ],
       ),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             AppDropdownButton(
               items: _housingOwnerShip.map((e) => e.name ?? '').toList(),

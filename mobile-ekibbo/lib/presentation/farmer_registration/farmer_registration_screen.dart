@@ -59,8 +59,6 @@ class _FarmerRegistrationScreenState extends State<FarmerRegistrationScreen> {
   List<String> _idTypes = [];
   List<String> _enrollmentPlaces = [];
   List<String> _certTypes = [];
-  List<String> _housingOwnerships = [];
-  List<String> _houseTypes = [];
 
   // 7-level location cascade from the web Location Master:
   // Region → SubRegion → District → County → SubCounty → Parish → Village
@@ -142,21 +140,21 @@ class _FarmerRegistrationScreenState extends State<FarmerRegistrationScreen> {
     _idTypes = ota.categoryValues('national_id_type');
     _enrollmentPlaces = ota.categoryValues('enrollment_place');
     _certTypes = ota.categoryValues('certification_type');
-    _housingOwnerships = ota.categoryValues('housing_ownership');
-    _houseTypes = ota.categoryValues('house_type');
     setState(() {});
   }
 
   _getCooperatives() async {
+    if (!mounted) return;
     _cooperatives = await ApiAddress.getCooperatives();
     if (_cooperatives.isNotEmpty) {
       setState(() {});
     }
-  }
+    }
 
   /// Top-level regions from the web Location Master.
   _getRegions() async {
     _regions = await ApiAddress.getRegions();
+    if (!mounted) return;
     if (_regions.isNotEmpty) setState(() {});
   }
 
@@ -164,6 +162,7 @@ class _FarmerRegistrationScreenState extends State<FarmerRegistrationScreen> {
   _getSubRegions() async {
     if (mFarmerLocal.region == 0) return;
     _subRegions = await ApiAddress.getChildren('sub-region', mFarmerLocal.region);
+    if (!mounted) return;
     setState(() {});
   }
 
@@ -171,6 +170,7 @@ class _FarmerRegistrationScreenState extends State<FarmerRegistrationScreen> {
   _getCounties() async {
     if (mFarmerLocal.district == 0) return;
     _counties = await ApiAddress.getChildren('county', mFarmerLocal.district);
+    if (!mounted) return;
     setState(() {});
   }
 
@@ -178,21 +178,24 @@ class _FarmerRegistrationScreenState extends State<FarmerRegistrationScreen> {
   _getParishes() async {
     if (mFarmerLocal.commune == 0) return;
     _parishes = await ApiAddress.getChildren('parish', mFarmerLocal.commune);
+    if (!mounted) return;
     setState(() {});
   }
 
   /// All districts from the web Location Master.
   _getDistrictsMaster() async {
+    if (!mounted) return;
     _districts = await ApiAddress.getAllDistrictsMaster();
     if (_districts.isNotEmpty) {
       setState(() {});
     }
-  }
+    }
 
   /// Sub-counties under the selected district (web Location Master).
   _getCommune() async {
     if (_districts.isEmpty) return;
     _communes = await ApiAddress.getCommunes(mFarmerLocal.district);
+    if (!mounted) return;
     if (_communes.isNotEmpty) {
       setState(() {});
     }
@@ -201,6 +204,7 @@ class _FarmerRegistrationScreenState extends State<FarmerRegistrationScreen> {
   /// Villages under the selected parish (web Location Master).
   _getVillages(int parishId) async {
     _villages = await ApiAddress.getVillages(parishId);
+    if (!mounted) return;
     setState(() {});
   }
 
@@ -923,61 +927,6 @@ class _FarmerRegistrationScreenState extends State<FarmerRegistrationScreen> {
               setState(() {
                 mFarmerLocal.village = _villages[index].villageName ?? '';
               });
-            },
-          ),
-          const SizedBox(height: 24),
-          // Family Information — web parity
-          AppFormField(
-            hint: 'Spouse Name',
-            initialValue: mFarmerLocal.spouse_name,
-            onChanged: (value) {
-              mFarmerLocal.spouse_name = value;
-            },
-          ),
-          const SizedBox(height: 24),
-          AppFormField(
-            hint: 'No of Family Members',
-            keyboardType: TextInputType.number,
-            initialValue: mFarmerLocal.family_members,
-            onChanged: (value) {
-              mFarmerLocal.family_members = value;
-            },
-          ),
-          const SizedBox(height: 24),
-          AppFormField(
-            hint: 'Total Children below 18',
-            keyboardType: TextInputType.number,
-            initialValue: mFarmerLocal.children_under_18,
-            onChanged: (value) {
-              mFarmerLocal.children_under_18 = value;
-            },
-          ),
-          const SizedBox(height: 24),
-          AppFormField(
-            hint: 'Total School Going Children',
-            keyboardType: TextInputType.number,
-            initialValue: mFarmerLocal.school_going_children,
-            onChanged: (value) {
-              mFarmerLocal.school_going_children = value;
-            },
-          ),
-          const SizedBox(height: 24),
-          // Asset Information — web parity
-          InputDropDownData(
-            items: _housingOwnerships,
-            hintText: 'Housing Ownership',
-            itemIndex: safeIndex(_housingOwnerships, mFarmerLocal.housing_ownership),
-            onChanged: (index) {
-              mFarmerLocal.housing_ownership = _housingOwnerships[index];
-            },
-          ),
-          const SizedBox(height: 24),
-          InputDropDownData(
-            items: _houseTypes,
-            hintText: 'House Type',
-            itemIndex: safeIndex(_houseTypes, mFarmerLocal.house_type),
-            onChanged: (index) {
-              mFarmerLocal.house_type = _houseTypes[index];
             },
           ),
           const SizedBox(height: 24),

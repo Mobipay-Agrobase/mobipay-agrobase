@@ -77,6 +77,7 @@ class _FamilyInfoScreenState extends State<FamilyInfoScreen> {
   _getFamilyInfo() async {
     final res =
         await ApiProvider.instance.apiFarmer.getFamilyInfo(widget.farmerId);
+    if (!mounted) return; // async gap — user may have left the tab
     if (res?.data != null) {
       setState(() {
         _educations = res!.data!.dataEducation ?? [];

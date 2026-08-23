@@ -34,6 +34,7 @@ class _AnimalHusbandryScreenState extends State<AnimalHusbandryScreen> {
   _getAnimalHusbandry() async {
     final res = await ApiProvider.instance.apiFarmer
         .getAnimalHusbandry(widget.farmerId);
+    if (!mounted) return;
     if (res?.data != null) {
       setState(() {
         _animalRes = res?.data;
@@ -80,14 +81,15 @@ class _AnimalHusbandryScreenState extends State<AnimalHusbandryScreen> {
                 )
               ],
       ),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Expanded(
-              child: _animals.isEmpty
-                  ? const NoDataView()
-                  : ListView.builder(
+            _animals.isEmpty
+                ? const NoDataView()
+                : ListView.builder(
                       itemCount: _animals.length,
                       shrinkWrap: true,
                       itemBuilder: (_, index) {
@@ -177,7 +179,6 @@ class _AnimalHusbandryScreenState extends State<AnimalHusbandryScreen> {
                         );
                       },
                     ),
-            ),
             AppButton(
               onTap: () {
                 Navigator.of(context).pushNamed(

@@ -244,3 +244,24 @@ Stage Summary:
 - Java-25-compatible Android toolchain in repo; user pulls → flutter clean → flutter run
 - First build downloads Gradle 9.1 (~130MB, one-time)
 - Fallback documented: flutter config --jdk-dir to a JDK 17/21 if the user prefers pinning the JVM instead
+
+---
+Task ID: 12
+Agent: Super Z
+Task: Fix Dart compile errors after Gradle fix (user's second build failure)
+
+Work Log:
+- Diagnosed 3 compile errors from user's build log:
+  1. upload_api_client.dart missing on user's machine — root .gitignore 'upload/' rule (unanchored) silently excluded lib/.../raw_data/upload/ from ALL previous commits; file existed only in my sandbox copy
+  2. flutter_gen/gen_l10n unresolvable — modern Flutter removed the flutter_gen synthetic package
+  3. location_api_client.g.dart called _combineBaseUrls/_setStreamType without defining them (my earlier rewrite)
+- Fix 1: anchored .gitignore rule to '/upload/' (root repo + checked mobile-ekibbo/.gitignore), force-added upload_api_client.dart + .g.dart; swept all 472 dart files — only the upload pair had been silently excluded
+- Fix 2: l10n.yaml → synthetic-package:false + output-dir lib/domain/l10n/generated; hand-generated app_localizations.dart/en/vi (299 getters, vi complete after earlier fix) via scripts/gen_l10n.py matching gen_l10n output shape (of(), delegate, supportedLocales, localizationsDelegates w/ Global* delegates); imports updated in main.dart + app_lang.dart; flutter_localizations sdk: flutter added as direct dep
+- Fix 3: added _setStreamType + _combineBaseUrls methods (verbatim retrofit generator output) into _LocationApiClient class
+- Verified: no flutter_gen imports remain; all package imports resolve to tracked files; brace balance OK
+- Committed 76c1fe6, pushed to origin/main
+
+Stage Summary:
+- User pulls → flutter clean && flutter pub get && flutter run
+- gen-l10n (auto or manual) regenerates equivalent l10n files in place; hand-generated versions guarantee compile even if generation is skipped
+- KGP 'Built-in Kotlin' warnings are informational — not blockers

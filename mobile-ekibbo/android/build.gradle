@@ -15,15 +15,27 @@ subprojects {
 
 // ─── Force every Android library plugin (location, google_maps_flutter,
 // webview_flutter, …) to compile against the same modern SDK as the app.
-// Older plugins pin compileSdk 33 while their AndroidX transitive deps
-// require 34+ (AAR metadata check failure). pluginManager.withPlugin fires
-// when the plugin is applied — BEFORE project evaluation — so it is safe on
-// Gradle 9, which forbids afterEvaluate on already-evaluated projects.
+//
+// Timing matters: plugins apply com.android.library FIRST, then set their
+// own `compileSdk 33` inside their build.gradle — so a plugin-application-
+// time hook (pluginManager.withPlugin) gets overwritten. The override must
+// run AFTER each plugin's build script. That means afterEvaluate — but
+// Gradle 9 throws if the project is already evaluated (the block above
+// eagerly evaluates :app via evaluationDependsOn). Hence the state check:
+// already-evaluated → apply now; not yet → afterEvaluate.
 subprojects { sub ->
-    sub.pluginManager.withPlugin("com.android.library") {
-        sub.android {
-            compileSdk 36
+    if (sub.path == ':app') return
+    def forceModernSdk = {
+        if (sub.plugins.hasPlugin("com.android.library")) {
+            sub.android {
+                compileSdk 36
+            }
         }
+    }
+    if (sub.state.executed) {
+        forceModernSdk()
+    } else {
+        sub.afterEvaluate(forceModernSdk)
     }
 }
 

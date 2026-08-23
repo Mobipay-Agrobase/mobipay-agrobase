@@ -30,6 +30,19 @@ android {
         versionName = flutter.versionName
     }
 
+    // Android 15+ / 16 KB page sizes: uncompressed native libs are mapped
+    // page-aligned by the loader. useLegacyPackaging=false (the AGP default)
+    // guarantees this; pinned explicitly so nothing can silently flip it.
+    // NDK r28 (28.1.13356709, pinned at the top of this file) builds 16
+    // KB-aligned .so files by default, and the Flutter engine (≥3.22) is
+    // 16 KB-ready — so the app installs and runs on 16 KB devices (Pixel
+    // with Android 15+ 16 KB kernels, required by Google Play from Nov 2025).
+    packagingOptions {
+        jniLibs {
+            useLegacyPackaging = false
+        }
+    }
+
     buildTypes {
         release {
             // TODO: Add your own signing config for the release build.

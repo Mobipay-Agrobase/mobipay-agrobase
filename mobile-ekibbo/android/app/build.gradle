@@ -11,12 +11,12 @@ android {
     ndkVersion = '28.1.13356709'
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
     }
 
     kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_1_8
+        jvmTarget = JavaVersion.VERSION_11
     }
 
     defaultConfig {
@@ -37,7 +37,8 @@ android {
             signingConfig = signingConfigs.debug
         }
     }
-    buildToolsVersion '30.0.3'
+    // No buildToolsVersion pin — AGP 8.13 pairs the default build-tools with
+    // compileSdk 36. The old '30.0.3' pin breaks modern SDK 36 builds.
 }
 
 flutter {

@@ -430,3 +430,19 @@ Work Log:
 Stage Summary:
 - All 4 issues from device log root-caused & fixed with live verification
 - Sweep now guards braces+parens+mounted+scroll-structure on every push
+
+---
+Task ID: 22
+Agent: Super Z
+Task: Ekibbo team menu spec + web-parity farm land/cultivation datapoints
+
+Work Log:
+- Menus rebuilt to EXACTLY the team's Field Officer list: FAB (Add Farmer, Add Plot, Add Crop, Purchase, Inputs, Farmer Visit); drawer (Farmer Registry, Purchases, Inputs, Loans, Trainings, Farmer Visits, Surveys, News & Advisory, Settings, Profile). Removed: Carbon & Compliance, Sale Intentions, Crop Harvest, duplicate Farmer Registry FAB, Cultivations + Farm Land Registry drawer items (Add Crop/Add Plot cover them)
+- New EkibboModuleListScreen + /api/mobile/ekibbo-modules (trainings/farm-visits/surveys/loans) — real tenant-scoped data from the same tables the web uses; 4 routes registered (ekbTrainings/ekbFarmerVisits/ekbSurveys/ekbLoans); drawer nav wired (initially to wrong SRP screens — corrected)
+- Farm land web parity: /api/mobile/ekibbo-farmland GET (all CatalogMaster land categories + farmer lands) & POST (full web field set incl polygon pointOrder, photos data-URI); Add Plot form extended with Land Survey No, Water Source, Power Source, Fertility, Irrigation Type, Est Yield, 4 worker counts; FarmLandModel + parsers + submit payload extended; controllers disposed
+- Cultivation: /api/mobile/ekibbo-cultivation-dropdowns (SeasonMaster/CropMaster/CropVariety + farm lands)
+- Live-verified: farmland 8 dropdown categories w/ counts, cultivation 3 seasons/10 crops/2 varieties, modules trainings(1)/surveys(2) — farm-visits & loans empty (no Ekibbo data yet, correct)
+- tsc 0, eslint clean, sanity sweep clean; committed 0cbb66c, pushed
+
+Stage Summary:
+- Menu now matches Ekibbo team feedback exactly; farm land form has web datapoint parity; new module list screens serve real Agrobase data

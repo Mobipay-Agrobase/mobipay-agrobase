@@ -147,3 +147,33 @@ Stage Summary:
 - Nightly cron job auto-computes all KPIs + climate scores for every active farmer
 - Flutter app now has 11 features (added Impact) with 3 new screens
 - Codebase: 138 → 143 Prisma models, 229 → 237 API routes, 10 → 11 Flutter features
+
+---
+Task ID: 8
+Agent: Super Z
+Task: Ekibbo team feedback implementation (web) — purchase/input module fixes, farmer codes MN0001L, sidebar priority, ops dashboard, SMS price alerts
+
+Work Log:
+- Explored feedback-relevant modules: PurchasesView (basic form in use — EnhancedPurchaseForm existed but unused), InputDistributionView, FarmerFormPage, Sidebar, EkbiboDashboards, notifications engine
+- Built FarmerSearchSelect combobox (Popover+Command, searches name/code/phone) — reused in Purchase + Input Distribution forms
+- Purchase form: moisture reading + editable threshold (13%) → auto kg deduction; loan/input money deductions; Variety → Form dropdown (commodity-specific options, stored in variety column); live net-weight/net-payment breakdown; table + detail dialog show moisture/quality/loan/input deductions
+- Purchases API: netWeight now subtracts moistureDeduction too; persists moistureDeduction + moistureThreshold
+- Input Distribution: payment modes CREDIT/CASH_FULL/CASH_PARTIAL + amountPaid → balanceRemaining; API writes INPUT_DIST debit + PAYMENT credit ledger entries; table + CSV show Paid/Balance
+- Farmer form: removed Field Officer section; Cooperative → Farmer Group (/api/farmer-groups → groupId); District/Subcounty/Village LocationPicker moved to Enrollment tab with live MN0001L code preview; Contact tab shows read-only location
+- farmer-code.ts: generateLocationBasedFarmerCode — D+S+4-digit sequence+V format, per-village sequence, Ekibbo tenant only when all 3 parts present; wired into POST /api/farmers
+- Sidebar: prioritizeForEkibbo() reorders groups (Core Ops + Supply Chain up top) and items (Farmers, Purchases, Input Distribution, Trainings, Loans first) for EKB_* roles / Ekibbo tenant
+- Ops dashboard: new /api/dashboard/ops-summary (registry total/active/by-district, groups, purchase volumes by crop/district/season, inputs by type, distinct borrowers by season with Season A/B derivation); EkbOpsManagerDashboard renders all + loyalty KPIs
+- SMS price broadcast: /api/communication/price-broadcast (audience filters all/district/group, dryRun preview, PII phone decryption + dedupe, batches of 50 via NotificationEngine SMS = Africa's Talking/Twilio); Communication > Price Alerts tab
+- Schema (additive, applied to Neon via prisma db push): Purchase.moistureDeduction, Purchase.moistureThreshold, InputDistribution.paymentMode, InputDistribution.amountPaid
+- bun install fixed broken node_modules symlink target; prisma generate
+
+Verification:
+- tsc --noEmit: 0 errors
+- eslint on all changed files: clean
+- next build: full success (TS worker OOMs in 4GB sandbox — types verified standalone)
+- Committed 53089e9 and pushed to origin/main
+
+Stage Summary:
+- All Ekibbo web feedback items implemented and shipped to GitHub
+- DB schema pushed to Neon (additive nullable columns only)
+- Mobile Extension Officer login + dashboard PENDING — awaiting UI-UX screens from user (next message)

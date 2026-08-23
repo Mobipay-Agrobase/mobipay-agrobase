@@ -24,6 +24,7 @@ import 'package:agrobase_ekibbo/components/helpers/dialog_helper.dart';
 import 'package:agrobase_ekibbo/components/helpers/map_toolkit_helper.dart';
 import 'package:agrobase_ekibbo/domain/l10n/app_lang.dart';
 import 'package:agrobase_ekibbo/infrastructure/remote_data/api_data/api_address.dart';
+import 'package:agrobase_ekibbo/infrastructure/remote_data/api_data/api_farmland.dart';
 import 'package:agrobase_ekibbo/models/all_farmer/farmer_model.dart';
 import 'package:agrobase_ekibbo/models/dropdown/dropdown_data_model.dart';
 import 'package:agrobase_ekibbo/models/farm_land/farm_land_model.dart';
@@ -60,6 +61,18 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
   List<DropdownDataModel> _landGradients = [];
   List<DropdownDataModel> _appoarchRoads = [];
   List<DropdownDataModel> _landTopologs = [];
+  // Web-parity extra dropdowns (CatalogMaster via ekibbo-farmland)
+  List<DropdownDataModel> _waterSources = [];
+  List<DropdownDataModel> _powerSources = [];
+  List<DropdownDataModel> _soilFertility = [];
+  List<DropdownDataModel> _irrigationTypes = [];
+  int? _waterIndex, _powerIndex, _fertilityIndex, _irrigationIndex;
+  final _surveyNoTxtController = TextEditingController();
+  final _estYieldTxtController = TextEditingController();
+  final _fullTimeTxtController = TextEditingController();
+  final _partTimeTxtController = TextEditingController();
+  final _seasonalTxtController = TextEditingController();
+  final _familyTxtController = TextEditingController();
   String _farmerError = '';
   String initValueFarmer = '';
   int farmerId = 0;
@@ -78,6 +91,12 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
 
   @override
   void dispose() {
+    _surveyNoTxtController.dispose();
+    _estYieldTxtController.dispose();
+    _fullTimeTxtController.dispose();
+    _partTimeTxtController.dispose();
+    _seasonalTxtController.dispose();
+    _familyTxtController.dispose();
     _areaTxtController.dispose();
     _farmNameTxtController.dispose();
     _totalLandTxtController.dispose();
@@ -91,12 +110,17 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
 
   _getDropdDown() async {
     try {
-      final res = await ApiAddress.getDropDownForFarmland();
+      final res = await ApiFarmland.getEkibboFarmlandDropdowns();
+      if (!mounted) return;
       setState(() {
         _ownerLands = res.dataLandWwnerShip ?? [];
         _landGradients = res.dataLandGradient ?? [];
         _appoarchRoads = res.dataAppoarchRoad ?? [];
         _landTopologs = res.dataLandTopolog ?? [];
+        _waterSources = res.dataWaterSource ?? [];
+        _powerSources = res.dataPowerSource ?? [];
+        _soilFertility = res.dataSoilFertility ?? [];
+        _irrigationTypes = res.dataIrrigationType ?? [];
         if (widget.farmer != null) {
           initValueFarmer =
               widget.farmer == null ? '' : widget.farmer!.showInputName;
@@ -192,6 +216,20 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
           _topologIndex != null ? _landTopologs[_topologIndex!].name : '';
       farmLandModel.landGradient =
           _gradientIndex == null ? '' : _landGradients[_gradientIndex!].name;
+      farmLandModel.landSurveyNo = _surveyNoTxtController.text;
+      farmLandModel.waterSource =
+          _waterIndex == null ? '' : _waterSources[_waterIndex!].name ?? '';
+      farmLandModel.powerSource =
+          _powerIndex == null ? '' : _powerSources[_powerIndex!].name ?? '';
+      farmLandModel.soilFertility =
+          _fertilityIndex == null ? '' : _soilFertility[_fertilityIndex!].name ?? '';
+      farmLandModel.irrigationType =
+          _irrigationIndex == null ? '' : _irrigationTypes[_irrigationIndex!].name ?? '';
+      farmLandModel.estYield = _estYieldTxtController.text;
+      farmLandModel.fullTimeWorkers = _fullTimeTxtController.text;
+      farmLandModel.partTimeWorkers = _partTimeTxtController.text;
+      farmLandModel.seasonalWorkers = _seasonalTxtController.text;
+      farmLandModel.familyWorkers = _familyTxtController.text;
       farmLandModel.farmPhoto = _farmImg?.path;
       farmLandModel.landDocument = _landImg?.path;
       farmLandModel.lat = DataConstant.lat.toString();
@@ -495,6 +533,78 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
                         const SizedBox(
                           height: 24,
                         ),
+                        // ── Web-parity fields (FarmLandFormPage) ──
+                        AppFormField(
+                          labelText: 'Land Survey No',
+                          controller: _surveyNoTxtController,
+                        ),
+                        const SizedBox(height: 24),
+                        AppDropdownButton(
+                          hintText: 'Water Source',
+                          items: _waterSources.map((e) => e.name ?? '').toList(),
+                          itemSelected: _waterIndex == null ? '' : _waterSources[_waterIndex!].name ?? '',
+                          onChanged: (v) => setState(() => _waterIndex = v),
+                        ),
+                        const SizedBox(height: 24),
+                        AppDropdownButton(
+                          hintText: 'Power Source',
+                          items: _powerSources.map((e) => e.name ?? '').toList(),
+                          itemSelected: _powerIndex == null ? '' : _powerSources[_powerIndex!].name ?? '',
+                          onChanged: (v) => setState(() => _powerIndex = v),
+                        ),
+                        const SizedBox(height: 24),
+                        AppDropdownButton(
+                          hintText: 'Fertility Status',
+                          items: _soilFertility.map((e) => e.name ?? '').toList(),
+                          itemSelected: _fertilityIndex == null ? '' : _soilFertility[_fertilityIndex!].name ?? '',
+                          onChanged: (v) => setState(() => _fertilityIndex = v),
+                        ),
+                        const SizedBox(height: 24),
+                        AppDropdownButton(
+                          hintText: 'Irrigation Type',
+                          items: _irrigationTypes.map((e) => e.name ?? '').toList(),
+                          itemSelected: _irrigationIndex == null ? '' : _irrigationTypes[_irrigationIndex!].name ?? '',
+                          onChanged: (v) => setState(() => _irrigationIndex = v),
+                        ),
+                        const SizedBox(height: 24),
+                        AppFormField(
+                          labelText: 'Est Yield (Kg)',
+                          controller: _estYieldTxtController,
+                          keyboardType: TextInputType.number,
+                        ),
+                        const SizedBox(height: 24),
+                        Row(
+                          children: [
+                            Expanded(child: AppFormField(
+                              labelText: 'Full-time Workers',
+                              controller: _fullTimeTxtController,
+                              keyboardType: TextInputType.number,
+                            )),
+                            const SizedBox(width: 12),
+                            Expanded(child: AppFormField(
+                              labelText: 'Part-time Workers',
+                              controller: _partTimeTxtController,
+                              keyboardType: TextInputType.number,
+                            )),
+                          ],
+                        ),
+                        const SizedBox(height: 24),
+                        Row(
+                          children: [
+                            Expanded(child: AppFormField(
+                              labelText: 'Seasonal Workers',
+                              controller: _seasonalTxtController,
+                              keyboardType: TextInputType.number,
+                            )),
+                            const SizedBox(width: 12),
+                            Expanded(child: AppFormField(
+                              labelText: 'Family Workers',
+                              controller: _familyTxtController,
+                              keyboardType: TextInputType.number,
+                            )),
+                          ],
+                        ),
+                        const SizedBox(height: 24),
                         StatefulBuilder(
                           builder: (_, s) => _buildImgView(
                             AppLang.local.land_document,

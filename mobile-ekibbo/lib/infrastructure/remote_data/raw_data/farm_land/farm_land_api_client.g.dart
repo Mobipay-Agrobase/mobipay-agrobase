@@ -33,7 +33,7 @@ class _FarmLandApiClient implements FarmLandApiClient {
     )
             .compose(
               _dio.options,
-              '/add_farmland',
+              '/mobile/ekibbo-farmland',
               queryParameters: queryParameters,
               data: _data,
             )
@@ -101,7 +101,7 @@ class _FarmLandApiClient implements FarmLandApiClient {
     )
             .compose(
               _dio.options,
-              '/farmland/dropdown_value',
+              '/mobile/ekibbo-farmland',
               queryParameters: queryParameters,
               data: _data,
             )

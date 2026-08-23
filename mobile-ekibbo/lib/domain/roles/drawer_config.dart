@@ -2,38 +2,21 @@ import 'package:agrobase_ekibbo/domain/l10n/app_lang.dart';
 import 'package:agrobase_ekibbo/domain/roles/role_config.dart';
 
 /// ─────────────────────────────────────────────────────────────────────────
-/// Ekibbo side-drawer — mirrors the EKIBBO WEB platform sidebar for the
-/// Field Officer role (same order, same labels):
-///   Farmer Profiling · Farm Land Registry · Cultivations · Training &
-///   Groups · Farm Visits · Purchases · Input Distribution · Carbon &
-///   Compliance · Reports · Farmer Queries · News & Advisory · Settings
+/// Ekibbo side-drawer — EXACTLY the Ekibbo team's Field Officer menu:
+///   Farmer Registry · Purchases · Inputs · Trainings · Loans ·
+///   Farmer Visits · Surveys · News & Advisory · Settings · Profile
 ///
-/// Farmer role mirrors the farmer-facing web menu.
+/// Removed per feedback: Carbon & Compliance, Sale Intentions, Crop
+/// Harvest, Cultivations (covered by Add Crop), Farm Land Registry
+/// (covered by Add Plot), duplicate entries.
+/// Farmer role: Dashboard, Farmer Queries, News & Advisory, Settings.
 /// ─────────────────────────────────────────────────────────────────────────
 final List<MDDrawerMenu> drawerConfigs = [
   MDDrawerMenu(
-    type: DrawerMenuType.profile,
-    icon: 'ic_profile',
-    title: AppLang.local.profile,
-    roleAccessed: [EnumUserRole.staff, EnumUserRole.farmer],
-  ),
-  MDDrawerMenu(
     type: DrawerMenuType.farmerList,
     icon: 'ic_farmer',
-    title: 'Farmer Profiling',
+    title: 'Farmer Registry',
     roleAccessed: [EnumUserRole.staff],
-  ),
-  MDDrawerMenu(
-    type: DrawerMenuType.listPlot,
-    icon: 'ic_land_plot',
-    title: 'Farm Land Registry',
-    roleAccessed: [EnumUserRole.staff, EnumUserRole.farmer],
-  ),
-  MDDrawerMenu(
-    type: DrawerMenuType.crops,
-    icon: 'ic_agriculture',
-    title: 'Cultivations',
-    roleAccessed: [EnumUserRole.staff, EnumUserRole.farmer],
   ),
   MDDrawerMenu(
     type: DrawerMenuType.procurement,
@@ -44,19 +27,31 @@ final List<MDDrawerMenu> drawerConfigs = [
   MDDrawerMenu(
     type: DrawerMenuType.distribution,
     icon: 'ic_distribution',
-    title: 'Input Distribution',
+    title: 'Inputs',
     roleAccessed: [EnumUserRole.staff],
   ),
   MDDrawerMenu(
-    type: DrawerMenuType.carbon,
-    icon: 'ic_carbon_agri',
-    title: 'Carbon & Compliance',
-    roleAccessed: [EnumUserRole.staff],
-  ),
-  MDDrawerMenu(
-    type: DrawerMenuType.saleIntention,
+    type: DrawerMenuType.loans,
     icon: 'ic_dollar',
-    title: 'Sale Intentions',
+    title: 'Loans',
+    roleAccessed: [EnumUserRole.staff],
+  ),
+  MDDrawerMenu(
+    type: DrawerMenuType.training,
+    icon: 'ic_agriculture',
+    title: 'Trainings',
+    roleAccessed: [EnumUserRole.staff],
+  ),
+  MDDrawerMenu(
+    type: DrawerMenuType.farmerVisits,
+    icon: 'ic_queries',
+    title: 'Farmer Visits',
+    roleAccessed: [EnumUserRole.staff],
+  ),
+  MDDrawerMenu(
+    type: DrawerMenuType.surveys,
+    icon: 'ic_blog',
+    title: 'Surveys',
     roleAccessed: [EnumUserRole.staff],
   ),
   MDDrawerMenu(
@@ -77,25 +72,35 @@ final List<MDDrawerMenu> drawerConfigs = [
     title: AppLang.local.settings,
     roleAccessed: [EnumUserRole.staff, EnumUserRole.farmer],
   ),
+  MDDrawerMenu(
+    type: DrawerMenuType.profile,
+    icon: 'ic_profile',
+    title: AppLang.local.profile,
+    roleAccessed: [EnumUserRole.staff, EnumUserRole.farmer],
+  ),
 ];
 
 enum DrawerMenuType {
+  loans,
   profile,
   farmerList,
-  listPlot,
-  crops,
+  training,
+  farmerVisits,
+  surveys,
   saleIntention,
   distribution,
   vendorProcurement,
   procurement,
   cropHarvest,
-  carbon,
   appLang,
   settings,
   version,
   farmerQueries,
   newsAdvisory,
   blog,
+  listPlot,
+  crops,
+  carbon,
   feeding,
   mortalities,
   waterQuality,

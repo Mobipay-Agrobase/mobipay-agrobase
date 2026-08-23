@@ -13,7 +13,7 @@ part 'farm_land_api_client.g.dart';
 abstract class FarmLandApiClient {
   factory FarmLandApiClient(Dio dio, {String baseUrl}) = _FarmLandApiClient;
 
-  @POST('/add_farmland')
+  @POST('/mobile/ekibbo-farmland')
   @MultiPart()
   Future<BaseResponse?> addFarmLand(@Body() FormData data);
 
@@ -22,7 +22,7 @@ abstract class FarmLandApiClient {
   Future<BaseResponse?> updateFarmland(
       @Body() FormData data, @Path('farmId') int farmId);
 
-  @GET('/farmland/dropdown_value') //remove list all_farmer
+  @GET('/mobile/ekibbo-farmland') //remove list all_farmer
   Future<BaseResponse<DropdownFarmLandModel>?> getFarmLandDropdownData();
   @GET('/get_all_farm_land/{farmerId}')
   Future<BaseResponse<AllFarmLandResponse>?> getAllFarmLands(

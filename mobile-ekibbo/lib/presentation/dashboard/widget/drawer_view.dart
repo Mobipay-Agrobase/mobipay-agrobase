@@ -311,6 +311,18 @@ class _DrawerViewState extends State<DrawerView> {
       case DrawerMenuType.farmerList:
         Navigator.of(context).pushNamed(RouterName.farmer_list);
         break;
+      case DrawerMenuType.training:
+        Navigator.of(context).pushNamed(RouterName.ekbTrainings);
+        break;
+      case DrawerMenuType.farmerVisits:
+        Navigator.of(context).pushNamed(RouterName.ekbFarmerVisits);
+        break;
+      case DrawerMenuType.surveys:
+        Navigator.of(context).pushNamed(RouterName.ekbSurveys);
+        break;
+      case DrawerMenuType.loans:
+        Navigator.of(context).pushNamed(RouterName.ekbLoans);
+        break;
       case DrawerMenuType.listPlot:
         Navigator.of(context).pushNamed(
           RouterName.list_plots,

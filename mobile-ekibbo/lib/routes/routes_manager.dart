@@ -65,6 +65,7 @@ import 'package:agrobase_ekibbo/presentation/srp/views/list_transaction_screen.d
 import 'package:agrobase_ekibbo/presentation/srp/views/transaction_calendar_screen.dart';
 import 'package:agrobase_ekibbo/presentation/srp/views/transaction_detail_screen.dart';
 import 'package:agrobase_ekibbo/presentation/farmer_registration/farmer_registration_screen.dart';
+import 'package:agrobase_ekibbo/presentation/modules/ekibbo_module_list_screen.dart';
 
 class RoutesManager {
   static Route<dynamic>? onGenerateRoute(RouteSettings settings) {
@@ -80,6 +81,18 @@ class RoutesManager {
         screen = FarmerRegistrationScreen(
           farmerLocal: farmerLocal,
         );
+        break;
+      case RouterName.ekbTrainings:
+        screen = const EkibboModuleListScreen(type: 'trainings', title: 'Trainings');
+        break;
+      case RouterName.ekbFarmerVisits:
+        screen = const EkibboModuleListScreen(type: 'farm-visits', title: 'Farmer Visits');
+        break;
+      case RouterName.ekbSurveys:
+        screen = const EkibboModuleListScreen(type: 'surveys', title: 'Surveys');
+        break;
+      case RouterName.ekbLoans:
+        screen = const EkibboModuleListScreen(type: 'loans', title: 'Loans');
         break;
       case RouterName.login:
         screen = const LoginScreen();
@@ -396,6 +409,10 @@ class RouterName {
   static const dashboard = '/dashboard';
   static const farmer_detail = '/farmer_detail';
   static const edit_farmer_profile = '/edit_farmer_profile';
+  static const ekbTrainings = '/ekb-trainings';
+  static const ekbFarmerVisits = '/ekb-farmer-visits';
+  static const ekbSurveys = '/ekb-surveys';
+  static const ekbLoans = '/ekb-loans';
   static const farmer_list = '/farmer_list';
   static const add_plot = '/add_plot';
   static const farm_land_plotting = '/farm_land_plotting';

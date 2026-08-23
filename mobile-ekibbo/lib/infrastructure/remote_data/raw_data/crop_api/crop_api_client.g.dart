@@ -32,7 +32,7 @@ class _CropApiClient implements CropApiClient {
     )
             .compose(
               _dio.options,
-              '/crops/get_dropdown',
+              '/mobile/ekibbo-crop-dropdowns',
               queryParameters: queryParameters,
               data: _data,
             )
@@ -201,7 +201,7 @@ class _CropApiClient implements CropApiClient {
     )
             .compose(
               _dio.options,
-              '/crops/get_dropdown?farm_land_id=${farmlandId}&season_id=${seasonId}',
+              '/mobile/ekibbo-crop-dropdowns?farmerId=${farmlandId}&season_id=${seasonId}',
               queryParameters: queryParameters,
               data: _data,
             )

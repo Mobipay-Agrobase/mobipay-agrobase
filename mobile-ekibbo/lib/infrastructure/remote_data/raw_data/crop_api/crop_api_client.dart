@@ -10,7 +10,7 @@ part 'crop_api_client.g.dart';
 @RestApi(baseUrl: '')
 abstract class CropApiClient {
   factory CropApiClient(Dio dio, {String baseUrl}) = _CropApiClient;
-  @GET('/crops/get_dropdown')
+  @GET('/mobile/ekibbo-crop-dropdowns')
   Future<BaseResponse<DropdownCropModel>?> getCropDropdownData();
 
   @POST('/add_crops')
@@ -30,7 +30,7 @@ abstract class CropApiClient {
   @GET('/crops/get_crop_variety/{id}')
   Future<BaseResponse<CropVarietyResponse>?> getVariety(@Path('id') int id);
 
-  @GET('/crops/get_dropdown?farm_land_id={farmlandId}&season_id={seasonId}')
+  @GET('/mobile/ekibbo-crop-dropdowns?farmerId={farmlandId}&season_id={seasonId}')
   Future<BaseResponse<DropdownCropModel>?> getCropCutivated(
       @Path('farmlandId') int farmlandId, @Path('seasonId') int seasonId);
 }

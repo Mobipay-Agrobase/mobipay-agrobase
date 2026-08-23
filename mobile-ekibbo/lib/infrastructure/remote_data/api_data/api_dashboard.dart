@@ -19,7 +19,6 @@ import 'package:agrobase_ekibbo/routes/routes_manager.dart';
 class ApiDashboard {
   static Future<DashboardModel?> getDashboardData() async {
     try {
-      //throw const FormatException('getDashboardData data debug');
       final res = await ApiProvider.instance.apiDashboard
           .getDashboardData(DataConstant.lat, DataConstant.lng, 50);
       if (res == null) {
@@ -34,13 +33,18 @@ class ApiDashboard {
           NavigatorManager.contextRoot, 'No connect internet!');
       return null;
     } catch (e) {
-      if ((e as DioException).response!.statusCode == 200) {
-        DialogHelper.showOkDialog(
-            NavigatorManager.contextRoot, "Login Session Exprired",
-            okAction: () {
-          SharedPreferencesProvider.instance.clear();
-          NavigatorManager.replacementAndRemoveUntil(RouterName.login);
-        });
+      // Defensive: never let a parse/API error escape — the old code blindly
+      // cast to DioException and crashed, leaving an EMPTY dashboard.
+      if (e is DioException) {
+        final code = e.response?.statusCode;
+        if (code == 401 || code == 403) {
+          DialogHelper.showOkDialog(
+              NavigatorManager.contextRoot, "Login Session Expired",
+              okAction: () {
+            SharedPreferencesProvider.instance.clear();
+            NavigatorManager.replacementAndRemoveUntil(RouterName.login);
+          });
+        }
       }
       debugPrint("getDashboardData $e");
       return null;

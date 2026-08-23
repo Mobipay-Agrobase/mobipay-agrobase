@@ -99,6 +99,12 @@ class _LocationApiClient implements LocationApiClient {
     return _fetchList<MCooperative>(type, null, MCooperative.fromJson);
   }
 
+  @override
+  Future<BaseResponse<List<VillageModel>>?> getVillages(
+      String type, int subCountyId) async {
+    return _fetchList<VillageModel>(type, subCountyId, VillageModel.fromJson);
+  }
+
   RequestOptions _setStreamType<T>(RequestOptions requestOptions) {
     if (T != dynamic &&
         !(requestOptions.responseType == ResponseType.bytes ||

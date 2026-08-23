@@ -19,6 +19,11 @@ class MFarmerLocal {
   int district;
   int commune;
   String village;
+  // Web-platform aligned location NAMES (sent to the API for storage +
+  // MN0001L farmer-code generation). district = Agrobase District,
+  // commune = Agrobase SubCounty, village = Agrobase Village name.
+  String district_name;
+  String commune_name;
   String lng;
   String lat;
   String proof_no;
@@ -59,6 +64,8 @@ class MFarmerLocal {
     required this.district,
     required this.commune,
     required this.village,
+    this.district_name = '',
+    this.commune_name = '',
     required this.lng,
     required this.lat,
     required this.proof_no,
@@ -100,6 +107,8 @@ class MFarmerLocal {
       district: map['district'] ?? 0,
       commune: map['commune'] ?? 0,
       village: map['village'] ?? '',
+      district_name: map['district_name'] ?? '',
+      commune_name: map['commune_name'] ?? '',
       lng: map['lng'] ?? '0',
       lat: map['lat'] ?? '0',
       proof_no: map['proof_no'] ?? '',
@@ -162,6 +171,8 @@ class MFarmerLocal {
       'province': province,
       'district': district,
       'commune': commune,
+      'district_name': district_name,
+      'commune_name': commune_name,
       'village': village,
       'lng': lng,
       'lat': lat,
@@ -199,6 +210,8 @@ class MFarmerLocal {
       'province': province,
       'district': district,
       'commune': commune,
+      'district_name': district_name,
+      'commune_name': commune_name,
       'village': village,
       'proof_no': proof_no,
       'gender': gender,

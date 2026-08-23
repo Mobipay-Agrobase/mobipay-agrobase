@@ -136,6 +136,32 @@ export async function GET(req: NextRequest) {
           })),
         })
       }
+      case 'village': {
+        // Villages under a subcounty (through its parishes) — matches the
+        // web Location Master hierarchy ... > SubCounty > Parish > Village
+        let villages
+        if (parentId != null) {
+          const subCounties = await db.subCounty.findMany({ select: { id: true }, take: 3000 })
+          const subCounty = await resolveByNumericId(subCounties, parentId)
+          villages = subCounty
+            ? await db.village.findMany({
+                where: { parish: { subCountyId: subCounty.id } },
+                select: { id: true, name: true },
+                orderBy: { name: 'asc' },
+                take: 300,
+              })
+            : []
+        } else {
+          villages = []
+        }
+        return NextResponse.json({
+          result: true,
+          data: villages.map(v => ({
+            id: numericId(v.id),
+            village_name: v.name,
+          })),
+        })
+      }
       case 'cooperatives': {
         const tf = buildTenantFilter(ctx, 'tenantId')
         const groups = await db.farmerGroup.findMany({

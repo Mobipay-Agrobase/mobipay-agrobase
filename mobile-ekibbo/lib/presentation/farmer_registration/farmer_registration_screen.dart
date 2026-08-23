@@ -29,9 +29,8 @@ import 'package:agrobase_ekibbo/models/distribution/model_cooperative.dart';
 import 'package:agrobase_ekibbo/models/dropdown/dropdown_data_model.dart';
 import 'package:agrobase_ekibbo/models/farmer_local/farmer_local_model.dart';
 import 'package:agrobase_ekibbo/models/location/commune/commune_model.dart';
-import 'package:agrobase_ekibbo/models/location/country/country_model.dart';
+import 'package:agrobase_ekibbo/models/location/village/village_model.dart';
 import 'package:agrobase_ekibbo/models/location/district/district_model.dart';
-import 'package:agrobase_ekibbo/models/location/province/province_model.dart';
 
 class FarmerRegistrationScreen extends StatefulWidget {
   const FarmerRegistrationScreen({
@@ -53,10 +52,10 @@ class _FarmerRegistrationScreenState extends State<FarmerRegistrationScreen> {
   XFile? _avtFile;
   XFile? _frontImg;
   XFile? _backImg;
-  List<CountryModel> _countries = [];
-  List<ProvinceModel> _provinces = [];
+  // Web-platform aligned location cascade: District → Sub County → Village
   List<DistrictModel> _districts = [];
   List<CommuneModel> _communes = [];
+  List<VillageModel> _villages = [];
   List<DropdownDataModel> _genders = [];
   List<DropdownDataModel> _enrollmentPlace = [];
   List<DropdownDataModel> _identityProofs = [];
@@ -106,11 +105,10 @@ class _FarmerRegistrationScreenState extends State<FarmerRegistrationScreen> {
   _initDataLocation() async {
     _latLng = LatLng(double.tryParse(mFarmerLocal.lat) ?? 0,
         double.tryParse(mFarmerLocal.lng) ?? 0);
-    await _getCountries();
+    await _getDistrictsMaster();
     await _getCooperatives();
-    if (mFarmerLocal.province != 0) await _getProvinces();
-    if (mFarmerLocal.district != 0) await _getDistricts();
     if (mFarmerLocal.commune != 0) await _getCommune();
+    if (mFarmerLocal.commune != 0) await _getVillages(mFarmerLocal.commune);
   }
 
   Future<void> _getDropdownData() async {
@@ -129,35 +127,27 @@ class _FarmerRegistrationScreenState extends State<FarmerRegistrationScreen> {
     }
   }
 
-  _getCountries() async {
-    _countries = await ApiAddress.getCountries();
-    if (_countries.isNotEmpty) {
-      setState(() {});
-    }
-  }
-
-  _getProvinces() async {
-    if (_countries.isEmpty) return;
-    _provinces = await ApiAddress.getProvices(mFarmerLocal.country);
-    if (_provinces.isNotEmpty) {
-      setState(() {});
-    }
-  }
-
-  _getDistricts() async {
-    if (_provinces.isEmpty) return;
-    _districts = await ApiAddress.getDistricts(mFarmerLocal.province);
+  /// All districts from the web Location Master.
+  _getDistrictsMaster() async {
+    _districts = await ApiAddress.getAllDistrictsMaster();
     if (_districts.isNotEmpty) {
       setState(() {});
     }
   }
 
+  /// Sub-counties under the selected district (web Location Master).
   _getCommune() async {
     if (_districts.isEmpty) return;
     _communes = await ApiAddress.getCommunes(mFarmerLocal.district);
     if (_communes.isNotEmpty) {
       setState(() {});
     }
+  }
+
+  /// Villages under the selected sub-county (web Location Master).
+  _getVillages(int subCountyId) async {
+    _villages = await ApiAddress.getVillages(subCountyId);
+    setState(() {});
   }
 
   int? initIndex(List<String> items, String item) {
@@ -208,6 +198,13 @@ class _FarmerRegistrationScreenState extends State<FarmerRegistrationScreen> {
     }
     if (_avtFile == null || _avtFile!.path.isEmpty) {
       DialogHelper.showOkDialog(context, AppLang.local.please_choose_avt);
+      return;
+    }
+    if (mFarmerLocal.district == 0 ||
+        mFarmerLocal.commune == 0 ||
+        mFarmerLocal.village.isEmpty) {
+      DialogHelper.showOkDialog(
+          context, 'Please select District, Sub County and Village');
       return;
     }
     if (mFarmerLocal.identity_proof.isNotEmpty) {
@@ -620,48 +617,11 @@ class _FarmerRegistrationScreenState extends State<FarmerRegistrationScreen> {
           const SizedBox(
             height: 20,
           ),
-          InputDropDownData(
-            items: _countries.map((e) => e.countryName!).toList(),
-            hintText: AppLang.local.country,
-            itemIndex: mFarmerLocal.country == 0 || _countries.isEmpty
-                ? null
-                : _countries.indexWhere(
-                    (element) => element.id == mFarmerLocal.country),
-            onChanged: (index) {
-              setState(() {
-                mFarmerLocal.country = _countries[index].id!;
-                mFarmerLocal.province = 0;
-                mFarmerLocal.district = 0;
-                mFarmerLocal.commune = 0;
-              });
-              _getProvinces();
-            },
-          ),
-          const SizedBox(
-            height: 24,
-          ),
-          InputDropDownData(
-            items: _provinces.map((e) => e.provinceName!).toList(),
-            hintText: AppLang.local.province,
-            itemIndex: mFarmerLocal.province == 0 || _provinces.isEmpty
-                ? null
-                : _provinces.indexWhere(
-                    (element) => element.id == mFarmerLocal.province),
-            onChanged: (index) {
-              setState(() {
-                mFarmerLocal.province = _provinces[index].id!;
-                mFarmerLocal.district = 0;
-                mFarmerLocal.commune = 0;
-              });
-              _getDistricts();
-            },
-          ),
-          const SizedBox(
-            height: 24,
-          ),
+          // ── Location cascade aligned with the WEB Location Master ──
+          // District → Sub County → Village (drives the MN0001L farmer code)
           InputDropDownData(
             items: _districts.map((e) => e.districtName!).toList(),
-            hintText: AppLang.local.district,
+            hintText: 'District *',
             itemIndex: mFarmerLocal.district == 0 || _districts.isEmpty
                 ? null
                 : _districts.indexWhere(
@@ -669,7 +629,12 @@ class _FarmerRegistrationScreenState extends State<FarmerRegistrationScreen> {
             onChanged: (index) {
               setState(() {
                 mFarmerLocal.district = _districts[index].id!;
+                mFarmerLocal.district_name =
+                    _districts[index].districtName ?? '';
                 mFarmerLocal.commune = 0;
+                mFarmerLocal.commune_name = '';
+                mFarmerLocal.village = '';
+                _villages = [];
               });
               _getCommune();
             },
@@ -679,23 +644,35 @@ class _FarmerRegistrationScreenState extends State<FarmerRegistrationScreen> {
           ),
           InputDropDownData(
             items: _communes.map((e) => e.communeName!).toList(),
-            hintText: AppLang.local.commune,
+            hintText: 'Sub County *',
             itemIndex: mFarmerLocal.commune == 0 || _communes.isEmpty
                 ? null
                 : _communes.indexWhere(
                     (element) => element.id == mFarmerLocal.commune),
             onChanged: (index) {
-              mFarmerLocal.commune = _communes[index].id!;
+              setState(() {
+                mFarmerLocal.commune = _communes[index].id!;
+                mFarmerLocal.commune_name =
+                    _communes[index].communeName ?? '';
+                mFarmerLocal.village = '';
+              });
+              _getVillages(mFarmerLocal.commune);
             },
           ),
           const SizedBox(
             height: 24,
           ),
-          AppFormField(
-            hint: AppLang.local.village,
-            initialValue: mFarmerLocal.village,
-            onChanged: (value) {
-              mFarmerLocal.village = value;
+          InputDropDownData(
+            items: _villages.map((e) => e.villageName ?? '').toList(),
+            hintText: 'Village *',
+            itemIndex: mFarmerLocal.village.isEmpty || _villages.isEmpty
+                ? null
+                : _villages.indexWhere(
+                    (element) => element.villageName == mFarmerLocal.village),
+            onChanged: (index) {
+              setState(() {
+                mFarmerLocal.village = _villages[index].villageName ?? '';
+              });
             },
           ),
           const SizedBox(

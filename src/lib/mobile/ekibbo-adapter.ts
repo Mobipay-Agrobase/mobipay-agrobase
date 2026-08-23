@@ -116,6 +116,11 @@ export function mapFarmer(f: FarmerWithLands): Record<string, unknown> {
       total_land_holding: Number(l.sizeHectares) || 0,
       total_cultivation: 0,
       actual_area: String(l.sizeHectares ?? 0),
+      // The upstream FarmLandModel parser casts these NON-nullably
+      // (`json['tag'] as String`); omitting them crashes the whole
+      // dashboard parse — always include them.
+      tag: '',
+      listLatLng: '',
     })),
     total_area: totalArea,
     farm_lands_count: lands.length,

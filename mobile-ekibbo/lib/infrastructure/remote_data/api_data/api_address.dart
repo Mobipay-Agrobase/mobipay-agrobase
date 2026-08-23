@@ -10,6 +10,7 @@ import 'package:agrobase_ekibbo/models/dropdown/register/dropdown_register_model
 import 'package:agrobase_ekibbo/models/location/commune/commune_model.dart';
 import 'package:agrobase_ekibbo/models/location/country/country_model.dart';
 import 'package:agrobase_ekibbo/models/location/district/district_model.dart';
+import 'package:agrobase_ekibbo/models/location/village/village_model.dart';
 import 'package:agrobase_ekibbo/models/location/province/province_model.dart';
 
 class ApiAddress {
@@ -168,6 +169,33 @@ class ApiAddress {
       } else {
         return res.map((e) => CommuneModel.fromJson(e.cast<String, dynamic>())).toList();
       }
+    }
+  }
+
+  /// All districts from the web Location Master (mobile registration form
+  /// starts at District level — matches the web Ekibbo flow).
+  static Future<List<DistrictModel>> getAllDistrictsMaster() async {
+    try {
+      final res = await ApiProvider.instance.apiLocation.getAllDistricts('district');
+      if (res == null) throw const FormatException('districts response null');
+      if (res.data == null) throw const FormatException('districts data null');
+      return res.data ?? [];
+    } catch (e) {
+      debugPrint("getAllDistrictsMaster $e");
+      return [];
+    }
+  }
+
+  /// Villages under a subcounty (web Location Master hierarchy).
+  static Future<List<VillageModel>> getVillages(int subCountyId) async {
+    try {
+      final res = await ApiProvider.instance.apiLocation.getVillages('village', subCountyId);
+      if (res == null) throw const FormatException('villages response null');
+      if (res.data == null) throw const FormatException('villages data null');
+      return res.data ?? [];
+    } catch (e) {
+      debugPrint("getVillages $e");
+      return [];
     }
   }
 

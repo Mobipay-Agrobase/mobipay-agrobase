@@ -3,6 +3,7 @@ import 'package:retrofit/retrofit.dart';
 import 'package:agrobase_ekibbo/models/base/base_response.dart';
 import 'package:agrobase_ekibbo/models/distribution/model_cooperative.dart';
 import 'package:agrobase_ekibbo/models/location/commune/commune_model.dart';
+import 'package:agrobase_ekibbo/models/location/village/village_model.dart';
 import 'package:agrobase_ekibbo/models/location/country/country_model.dart';
 import 'package:agrobase_ekibbo/models/location/district/district_model.dart';
 import 'package:agrobase_ekibbo/models/location/province/province_model.dart';
@@ -31,4 +32,7 @@ abstract class LocationApiClient {
   Future<BaseResponse<List<CommuneModel>>?> getAllCommunes(@Query('type') String type);
   @GET('/mobile/ekibbo-geo')
   Future<BaseResponse<List<MCooperative>>?> getCooperatives(@Query('type') String type);
+  @GET('/mobile/ekibbo-geo')
+  Future<BaseResponse<List<VillageModel>>?> getVillages(
+      @Query('type') String type, @Query('parentId') int subCountyId);
 }

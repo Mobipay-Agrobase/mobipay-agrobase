@@ -85,8 +85,15 @@ export async function POST(request: Request) {
     const ctx = await getTenantContext()
     const body = await request.json()
 
-    // Generate tenant-aware farmer code (e.g. EKB-00001 for EKIBBO, SAA-00001 for SAA-WFP-AMS)
-    const farmerCode = await generateFarmerCode(ctx.tenantId, body.farmerCode)
+    // Generate tenant-aware farmer code.
+    // Ekibbo tenants with District/Subcounty/Village provided use the
+    // location-based format (e.g. Mukono/Nakisunga/Lugala → MN0001L);
+    // all others use the tenant-prefix format (EKB-00001, SAA-00001).
+    const farmerCode = await generateFarmerCode(ctx.tenantId, body.farmerCode, {
+      district: body.district,
+      subCounty: body.commune,        // commune = sub-county on FarmerProfile
+      village: body.villageName,
+    })
 
     // Stringify JSON fields
     const jsonData: Record<string, string | undefined> = {}

@@ -43,7 +43,13 @@ export async function POST(request: NextRequest) {
   try {
     const ctx = await getTenantContext(request)
     const body = await request.json()
-    const { farmerId, inputType, inputName, quantity, unit, unitCost, distributionDate, notes } = body
+    const {
+      farmerId, inputType, inputName, quantity, unit, unitCost,
+      distributionDate, notes,
+      // ── Ekibbo payment fields ──
+      paymentMode,   // CREDIT | CASH_FULL | CASH_PARTIAL
+      amountPaid,    // amount paid now (cash full/partial)
+    } = body
 
     if (!farmerId || !inputType || !quantity || !unitCost) {
       return NextResponse.json(
@@ -63,6 +69,21 @@ export async function POST(request: NextRequest) {
 
     const totalCost = parseFloat(quantity) * parseFloat(unitCost)
 
+    // ── Payment resolution (Ekibbo: "indicate balance to be paid if the farmer
+    //    pays cash in installments") ─────────────────────────────────────────
+    //    CREDIT       → pays later, balance = totalCost
+    //    CASH_FULL    → pays everything now, balance = 0
+    //    CASH_PARTIAL → pays part now (installments), balance = totalCost − paid
+    const mode = paymentMode || 'CREDIT'
+    let paid = 0
+    if (mode === 'CASH_FULL') paid = totalCost
+    else if (mode === 'CASH_PARTIAL') paid = Math.max(0, Math.min(parseFloat(amountPaid) || 0, totalCost))
+    const balance = Math.max(0, totalCost - paid)
+    const status =
+      balance <= 0 ? 'FULLY_REPAID' :
+      paid > 0 ? 'PARTIALLY_REPAID' :
+      'DISTRIBUTED'
+
     // Create the distribution record
     const distribution = await db.inputDistribution.create({
       data: {
@@ -74,20 +95,24 @@ export async function POST(request: NextRequest) {
         unit: unit || 'pcs',
         unitCost: parseFloat(unitCost),
         totalCost,
-        balanceRemaining: totalCost,
-        status: 'DISTRIBUTED',
+        paymentMode: mode,
+        amountPaid: paid > 0 ? paid : null,
+        balanceRemaining: balance,
+        status,
         distributionDate: distributionDate ? new Date(distributionDate) : new Date(),
         notes: notes || null,
       },
     })
 
-    // Create a ledger entry (debit — farmer owes this amount)
+    // Create a ledger entry (debit — farmer owes the outstanding balance).
+    // The INPUT_DIST entry debits the full cost; an immediate PAYMENT entry
+    // credits whatever cash was paid at distribution time.
     const lastEntry = await db.farmerLedgerEntry.findFirst({
       where: { farmerId },
       orderBy: { date: 'desc' },
       select: { balanceAfter: true },
     })
-    const runningBalance = (lastEntry?.balanceAfter || 0) - totalCost
+    let runningBalance = (lastEntry?.balanceAfter || 0) - totalCost
 
     await db.farmerLedgerEntry.create({
       data: {
@@ -104,6 +129,25 @@ export async function POST(request: NextRequest) {
         approvedBy: ctx.userId,
       },
     })
+
+    if (paid > 0) {
+      runningBalance += paid
+      await db.farmerLedgerEntry.create({
+        data: {
+          tenantId: ctx.tenantId,
+          farmerId,
+          type: 'PAYMENT',
+          description: `Cash paid at distribution: ${inputName || inputType} (UGX ${paid.toLocaleString()})`,
+          amount: paid,
+          balanceAfter: runningBalance,
+          referenceType: 'InputDistribution',
+          referenceId: distribution.id,
+          createdBy: ctx.userId,
+          approvalStatus: 'APPROVED',
+          approvedBy: ctx.userId,
+        },
+      })
+    }
 
     return NextResponse.json({ data: distribution }, { status: 201 })
   } catch (error: any) {

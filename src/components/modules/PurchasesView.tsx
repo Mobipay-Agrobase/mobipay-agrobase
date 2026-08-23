@@ -20,6 +20,7 @@ import { Separator } from '@/components/ui/separator'
 import { toast } from 'sonner'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts'
 import { safeFetch, extractArray } from '@/lib/safe-fetch'
+import { FarmerSearchSelect } from '@/components/ui/farmer-search-select'
 
 interface Purchase {
   id: string
@@ -34,6 +35,13 @@ interface Purchase {
   charges: number
   taxes: number
   netAmount: number
+  // Ekibbo enhanced fields
+  netWeight?: number | null
+  moistureReading?: number | null
+  moistureDeduction?: number | null
+  qualityDeduction?: number | null
+  loanDeduction?: number | null
+  inputDeduction?: number | null
   status: 'PENDING' | 'REVIEWED' | 'APPROVED' | 'PAID' | 'REJECTED'
   date: string
   reviewedBy?: string
@@ -93,12 +101,19 @@ export default function PurchasesView() {
         commodity: p.commodity || '',
         variety: p.variety || '',
         quantity: Number(p.quantity) || 0,
-        unit: p.unit || '',
-        unitPrice: p.unitPrice || 0,
+        unit: p.unit || 'kg',
+        unitPrice: p.unitPrice || p.dailyPrice || 0,
         totalAmount: p.totalAmount || 0,
-        charges: 0,
-        taxes: 0,
-        netAmount: p.totalAmount || 0,
+        charges: p.momoCharges || 0,
+        taxes: p.momoTax || 0,
+        netAmount: p.netPayment ?? p.totalAmount ?? 0,
+        // Ekibbo enhanced fields
+        netWeight: p.netWeight ?? null,
+        moistureReading: p.moistureReading ?? null,
+        moistureDeduction: p.moistureDeduction ?? null,
+        qualityDeduction: p.qualityDeduction ?? null,
+        loanDeduction: p.loanDeduction ?? null,
+        inputDeduction: p.inputDeduction ?? null,
         status: (p.status || 'PENDING') as Purchase['status'],
         date: p.createdAt ? new Date(p.createdAt).toISOString().split('T')[0] : '',
         reviewedBy: p.reviewedBy,
@@ -249,7 +264,7 @@ export default function PurchasesView() {
                   <TableRow>
                     <TableHead>Farmer</TableHead>
                     <TableHead className="hidden sm:table-cell">Commodity</TableHead>
-                    <TableHead className="hidden md:table-cell">Qty</TableHead>
+                    <TableHead className="hidden md:table-cell">Qty / Net</TableHead>
                     <TableHead className="hidden lg:table-cell">Charges</TableHead>
                     <TableHead className="hidden lg:table-cell">Taxes</TableHead>
                     <TableHead>Net Amount</TableHead>
@@ -272,7 +287,14 @@ export default function PurchasesView() {
                           <p className="text-[10px] text-muted-foreground">{p.variety}</p>
                         </div>
                       </TableCell>
-                      <TableCell className="hidden md:table-cell text-sm">{p.quantity} {p.unit}</TableCell>
+                      <TableCell className="hidden md:table-cell text-sm">
+                        <p>{p.quantity} {p.unit}</p>
+                        {(p.moistureDeduction || p.qualityDeduction) ? (
+                          <p className="text-[10px] text-amber-600 dark:text-amber-400">
+                            Net {p.netWeight ?? '—'} kg
+                          </p>
+                        ) : null}
+                      </TableCell>
                       <TableCell className="hidden lg:table-cell text-sm text-amber-600">UGX {((p as any).charges || 0).toLocaleString()}</TableCell>
                       <TableCell className="hidden lg:table-cell text-sm text-red-600">UGX {((p as any).taxes || 0).toLocaleString()}</TableCell>
                       <TableCell>
@@ -360,17 +382,33 @@ export default function PurchasesView() {
                 <div><p className="text-xs text-muted-foreground">Farmer</p><p className="text-sm font-medium">{showDetail.farmerName}</p></div>
                 <div><p className="text-xs text-muted-foreground">Code</p><p className="text-sm font-mono">{showDetail.farmerCode}</p></div>
                 <div><p className="text-xs text-muted-foreground">Commodity</p><p className="text-sm">{showDetail.commodity}</p></div>
-                <div><p className="text-xs text-muted-foreground">Variety</p><p className="text-sm">{showDetail.variety}</p></div>
-                <div><p className="text-xs text-muted-foreground">Quantity</p><p className="text-sm">{showDetail.quantity} {showDetail.unit}</p></div>
+                <div><p className="text-xs text-muted-foreground">Form</p><p className="text-sm">{showDetail.variety || '—'}</p></div>
+                <div><p className="text-xs text-muted-foreground">Total Weight</p><p className="text-sm">{showDetail.quantity} {showDetail.unit || 'kg'}</p></div>
+                <div><p className="text-xs text-muted-foreground">Net Weight</p><p className="text-sm">{showDetail.netWeight != null ? `${showDetail.netWeight} kg` : '—'}</p></div>
                 <div><p className="text-xs text-muted-foreground">Unit Price</p><p className="text-sm">UGX {showDetail.unitPrice.toLocaleString()}</p></div>
+                {showDetail.moistureReading != null && (
+                  <div><p className="text-xs text-muted-foreground">Moisture</p><p className="text-sm">{showDetail.moistureReading}%</p></div>
+                )}
               </div>
               <Separator />
               <div className="space-y-2">
                 <div className="flex justify-between text-sm"><span className="text-muted-foreground">Gross Amount</span><span>UGX {showDetail.totalAmount.toLocaleString()}</span></div>
-                <div className="flex justify-between text-sm"><span className="text-muted-foreground">Charges (2.5%)</span><span className="text-amber-600">- UGX {((showDetail as any).charges || 0).toLocaleString()}</span></div>
-                <div className="flex justify-between text-sm"><span className="text-muted-foreground">Taxes (5%)</span><span className="text-red-600">- UGX {((showDetail as any).taxes || 0).toLocaleString()}</span></div>
+                {showDetail.moistureDeduction ? (
+                  <div className="flex justify-between text-sm"><span className="text-muted-foreground">Moisture Deduction</span><span className="text-amber-600">− {showDetail.moistureDeduction} kg</span></div>
+                ) : null}
+                {showDetail.qualityDeduction ? (
+                  <div className="flex justify-between text-sm"><span className="text-muted-foreground">Quality Deduction</span><span className="text-amber-600">− {showDetail.qualityDeduction} kg</span></div>
+                ) : null}
+                {showDetail.loanDeduction ? (
+                  <div className="flex justify-between text-sm"><span className="text-muted-foreground">Loan Deduction</span><span className="text-red-600">− UGX {showDetail.loanDeduction.toLocaleString()}</span></div>
+                ) : null}
+                {showDetail.inputDeduction ? (
+                  <div className="flex justify-between text-sm"><span className="text-muted-foreground">Input Deduction</span><span className="text-red-600">− UGX {showDetail.inputDeduction.toLocaleString()}</span></div>
+                ) : null}
+                <div className="flex justify-between text-sm"><span className="text-muted-foreground">MoMo Charges</span><span className="text-amber-600">− UGX {((showDetail as any).charges || 0).toLocaleString()}</span></div>
+                <div className="flex justify-between text-sm"><span className="text-muted-foreground">MoMo Tax</span><span className="text-red-600">− UGX {((showDetail as any).taxes || 0).toLocaleString()}</span></div>
                 <Separator />
-                <div className="flex justify-between font-bold"><span>Net Amount</span><span className="text-emerald-700 dark:text-emerald-400">UGX {((showDetail as any).netAmount || showDetail.totalAmount || 0).toLocaleString()}</span></div>
+                <div className="flex justify-between font-bold"><span>Net Payment to Farmer</span><span className="text-emerald-700 dark:text-emerald-400">UGX {((showDetail as any).netAmount || showDetail.totalAmount || 0).toLocaleString()}</span></div>
               </div>
               <div className="flex items-center gap-2">
                 <Badge className={cn('text-xs', purchaseStatusColor[showDetail.status] || '')}>{showDetail.status}</Badge>
@@ -430,53 +468,94 @@ export default function PurchasesView() {
   )
 }
 
-interface FarmerOption {
-  id: string
-  name: string
-  farmerCode: string
+
+/**
+ * NewPurchaseForm — Ekibbo-enhanced purchase entry form.
+ *
+ * Ekibbo team feedback addressed:
+ *   1. "Search Button to search for a farmer's name is not included"
+ *      → FarmerSearchSelect combobox (search by name / code / phone)
+ *   2. "Deductions of kilograms due to High moisture is not provided"
+ *      → Moisture reading + threshold; excess moisture auto-deducts weight in kg
+ *   3. "Deduction of amount of money due to loans is not included"
+ *      → Loan Deduction + Input Deduction fields reduce the net payment
+ *   4. "Commodity variety is supposed to be Form"
+ *      → Variety text input replaced by a "Form" dropdown (cherry/parchment/…)
+ *        (stored in the existing `variety` column — no schema break)
+ */
+const COMMODITIES = [
+  { value: 'coffee', label: 'Coffee' },
+  { value: 'cocoa', label: 'Cocoa' },
+  { value: 'vanilla', label: 'Vanilla' },
+  { value: 'cassava', label: 'Cassava' },
+  { value: 'avocado', label: 'Avocado' },
+  { value: 'jackfruit', label: 'Jackfruit' },
+]
+
+// Commodity "Form" options — the physical form in which produce is delivered
+const COMMODITY_FORMS: Record<string, string[]> = {
+  coffee: ['Fresh Cherry', 'Wet Parchment', 'Dry Parchment', 'Green Beans', 'Dry Cherry'],
+  cocoa: ['Wet Beans', 'Dry Beans', 'Pods'],
+  vanilla: ['Green Vanilla', 'Cured Vanilla'],
+  cassava: ['Fresh Tubers', 'Dry Chips', 'Flour'],
+  avocado: ['Fresh Fruit'],
+  jackfruit: ['Fresh Fruit', 'Slices'],
 }
+const DEFAULT_FORMS = ['Fresh Cherry', 'Wet Parchment', 'Dry Parchment', 'Green Beans', 'Other']
+
+const DEFAULT_MOISTURE_THRESHOLD = 13 // % — standard for coffee/cocoa parchment
+
+const fmtUGX = (n: number) => `UGX ${(Number(n) || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}`
+const fmtKg = (n: number) => `${(Number(n) || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })} kg`
 
 function NewPurchaseForm({ onClose }: { onClose: () => void }) {
   const [saving, setSaving] = useState(false)
-  const [farmers, setFarmers] = useState<FarmerOption[]>([])
-  const [farmersLoading, setFarmersLoading] = useState(true)
   const [form, setForm] = useState({
     farmerId: '',
-    commodity: '',
-    variety: '',
-    quantity: '',
-    unit: 'kg',
-    unitPrice: '',
-    charges: '',
-    tax: '',
+    commodity: 'coffee',
+    form: '',            // "Form" (stored in Purchase.variety)
+    totalWeight: '',
+    moistureReading: '',
+    moistureThreshold: String(DEFAULT_MOISTURE_THRESHOLD),
+    defectCount: '',
+    qualityDeduction: '',
+    dailyPrice: '',
+    loanDeduction: '',
+    inputDeduction: '',
+    momoCharges: '',
+    momoTax: '',
   })
-
-  useEffect(() => {
-    safeFetch('/api/farmers?limit=100').then((data) => {
-      const arr = extractArray(data, 'farmers', 'data')
-      setFarmers(arr.map((f: any) => ({
-        id: f.id,
-        name: `${f.firstName || ''} ${f.lastName || ''}`.trim() || f.farmerCode || 'Unknown',
-        farmerCode: f.farmerCode || '',
-      })))
-      setFarmersLoading(false)
-    })
-  }, [])
-
-  const qty = Number(form.quantity) || 0
-  const price = Number(form.unitPrice) || 0
-  const charges = Number(form.charges) || 0
-  const tax = Number(form.tax) || 0
-  const totalAmount = qty * price
-  const netAmount = totalAmount - charges - tax
 
   const update = (k: string, v: string) => setForm(p => ({ ...p, [k]: v }))
 
+  const totalWeight = Number(form.totalWeight) || 0
+  const moisture = Number(form.moistureReading) || 0
+  const threshold = Number(form.moistureThreshold) || DEFAULT_MOISTURE_THRESHOLD
+  const qualityDeduction = Number(form.qualityDeduction) || 0
+  const dailyPrice = Number(form.dailyPrice) || 0
+  const loanDeduction = Number(form.loanDeduction) || 0
+  const inputDeduction = Number(form.inputDeduction) || 0
+  const momoCharges = Number(form.momoCharges) || 0
+  const momoTax = Number(form.momoTax) || 0
+
+  // ── Moisture deduction: 1 kg deducted per percentage point above threshold
+  //    (industry rule-of-thumb for cherry/parchment weight correction)
+  const moistureExcess = Math.max(0, moisture - threshold)
+  const moistureDeduction = Math.min(totalWeight, moistureExcess * (totalWeight / 100))
+  const netWeight = Math.max(0, totalWeight - qualityDeduction - moistureDeduction)
+  const purchaseTotal = netWeight * dailyPrice
+  const netPayment = purchaseTotal - loanDeduction - inputDeduction - momoCharges - momoTax
+
+  const formOptions = COMMODITY_FORMS[form.commodity] || DEFAULT_FORMS
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!form.farmerId || !form.commodity || !form.quantity) {
-      toast.error('Farmer, commodity and quantity are required')
-      return
+    if (!form.farmerId) { toast.error('Farmer is required'); return }
+    if (!form.commodity) { toast.error('Commodity is required'); return }
+    if (totalWeight <= 0) { toast.error('Total weight must be greater than zero'); return }
+    if (dailyPrice <= 0) { toast.error('Daily price must be greater than zero'); return }
+    if (qualityDeduction + moistureDeduction > totalWeight) {
+      toast.error('Total deductions (quality + moisture) cannot exceed total weight'); return
     }
     setSaving(true)
     try {
@@ -486,14 +565,23 @@ function NewPurchaseForm({ onClose }: { onClose: () => void }) {
         body: JSON.stringify({
           farmerId: form.farmerId,
           commodity: form.commodity,
-          variety: form.variety || null,
-          quantity: String(form.quantity),
-          unitPrice: price,
-          totalAmount,
+          variety: form.form || null,          // "Form" (cherry / parchment / …)
+          quantity: String(form.totalWeight),
+          unit: 'kg',
+          unitPrice: dailyPrice,
           status: 'PENDING',
-          // EKIBBO charges + tax — Purchase schema uses momoCharges + momoTax
-          momoCharges: charges || null,
-          momoTax: tax || null,
+          approvalStatus: 'SUBMITTED',
+          // ── Ekibbo enhanced fields ──
+          dailyPrice,
+          moistureReading: form.moistureReading || null,
+          moistureThreshold: threshold,
+          moistureDeduction: moistureDeduction || null,
+          defectCount: form.defectCount || null,
+          qualityDeduction: form.qualityDeduction || null,
+          loanDeduction: form.loanDeduction || null,
+          inputDeduction: form.inputDeduction || null,
+          momoCharges: form.momoCharges || null,
+          momoTax: form.momoTax || null,
         }),
       })
       if (!res.ok) {
@@ -511,35 +599,137 @@ function NewPurchaseForm({ onClose }: { onClose: () => void }) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      {/* Farmer (searchable) + Commodity + Form */}
       <div className="space-y-1.5">
         <Label>Farmer *</Label>
-        <Select value={form.farmerId} onValueChange={v => update('farmerId', v)}>
-          <SelectTrigger><SelectValue placeholder={farmersLoading ? 'Loading farmers...' : 'Select farmer'} /></SelectTrigger>
-          <SelectContent>
-            {farmers.map(f => <SelectItem key={f.id} value={f.id}>{f.name} ({f.farmerCode})</SelectItem>)}
-          </SelectContent>
-        </Select>
+        <FarmerSearchSelect value={form.farmerId} onChange={v => update('farmerId', v)} />
       </div>
       <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-1.5"><Label>Commodity *</Label><Input value={form.commodity} onChange={e => update('commodity', e.target.value)} required /></div>
-        <div className="space-y-1.5"><Label>Variety</Label><Input value={form.variety} onChange={e => update('variety', e.target.value)} /></div>
+        <div className="space-y-1.5">
+          <Label>Commodity *</Label>
+          <Select value={form.commodity} onValueChange={v => { update('commodity', v); update('form', '') }}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {COMMODITIES.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1.5">
+          <Label>Form *</Label>
+          <Select value={form.form} onValueChange={v => update('form', v)}>
+            <SelectTrigger><SelectValue placeholder="Select form" /></SelectTrigger>
+            <SelectContent>
+              {formOptions.map(f => <SelectItem key={f} value={f}>{f}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
-      <div className="grid grid-cols-3 gap-3">
-        <div className="space-y-1.5"><Label>Quantity *</Label><Input type="number" value={form.quantity} onChange={e => update('quantity', e.target.value)} required /></div>
-        <div className="space-y-1.5"><Label>Unit</Label><Input value={form.unit} onChange={e => update('unit', e.target.value)} /></div>
-        <div className="space-y-1.5"><Label>Unit Price (UGX)</Label><Input type="number" value={form.unitPrice} onChange={e => update('unitPrice', e.target.value)} /></div>
+
+      <Separator />
+
+      {/* Weight & Moisture */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="space-y-1.5">
+          <Label>Total Weight (kg) *</Label>
+          <Input type="number" step="any" min="0" value={form.totalWeight}
+            onChange={e => update('totalWeight', e.target.value)} placeholder="0.00" required />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Moisture (%)</Label>
+          <Input type="number" step="any" min="0" max="100" value={form.moistureReading}
+            onChange={e => update('moistureReading', e.target.value)} placeholder="0.0" />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Moisture Std. (%)</Label>
+          <Input type="number" step="any" min="0" max="100" value={form.moistureThreshold}
+            onChange={e => update('moistureThreshold', e.target.value)} placeholder="13" />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Defects (blacks)</Label>
+          <Input type="number" min="0" value={form.defectCount}
+            onChange={e => update('defectCount', e.target.value)} placeholder="0" />
+        </div>
       </div>
+
+      {moistureExcess > 0 && (
+        <p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
+          <AlertCircle className="w-3.5 h-3.5" />
+          Moisture {moisture}% is {moistureExcess.toFixed(1)}% above standard — auto-deducting {fmtKg(moistureDeduction)}.
+        </p>
+      )}
+
       <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-1.5"><Label>Charges (UGX)</Label><Input type="number" value={form.charges} onChange={e => update('charges', e.target.value)} /></div>
-        <div className="space-y-1.5"><Label>Tax (UGX)</Label><Input type="number" value={form.tax} onChange={e => update('tax', e.target.value)} /></div>
+        <div className="space-y-1.5">
+          <Label>Quality Deduction (kg)</Label>
+          <Input type="number" step="any" min="0" value={form.qualityDeduction}
+            onChange={e => update('qualityDeduction', e.target.value)} placeholder="0.00" />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Daily Price (UGX/kg) *</Label>
+          <Input type="number" step="any" min="0" value={form.dailyPrice}
+            onChange={e => update('dailyPrice', e.target.value)} placeholder="0" required />
+        </div>
       </div>
-      <div className="bg-muted/50 p-3 rounded-lg space-y-1 text-sm">
-        <div className="flex justify-between"><span className="text-muted-foreground">Gross Amount:</span><span className="font-medium">UGX {totalAmount.toLocaleString()}</span></div>
-        <div className="flex justify-between"><span className="text-muted-foreground">Charges:</span><span className="text-amber-600">- UGX {charges.toLocaleString()}</span></div>
-        <div className="flex justify-between"><span className="text-muted-foreground">Tax:</span><span className="text-red-600">- UGX {tax.toLocaleString()}</span></div>
-        <Separator className="my-2" />
-        <div className="flex justify-between font-bold"><span>Net Amount:</span><span className="text-emerald-700 dark:text-emerald-400">UGX {Math.max(0, netAmount).toLocaleString()}</span></div>
+
+      <Separator />
+
+      {/* Deductions (money) */}
+      <div>
+        <h4 className="text-sm font-semibold mb-2">Money Deductions (UGX)</h4>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="space-y-1.5">
+            <Label>Loan Deduction</Label>
+            <Input type="number" step="any" min="0" value={form.loanDeduction}
+              onChange={e => update('loanDeduction', e.target.value)} placeholder="0" />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Input Deduction</Label>
+            <Input type="number" step="any" min="0" value={form.inputDeduction}
+              onChange={e => update('inputDeduction', e.target.value)} placeholder="0" />
+          </div>
+          <div className="space-y-1.5">
+            <Label>MoMo Charges</Label>
+            <Input type="number" step="any" min="0" value={form.momoCharges}
+              onChange={e => update('momoCharges', e.target.value)} placeholder="0" />
+          </div>
+          <div className="space-y-1.5">
+            <Label>MoMo Tax</Label>
+            <Input type="number" step="any" min="0" value={form.momoTax}
+              onChange={e => update('momoTax', e.target.value)} placeholder="0" />
+          </div>
+        </div>
       </div>
+
+      {/* Auto-calc summary */}
+      <div className="bg-primary/5 dark:bg-primary/10 border border-primary/20 dark:border-primary/30 rounded-lg p-4 space-y-3">
+        <h4 className="text-sm font-semibold text-primary">Auto-Calculated</h4>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="bg-background rounded-md p-3 border">
+            <p className="text-[11px] text-muted-foreground mb-1">Net Weight</p>
+            <p className="text-lg font-bold">{fmtKg(netWeight)}</p>
+            <p className="text-[10px] text-muted-foreground mt-0.5">
+              {fmtKg(totalWeight)} − {fmtKg(qualityDeduction)} quality − {fmtKg(moistureDeduction)} moisture
+            </p>
+          </div>
+          <div className="bg-background rounded-md p-3 border">
+            <p className="text-[11px] text-muted-foreground mb-1">Purchase Total</p>
+            <p className="text-lg font-bold text-blue-700 dark:text-blue-400">{fmtUGX(purchaseTotal)}</p>
+            <p className="text-[10px] text-muted-foreground mt-0.5">{fmtKg(netWeight)} × {fmtUGX(dailyPrice)}/kg</p>
+          </div>
+          <div className="bg-background rounded-md p-3 border-2 border-emerald-400/50 dark:border-emerald-500/40">
+            <p className="text-[11px] text-muted-foreground mb-1">Net Payment to Farmer</p>
+            <p className="text-lg font-bold text-emerald-700 dark:text-emerald-400">{fmtUGX(netPayment)}</p>
+            <p className="text-[10px] text-muted-foreground mt-0.5">Total − loan − input − MoMo − tax</p>
+          </div>
+        </div>
+        {netPayment < 0 && (
+          <p className="text-xs text-red-600 flex items-center gap-1.5">
+            <AlertCircle className="w-3.5 h-3.5" />
+            Net payment is negative — deductions exceed purchase total.
+          </p>
+        )}
+      </div>
+
       <DialogFooter className="gap-2">
         <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
         <Button type="submit" disabled={saving} className="gap-2">{saving && <Loader2 className="w-4 h-4 animate-spin" />} Create Purchase</Button>

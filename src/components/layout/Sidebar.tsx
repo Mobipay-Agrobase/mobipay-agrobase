@@ -153,6 +153,58 @@ for (const mod of ALL_MODULES) {
   MODULE_GROUPS[mod.group].push(mod)
 }
 
+// ─── Ekibbo sidebar prioritization (feedback: "Prioritization of contents on
+//     the left Ribbon") — the most-used operational modules come first.
+const EKB_GROUP_ORDER = [
+  'Overview',
+  'Core Operations',   // Farmer Profiling, Trainings, Farm Visits, Loans
+  'Supply Chain',      // Purchases, Input Distribution
+  'Farm Management',
+  'Intelligence',      // Reports
+  'Engagement',        // Surveys, Communication
+  'Master Data',       // Farmer Groups, Location Master, …
+  'Finance',
+  'Admin',
+]
+
+// Priority order of individual items within their groups (unlisted items keep
+// their original relative order after the listed ones)
+const EKB_ITEM_ORDER: Record<string, string[]> = {
+  'Core Operations': ['farmers', 'farm-lands', 'training', 'farm-visits', 'loans', 'payments', 'cultivations', 'marketplace'],
+  'Supply Chain': ['purchases', 'input-distribution', 'input-aggregation', 'approvals', 'processing', 'sales', 'deliveries', 'consignments', 'trace', 'plots'],
+  'Master Data': ['farmer-groups', 'location-master', 'field-staff', 'catalog-manager', 'crop-master'],
+  'Intelligence': ['reports', 'impact-assessment', 'agritrack'],
+  'Engagement': ['surveys', 'communication', 'feedback'],
+}
+
+/**
+ * Reorder groups + items for the Ekibbo tenant/roles so the daily workflow
+ * (Farmer registry → Purchases → Inputs → Trainings → Loans) is at the top.
+ */
+function prioritizeForEkibbo(entries: [string, NavItem[]][]): [string, NavItem[]][] {
+  const groups = [...entries].sort((a, b) => {
+    const ia = EKB_GROUP_ORDER.indexOf(a[0])
+    const ib = EKB_GROUP_ORDER.indexOf(b[0])
+    if (ia === -1 && ib === -1) return 0
+    if (ia === -1) return 1
+    if (ib === -1) return -1
+    return ia - ib
+  })
+  return groups.map(([label, items]) => {
+    const order = EKB_ITEM_ORDER[label]
+    if (!order) return [label, items] as [string, NavItem[]]
+    const sorted = [...items].sort((a, b) => {
+      const ia = order.indexOf(a.key)
+      const ib = order.indexOf(b.key)
+      if (ia === -1 && ib === -1) return 0
+      if (ia === -1) return 1
+      if (ib === -1) return -1
+      return ia - ib
+    })
+    return [label, sorted] as [string, NavItem[]]
+  })
+}
+
 // Maps sidebar permModule values to ModuleEntitlement module codes
 const PERM_TO_ENTITLEMENT: Record<string, string> = {
   'farmers': 'FARMERS',
@@ -302,7 +354,14 @@ export function Sidebar() {
               const allowedModules = new Set(getRoleModules(role))
               const isSuperAdmin = role === 'SUPER_ADMIN'
 
-              return Object.entries(MODULE_GROUPS).map(([groupLabel, items]) => {
+              // Ekibbo tenant/roles: reorder groups + items by daily-workflow priority
+              let groupEntries = Object.entries(MODULE_GROUPS) as [string, NavItem[]][]
+              const isEkbRole = role.startsWith('EKB_')
+              if (isEkbRole || tenantIsEkibbo) {
+                groupEntries = prioritizeForEkibbo(groupEntries)
+              }
+
+              return groupEntries.map(([groupLabel, items]) => {
                 // Hide Super Admin group for non-super-admin users
                 if (groupLabel === 'Super Admin' && !isSuperAdmin) return null
                 // MOBIPAY_FINANCE: hide most groups, only show Admin + Overview
@@ -315,7 +374,6 @@ export function Sidebar() {
                 if (isResetRole && !['Overview', 'ReSET MarketLink', 'Admin'].includes(groupLabel)) return null
 
                 // EKIBBO roles: only show specific groups
-                const isEkbRole = role.startsWith('EKB_')
                 const ekibboTenant = isEkbRole || tenantIsEkibbo
                 if (isEkbRole) {
                   const ekbAllowedGroups = ['Overview', 'Core Operations', 'Supply Chain', 'Farm Management', 'Master Data', 'Intelligence', 'Engagement', 'Finance', 'Admin']

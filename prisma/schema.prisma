@@ -1371,6 +1371,8 @@ model Purchase {
   // ─── EKIBBO Enhanced Purchase Workflow (nullable — no impact on other tenants) ───
   tenantId        String?   // links to tenant for EKIBBO purchases
   moistureReading Float?    // moisture percentage (coffee/cocoa)
+  moistureDeduction Float?  // kg deducted due to high moisture (above threshold)
+  moistureThreshold Float?  // moisture % threshold used at purchase time (default 13)
   moisturePhotoUrl String?  // URL of moisture meter photo
   defectCount     Int?      // number of defects/blacks (coffee quality)
   qualityDeduction Float?   // weight deducted due to quality (kg)
@@ -1438,6 +1440,8 @@ model InputDistribution {
   unit            String   @default("pcs")
   unitCost        Float
   totalCost       Float    // quantity × unitCost
+  paymentMode     String?  // CREDIT, CASH_FULL, CASH_PARTIAL (Ekibbo: cash in installments)
+  amountPaid      Float?   // amount paid at distribution time (cash full/partial)
   balanceRemaining Float?  // outstanding balance to be repaid
   status          String   @default("DISTRIBUTED") // DISTRIBUTED, PARTIALLY_REPAID, FULLY_REPAID
   distributionDate DateTime @default(now())

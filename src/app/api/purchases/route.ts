@@ -61,7 +61,9 @@ export async function POST(request: Request) {
     if (isEnhanced) {
       const totalWeight = parseFloat(body.quantity) || 0
       const qualityDeduction = parseFloat(body.qualityDeduction) || 0
-      netWeight = totalWeight - qualityDeduction
+      const moistureDeduction = parseFloat(body.moistureDeduction) || 0
+      // Net weight = total − quality deduction (defects etc.) − moisture deduction
+      netWeight = Math.max(0, totalWeight - qualityDeduction - moistureDeduction)
 
       const dailyPrice = parseFloat(body.dailyPrice) || 0
       totalAmount = netWeight * dailyPrice
@@ -91,6 +93,8 @@ export async function POST(request: Request) {
         // EKIBBO enhanced fields (nullable — no impact on non-EKIBBO tenants)
         tenantId: ctx.tenantId,
         moistureReading: body.moistureReading ? parseFloat(body.moistureReading) : null,
+        moistureDeduction: body.moistureDeduction ? parseFloat(body.moistureDeduction) : null,
+        moistureThreshold: body.moistureThreshold ? parseFloat(body.moistureThreshold) : null,
         moisturePhotoUrl: body.moisturePhotoUrl || null,
         defectCount: body.defectCount ? parseInt(body.defectCount) : null,
         qualityDeduction: body.qualityDeduction ? parseFloat(body.qualityDeduction) : null,

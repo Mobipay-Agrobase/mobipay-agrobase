@@ -116,17 +116,14 @@ function AddFarmerForm({ onClose, initialData, farmerId }: { onClose: () => void
   const isEdit = !!farmerId
   const [saving, setSaving] = useState(false)
   const [activeTab, setActiveTab] = useState('enrollment')
-  const [officers, setOfficers] = useState<{ id: string; name: string }[]>([])
-  const [coopOptions, setCoopOptions] = useState<{ id: string; name: string }[]>([])
+  // Ekibbo feedback: "Lets change cooperative to Farmer group" — groups now come
+  // from /api/farmer-groups instead of /api/cooperatives.
+  const [groupOptions, setGroupOptions] = useState<{ id: string; name: string }[]>([])
 
   useEffect(() => {
-    fetch('/api/field-staff?limit=1000')
+    fetch('/api/farmer-groups?limit=1000')
       .then(r => r.json())
-      .then(d => setOfficers((d.data || []).map((s: any) => ({ id: s.id, name: `${s.firstName} ${s.lastName}` }))))
-      .catch(() => {})
-    fetch('/api/cooperatives?limit=1000')
-      .then(r => r.json())
-      .then(d => setCoopOptions((d.data || []).map((c: any) => ({ id: c.id, name: c.name }))))
+      .then(d => setGroupOptions((d.data || []).map((g: any) => ({ id: g.id, name: g.name }))))
       .catch(() => {})
   }, [])
   const [form, setForm] = useState<Record<string, any>>(() => {
@@ -139,10 +136,8 @@ function AddFarmerForm({ onClose, initialData, farmerId }: { onClose: () => void
       certificationType: '',
       icsYear: '',
       farmerRegistrationUnder: '',
-      cooperative: '',
-      cooperativeId: '',
-      fieldOfficer: '',
-      extensionOfficer: '',
+      groupId: '',
+      groupName: '',
 
       // Tab 2: Personal Information
       firstName: '',
@@ -328,13 +323,13 @@ function AddFarmerForm({ onClose, initialData, farmerId }: { onClose: () => void
       setActiveTab('enrollment')
       return
     }
-    if (!form.cooperativeId) {
-      toast.error('Please select a Cooperative')
+    if (!form.groupId) {
+      toast.error('Please select a Farmer Group')
       setActiveTab('enrollment')
       return
     }
-    if (!form.extensionOfficer) {
-      toast.error('Please select a Field Officer')
+    if (!form.district || !form.commune || !form.villageName) {
+      toast.error('Please select District, Subcounty and Village (used for the farmer code)')
       setActiveTab('enrollment')
       return
     }
@@ -352,10 +347,7 @@ function AddFarmerForm({ onClose, initialData, farmerId }: { onClose: () => void
         certificationType: str(form.certificationType),
         icsYear: str(form.icsYear),
         farmerRegistrationUnder: str(form.farmerRegistrationUnder),
-        cooperative: str(form.cooperative),
-        cooperativeId: str(form.cooperativeId),
-        fieldOfficer: str(form.fieldOfficer),
-        extensionOfficer: str(form.extensionOfficer),
+        groupId: str(form.groupId),
 
         // Tab 2: Personal Information
         firstName: form.firstName,
@@ -542,35 +534,58 @@ function AddFarmerForm({ onClose, initialData, farmerId }: { onClose: () => void
               </label>
             </div>
           </FormField>
-          <div className="grid grid-cols-2 gap-3">
-            <FormField label="Cooperative *" required>
-              <Select value={form.cooperativeId || undefined}
-                onValueChange={v => {
-                  const c = coopOptions.find(o => o.id === v)
-                  update('cooperativeId', v)
-                  update('cooperative', c?.name ?? '')
-                }}>
-                <SelectTrigger><SelectValue placeholder={form.cooperative || "Select cooperative"} /></SelectTrigger>
-                <SelectContent>
-                  {coopOptions.length === 0 && <div className="px-3 py-2 text-xs text-muted-foreground">No cooperatives yet — add one under Master Data.</div>}
-                  {coopOptions.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </FormField>
-            <FormField label="Field Officer *" required>
-              <Select value={form.extensionOfficer || undefined}
-                onValueChange={v => {
-                  const o = officers.find(x => x.name === v)
-                  update('extensionOfficer', v)
-                  update('fieldOfficer', o?.name ?? v)
-                }}>
-                <SelectTrigger><SelectValue placeholder={form.fieldOfficer || "Select field officer"} /></SelectTrigger>
-                <SelectContent>
-                  {officers.length === 0 && <div className="px-3 py-2 text-xs text-muted-foreground">No field officers yet — add one under Master Data.</div>}
-                  {officers.map(o => <SelectItem key={o.id} value={o.name}>{o.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </FormField>
+
+          {/* ── Farmer Group (Ekibbo: replaced Cooperative) ── */}
+          <div className="space-y-1.5">
+            <Label>Farmer Group *</Label>
+            <Select value={form.groupId || undefined}
+              onValueChange={v => {
+                const g = groupOptions.find(o => o.id === v)
+                update('groupId', v)
+                update('groupName', g?.name ?? '')
+              }}>
+              <SelectTrigger><SelectValue placeholder={form.groupName || 'Select farmer group'} /></SelectTrigger>
+              <SelectContent>
+                {groupOptions.length === 0 && <div className="px-3 py-2 text-xs text-muted-foreground">No farmer groups yet — add one under Master Data.</div>}
+                {groupOptions.map(g => <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* ── Location (Ekibbo: District / Subcounty / Village drive the farmer code) ── */}
+          <div className="space-y-2">
+            <Label>District / Subcounty / Village *</Label>
+            <LocationPicker
+              value={{
+                country: 'Uganda',
+                villageId: form.villageId,
+              }}
+              onChange={sel => {
+                update('country', sel.country || 'Uganda')
+                update('province', sel.region || '')
+                update('district', sel.district || '')
+                update('commune', sel.subCounty || '')
+                update('villageName', sel.village || '')
+                update('villageId', sel.villageId || '')
+              }}
+            />
+            {/* Live farmer-code preview in Ekibbo MN0001L format */}
+            <div className="flex items-center gap-2 flex-wrap">
+              {(form.district || form.commune || form.villageName) ? (
+                <>
+                  <Badge variant="outline" className="font-mono text-xs">
+                    Farmer code: {(form.district?.[0] || '•').toUpperCase()}
+                    {(form.commune?.[0] || '•').toUpperCase()}####
+                    {(form.villageName?.[0] || '•').toUpperCase()}
+                  </Badge>
+                  <span className="text-[10px] text-muted-foreground">
+                    e.g. M = {form.district || 'District'}, N = {form.commune || 'Subcounty'}, L = {form.villageName || 'Village'} — final number assigned on save
+                  </span>
+                </>
+              ) : (
+                <span className="text-[10px] text-muted-foreground">Select District → Subcounty → Village to build the farmer code (e.g. MN0001L).</span>
+              )}
+            </div>
           </div>
         </TabsContent>
 
@@ -630,24 +645,24 @@ function AddFarmerForm({ onClose, initialData, farmerId }: { onClose: () => void
 
         {/* ── Tab 3: Contact Information ── */}
         <TabsContent value="contact" className="mt-4 space-y-4 form-tab-content">
-          <LocationPicker
-            value={{
-              country: 'Uganda',
-              villageId: form.villageId,
-            }}
-            onChange={sel => {
-              update('country', sel.country || 'Uganda')
-              update('province', sel.region || '')
-              update('district', sel.district || '')
-              update('commune', sel.subCounty || '')
-              update('villageName', sel.village || '')
-              update('villageId', sel.villageId || '')
-            }}
-          />
+          <p className="text-xs text-muted-foreground">District / Subcounty / Village are captured on the Enrollment tab (they build the farmer code).</p>
           <div className="grid grid-cols-2 gap-3">
+            <FormField label="District (from enrollment)">
+              <Input value={form.district || ''} disabled placeholder="Set on Enrollment tab" />
+            </FormField>
+            <FormField label="Subcounty (from enrollment)">
+              <Input value={form.commune || ''} disabled placeholder="Set on Enrollment tab" />
+            </FormField>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <FormField label="Village (from enrollment)">
+              <Input value={form.villageName || ''} disabled placeholder="Set on Enrollment tab" />
+            </FormField>
             <FormField label="Zip Code">
               <Input value={form.zipCode} onChange={e => update('zipCode', e.target.value)} />
             </FormField>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
             <FormField label="Country">
               <Input value={form.country || 'Uganda'} disabled placeholder="Uganda" />
             </FormField>

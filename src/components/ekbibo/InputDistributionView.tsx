@@ -19,6 +19,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogC
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { toast } from 'sonner'
 import { EmptyState, exportToCSV } from '@/components/ui/empty-state'
+import { FarmerSearchSelect } from '@/components/ui/farmer-search-select'
 
 interface InputDistribution {
   id: string
@@ -29,6 +30,8 @@ interface InputDistribution {
   unit: string
   unitCost: number
   totalCost: number
+  paymentMode?: string | null
+  amountPaid?: number | null
   balanceRemaining: number
   status: string
   distributionDate: string
@@ -165,6 +168,8 @@ export default function InputDistributionView() {
                 Unit: d.unit,
                 UnitCost: d.unitCost,
                 TotalCost: d.totalCost,
+                PaymentMode: d.paymentMode || 'CREDIT',
+                AmountPaid: d.amountPaid || 0,
                 BalanceRemaining: d.balanceRemaining,
                 Status: d.status,
                 Date: d.distributionDate ? new Date(d.distributionDate).toLocaleDateString() : '',
@@ -209,6 +214,7 @@ export default function InputDistributionView() {
                     <TableHead className="hidden sm:table-cell">Unit</TableHead>
                     <TableHead className="text-right hidden md:table-cell">Unit Cost</TableHead>
                     <TableHead className="text-right">Total Cost</TableHead>
+                    <TableHead className="text-right hidden lg:table-cell">Paid</TableHead>
                     <TableHead className="text-right hidden lg:table-cell">Balance</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="hidden md:table-cell">Date</TableHead>
@@ -234,6 +240,7 @@ export default function InputDistributionView() {
                         <TableCell className="hidden sm:table-cell text-xs text-muted-foreground">{d.unit || 'pcs'}</TableCell>
                         <TableCell className="text-right hidden md:table-cell text-sm">{fmtUGX(d.unitCost)}</TableCell>
                         <TableCell className="text-right text-sm font-semibold">{fmtUGX(d.totalCost)}</TableCell>
+                        <TableCell className="text-right hidden lg:table-cell text-sm text-blue-600">{d.amountPaid ? fmtUGX(d.amountPaid) : '—'}</TableCell>
                         <TableCell className="text-right hidden lg:table-cell text-sm text-amber-600 dark:text-amber-400">{fmtUGX(d.balanceRemaining)}</TableCell>
                         <TableCell>
                           <Badge className={cn('text-[10px]', statusColor[d.status] || 'bg-gray-100 text-gray-700')}>
@@ -282,6 +289,12 @@ export default function InputDistributionView() {
 
 // ─── Distribution Form ─────────────────────────────────────────────
 
+const PAYMENT_MODES = [
+  { value: 'CREDIT', label: 'Credit (pay later)', hint: 'Full amount remains as balance' },
+  { value: 'CASH_FULL', label: 'Cash — Full payment', hint: 'Paid in full now, no balance' },
+  { value: 'CASH_PARTIAL', label: 'Cash — Partial (installments)', hint: 'Pay part now, balance to be paid' },
+]
+
 function InputDistributionForm({
   distribution,
   onClose,
@@ -292,8 +305,6 @@ function InputDistributionForm({
   onSaved: () => void
 }) {
   const [saving, setSaving] = useState(false)
-  const [farmers, setFarmers] = useState<Farmer[]>([])
-  const [farmersLoading, setFarmersLoading] = useState(true)
   const [form, setForm] = useState<Record<string, any>>({
     farmerId: distribution?.farmerId || '',
     inputType: distribution?.inputType || 'tarpaulin',
@@ -306,24 +317,22 @@ function InputDistributionForm({
       : new Date().toISOString().split('T')[0],
     status: distribution?.status || 'DISTRIBUTED',
     notes: distribution?.notes || '',
+    // ── Ekibbo payment fields ──
+    paymentMode: distribution?.paymentMode || 'CREDIT',
+    amountPaid: distribution?.amountPaid != null ? String(distribution.amountPaid) : '',
   })
-
-  useEffect(() => {
-    let cancelled = false
-    safeFetch('/api/farmers?limit=200').then(data => {
-      if (cancelled) return
-      const arr = extractArray(data, 'farmers', 'data')
-      setFarmers(arr)
-      setFarmersLoading(false)
-    })
-    return () => { cancelled = true }
-  }, [])
 
   const update = (k: string, v: any) => setForm(p => ({ ...p, [k]: v }))
 
   const qty = Number(form.quantity) || 0
   const unitCost = Number(form.unitCost) || 0
   const totalCost = qty * unitCost
+  const paid = form.paymentMode === 'CASH_FULL'
+    ? totalCost
+    : form.paymentMode === 'CASH_PARTIAL'
+      ? Math.max(0, Math.min(Number(form.amountPaid) || 0, totalCost))
+      : 0
+  const balance = Math.max(0, totalCost - paid)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -334,6 +343,11 @@ function InputDistributionForm({
 
     setSaving(true)
     try {
+      if (!distribution && form.paymentMode === 'CASH_PARTIAL' && paid <= 0) {
+        toast.error('Enter the amount the farmer is paying now')
+        setSaving(false)
+        return
+      }
       const payload: Record<string, any> = {
         farmerId: form.farmerId,
         inputType: form.inputType,
@@ -343,6 +357,8 @@ function InputDistributionForm({
         unitCost: String(form.unitCost),
         distributionDate: form.distributionDate || null,
         notes: form.notes || null,
+        paymentMode: form.paymentMode,
+        amountPaid: form.paymentMode === 'CASH_PARTIAL' ? String(form.amountPaid) : undefined,
       }
       if (distribution) {
         payload.status = form.status
@@ -373,19 +389,8 @@ function InputDistributionForm({
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-1.5">
         <Label>Farmer *</Label>
-        <Select value={form.farmerId} onValueChange={v => update('farmerId', v)}>
-          <SelectTrigger><SelectValue placeholder={farmersLoading ? 'Loading farmers...' : 'Select farmer'} /></SelectTrigger>
-          <SelectContent>
-            {farmers.map(f => (
-              <SelectItem key={f.id} value={f.id}>
-                {f.firstName} {f.lastName}{f.farmerCode ? ` (${f.farmerCode})` : ''}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {farmers.length === 0 && !farmersLoading && (
-          <p className="text-xs text-amber-600 flex items-center gap-1 mt-1"><AlertCircle className="w-3 h-3" /> No farmers found</p>
-        )}
+        <FarmerSearchSelect value={form.farmerId} onChange={v => update('farmerId', v)} />
+        <p className="text-[11px] text-muted-foreground">Type to search by name, farmer code or phone.</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -457,12 +462,65 @@ function InputDistributionForm({
         />
       </div>
 
+      {/* ── Payment (Ekibbo: balance when paying cash in installments) ── */}
+      {!distribution && (
+        <div className="border rounded-lg p-3 space-y-3">
+          <h4 className="text-sm font-semibold flex items-center gap-2"><Wallet className="w-4 h-4 text-primary" /> Payment</h4>
+          <div className="space-y-2">
+            {PAYMENT_MODES.map(m => (
+              <label
+                key={m.value}
+                className={cn(
+                  'flex items-start gap-2.5 p-2.5 rounded-md border cursor-pointer transition-colors',
+                  form.paymentMode === m.value ? 'border-primary bg-primary/5' : 'border-border hover:bg-muted/50'
+                )}
+              >
+                <input
+                  type="radio"
+                  name="paymentMode"
+                  className="mt-0.5 accent-primary"
+                  checked={form.paymentMode === m.value}
+                  onChange={() => update('paymentMode', m.value)}
+                />
+                <span className="flex flex-col">
+                  <span className="text-sm font-medium">{m.label}</span>
+                  <span className="text-[11px] text-muted-foreground">{m.hint}</span>
+                </span>
+              </label>
+            ))}
+          </div>
+          {form.paymentMode === 'CASH_PARTIAL' && (
+            <div className="space-y-1.5">
+              <Label>Amount Paid Now (UGX) *</Label>
+              <Input
+                type="number" step="any" min="0" max={totalCost || undefined}
+                value={form.amountPaid}
+                onChange={e => update('amountPaid', e.target.value)}
+                placeholder="0"
+              />
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Auto-calc */}
       <div className="bg-muted/50 p-3 rounded-lg space-y-1 text-sm">
         <div className="flex justify-between">
           <span className="text-muted-foreground">Total Cost (auto):</span>
           <span className="font-bold text-emerald-700 dark:text-emerald-400">{fmtUGX(totalCost)}</span>
         </div>
+        {!distribution && paid > 0 && (
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Paid Now:</span>
+            <span className="font-medium text-blue-600">{fmtUGX(paid)}</span>
+          </div>
+        )}
+        {!distribution && (
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Balance to be Paid:</span>
+            <span className="font-bold text-amber-600">{fmtUGX(balance)}</span>
+          </div>
+        )}
         <p className="text-[10px] text-muted-foreground">
           = {qty.toLocaleString()} {form.unit} × {fmtUGX(unitCost)}
         </p>

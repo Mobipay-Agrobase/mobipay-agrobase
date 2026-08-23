@@ -1293,6 +1293,8 @@ export function EkbOpsManagerDashboard() {
   const { stats, monthlyRegs, loading } = useDashboardStats()
   const [pendingPurchases, setPendingPurchases] = useState<any[]>([])
   const [recentTrainings, setRecentTrainings] = useState<any[]>([])
+  const [ops, setOps] = useState<any>(null)
+  const [loyalty, setLoyalty] = useState<any>(null)
 
   useEffect(() => {
     fetchJson('/api/purchases?limit=30').then(d => {
@@ -1302,12 +1304,17 @@ export function EkbOpsManagerDashboard() {
     fetchJson('/api/trainings?limit=10').then(d => {
       setRecentTrainings(Array.isArray(d?.data) ? d.data : (Array.isArray(d) ? d : []))
     })
+    // Ekibbo feedback: full operations summary (registry, groups, volumes,
+    // inputs, loans, loyalty) for the Operations Manager dashboard.
+    fetchJson('/api/dashboard/ops-summary').then(setOps).catch(() => {})
+    fetchJson('/api/dashboard/ekibbo-loyalty').then(setLoyalty).catch(() => {})
   }, [])
 
   if (loading) return <DashSkeleton />
   if (!stats) return <DashError />
 
   const lineConfig: ChartConfig = { value: { label: 'Farmers', color: 'var(--chart-1)' } }
+  const volumeConfig: ChartConfig = { volumeKg: { label: 'Volume (kg)', color: 'var(--chart-2)' } }
 
   return (
     <div className="space-y-6">
@@ -1317,9 +1324,194 @@ export function EkbOpsManagerDashboard() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard label="Farmers Registered" value={fmtNum(stats.farmerCount)} icon={Users} color="bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600" trend="+8%" />
         <StatCard label="Trainings Conducted" value={stats.trainingCount} icon={GraduationCap} color="bg-purple-50 dark:bg-purple-950/40 text-purple-600" />
-        <StatCard label="Farmer Groups" value={stats.groupCount} icon={UserCheck} color="bg-blue-50 dark:bg-blue-950/40 text-blue-600" />
+        <StatCard label="Farmer Groups" value={ops?.farmerGroups?.total ?? stats.groupCount} icon={UserCheck} color="bg-blue-50 dark:bg-blue-950/40 text-blue-600" />
         <StatCard label="Purchases Pending Approval" value={pendingPurchases.length} icon={ClipboardCheck} color="bg-amber-50 dark:bg-amber-950/40 text-amber-600" />
       </div>
+
+      {/* ── Operations Summary (Ekibbo feedback: registry, groups, volumes,
+             inputs, loans, loyalty) ─────────────────────────────────────── */}
+      {ops && (
+        <>
+          {/* Registry + Loyalty row */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <Card>
+              <CardHeader className="pb-2"><CardTitle className="text-base">Farmer Registry</CardTitle></CardHeader>
+              <CardContent className="space-y-3">
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="p-2.5 rounded-lg bg-muted/50">
+                    <p className="text-[11px] text-muted-foreground">Total Registered</p>
+                    <p className="text-xl font-bold">{fmtNum(ops.farmerRegistry?.total ?? 0)}</p>
+                  </div>
+                  <div className="p-2.5 rounded-lg bg-muted/50">
+                    <p className="text-[11px] text-muted-foreground">Active</p>
+                    <p className="text-xl font-bold text-emerald-600">{fmtNum(ops.farmerRegistry?.active ?? 0)}</p>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground mb-1.5">By District</p>
+                  <div className="space-y-1">
+                    {(ops.farmerRegistry?.byDistrict || []).slice(0, 5).map((d: any) => (
+                      <div key={d.district} className="flex items-center justify-between text-xs">
+                        <span className="flex items-center gap-1.5"><MapPin className="w-3 h-3 text-muted-foreground" />{d.district}</span>
+                        <span className="font-semibold">{d.count}</span>
+                      </div>
+                    ))}
+                    {(ops.farmerRegistry?.byDistrict || []).length === 0 && (
+                      <p className="text-xs text-muted-foreground">No district data yet</p>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-2"><CardTitle className="text-base">Farmer Groups Formed</CardTitle></CardHeader>
+              <CardContent className="space-y-3">
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="p-2.5 rounded-lg bg-muted/50">
+                    <p className="text-[11px] text-muted-foreground">Total Groups</p>
+                    <p className="text-xl font-bold">{fmtNum(ops.farmerGroups?.total ?? 0)}</p>
+                  </div>
+                  <div className="p-2.5 rounded-lg bg-muted/50">
+                    <p className="text-[11px] text-muted-foreground">Active</p>
+                    <p className="text-xl font-bold text-emerald-600">{fmtNum(ops.farmerGroups?.active ?? 0)}</p>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground mb-1.5">Inputs Distributed by Type</p>
+                  <div className="space-y-1">
+                    {(ops.inputs?.byType || []).slice(0, 5).map((i: any) => (
+                      <div key={i.inputType} className="flex items-center justify-between text-xs">
+                        <span className="capitalize">{String(i.inputType || '').replace(/_/g, ' ')}</span>
+                        <span className="font-semibold">{fmtNum(i.quantity)} × · {fmtUGX(i.value)}</span>
+                      </div>
+                    ))}
+                    {(ops.inputs?.byType || []).length === 0 && (
+                      <p className="text-xs text-muted-foreground">No inputs distributed yet</p>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-2"><CardTitle className="text-base">Loyalty Summary</CardTitle></CardHeader>
+              <CardContent>
+                {loyalty?.kpi ? (
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="p-2.5 rounded-lg bg-muted/50">
+                        <p className="text-[11px] text-muted-foreground">Loyal Farmers</p>
+                        <p className="text-xl font-bold">{fmtNum(loyalty.kpi.loyalFarmerCount ?? 0)}</p>
+                      </div>
+                      <div className="p-2.5 rounded-lg bg-muted/50">
+                        <p className="text-[11px] text-muted-foreground">Loyalty Rate</p>
+                        <p className="text-xl font-bold text-emerald-600">
+                          {loyalty.kpi.loyalFarmerRate != null ? `${loyalty.kpi.loyalFarmerRate}%` : '—'}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-xs text-muted-foreground space-y-1">
+                      <p>Repeat sellers: <span className="font-semibold text-foreground">{loyalty.kpi.repeatSellerCount ?? 0}</span>
+                        {loyalty.kpi.repeatSellerRate != null && ` (${loyalty.kpi.repeatSellerRate}%)`}</p>
+                      <p>Avg sales / farmer: <span className="font-semibold text-foreground">{loyalty.engagement?.avgSalesPerFarmer ?? 0}</span></p>
+                      <p>Multi-crop farmers: <span className="font-semibold text-foreground">{loyalty.engagement?.multiCropFarmerCount ?? 0}</span></p>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground py-4 text-center">Loyalty data not available</p>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Volumes purchased — by crop, district, season */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <Card>
+              <CardHeader className="pb-2"><CardTitle className="text-base">Volumes Purchased by Crop</CardTitle></CardHeader>
+              <CardContent>
+                <ChartContainer config={volumeConfig} className="h-[220px] w-full">
+                  <BarChart data={(ops.purchases?.byCrop || []).slice(0, 6)}>
+                    <CartesianGrid vertical={false} strokeDasharray="3 3" opacity={0.3} />
+                    <XAxis dataKey="crop" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Bar dataKey="volumeKg" fill="var(--chart-2)" radius={[6, 6, 0, 0]} />
+                  </BarChart>
+                </ChartContainer>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-2"><CardTitle className="text-base">Volumes by District</CardTitle></CardHeader>
+              <CardContent>
+                <ChartContainer config={volumeConfig} className="h-[220px] w-full">
+                  <BarChart data={(ops.purchases?.byDistrict || []).slice(0, 6)}>
+                    <CartesianGrid vertical={false} strokeDasharray="3 3" opacity={0.3} />
+                    <XAxis dataKey="district" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Bar dataKey="volumeKg" fill="var(--chart-3)" radius={[6, 6, 0, 0]} />
+                  </BarChart>
+                </ChartContainer>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-2"><CardTitle className="text-base">Farmers with Loans by Season</CardTitle></CardHeader>
+              <CardContent className="p-0">
+                {(ops.loans?.bySeason || []).length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground text-sm">No loan data yet</div>
+                ) : (
+                  <Table>
+                    <TableHeader><TableRow>
+                      <TableHead>Season</TableHead>
+                      <TableHead className="text-right">Farmers</TableHead>
+                      <TableHead className="text-right">Amount</TableHead>
+                    </TableRow></TableHeader>
+                    <TableBody>
+                      {ops.loans.bySeason.slice(0, 6).map((s: any) => (
+                        <TableRow key={s.season}>
+                          <TableCell className="text-sm">{s.season}</TableCell>
+                          <TableCell className="text-right text-sm font-medium">{s.farmers}</TableCell>
+                          <TableCell className="text-right text-sm">{fmtUGX(s.amount)}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Purchases by season table */}
+          <Card>
+            <CardHeader className="pb-2"><CardTitle className="text-base">Volumes Purchased by Season</CardTitle></CardHeader>
+            <CardContent className="p-0">
+              {(ops.purchases?.bySeason || []).length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground text-sm">No purchases yet</div>
+              ) : (
+                <Table>
+                  <TableHeader><TableRow>
+                    <TableHead>Season</TableHead>
+                    <TableHead className="text-right">Volume (kg)</TableHead>
+                    <TableHead className="text-right">Value (UGX)</TableHead>
+                  </TableRow></TableHeader>
+                  <TableBody>
+                    {ops.purchases.bySeason.map((s: any) => (
+                      <TableRow key={s.season}>
+                        <TableCell className="text-sm font-medium">{s.season}</TableCell>
+                        <TableCell className="text-right text-sm">{fmtNum(s.volumeKg)}</TableCell>
+                        <TableCell className="text-right text-sm">{fmtUGX(s.value)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </>
+      )}
 
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

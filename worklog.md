@@ -202,3 +202,26 @@ Stage Summary:
 - mobile-ekibbo/ committed (70348d4) and pushed to origin/main
 - Same UI-UX as PPT, Agrobase branding, Ekibbo green, offline-first, tenant-isolated
 - API points at Agrobase web platform; feature screens beyond auth/farmer-registry still use upstream endpoint shapes — needs endpoint mapping per feature in next sprint (dashboard/farmers/plots align with existing /api/mobile/* routes)
+
+---
+Task ID: 10
+Agent: Super Z
+Task: Complete pending Ekibbo mobile endpoint mapping + production URL + local test readiness
+
+Work Log:
+- Built server-side adapter layer (src/lib/mobile/ekibbo-adapter.ts): numericId() 52-bit dual-salted FNV-1a hash of full cuid (JSON/Dart-safe; naive slice-prefix hash collides systematically on batch-seeded cuids — rejected), mapFarmer() to upstream FarmerModel shape, resolveFarmerByNumericId() with collision rejection
+- 8 new endpoints under /api/mobile/ekibbo-*: home (staff dashboard), home-farmer, farmers (paged+flat search), farmer/[id] (numeric|me), farmer POST (multipart register/update w/ photo data-URI + MN0001L codes), geo (Region→SubRegion→District→SubCounty cascade + FarmerGroup cooperatives), profile, register-dropdowns
+- Role gates (ekibbo-mobile-utils): EKB_FARMER 403 on registry/dashboard/geo; staff whitelist mirrors web RBAC
+- Client: env_config default → https://mobipay-agrobase.vercel.app; retrofit clients (farmer/dashboard/auth/location/weather) repointed — both annotations AND generated .g.dart patched (works without build_runner); weather → Kampala w/ dart-define overrides
+- Fixed Prisma relation name (farmLands→farms) caught by tsc + runtime knowledge
+- Created mobile test users on Ekibbo tenant: Field Officer +256700111222 / Farmer +256700333444 (password Ekibbo2026!)
+- E2E verified via next dev + curl against live Neon DB: login, dashboard (1975 farmers/15,662 ha/1,237 plots), paged list, flat search, detail roundtrip (numeric id → correct farmer), 4-level geo cascade, multipart registration (farmer_code MN0001L generated), farmer-role 403 gates, cross-tenant isolation (0 leaks), unauth 401
+- Collision test: numericId unique across 2081 farmers / 2228 subcounties / 184 districts / 15 subregions
+- Note: local `next dev` needs DATABASE_URL without pgbouncer=true param (Turbopack quirk); production Vercel unaffected
+- Committed fabe9e4, pushed to origin/main
+
+Stage Summary:
+- Pending endpoint-mapping task COMPLETE and live-verified
+- App defaults to production URL — user can pull, flutter pub get, flutter run
+- New server endpoints deploy to Vercel on push (auto-deploy) before user tests
+- Farmer-detail sub-tabs (family/assets/bank/…) still upstream-shaped — next sprint

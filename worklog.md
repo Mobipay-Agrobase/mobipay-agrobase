@@ -225,3 +225,22 @@ Stage Summary:
 - App defaults to production URL — user can pull, flutter pub get, flutter run
 - New server endpoints deploy to Vercel on push (auto-deploy) before user tests
 - Farmer-detail sub-tabs (family/assets/bank/…) still upstream-shaped — next sprint
+
+---
+Task ID: 11
+Agent: Super Z
+Task: Fix Android build failure on user's Mac (Java 25 / Gradle incompatibility)
+
+Work Log:
+- Diagnosed: 'Unsupported class file major version 69' = user's Flutter uses JDK 25; project pinned Gradle 8.13 (max Java 24) → Gradle crashed compiling build scripts
+- gradle-wrapper.properties: 8.13 → 9.1.0 (first Gradle release that runs on Java 25; AGP 8.13.1 already in project supports Gradle 9.x)
+- settings.gradle: Kotlin plugin 1.8.22 → 2.2.20 (KGP 1.8.x cannot load on Gradle 9; 2.2+ officially supports Gradle 9)
+- app/build.gradle: removed stale buildToolsVersion '30.0.3' pin (incompatible with compileSdk 36), Java/Kotlin compat 1.8 → 11
+- l10n: added missing vi 'add_new_' → 'Thêm mới' (clears untranslated-message warning)
+- Removed stale .fvmrc (pinned Flutter 3.24.3; user runs current stable)
+- Committed 9df7ae2, pushed to origin/main
+
+Stage Summary:
+- Java-25-compatible Android toolchain in repo; user pulls → flutter clean → flutter run
+- First build downloads Gradle 9.1 (~130MB, one-time)
+- Fallback documented: flutter config --jdk-dir to a JDK 17/21 if the user prefers pinning the JVM instead

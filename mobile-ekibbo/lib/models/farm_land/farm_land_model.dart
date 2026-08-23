@@ -1,14 +1,4 @@
-import 'packag
-    this.landSurveyNo,
-    this.waterSource,
-    this.powerSource,
-    this.soilFertility,
-    this.irrigationType,
-    this.estYield,
-    this.fullTimeWorkers,
-    this.partTimeWorkers,
-    this.seasonalWorkers,
-    this.familyWorkers,e:json_annotation/json_annotation.dart';
+import 'package:json_annotation/json_annotation.dart';
 import 'package:agrobase_ekibbo/models/all_farmer/farmer_model.dart';
 import 'package:agrobase_ekibbo/models/cultivation/cultivation_model.dart';
 
@@ -36,7 +26,20 @@ class FarmLandModel {
   String? landTopology;
   @JsonKey(name: 'land_gradient')
   String? landGradient;
-  // Web-parity datapoints (FarmLandFormPage)
+  @JsonKey(name: 'farm_photo')
+  String? farmPhoto;
+  @JsonKey(name: 'land_document')
+  String? landDocument;
+  String? lat;
+  String? lng;
+  List<FarmPlottingModel>? farmPlottings;
+  @JsonKey(name: 'farmer_details')
+  FarmerModel? farmerDetails;
+
+  String tag = '';
+  String listLatLng = '';
+
+  // ── Web-parity datapoints (FarmLandFormPage) ──
   @JsonKey(name: 'land_survey_no')
   String? landSurveyNo;
   @JsonKey(name: 'water_source')
@@ -57,18 +60,6 @@ class FarmLandModel {
   String? seasonalWorkers;
   @JsonKey(name: 'family_workers')
   String? familyWorkers;
-  @JsonKey(name: 'farm_photo')
-  String? farmPhoto;
-  @JsonKey(name: 'land_document')
-  String? landDocument;
-  String? lat;
-  String? lng;
-  List<FarmPlottingModel>? farmPlottings;
-  @JsonKey(name: 'farmer_details')
-  FarmerModel? farmerDetails;
-
-  String tag = '';
-  String listLatLng = '';
 
   FarmLandModel();
   factory FarmLandModel.fromJson(Map<String, dynamic> json) =>

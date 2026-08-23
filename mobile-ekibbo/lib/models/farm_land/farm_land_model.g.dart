@@ -32,7 +32,17 @@ FarmLandModel _$FarmLandModelFromJson(Map<String, dynamic> json) =>
           ? null
           : FarmerModel.fromJson(json['farmer_details'] as Map<String, dynamic>)
       ..tag = json['tag'] as String
-      ..listLatLng = json['listLatLng'] as String;
+      ..listLatLng = json['listLatLng'] as String
+      ..landSurveyNo = json['land_survey_no'] as String?
+      ..waterSource = json['water_source'] as String?
+      ..powerSource = json['power_source'] as String?
+      ..soilFertility = json['soil_fertility'] as String?
+      ..irrigationType = json['irrigation_type'] as String?
+      ..estYield = json['est_yield'] as String?
+      ..fullTimeWorkers = json['full_time_workers'] as String?
+      ..partTimeWorkers = json['part_time_workers'] as String?
+      ..seasonalWorkers = json['seasonal_workers'] as String?
+      ..familyWorkers = json['family_workers'] as String?;
 
 Map<String, dynamic> _$FarmLandModelToJson(FarmLandModel instance) =>
     <String, dynamic>{
@@ -55,6 +65,16 @@ Map<String, dynamic> _$FarmLandModelToJson(FarmLandModel instance) =>
       'farmer_details': instance.farmerDetails,
       'tag': instance.tag,
       'listLatLng': instance.listLatLng,
+      'land_survey_no': instance.landSurveyNo,
+      'water_source': instance.waterSource,
+      'power_source': instance.powerSource,
+      'soil_fertility': instance.soilFertility,
+      'irrigation_type': instance.irrigationType,
+      'est_yield': instance.estYield,
+      'full_time_workers': instance.fullTimeWorkers,
+      'part_time_workers': instance.partTimeWorkers,
+      'seasonal_workers': instance.seasonalWorkers,
+      'family_workers': instance.familyWorkers,
     };
 
 FarmPlottingModel _$FarmPlottingModelFromJson(Map<String, dynamic> json) =>

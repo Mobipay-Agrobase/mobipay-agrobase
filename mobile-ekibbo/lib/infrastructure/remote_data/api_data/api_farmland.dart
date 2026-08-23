@@ -1,10 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:agrobase_ekibbo/models/cultivation/cultivation_model.dart';
 import 'package:agrobase_ekibbo/models/farm_land/farm_land_model.dart';
+import 'package:agrobase_ekibbo/models/dropdown/farm_land/drodown_farmland_model.dart';
 import 'package:agrobase_ekibbo/domain/core/api_provider.dart';
 import 'package:agrobase_ekibbo/models/farmland_detail/farmland_detail_response.dart';
 
 class ApiFarmland {
+  /// Ekibbo farmland dropdowns — web CatalogMaster categories via
+  /// /api/mobile/ekibbo-farmland (tenant-scoped; token rides ApiProvider).
+  static Future<DropdownFarmLandModel> getEkibboFarmlandDropdowns() async {
+    final res = await ApiProvider.instance.apiFarmland.getFarmLandDropdownData();
+    if (res == null) {
+      throw const FormatException('farmland dropdowns response null');
+    }
+    if (res.data == null) {
+      throw const FormatException('farmland dropdowns data null');
+    }
+    return res.data!;
+  }
+
   static Future<List<FarmLandModel>> getFarmlandByFarmerId(int farmerId) async {
     try {
       final res =

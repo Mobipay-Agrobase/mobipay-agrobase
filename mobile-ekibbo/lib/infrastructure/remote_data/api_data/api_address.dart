@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import 'package:agrobase_ekibbo/domain/config/env_config.dart';
 import 'package:agrobase_ekibbo/domain/core/api_provider.dart';
 import 'package:agrobase_ekibbo/infrastructure/local_data/hivebox_manager/box_address.dart';
+import 'package:agrobase_ekibbo/infrastructure/local_data/shared_manager.dart';
 import 'package:agrobase_ekibbo/infrastructure/local_data/hivebox_manager/box_dropdown.dart';
 import 'package:agrobase_ekibbo/models/distribution/model_cooperative.dart';
 import 'package:agrobase_ekibbo/models/dropdown/crop/dropdown_crop_model.dart';

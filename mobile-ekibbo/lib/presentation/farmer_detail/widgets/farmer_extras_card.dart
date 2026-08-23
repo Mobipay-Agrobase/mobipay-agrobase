@@ -4,6 +4,7 @@ import 'package:flutter_svg/svg.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
 import 'package:agrobase_ekibbo/components/constant/color_constant.dart';
+import 'package:agrobase_ekibbo/components/g_image.dart';
 import 'package:agrobase_ekibbo/components/constant/text_style_constant.dart';
 import 'package:agrobase_ekibbo/domain/config/env_config.dart';
 import 'package:agrobase_ekibbo/infrastructure/local_data/shared_manager.dart';

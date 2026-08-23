@@ -655,10 +655,7 @@ class _FarmerRegistrationScreenState extends State<FarmerRegistrationScreen> {
           ),
           Padding(
             padding: const EdgeInsets.only(bottom: 24.0),
-            child: AppFormField(
-              hint: 'Date of Birth',
-              readOnly: true,
-              controller: _birthDateTxtController,
+            child: InkWell(
               onTap: () async {
                 final now = DateTime.now();
                 final picked = await showDatePicker(
@@ -676,6 +673,17 @@ class _FarmerRegistrationScreenState extends State<FarmerRegistrationScreen> {
                   });
                 }
               },
+              child: IgnorePointer(
+                child: AppFormField(
+                  hint: 'Date of Birth',
+                  readOnly: true,
+                  controller: _birthDateTxtController,
+                  prefixIcon: Padding(
+                    padding: const EdgeInsets.only(left: 16, right: 16),
+                    child: SvgPicture.asset('ic_calendar'.iconSvg),
+                  ),
+                ),
+              ),
             ),
           ),
           Padding(
@@ -819,7 +827,7 @@ class _FarmerRegistrationScreenState extends State<FarmerRegistrationScreen> {
                 _parishes = [];
                 _villages = [];
               });
-              _getDistricts();
+              _getDistrictsMaster();
             },
           ),
           const SizedBox(height: 24),

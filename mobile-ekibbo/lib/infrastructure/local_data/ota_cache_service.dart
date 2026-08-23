@@ -40,11 +40,19 @@ class OtaCacheService {
       receiveTimeout: const Duration(seconds: 15),
       validateStatus: (s) => true,
       headers: {
-        'Authorization': 'Bearer ${SharedPreferencesProvider.instance.accessToken}',
         'x-app-client': 'agrobase-ekibbo-flutter',
       },
     ));
     _loadCached();
+  }
+
+  /// CRITICAL: this service is created at app start — BEFORE login — so the
+  /// token must be re-read on EVERY request (fixes 401s → empty dropdowns).
+  void _auth() {
+    _dio?.options.headers['Authorization'] =
+        'Bearer ${SharedPreferencesProvider.instance.accessToken}';
+    _dio?.options.headers['x-device-id'] =
+        SharedPreferencesProvider.instance.deviceId;
   }
 
   void _loadCached() {
@@ -74,6 +82,8 @@ class OtaCacheService {
   /// Pull the latest catalog from the web platform (OTA update).
   Future<bool> refreshCatalog() async {
     try {
+      if (_dio == null) init();
+      _auth();
       final res = await _dio!.get('/mobile/ekibbo-catalog');
       if (res.statusCode != 200 || res.data['result'] != true) return false;
       final data = res.data['data'] as Map<String, dynamic>;

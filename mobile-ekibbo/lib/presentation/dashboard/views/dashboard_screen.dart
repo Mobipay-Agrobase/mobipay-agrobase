@@ -22,8 +22,16 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   @override
+  /// Unique per-instance Scaffold key — registered on NavigatorManager so
+  /// the app-bar drawer button opens THIS screen's drawer. A shared static
+  /// key caused 'Duplicate GlobalKey in widget tree' when two dashboard
+  /// routes existed briefly (session-restore + login navigation).
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+
+  @override
   void initState() {
     super.initState();
+    NavigatorManager.scaffoldKey = _scaffoldKey;
     DOrtherInfo.instance.requestLocation();
     context.read<AppProvider>().initState();
   }
@@ -32,7 +40,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      key: NavigatorManager.scaffoldKey,
+      key: _scaffoldKey,
       drawer: const DrawerView(),
       floatingActionButton:
           isShowFloatButton() ? const DashboardFloatingButton() : null,

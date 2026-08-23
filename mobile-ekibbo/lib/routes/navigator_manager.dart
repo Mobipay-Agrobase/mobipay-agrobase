@@ -5,7 +5,10 @@ class NavigatorManager {
       GlobalKey<NavigatorState>();
   static final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey =
       GlobalKey<ScaffoldMessengerState>();
-  static final GlobalKey<ScaffoldState> scaffoldKey =
+  /// Mutable: each DashboardScreen instance registers its OWN unique key
+  /// here (fixes 'Duplicate GlobalKey' when two dashboard routes coexist
+  /// briefly during session-restore + login navigation).
+  static GlobalKey<ScaffoldState> scaffoldKey =
       GlobalKey<ScaffoldState>();
 
   static NavigatorState get stateRoot => navigatorKey.currentState!;

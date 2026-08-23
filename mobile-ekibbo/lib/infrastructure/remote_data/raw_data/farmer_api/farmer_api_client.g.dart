@@ -320,7 +320,7 @@ class _FarmerApiClient implements FarmerApiClient {
     )
             .compose(
               _dio.options,
-              '/farmer/get_data_for_family_info/${farmerId}',
+              '/mobile/ekibbo-farmer-tabs/${farmerId}',
               queryParameters: queryParameters,
               data: _data,
             )
@@ -355,7 +355,7 @@ class _FarmerApiClient implements FarmerApiClient {
     )
             .compose(
               _dio.options,
-              '/farmer/update_family_info/${farmerId}',
+              '/mobile/ekibbo-farmer/${farmerId}',
               queryParameters: queryParameters,
               data: _data,
             )
@@ -387,7 +387,7 @@ class _FarmerApiClient implements FarmerApiClient {
     )
             .compose(
               _dio.options,
-              '/farmer/get_data_for_asset_info/${farmerId}',
+              '/mobile/ekibbo-farmer-tabs/${farmerId}',
               queryParameters: queryParameters,
               data: _data,
             )
@@ -422,7 +422,7 @@ class _FarmerApiClient implements FarmerApiClient {
     )
             .compose(
               _dio.options,
-              '/farmer/update_asset_info/${farmerId}',
+              '/mobile/ekibbo-farmer/${farmerId}',
               queryParameters: queryParameters,
               data: _data,
             )
@@ -454,7 +454,7 @@ class _FarmerApiClient implements FarmerApiClient {
     )
             .compose(
               _dio.options,
-              '/farmer/get_data_for_bank_info/${farmerId}',
+              '/mobile/ekibbo-farmer-tabs/${farmerId}',
               queryParameters: queryParameters,
               data: _data,
             )
@@ -489,7 +489,7 @@ class _FarmerApiClient implements FarmerApiClient {
     )
             .compose(
               _dio.options,
-              '/farmer/update_bank_info/${farmerId}',
+              '/mobile/ekibbo-farmer/${farmerId}',
               queryParameters: queryParameters,
               data: _data,
             )
@@ -522,7 +522,7 @@ class _FarmerApiClient implements FarmerApiClient {
     )
             .compose(
               _dio.options,
-              '/farmer/get_data_for_finance_info/${farmerId}',
+              '/mobile/ekibbo-farmer-tabs/${farmerId}',
               queryParameters: queryParameters,
               data: _data,
             )
@@ -558,7 +558,7 @@ class _FarmerApiClient implements FarmerApiClient {
     )
             .compose(
               _dio.options,
-              '/farmer/update_finance_info/${farmerId}',
+              '/mobile/ekibbo-farmer/${farmerId}',
               queryParameters: queryParameters,
               data: _data,
             )
@@ -591,7 +591,7 @@ class _FarmerApiClient implements FarmerApiClient {
     )
             .compose(
               _dio.options,
-              '/farmer/get_data_for_farm_equipment/${farmerId}',
+              '/mobile/ekibbo-farmer-tabs/${farmerId}',
               queryParameters: queryParameters,
               data: _data,
             )
@@ -627,7 +627,7 @@ class _FarmerApiClient implements FarmerApiClient {
     )
             .compose(
               _dio.options,
-              '/farmer/update_farm_equipment/${farmerId}',
+              '/mobile/ekibbo-farmer/${farmerId}',
               queryParameters: queryParameters,
               data: _data,
             )
@@ -660,7 +660,7 @@ class _FarmerApiClient implements FarmerApiClient {
     )
             .compose(
               _dio.options,
-              '/farmer/get_data_for_animal_husbandry/${farmerId}',
+              '/mobile/ekibbo-farmer-tabs/${farmerId}',
               queryParameters: queryParameters,
               data: _data,
             )
@@ -696,7 +696,7 @@ class _FarmerApiClient implements FarmerApiClient {
     )
             .compose(
               _dio.options,
-              '/farmer/update_animal_husbandry/${farmerId}',
+              '/mobile/ekibbo-farmer/${farmerId}',
               queryParameters: queryParameters,
               data: _data,
             )
@@ -729,7 +729,7 @@ class _FarmerApiClient implements FarmerApiClient {
     )
             .compose(
               _dio.options,
-              '/farmer/get_data_for_insurance_info/${farmerId}',
+              '/mobile/ekibbo-farmer-tabs/${farmerId}',
               queryParameters: queryParameters,
               data: _data,
             )
@@ -765,7 +765,7 @@ class _FarmerApiClient implements FarmerApiClient {
     )
             .compose(
               _dio.options,
-              '/farmer/update_insurance_info/${farmerId}',
+              '/mobile/ekibbo-farmer/${farmerId}',
               queryParameters: queryParameters,
               data: _data,
             )
@@ -798,7 +798,7 @@ class _FarmerApiClient implements FarmerApiClient {
     )
             .compose(
               _dio.options,
-              '/farmer/get_data_for_certificate_info/${farmerId}',
+              '/mobile/ekibbo-farmer-tabs/${farmerId}',
               queryParameters: queryParameters,
               data: _data,
             )
@@ -834,7 +834,7 @@ class _FarmerApiClient implements FarmerApiClient {
     )
             .compose(
               _dio.options,
-              '/farmer/update_certificate/${farmerId}',
+              '/mobile/ekibbo-farmer/${farmerId}',
               queryParameters: queryParameters,
               data: _data,
             )

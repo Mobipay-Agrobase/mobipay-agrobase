@@ -35,6 +35,15 @@ class SyncEngine {
 
   bool get isSyncing => _syncing;
 
+  /// CRITICAL: re-read the token on every request — this engine is created
+  /// at app start (pre-login) and outlives logins.
+  void _auth() {
+    _dio?.options.headers['Authorization'] =
+        'Bearer ${SharedPreferencesProvider.instance.accessToken}';
+    _dio?.options.headers['x-device-id'] =
+        SharedPreferencesProvider.instance.deviceId;
+  }
+
   void init() {
     _dio ??= Dio(BaseOptions(
       baseUrl: EnvConfig.domainStream,
@@ -42,9 +51,7 @@ class SyncEngine {
       receiveTimeout: const Duration(seconds: 30),
       validateStatus: (s) => true,
       headers: {
-        'Authorization': 'Bearer ${SharedPreferencesProvider.instance.accessToken}',
         'x-app-client': 'agrobase-ekibbo-flutter',
-        'x-device-id': SharedPreferencesProvider.instance.deviceId,
       },
     ));
     // Connectivity watch: check every 20s; on offline→online transition,
@@ -56,6 +63,7 @@ class SyncEngine {
 
   Future<bool> _isOnline() async {
     try {
+      _auth();
       final res = await _dio!.get('/mobile/ekibbo-catalog');
       return res.statusCode == 200;
     } catch (_) {
@@ -97,6 +105,7 @@ class SyncEngine {
       final farmers = await _pendingFarmers(onlyLocalId);
       if (farmers.isEmpty) return (0, 0);
 
+      _auth();
       final res = await _dio!.post(
         '/mobile/ekibbo-sync',
         data: {
@@ -168,6 +177,7 @@ class SyncEngine {
   /// Server-side audit log (last 100 attempts for this device).
   Future<List<Map<String, dynamic>>> serverAuditLog() async {
     try {
+      _auth();
       final res = await _dio!.get(
         '/mobile/ekibbo-sync',
         queryParameters: {

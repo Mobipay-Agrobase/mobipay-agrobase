@@ -204,6 +204,22 @@ class _FarmerRegistrationScreenState extends State<FarmerRegistrationScreen> {
     setState(() {});
   }
 
+  /// Safe index for InputDropDownData: null when the list is empty or the
+  /// value is absent (indexOf == -1). Passing -1 crashes with the
+  /// 'RangeError: Valid value range is empty: -1' seen on the edit form.
+  int? safeIndex(List<dynamic> items, dynamic value) {
+    if (items.isEmpty || value == null) return null;
+    final i = items.indexOf(value);
+    return i == -1 ? null : i;
+  }
+
+  /// Safe indexWhere variant.
+  int? safeIndexWhere(List<dynamic> items, bool Function(dynamic) test) {
+    if (items.isEmpty) return null;
+    final i = items.indexWhere(test);
+    return i == -1 ? null : i;
+  }
+
   int? initIndex(List<String> items, String item) {
     try {
       int index = items.indexOf(item);
@@ -502,11 +518,7 @@ class _FarmerRegistrationScreenState extends State<FarmerRegistrationScreen> {
             child: InputDropDownData(
               hintText: 'Enrollment Place',
               items: _enrollmentPlaces,
-              itemIndex: mFarmerLocal.enrollment_place.isEmpty || _enrollmentPlaces.isEmpty
-                  ? null
-                  : _enrollmentPlaces.indexOf(mFarmerLocal.enrollment_place) == -1
-                      ? null
-                      : _enrollmentPlaces.indexOf(mFarmerLocal.enrollment_place),
+              itemIndex: safeIndex(_enrollmentPlaces, mFarmerLocal.enrollment_place),
               onChanged: (index) {
                 mFarmerLocal.enrollment_place = _enrollmentPlaces[index];
               },
@@ -552,9 +564,7 @@ class _FarmerRegistrationScreenState extends State<FarmerRegistrationScreen> {
                 InputDropDownData(
                   hintText: 'Certification Type',
                   items: _certTypes,
-                  itemIndex: mFarmerLocal.certification_type.isEmpty
-                      ? null
-                      : _certTypes.indexOf(mFarmerLocal.certification_type),
+                  itemIndex: safeIndex(_certTypes, mFarmerLocal.certification_type),
                   onChanged: (index) {
                     s(() {
                       mFarmerLocal.certification_type = _certTypes[index];
@@ -647,7 +657,7 @@ class _FarmerRegistrationScreenState extends State<FarmerRegistrationScreen> {
             child: InputDropDownData(
               items: _gendersList,
               hintText: 'Gender',
-              itemIndex: mFarmerLocal.gender.isEmpty ? null : _gendersList.indexOf(mFarmerLocal.gender),
+              itemIndex: safeIndex(_gendersList, mFarmerLocal.gender),
               onChanged: (index) {
                 mFarmerLocal.gender = _gendersList[index];
               },
@@ -691,7 +701,7 @@ class _FarmerRegistrationScreenState extends State<FarmerRegistrationScreen> {
             child: InputDropDownData(
               items: _educationLevels,
               hintText: 'Education',
-              itemIndex: mFarmerLocal.education.isEmpty ? null : _educationLevels.indexOf(mFarmerLocal.education),
+              itemIndex: safeIndex(_educationLevels, mFarmerLocal.education),
               onChanged: (index) {
                 mFarmerLocal.education = _educationLevels[index];
               },
@@ -702,7 +712,7 @@ class _FarmerRegistrationScreenState extends State<FarmerRegistrationScreen> {
             child: InputDropDownData(
               items: _maritalStatuses,
               hintText: 'Marital Status',
-              itemIndex: mFarmerLocal.marital_status.isEmpty ? null : _maritalStatuses.indexOf(mFarmerLocal.marital_status),
+              itemIndex: safeIndex(_maritalStatuses, mFarmerLocal.marital_status),
               onChanged: (index) {
                 mFarmerLocal.marital_status = _maritalStatuses[index];
               },
@@ -744,7 +754,7 @@ class _FarmerRegistrationScreenState extends State<FarmerRegistrationScreen> {
           InputDropDownData(
             hintText: 'National ID Type',
             items: _idTypes,
-            itemIndex: mFarmerLocal.identity_proof.isEmpty ? null : _idTypes.indexOf(mFarmerLocal.identity_proof),
+            itemIndex: safeIndex(_idTypes, mFarmerLocal.identity_proof),
             onChanged: (index) {
               mFarmerLocal.identity_proof = _idTypes[index];
             },
@@ -773,9 +783,7 @@ class _FarmerRegistrationScreenState extends State<FarmerRegistrationScreen> {
           InputDropDownData(
             items: _regions.map((e) => e['name'] as String).toList(),
             hintText: 'Region *',
-            itemIndex: mFarmerLocal.region == 0 || _regions.isEmpty
-                ? null
-                : _regions.indexWhere((e) => e['id'] == mFarmerLocal.region),
+            itemIndex: mFarmerLocal.region == 0 ? null : safeIndexWhere(_regions, (e) => e['id'] == mFarmerLocal.region),
             onChanged: (index) {
               setState(() {
                 mFarmerLocal.region = _regions[index]['id'] as int;
@@ -805,9 +813,7 @@ class _FarmerRegistrationScreenState extends State<FarmerRegistrationScreen> {
           InputDropDownData(
             items: _subRegions.map((e) => e['name'] as String).toList(),
             hintText: 'Sub Region *',
-            itemIndex: mFarmerLocal.sub_region == 0 || _subRegions.isEmpty
-                ? null
-                : _subRegions.indexWhere((e) => e['id'] == mFarmerLocal.sub_region),
+            itemIndex: mFarmerLocal.sub_region == 0 ? null : safeIndexWhere(_subRegions, (e) => e['id'] == mFarmerLocal.sub_region),
             onChanged: (index) {
               setState(() {
                 mFarmerLocal.sub_region = _subRegions[index]['id'] as int;
@@ -834,9 +840,7 @@ class _FarmerRegistrationScreenState extends State<FarmerRegistrationScreen> {
           InputDropDownData(
             items: _districts.map((e) => e.districtName!).toList(),
             hintText: 'District *',
-            itemIndex: mFarmerLocal.district == 0 || _districts.isEmpty
-                ? null
-                : _districts.indexWhere((element) => element.id == mFarmerLocal.district),
+            itemIndex: mFarmerLocal.district == 0 ? null : safeIndexWhere(_districts, (e) => e.id == mFarmerLocal.district),
             onChanged: (index) {
               setState(() {
                 mFarmerLocal.district = _districts[index].id!;
@@ -860,9 +864,7 @@ class _FarmerRegistrationScreenState extends State<FarmerRegistrationScreen> {
           InputDropDownData(
             items: _counties.map((e) => e['name'] as String).toList(),
             hintText: 'County *',
-            itemIndex: mFarmerLocal.county == 0 || _counties.isEmpty
-                ? null
-                : _counties.indexWhere((e) => e['id'] == mFarmerLocal.county),
+            itemIndex: mFarmerLocal.county == 0 ? null : safeIndexWhere(_counties, (e) => e['id'] == mFarmerLocal.county),
             onChanged: (index) {
               setState(() {
                 mFarmerLocal.county = _counties[index]['id'] as int;
@@ -883,9 +885,7 @@ class _FarmerRegistrationScreenState extends State<FarmerRegistrationScreen> {
           InputDropDownData(
             items: _communes.map((e) => e.communeName!).toList(),
             hintText: 'Sub County *',
-            itemIndex: mFarmerLocal.commune == 0 || _communes.isEmpty
-                ? null
-                : _communes.indexWhere((element) => element.id == mFarmerLocal.commune),
+            itemIndex: mFarmerLocal.commune == 0 ? null : safeIndexWhere(_communes, (e) => e.id == mFarmerLocal.commune),
             onChanged: (index) {
               setState(() {
                 mFarmerLocal.commune = _communes[index].id!;
@@ -903,9 +903,7 @@ class _FarmerRegistrationScreenState extends State<FarmerRegistrationScreen> {
           InputDropDownData(
             items: _parishes.map((e) => e['name'] as String).toList(),
             hintText: 'Parish *',
-            itemIndex: mFarmerLocal.parish == 0 || _parishes.isEmpty
-                ? null
-                : _parishes.indexWhere((e) => e['id'] == mFarmerLocal.parish),
+            itemIndex: mFarmerLocal.parish == 0 ? null : safeIndexWhere(_parishes, (e) => e['id'] == mFarmerLocal.parish),
             onChanged: (index) {
               setState(() {
                 mFarmerLocal.parish = _parishes[index]['id'] as int;
@@ -920,9 +918,7 @@ class _FarmerRegistrationScreenState extends State<FarmerRegistrationScreen> {
           InputDropDownData(
             items: _villages.map((e) => e.villageName ?? '').toList(),
             hintText: 'Village *',
-            itemIndex: mFarmerLocal.village.isEmpty || _villages.isEmpty
-                ? null
-                : _villages.indexWhere((element) => element.villageName == mFarmerLocal.village),
+            itemIndex: mFarmerLocal.village.isEmpty ? null : safeIndexWhere(_villages, (e) => e.villageName == mFarmerLocal.village),
             onChanged: (index) {
               setState(() {
                 mFarmerLocal.village = _villages[index].villageName ?? '';
@@ -970,7 +966,7 @@ class _FarmerRegistrationScreenState extends State<FarmerRegistrationScreen> {
           InputDropDownData(
             items: _housingOwnerships,
             hintText: 'Housing Ownership',
-            itemIndex: mFarmerLocal.housing_ownership.isEmpty ? null : _housingOwnerships.indexOf(mFarmerLocal.housing_ownership),
+            itemIndex: safeIndex(_housingOwnerships, mFarmerLocal.housing_ownership),
             onChanged: (index) {
               mFarmerLocal.housing_ownership = _housingOwnerships[index];
             },
@@ -979,7 +975,7 @@ class _FarmerRegistrationScreenState extends State<FarmerRegistrationScreen> {
           InputDropDownData(
             items: _houseTypes,
             hintText: 'House Type',
-            itemIndex: mFarmerLocal.house_type.isEmpty ? null : _houseTypes.indexOf(mFarmerLocal.house_type),
+            itemIndex: safeIndex(_houseTypes, mFarmerLocal.house_type),
             onChanged: (index) {
               mFarmerLocal.house_type = _houseTypes[index];
             },

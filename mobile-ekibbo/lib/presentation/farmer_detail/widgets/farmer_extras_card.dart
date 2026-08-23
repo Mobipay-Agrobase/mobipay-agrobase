@@ -43,6 +43,7 @@ class _FarmerExtrasCardState extends State<FarmerExtrasCard> {
         receiveTimeout: const Duration(seconds: 15),
         validateStatus: (s) => true,
         headers: {
+          // fresh token per request (widget may outlive a login)
           'Authorization': 'Bearer ${SharedPreferencesProvider.instance.accessToken}',
           'x-app-client': 'agrobase-ekibbo-flutter',
         },

@@ -58,73 +58,73 @@ abstract class FarmerApiClient {
   @MultiPart()
   Future<BaseResponse<FarmerModel>?> updateFarmer(@Body() FormData data);
 
-  @GET('/farmer/get_data_for_family_info/{farmerId}')
+  @GET('/mobile/ekibbo-farmer-tabs/{farmerId}')
   Future<BaseResponse<FamilyInfoResponse>?> getFamilyInfo(
       @Path('farmerId') int farmerId);
-  @PUT('/farmer/update_family_info/{farmerId}')
+  @PUT('/mobile/ekibbo-farmer/{farmerId}')
   Future<BaseResponse?> updateFamilyInfo(
     @Path('farmerId') int farmerId,
     @Body() data,
   );
-  @GET('/farmer/get_data_for_asset_info/{farmerId}')
+  @GET('/mobile/ekibbo-farmer-tabs/{farmerId}')
   Future<BaseResponse<AssetInfoResponse>?> getAssetInfo(
       @Path('farmerId') int farmerId);
 
-  @PUT('/farmer/update_asset_info/{farmerId}')
+  @PUT('/mobile/ekibbo-farmer/{farmerId}')
   Future<BaseResponse?> updateAssetInfo(
     @Path('farmerId') int farmerId,
     @Body() data,
   );
-  @GET('/farmer/get_data_for_bank_info/{farmerId}')
+  @GET('/mobile/ekibbo-farmer-tabs/{farmerId}')
   Future<BaseResponse<BankInfoResponse>?> getBankInfo(
       @Path('farmerId') int farmerId);
 
-  @PUT('/farmer/update_bank_info/{farmerId}')
+  @PUT('/mobile/ekibbo-farmer/{farmerId}')
   Future<BaseResponse?> updateBankInfo(
     @Path('farmerId') int farmerId,
     @Body() data,
   );
-  @GET('/farmer/get_data_for_finance_info/{farmerId}')
+  @GET('/mobile/ekibbo-farmer-tabs/{farmerId}')
   Future<BaseResponse<FinanceInfoResponse>?> getFinanceInfo(
       @Path('farmerId') int farmerId);
 
-  @PUT('/farmer/update_finance_info/{farmerId}')
+  @PUT('/mobile/ekibbo-farmer/{farmerId}')
   Future<BaseResponse?> updateFinanceInfo(
     @Path('farmerId') int farmerId,
     @Body() data,
   );
-  @GET('/farmer/get_data_for_farm_equipment/{farmerId}')
+  @GET('/mobile/ekibbo-farmer-tabs/{farmerId}')
   Future<BaseResponse<FarmEquipmentResponse>?> getFarmEquipment(
       @Path('farmerId') int farmerId);
 
-  @PUT('/farmer/update_farm_equipment/{farmerId}')
+  @PUT('/mobile/ekibbo-farmer/{farmerId}')
   Future<BaseResponse?> updateFarmEquipment(
     @Path('farmerId') int farmerId,
     @Body() data,
   );
-  @GET('/farmer/get_data_for_animal_husbandry/{farmerId}')
+  @GET('/mobile/ekibbo-farmer-tabs/{farmerId}')
   Future<BaseResponse<AnimalHusbandryResponse>?> getAnimalHusbandry(
       @Path('farmerId') int farmerId);
 
-  @PUT('/farmer/update_animal_husbandry/{farmerId}')
+  @PUT('/mobile/ekibbo-farmer/{farmerId}')
   Future<BaseResponse?> updateAnimalHusbandry(
     @Path('farmerId') int farmerId,
     @Body() data,
   );
-  @GET('/farmer/get_data_for_insurance_info/{farmerId}')
+  @GET('/mobile/ekibbo-farmer-tabs/{farmerId}')
   Future<BaseResponse<InsuranceInfoResponse>?> getInsuranceData(
       @Path('farmerId') int farmerId);
 
-  @PUT('/farmer/update_insurance_info/{farmerId}')
+  @PUT('/mobile/ekibbo-farmer/{farmerId}')
   Future<BaseResponse?> updateInsuranceData(
     @Path('farmerId') int farmerId,
     @Body() data,
   );
-  @GET('/farmer/get_data_for_certificate_info/{farmerId}')
+  @GET('/mobile/ekibbo-farmer-tabs/{farmerId}')
   Future<BaseResponse<CertificateResponse>?> getCertificateInfo(
       @Path('farmerId') int farmerId);
 
-  @PUT('/farmer/update_certificate/{farmerId}')
+  @PUT('/mobile/ekibbo-farmer/{farmerId}')
   Future<BaseResponse?> updateCertificateInfo(
     @Path('farmerId') int farmerId,
     @Body() data,

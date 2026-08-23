@@ -378,3 +378,21 @@ Work Log:
 Stage Summary:
 - Every item from the user's list addressed; mobile now sources ALL reference data (catalog + geo) from the same web masters
 - Remaining known gap: farm-land/cultivation FORM field parity (seasons/crops dropdowns already wired via ekibbo-crop-dropdowns; full form parity next sprint if requested)
+
+---
+Task ID: 19
+Agent: Super Z
+Task: Fix 4 compile errors from the web-parity rebuild (user's build log)
+
+Work Log:
+- Error 1 (AppFormField onTap): AppFormField doesn't expose onTap — DOB picker rewritten as InkWell + IgnorePointer wrapper (project's own InputDate pattern), calendar prefix icon added
+- Error 2 (_getDistricts undefined): renamed call to _getDistrictsMaster() (method that exists post-rebuild)
+- Error 3 (SharedPreferencesProvider in api_address): added missing shared_manager.dart import
+- Error 4 (iconSvg in farmer_extras_card): added missing g_image.dart import (GetIcon extension home)
+- Built & ran scripts/dart_sanity.py — full static sweep across 480 dart files: import resolution (package+relative, comment-aware), brace-balance drift vs HEAD, undefined-symbol checks on all touched files, onTap regression check, stale-ref check → ALL CLEAN
+- Pre-flight deep check: all _getXxx calls defined, sync engine symbol refs, public shared_manager accessors, drawer nav routes, pubspec qr_flutter → CLEAN
+- Committed 36b260b, pushed
+
+Stage Summary:
+- All 4 reported compile errors verified fixed; full-file sweep found no other issues
+- Lesson applied: added automated sanity script so future Dart edits are pre-checked before push

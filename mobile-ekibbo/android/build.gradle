@@ -13,18 +13,16 @@ subprojects {
     project.evaluationDependsOn(":app")
 }
 
-// ─── Force every Android plugin (location, google_maps_flutter, etc.) to
-// compile against the same modern SDK as the app. Older plugins pin
-// compileSdk 33 while their AndroidX transitive deps require 34+, which
-// fails AAR metadata checks (e.g. :location:checkDebugAarMetadata).
-// Central override keeps all plugins aligned regardless of their own pins.
-subprojects {
-    afterEvaluate { project ->
-        if (project.plugins.hasPlugin("com.android.application") ||
-                project.plugins.hasPlugin("com.android.library")) {
-            project.android {
-                compileSdk 36
-            }
+// ─── Force every Android library plugin (location, google_maps_flutter,
+// webview_flutter, …) to compile against the same modern SDK as the app.
+// Older plugins pin compileSdk 33 while their AndroidX transitive deps
+// require 34+ (AAR metadata check failure). pluginManager.withPlugin fires
+// when the plugin is applied — BEFORE project evaluation — so it is safe on
+// Gradle 9, which forbids afterEvaluate on already-evaluated projects.
+subprojects { sub ->
+    sub.pluginManager.withPlugin("com.android.library") {
+        sub.android {
+            compileSdk 36
         }
     }
 }

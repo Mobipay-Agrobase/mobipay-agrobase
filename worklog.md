@@ -413,3 +413,20 @@ Work Log:
 Stage Summary:
 - All 4 device-test issues fixed with live verification
 - Key lesson encoded: any new mobile service MUST re-read the token per request, never bake it into BaseOptions
+
+---
+Task ID: 21
+Agent: Super Z
+Task: Fix form structure, duplicate dropdowns, setState-after-dispose, overflow (user's device log round 3)
+
+Work Log:
+- Misplaced fields: family (spouse/members/children/school) + asset (housing/house type) fields I had added INSIDE the registration form — they belong in the dedicated Family/Asset tab screens (edit menu), matching web farmer-detail structure. Removed from registration; stale catalog state cleaned.
+- Duplicate dropdowns in tabs: cat() in ekibbo-farmer-tabs didn't dedupe CatalogMaster global+tenant copies. Deduped by value — live-verified marital 7/electronics 13/education 16/housing 9/house-types 11, all unique.
+- setState-after-dispose (family_info crash): mounted guards after every async gap in all 8 tab screens + registration loaders.
+- RenderFlex overflow 778px (asset screen; latent in 6 siblings): bodies wrapped in SingleChildScrollView; invalid Expanded(child: shrinkWrap ListView) inside scroll columns removed; orphaned closing parens from un-Expand fixed in 3 files.
+- Extended sanity sweep to check PARENS as well as braces — caught my own setState(() {}; corruption before push.
+- Committed f116fe0, pushed.
+
+Stage Summary:
+- All 4 issues from device log root-caused & fixed with live verification
+- Sweep now guards braces+parens+mounted+scroll-structure on every push

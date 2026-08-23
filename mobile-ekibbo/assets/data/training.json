@@ -1,0 +1,105 @@
+[
+    {
+        "key": "farmer_group_got_the_training_and_necessary_information",
+        "question_title": "Farmer/Farmer group got the Training and necessary information on SRP Authorized Standards through Internal or External partners or professional sources for training",
+        "type": "radio",
+        "is_require":true
+    },
+    {
+        "key": "date_of_training",
+        "question_title": "Date of Training",
+        "type": "date_picker",
+        "is_require":true
+    },
+    {
+        "key": "who_provided_the_training",
+        "question_title": "Who provided the training?",
+        "type": "dropdown",
+        "is_require":true,
+        "options": [
+            {
+                "title": "SRP Authorized Trainer",
+                "score": 3
+            },
+            {
+                "title": "Other 3rd Party Vendor",
+                "score": 0
+            }
+        ]
+    },
+    {
+        "key": "training_venu",
+        "question_title": "Training Venu",
+        "type": "text_box",
+        "is_require":true
+    },
+    {
+        "key": "topic_discussion",
+        "question_title": "Topic Discussion",
+        "type": "text_box",
+        "is_require":true
+    },
+    {
+        "key": "focused_crop",
+        "question_title": "Focused Crop",
+        "type": "dropdown",
+        "is_require":true,
+        "options": [
+            {
+                "title": "Rice",
+                "score": 0
+            },
+            {
+                "title": "Fragrant rice",
+                "score": 0
+            }
+        ]
+    },
+    {
+        "key": "objective",
+        "question_title": "Objective",
+        "type": "text_box",
+        "is_require":true
+    },
+    {
+        "key": "no_of_men_participants",
+        "question_title": "No of Men Participants",
+        "type": "text_box",
+        "is_require":false
+    },
+    {
+        "key": "no_of_womens_participants",
+        "question_title": "No of Womens Participants",
+        "type": "text_box",
+        "is_require":false
+    },
+    {
+        "key": "trainer_provided_information_on_water_usage",
+        "question_title": "Trainer provided information on water usage?",
+        "type": "radio",
+        "is_require":false
+    },
+    {
+        "key": "trainer_provided_information_on_pesticide_usage",
+        "question_title": "Trainer provided information on pesticide usage?",
+        "type": "radio",
+        "is_require":false
+    },
+    {
+        "key": "can_you_demonstrate_how_training_content",
+        "question_title": "Can you demonstrate how training content has been applied?",
+        "type": "radio",
+        "is_require":true,
+        "options": [
+            {
+                "title": "yes",
+                "score": 2
+            },
+            {
+                "title": "no",
+                "score": 1
+            }
+        ]
+
+    }
+]

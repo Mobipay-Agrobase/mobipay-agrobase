@@ -1,0 +1,221 @@
+[
+  {
+    "key": "date_of_event",
+    "question_title": "Date of Event",
+    "type": "auto_fill",
+    "is_require": true
+  },
+  {
+    "key": "safety_instructions_and_first_aid_option",
+    "question_title": "Do your Workers, including working household members, receive regular safety instructions on how to prevent work-related accidents or diseases, where to access first aid kits, and how to contact health workers.",
+    "type": "radio",
+    "is_require": true,
+    "options": [
+      {
+        "title": "yes",
+        "score": 2
+      }
+    ]
+  },
+  {
+    "key": "how_often_is_this_equipment_maintained",
+    "question_title": "How often is this equipment maintained?",
+    "type": "dropdown",
+    "is_require": true,
+    "options": [
+      {
+        "title": "a) Tools and equipment maintained and calibrated within the current cropping season.",
+        "score": 2
+      },{
+        "title": "b) Tools and equipment maintained and calibrated within the past 2 years.",
+        "score": 1
+      },
+      {
+        "title": "c) Tools and equipment not maintained and calibrated within the past 2 years.",
+        "score": 0
+      }
+    ]
+  },
+  {
+    "key": "did_pesticide_is_used",
+    "question_title": "Did pesticide(s) is (are) used, in the last 5 years:",
+    "type": "radio",
+    "is_require": true,
+    "options": [
+      {
+        "title": "yes",
+        "questions": [
+          {
+            "key": "pesticide_applicators_receive_training",
+            "question_title": "Did Pesticide applicators receive training and apply good practices on the safe handling and use of pesticides?",
+            "type": "dropdown",
+            "is_require": true,
+            "options": [
+              {
+                "title": "Pesticide applicators participated in training and demonstrate",
+                "score": 2
+              },
+              {
+                "title": "Pesticide applicators participated in training",
+                "score": 1
+              },
+              {
+                "title": "Not participate in training",
+                "score": 0
+              }
+            ]
+          },
+          {
+            "key": "pesticide_applicators_use_PPE_items",
+            "question_title": "During spraying: Pesticide applicators use PPE items of good quality (or what is recommended on the product label).",
+            "type": "radio",
+            "is_require": true,
+            "options": [
+              {
+                "title": "yes",
+                "score": 2
+              }
+            ]
+          },
+          {
+            "key": "during_plane_drone_or_tractor_application",
+            "question_title": "During plane, drone, or tractor application: Pesticide applicators use chemical-resistant gloves and masks of good quality during mixing (or what is recommended on the product label).",
+            "type": "radio",
+            "is_require": true,
+            "options": [
+              {
+                "title": "yes",
+                "score": 2
+              }
+            ]
+          },
+          {
+            "key": "pesticide_applicators_use_at_least_chemical_resistant_gloves",
+            "question_title": "During spraying: Pesticide applicators use at least chemical resistant gloves and masks of good quality.",
+            "type": "radio",
+            "is_require": true,
+            "options": [
+              {
+                "title": "yes",
+                "score": 1
+              }
+            ]
+          },
+          {
+            "key": "wash_personal_protective_equipment",
+            "question_title": "Where do you wash Personal Protective Equipment?",
+            "type": "dropdown",
+            "is_require": true,
+            "options": [
+              {
+                "title": "Separate area for washing PPE and Household laundry.",
+                "score": 2
+              },
+              {
+                "title": "Combine area but not used for Household laundry.",
+                "score": 1
+              },
+              {
+                "title": "Combine area but used for Washing PPE and Household laundry.",
+                "score": 0
+              }
+            ]
+          },
+          {
+            "key": "pesticides_are_applied_by_pregnant_or_lactating_women",
+            "question_title": "Does Pesticides are applied by pregnant or lactating women, by persons below 18 years, or by persons who suffer from chronic or respiratory diseases.",
+            "type": "radio",
+            "is_require": true,
+            "options": [
+              {
+                "title": "no",
+                "score": 2
+              }
+            ]
+          },
+          {
+            "key": "does_your_workers_enter_the_field",
+            "question_title": "After the use of pesticides, does your workers enter the field?",
+            "type": "radio",
+            "is_require": true,
+            "options": [
+              {
+                "title": "no",
+                "score": 2
+              }
+            ]
+          },
+          {
+            "key": "you_communicate_when_they_are_allowed_in_the_field",
+            "question_title": "How do you communicate when they are allowed in the field?",
+            "type": "dropdown",
+            "is_require": true,
+            "options": [
+              {
+                "title": "Clearly/Verbally communicated",
+                "score": 1
+              },
+              {
+                "title": "Not Communicated.",
+                "score": 0
+              }
+            ]
+          },
+          {
+            "key": "does_farmer_follow_proper_disposal_of_empty_pesticide_containers",
+            "question_title": "Does farmer follow proper disposal of Empty pesticide containers, surplus pesticides, and obsolete pesticidesd , through a collection, return, or disposal service, or through good practices in pesticide disposal.",
+            "type": "radio",
+            "is_require": true,
+            "options": [
+              {
+                "title": "yes",
+                "score": 2
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "title": "no",
+        "score": 12
+      }
+    ]
+  },
+  {
+    "key": "do_you_storage_pesticides_or_inorganic_fertilizers",
+    "question_title": "Do you storage pesticides and/or inorganic fertilizers.?",
+    "type": "radio",
+    "is_require": true,
+    "options": [
+      {
+        "title": "yes",
+        "questions": [
+          {
+            "key": "pesticides_and_inorganic_fertilizers",
+            "question_title": "Pesticides and inorganic fertilizers (including partly-empty containers) are:\n1. Labeled.\n2. Stored in a locked place that is separate from fuel, food, and rice and which is out of reach of children.",
+            "type": "dropdown",
+            "is_require": true,
+            "options": [
+              {
+                "title": "a) Farmer meets criteria 1 and 2.",
+                "score": 2
+              },
+              {
+                "title": "b) Farmer meets criteria 2.",
+                "score": 1
+              },
+              {
+                "title": "c) None of the above.",
+                "score": 0
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "title": "no",
+        "score": 2
+      }
+    ]
+  }
+]

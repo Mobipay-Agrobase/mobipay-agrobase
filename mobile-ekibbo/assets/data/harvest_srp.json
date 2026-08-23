@@ -1,0 +1,579 @@
+[
+  {
+    "key": "date_of_event",
+    "question_title": "Date of Event",
+    "type": "auto_fill",
+    "is_require": true,
+    "section": "general_information"
+  },
+  {
+    "key": "photo_captured",
+    "question_title": "Photo Captured",
+    "type": "upload",
+    "section": "general_information"
+  },
+  {
+    "key": "harvest_start_date",
+    "question_title": "Date of Start Harvest",
+    "type": "date_picker",
+    "is_require": true,
+    "section": "time_of_harvest"
+  },
+  {
+    "key": "harvest_end_date",
+    "question_title": "Date of End Harvest",
+    "type": "date_picker",
+    "is_require": true,
+    "section": "time_of_harvest"
+  },
+  {
+    "key": "total_harvested_volume",
+    "question_title": "Total Harvested Volume (Kgs)",
+    "type": "text_box",
+    "is_require": true,
+    "section": "time_of_harvest"
+  },
+  {
+    "key": "harvest_timing",
+    "question_title": "Did farmer follow appropriate timing of harvest ?",
+    "type": "radio",
+    "is_require": true,
+    "options": [
+      {
+        "title": "yes",
+        "questions": [
+          {
+            "key": "indications_of_appropriate_timing",
+            "question_title": "General indications of appropriate timing of harvest that farmer follows",
+            "type": "dropdown",
+            "is_require": true,
+            "options": [
+              {
+                "title": "When 80% to 85% of the grains per panicle are straw- or yellow-colored.",
+                "score": 3
+              },
+              {
+                "title": "When moisture content is between 21% and 24%.",
+                "score": 3
+              },
+              {
+                "title": "Between 28 and 35 days after heading in dry season, or between 32 and 38 days after heading in wet season.",
+                "score": 2
+              },
+              {
+                "title": "Between 130 and 136 days after sowing for late, 113 and 125 for medium, and 110 days for early-maturing varieties.",
+                "score": 2
+              },
+              {
+                "title": "Grains in the lower parts of the panicle should be in the “hard-dough” stage (firm but not brittle); grains that stick to your hand are too wet.",
+                "score": 1
+              }
+            ],
+            "section": "time_of_harvest"
+          }
+        ]
+      }
+    ],
+    "section": "time_of_harvest"
+  },
+  {
+    "key": "harvest_activity_done_by",
+    "question_title": "Activity Done By",
+    "type": "dropdown",
+    "is_require": true,
+    "options": [
+      {
+        "title": "Self"
+      },
+      {
+        "title": "Family Workers"
+      },
+      {
+        "title": "labor",
+        "is_multiple": true,
+        "questions": [
+          {
+            "key": "harvest_labor_gender",
+            "question_title": "Gender",
+            "type": "dropdown",
+            "is_require": true,
+            "section": "total_labor_cost_harvesting",
+            "parent": "labor",
+            "options": [
+              {
+                "title": "Male"
+              },
+              {
+                "title": "Female"
+              },
+              {
+                "title": "Other"
+              }
+            ]
+          },
+          {
+            "key": "harvest_labor_age_group",
+            "question_title": "Age Group",
+            "type": "dropdown",
+            "is_require": true,
+            "section": "total_labor_cost_harvesting",
+            "parent": "labor",
+            "options": [
+              {
+                "title": "11-18"
+              },
+              {
+                "title": "19-30"
+              },
+              {
+                "title": "31-40"
+              },
+              {
+                "title": "41-50"
+              },
+              {
+                "title": "Above 50"
+              }
+            ]
+          },
+          {
+            "key": "harvest_labor_man_days",
+            "question_title": "Man-Days",
+            "type": "text_box",
+            "is_require": true,
+            "section": "total_labor_cost_harvesting",
+            "parent": "labor"
+          },
+          {
+            "key": "harvest_labor_wages_per_area",
+            "question_title": "Wages per area",
+            "type": "text_box",
+            "is_require": true,
+            "section": "total_labor_cost_harvesting",
+            "parent": "labor"
+          },
+          {
+            "key": "harvest_labor_total_cost",
+            "question_title": "Cost",
+            "type": "auto_fill",
+            "is_require": true,
+            "section": "total_labor_cost_harvesting",
+            "parent": "labor"
+          }
+        ]
+      },
+      {
+        "title": "Machine",
+        "questions": [
+          {
+            "key": "harvest_machine_condition",
+            "question_title": "Did Harvest equipment was cleaned before use ?",
+            "type": "radio",
+            "is_require": true,
+            "options": [
+              {
+                "title": "yes",
+                "score": 3
+              },
+              {
+                "title": "no",
+                "score": 0
+              }
+            ],
+            "section": "harvesting_equipment",
+            "parent": "Machine"
+          },
+          {
+            "key": "harvest_machine_configuration",
+            "question_title": "Did Harvest equipment is cleaned before use and machine settings are adjusted ?",
+            "type": "dropdown",
+            "is_require": true,
+            "options": [
+              {
+                "title": "Yes cleaned and adjusted",
+                "score": 3
+              },
+              {
+                "title": "Either cleaned or adjusted",
+                "score": 1
+              },
+              {
+                "title": "No cleaned and adjusted",
+                "score": 0
+              }
+            ],
+            "section": "harvesting_equipment",
+            "parent": "Machine"
+          },
+          {
+            "key": "harvest_machine_name",
+            "question_title": "Machine Name",
+            "type": "text_box",
+            "is_require": true,
+            "section": "total_labor_cost_harvesting",
+            "parent": "Machine"
+          },
+          {
+            "key": "harvest_number_of_machine",
+            "question_title": "Number of machine",
+            "type": "text_box",
+            "is_require": true,
+            "section": "total_labor_cost_harvesting",
+            "parent": "Machine"
+          },
+          {
+            "key": "harvest_machine_wages_per_area",
+            "question_title": "Wages per area",
+            "type": "text_box",
+            "is_require": true,
+            "section": "total_labor_cost_harvesting",
+            "parent": "Machine"
+          },
+          {
+            "key": "harvest_machine_total_cost",
+            "question_title": "Cost",
+            "type": "auto_fill",
+            "is_require": true,
+            "section": "total_labor_cost_harvesting",
+            "parent": "Machine"
+          }
+        ]
+      }
+    ],
+    "section": "total_labor_cost_harvesting"
+  },
+  {
+    "key": "rice_condition",
+    "question_title": "Did rice is dried on-farm or they transported to a drying (e.g., miller) or processing facility within 12 hours after harvest",
+    "type": "dropdown",
+    "is_require": true,
+    "options": [
+      {
+        "title": "Yes",
+        "score": 3
+      },
+      {
+        "title": "No",
+        "questions": [
+          {
+            "key": "rice_moisture",
+            "question_title": "What is the final moisture content recorded?",
+            "type": "dropdown",
+            "is_require": true,
+            "options": [
+              {
+                "title": "16% or less moisture content and not more than 1% moisture gradient within 1 week.",
+                "score": 3
+              },
+              {
+                "title": "14-18% or less moisture content and not more than 1% moisture gradient within 3 days.",
+                "score": 2
+              },
+              {
+                "title": "18% or less moisture content or not 1% or less moisture gradient.",
+                "score": 1
+              }
+            ],
+            "section": "drying_time"
+          }
+        ]
+      },
+      {
+        "title": "NA",
+        "score": 0
+      }
+    ],
+    "section": "drying_time"
+  },
+  {
+    "key": "drying_activity_done_by",
+    "question_title": "Activity Done By",
+    "type": "dropdown",
+    "is_require": true,
+    "options": [
+      {
+        "title": "Self"
+      },
+      {
+        "title": "Family Workers"
+      },
+      {
+        "title": "labor",
+        "is_multiple": true,
+        "questions": [
+          {
+            "key": "drying_labor_gender",
+            "question_title": "Gender",
+            "type": "dropdown",
+            "is_require": true,
+            "section": "total_labor_cost_drying",
+            "parent": "labor",
+            "options": [
+              {
+                "title": "Male"
+              },
+              {
+                "title": "Female"
+              },
+              {
+                "title": "Other"
+              }
+            ]
+          },
+          {
+            "key": "drying_labor_age_group",
+            "question_title": "Age Group",
+            "type": "dropdown",
+            "is_require": true,
+            "section": "total_labor_cost_drying",
+            "parent": "labor",
+            "options": [
+              {
+                "title": "11-18"
+              },
+              {
+                "title": "19-30"
+              },
+              {
+                "title": "31-40"
+              },
+              {
+                "title": "41-50"
+              },
+              {
+                "title": "Above 50"
+              }
+            ]
+          },
+          {
+            "key": "drying_labor_man_days",
+            "question_title": "Man-Days",
+            "type": "text_box",
+            "is_require": true,
+            "section": "total_labor_cost_drying",
+            "parent": "labor"
+          },
+          {
+            "key": "drying_labor_wages_per_quantity",
+            "question_title": "Wages per quantity",
+            "type": "text_box",
+            "is_require": true,
+            "section": "total_labor_cost_drying",
+            "parent": "labor"
+          },
+          {
+            "key": "drying_labor_total_cost",
+            "question_title": "Cost",
+            "type": "auto_fill",
+            "is_require": true,
+            "section": "total_labor_cost_drying",
+            "parent": "labor"
+          }
+        ]
+      },
+      {
+        "title": "Machine"
+      }
+    ],
+    "section": "total_labor_cost_drying"
+  },
+  {
+    "key": "drying_technique",
+    "question_title": "How did you dry your rice?",
+    "type": "dropdown",
+    "is_require": true,
+    "options": [
+      {
+        "title": "mechanical drying",
+        "score": 3
+      },
+      {
+        "title": "sun drying",
+        "score": 2
+      },
+      {
+        "title": "Protected from rain, mycotoxins, animals, and people",
+        "score": 1
+      },
+      {
+        "title": "None of the above.",
+        "score": 0
+      }
+    ],
+    "section": "drying_technique"
+  },
+  {
+    "key": "stored_at_farm",
+    "question_title": "Do you store any rice on your farm?",
+    "type": "radio",
+    "is_require": true,
+    "section": "rice_storage"
+  },
+  {
+    "key": "how_is_rice_stored",
+    "question_title": "How do you store it?",
+    "type": "dropdown",
+    "is_require": true,
+    "options": [
+      {
+        "title": "Practices hermetic storage",
+        "score": 3
+      },
+      {
+        "title": "Practices hermetic storage Except cleaning the rice before storage",
+        "score": 2
+      },
+      {
+        "title": "Prevent contamination with hazardous substances and Maintain 14% moisture content or less.",
+        "score": 1
+      },
+      {
+        "title": "None of the above",
+        "score": 0
+      }
+    ],
+    "section": "rice_storage"
+  },
+  {
+    "key": "storage_activity_done_by",
+    "question_title": "Activity Done By",
+    "type": "dropdown",
+    "is_require": true,
+    "options": [
+      {
+        "title": "Self"
+      },
+      {
+        "title": "Family Workers"
+      },
+      {
+        "title": "labor",
+        "is_multiple": true,
+        "questions": [
+          {
+            "key": "storage_labor_gender",
+            "question_title": "Gender",
+            "type": "dropdown",
+            "is_require": true,
+            "section": "total_labor_cost_rice_storage",
+            "parent": "labor",
+            "options": [
+              {
+                "title": "Male"
+              },
+              {
+                "title": "Female"
+              },
+              {
+                "title": "Other"
+              }
+            ]
+          },
+          {
+            "key": "storage_labor_age_group",
+            "question_title": "Age Group",
+            "type": "dropdown",
+            "is_require": true,
+            "section": "total_labor_cost_rice_storage",
+            "parent": "labor",
+            "options": [
+              {
+                "title": "11-18"
+              },
+              {
+                "title": "19-30"
+              },
+              {
+                "title": "31-40"
+              },
+              {
+                "title": "41-50"
+              },
+              {
+                "title": "Above 50"
+              }
+            ]
+          },
+          {
+            "key": "storage_labor_man_days",
+            "question_title": "Man-Days",
+            "type": "text_box",
+            "is_require": true,
+            "section": "total_labor_cost_rice_storage",
+            "parent": "labor"
+          },
+          {
+            "key": "storage_labor_wages_per_quantity",
+            "question_title": "Wages per quantity",
+            "type": "text_box",
+            "is_require": true,
+            "section": "total_labor_cost_rice_storage",
+            "parent": "labor"
+          },
+          {
+            "key": "storage_labor_total_cost",
+            "question_title": "Cost",
+            "type": "auto_fill",
+            "is_require": true,
+            "section": "total_labor_cost_rice_storage",
+            "parent": "labor"
+          }
+        ]
+      },
+      {
+        "title": "Machine"
+      }
+    ],
+    "section": "total_labor_cost_rice_storage"
+  },
+  {
+    "key": "rice_stubble",
+    "question_title": "Rice stubble is:\n1. Not burned.\n2. Allowed sufficient time (at least 3 weeks) for aerobic decomposition before wetting.",
+    "type": "dropdown",
+    "is_require": true,
+    "options": [
+      {
+        "title": "Farmer meets criteria 1 and 2, without plowing of rice stubble under.",
+        "score": 3
+      },
+      {
+        "title": "Farmer meets criteria 1 and 2, with plowing of rice stubble under while soil is dry",
+        "score": 2
+      },
+      {
+        "title": "Farmer meets criteria 1, but plows rice stubble under while soil is flooded.",
+        "score": 1
+      },
+      {
+        "title": "Farmer burns rice stubble.",
+        "score": 0
+      }
+    ],
+    "section": "rice_stubble"
+  },
+  {
+    "key": "rice_straw",
+    "question_title": "Rice straw is:\n1. Not burned.\n2. Allowed sufficient time (at least 2 weeks) for aerobic decomposition if rice straw is left on the field or plowed under.\n3. Collected, used as livestock feed and animal manure is returned to the field. Or collected, composted, and returned to the field.",
+    "type": "dropdown",
+    "is_require": true,
+    "options": [
+      {
+        "title": "Farmer meets criteria 1 and 3.",
+        "score": 3
+      },
+      {
+        "title": "Farmer meets criteria 1 and 2 only.",
+        "score": 2
+      },
+      {
+        "title": "Farmer meets criteria 1 only.",
+        "score": 1
+      },
+      {
+        "title": "Farmer burns rice straw.",
+        "score": 0
+      }
+    ],
+    "section": "rice_straw"
+  }
+]

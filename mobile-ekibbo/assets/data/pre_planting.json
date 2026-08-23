@@ -1,0 +1,615 @@
+[
+    {
+        "key": "current_plot_land_is_using_for_any_conversion_activities",
+        "question_title": "Current plot land is using for any conversion activities (after 2009) and farming practices maintain and/or enhance site-specific biodiversity and ecosystem services.",
+        "type": "dropdown",
+        "is_require":true,
+        "options": [
+            {
+                "title": "There has been no conversion of described areas after 2009, and farming practices maintain and/or enhance site-specific biodiversity and ecosystem services.",
+                "score": 3
+            },
+            {
+                "title": "There has been no conversion of described areas after 2009, and farming practices maintain and/or enhance site-specific biodiversity.But not ecosystem services.",
+                "score": 2
+            },
+            {
+                "title": "There has been no conversion of described areas after 2009, and farming practices maintain and/or enhance site-specific biodiversity.But not ecosystem services.",
+                "score": 1
+            },
+            {
+                "title": "There has been conversion of described areas after",
+                "score": 0
+            }
+        ]
+    },
+    {
+        "key": "other_non_native_species",
+        "question_title": "Other non-native species was introduce by Farmer  or Farmer Group in field (since 2009)",
+        "type": "radio",
+        "is_require":true,
+        "options": [
+            {
+                "title": "no",
+                "score": 3
+            },
+            {
+                "title": "yes",
+                "score": 0,
+                "questions": [
+                    {
+                        "key": "non_native_species",
+                        "question_title": "Select the non-native species",
+                        "type": "dropdown",
+                        "is_require":true,
+                        "options": [
+                            {
+                                "title": "water hyacinth",
+                                "score": 3
+                            },
+                            {
+                                "title": "golden apple smail",
+                                "score": 2
+                            },
+                            {
+                                "title": "other",
+                                "score": 1,
+                                "question": [ 
+                                     {
+                                    "key": "other_native_species",
+                                    "question_title": "Please sepecify",
+                                    "type": "text_box",
+                                    "is_require":true
+                                      }
+                                  ]
+                            }
+                         
+                        ]
+                    },
+                    {
+                        "key": "does_effectively_managed",
+                        "question_title": "Does effectively managed",
+                        "type": "radio",
+                        "is_require":false,
+                        "options": [
+                            {
+                                "title": "yes",
+                                "score": 1
+                            }
+                        ]
+                
+                    }
+                ]
+            }
+        ]
+
+    }, 
+    {
+        "key": "current_rice_cultivated_farm_land_type",
+        "question_title": "Current rice cultivated farm land type",
+        "type": "dropdown",
+        "is_require":true,
+        "options": [
+            {
+                "title": "Flat land or terraces",
+                "score": 3,
+                "questions": [
+                    {
+                        "key": "type_of_leveling_is_used_to_level_the_surface",
+                        "question_title": "What Type of leveling is used to level the surface",
+                        "type": "dropdown",
+                        "is_require":true,
+                        "options": [
+                            {
+                                "title": "laser dry leveling",
+                                "score": 2
+                            },
+                            {
+                                "title": "wet leveling",
+                                "score": 2
+                            },
+                            {
+                                "title": "dry leveling",
+                                "score": 2
+                            },
+                            {
+                                "title": "No Leveling",
+                                "score": 0
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "title": "Sloping land without terraces",
+                "score": 3,
+                "questions": [
+                    {
+                        "key": "soil_conservation_practices_are_used",
+                        "question_title": "Which soil conservation practices are used",
+                        "type": "dropdown",
+                        "is_require":true,
+                        "options": [
+                            {
+                                "title": "Only Physical",
+                                "score": 2
+                            },
+                            {
+                                "title": "Both Physical and Cultural",
+                                "score": 3
+                            },
+                            {
+                                "title": "No soil conservation practices are used",
+                                "score": 0
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "title": "Dry land (without irrigation)",
+                "score": 3
+            }
+        ]
+    },
+    {
+        "key": "farmer_uses_certified_seed",
+        "question_title": "Farmer uses certified seed that is suitable for local conditions and meets criteria for certified seeds.",
+        "type": "radio",
+        "is_require":true,
+        "options": [
+            {
+                "title": "yes",
+                "score": 3
+            },
+            {
+                "title": "no",
+                "score": 3
+            }
+        ]
+    },
+    {
+        "key": "farmer_uses_seed_with_quality_control",
+        "question_title": "Farmer uses seed with quality control that is suitable for local conditions and meets criteria for seeds with quality control.",
+        "type": "radio",
+        "is_require":true,
+        "options": [
+            {
+                "title": "yes",
+                "score": 3
+            },
+            {
+                "title": "no",
+                "score": 3
+            }
+        ]
+    },
+    {
+        "key": "farmer_uses_self_saved_seeds",
+        "question_title": "Farmer uses self-saved seeds that meet criteria for self-saved seeds with quality control for a maximum of 3 crop cycles.",
+        "type": "radio",
+        "is_require":true,
+        "options": [
+            {
+                "title": "yes",
+                "score": 2
+            },
+            {
+                "title": "no",
+                "score": 2
+            }
+        ]
+    },
+    {
+        "key": "farmer_uses_4_options",
+        "question_title": "Farmer uses:\n- Uncertified seeds,\n- Seeds without quality control,\n- Self-saved seeds without quality control, or\n- Self-saved seeds for more than 3 crop cycles.",
+        "type": "radio",
+        "is_require":true
+    },
+    {
+        "key": "date_of_sowing",
+        "question_title": "Date of sowing",
+        "type": "date_picker",
+        "is_require":true
+    },
+    {
+        "key": "variety_types",
+        "question_title": "Variety types",
+        "type": "dropdown",
+        "is_require":true,
+        "options": [
+            {
+                "title": "White rice",
+                "score": 0
+            },
+            {
+                "title": "Fragrant rice",
+                "score": 0
+            },
+            {
+                "title": "Other rice",
+                "score": 0
+            }
+        ]
+    },
+    {
+        "key": "white_rice_is_selected",
+        "question_title": "Select white rice type",
+        "type": "dropdown",
+        "is_require":true,
+        "options": [
+            {
+                "title": "IR 504",
+                "score": 0
+            },
+            {
+                "title": "OM54",
+                "score": 0
+            },
+            {
+                "title": "OM38",
+                "score": 0
+            },
+            {
+                "title": "OM69",
+                "score": 0
+            },
+            {
+                "title": "HC",
+                "score": 0
+            },
+            {
+                "title": "SHC",
+                "score": 0
+            }
+        ]
+    },
+    {
+        "key": "fragrant_rice_is_selected",
+        "question_title": "Select fragrant rice type",
+        "type": "dropdown",
+        "is_require":true,
+        "options": [
+            {
+                "title": "OM18",
+                "score": 0
+            },
+            {
+                "title": "DT8",
+                "score": 0
+            },
+            {
+                "title": "NH9",
+                "score": 0
+            },
+            {
+                "title": "ST24",
+                "score": 0
+            },
+            {
+                "title": "ST25",
+                "score": 0
+            },
+            {
+                "title": "Jas",
+                "score": 0
+            },
+            {
+                "title": "RVT",
+                "score": 0
+            },
+            {
+                "title": "ST21",
+                "score": 0
+            }
+        ]
+    },
+    {
+        "key": "other_rice_is_selected",
+        "question_title": "Select other rice type",
+        "type": "dropdown",
+        "is_require":true,
+        "options": [
+            {
+                "title": "Nep",
+                "score": 0
+            },
+            {
+                "title": "Red",
+                "score": 0
+            },
+            {
+                "title": "Black",
+                "score": 0
+            },
+            {
+                "title": "Purple",
+                "score": 0
+            }
+        ]
+    },
+    {
+        "key": "quantity_of_used_seed",
+        "question_title": "Quantity of used seed",
+        "type": "text_box",
+        "is_require":true
+    },
+    {
+        "key": "price_of_seed",
+        "question_title": "Price of seed",
+        "type": "text_box",
+        "is_require":true
+    },
+    {
+        "key": "seed_cost",
+        "question_title": "Seed cost",
+        "type": "auto_fill",
+        "is_require":false
+    },
+    {
+        "key": "type_of_sowing",
+        "question_title": "Type of sowing",
+        "type": "dropdown",
+        "is_require":true,
+        "options": [
+            {
+                "title": "Row sowing",
+                "score": 0
+            },
+            {
+                "title": "hand sowing",
+                "score": 0
+            },
+            {
+                "title": "drone sowing",
+                "score": 0
+            },
+            {
+                "title": "Transplanting",
+                "score": 0
+            },
+            {
+                "title": "re-planting",
+                "score": 0
+            }
+        ]
+    },
+    {
+        "key": "sowing_charges_by",
+        "question_title": "Sowing charges by",
+        "type": "dropdown",
+        "is_require":true,
+        "options": [
+            {
+                "title": "hour",
+                "score": 0
+            },
+            {
+                "title": "hectare",
+                "score": 0
+            }
+        ]
+    },
+    {
+        "key": "sowing_charges",
+        "question_title": "Sowing charges",
+        "type": "text_box",
+        "is_require":true
+    },
+    {
+        "key": "sowing_cost",
+        "question_title": "Sowing cost",
+        "type": "auto_fill",
+        "is_require":false
+    },
+    {
+        "key": "presence_of_heavy_metals",
+        "question_title": "Presence of Heavy Metals ?",
+        "type": "radio",
+        "is_require":true,
+        "options":[
+            {
+                "title": "no",
+                "score": 3
+            },
+            {
+                "title": "yes",
+                "score": 0,
+                "questions": [
+                    {
+                        "key": "group_level_soil_analysis",
+                        "question_title": "Does group level soil analysis is conducted in contaminated areas at least every 5 years ?",
+                        "type": "radio",
+                        "is_require":true,
+                        "options":[
+                            {
+                                "title": "no",
+                                "score": 0
+                            },
+                            {
+                                "title": "yes",
+                                "score": 2
+                            }
+                        ]
+                    },
+                    {
+                        "key": "soil_remediation_techniques_are_implemented",
+                        "question_title": "Soil remediation techniques are implemented ?",
+                        "type": "radio",
+                        "is_require":true,
+                        "options":[
+                            {
+                                "title": "no",
+                                "score": 0
+                            },
+                            {
+                                "title": "yes",
+                                "score": 1
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "key": "has_any_part_of_your_land_been_used",
+        "question_title": "Has any part of your land been used for any of the following during the past 50 years?",
+        "type": "radio",
+        "is_require":true,
+        "options": [
+            {
+                "title": "yes",
+                "score": 0,
+                "questions": [
+                    {
+                        "key": "sewage_sludge_application",
+                        "question_title": "Sewage sludge application",
+                        "type": "radio",
+                        "is_require":true
+                    },
+                    {
+                        "key": "Industrial_waste_disposal",
+                        "question_title": "Industrial waste disposal",
+                        "type": "radio",
+                        "is_require":true
+                    },
+                    {
+                        "key": "mining_artisanal_or_industrial",
+                        "question_title": "Mining (artisanal or industrial)",
+                        "type": "radio",
+                        "is_require":true
+                    },
+                    {
+                        "key": "mine_drainage",
+                        "question_title": "Mine drainage",
+                        "type": "radio",
+                        "is_require":true
+                    },
+                    {
+                        "key": "battery_recycling_or_disposal",
+                        "question_title": "Battery recycling or disposal",
+                        "type": "radio",
+                        "is_require":true
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "key": "land_adjacent_to_a_busy_road",
+        "question_title": "Is your land adjacent to a busy road (like a highway, expressway)?",
+        "type": "radio",
+        "is_require":true
+    },
+    {
+        "key": "land_located_downwind_from_a_coal_powered",
+        "question_title": "Is your land located downwind from a coal-powered electrical plant (within 5 km)?",
+        "type": "radio",
+        "is_require":true
+    },
+    {
+        "key": "land_located_downstream",
+        "question_title": "Is your land located downstream from an active or former water treatment plant, livestock (including poultry) production facility, or fisheries operation?",
+        "type": "radio",
+        "is_require":true
+    },
+    {
+        "key": "following_products_been_used",
+        "question_title": "Have any of the following products been used on your land during the past 50 years?",
+        "type": "radio",
+        "is_require":true,
+        "options": [
+            {
+                "title": "yes",
+                "score": 0,
+                "questions": [
+                    {
+                        "key": "cadmium_containing_fungicides_is_used",
+                        "question_title": "Did Cadmium-containing fungicides is used ?",
+                        "type": "radio",
+                        "is_require":true
+                    },
+                    {
+                        "key": "mercury_containing_fungicides_is_used",
+                        "question_title": "Did Mercury-containing fungicides is used ?",
+                        "type": "radio",
+                        "is_require":true
+                    },
+                    {
+                        "key": "arsenic_containing_pesticides_is_used",
+                        "question_title": "Did Arsenic-containing pesticides is used ?",
+                        "type": "radio",
+                        "is_require":true
+                    },
+                    {
+                        "key": "phosphate_fertilizer_from_a_high_cadmium_source_is_used",
+                        "question_title": "Did Phosphate fertilizer from a high-cadmium source is used ?",
+                        "type": "radio",
+                        "is_require":true
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "key": "reports_of_groundwater_or_surface",
+        "question_title": "Have there been any reports of groundwater or surface water contamination in your region (with arsenic, cadmium, mercury, or anything else)?",
+        "type": "radio",
+        "is_require":true,
+        "options": [
+            {
+                "title": "yes",
+                "score": 0,
+                "questions": [
+                    {
+                        "key": "upload_the_report",
+                        "question_title": "Upload the report",
+                        "type": "upload",
+                        "is_require":true
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "key": "irrigation_source_ever_been_tested",
+        "question_title": "Has your irrigation source ever been tested outside the normal limits for any contaminant?",
+        "type": "radio",
+        "is_require":true
+    },
+    {
+        "key": "risk_of_soil_salinity_has_been_analyzed",
+        "question_title": "Does Risk of soil salinity has been analyzed ?",
+        "type": "radio",
+        "is_require":true
+    },
+    {
+        "key": "risk_of_soil_salinity",
+        "question_title": "Is there any risk of Soil Salinity within the group or region ?",
+        "type": "radio",
+        "is_require":true,
+        "options": [
+            {
+                "title": "no",
+                "score": 3
+            },
+            {
+                "title": "yes",
+                "score": 2
+            }
+        ]
+    },
+    {
+        "key": "prevention_measures_are_taken",
+        "question_title": "Any Prevention measures are taken ?",
+        "type": "radio",
+        "is_require":true,
+        "options": [
+            {
+                "title": "yes",
+                "score": 1
+            }
+        ]
+    }
+]

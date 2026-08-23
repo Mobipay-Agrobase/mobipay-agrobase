@@ -1,0 +1,480 @@
+[
+    {
+        "key": "did_you_use_pesticide_in_your_farm",
+        "question_title": "Did you use Pesticide in your farm ?",
+        "type": "radio",
+        "is_require": true,
+        "options": [
+            {
+                "title": "yes",
+                "questions": [
+                    {
+                        "key": "did_farmer_user_national_gov_recommended_products ",
+                        "question_title": "Did farmer user National Gov recommended products ",
+                        "type": "radio",
+                        "is_require": true,
+                        "options": [
+                            {
+                                "title": "yes",
+                                "score": 3
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "title": "no",
+                "score": 3
+            }
+        ]
+    },
+    {
+        "key": "pesticides_are_not_applied",
+        "question_title": "Pesticides are not applied:\n1) on non-target areas\n2) within 5 meters of occupied buildings, roads or pathways unless there is no threat to human or wildlife\n3) within 5 meters of water bodies (including main irrigation channels)\n4) within 1 meter of small diversion canals\n5) within 5 meters of protected areas\n6) during strong winds.",
+        "type": "dropdown",
+        "is_require": true,
+        "options": [
+            {
+                "title": "Managed without pesticides",
+                "score": 3
+            },
+            {
+                "title": "Compliance with all listed conditions",
+                "score": 3
+            },
+            {
+                "title": "Non-compliance with one or more of the listed elements for purchased or farm-produced pesticides.",
+                "score": 0
+            }
+        ]
+    },
+    {
+        "key": "farmer_follow_instructions_on_application_method",
+        "question_title": "Did farmer follow the label instructions on application method, pre-harvest interval and dosage ?",
+        "type": "dropdown",
+        "is_require": true,
+        "options": [
+            {
+                "title": "There is no use of pesticides.",
+                "score": 3
+            },
+            {
+                "title": "Instructions followed",
+                "score": 2
+            },
+            {
+                "title": "Instructions followed but sub-optimal dosage.",
+                "score": 1
+            },
+            {
+                "title": "No Instructions followed",
+                "score": 0
+            }
+        ]
+    },
+    {
+        "key": "pesticide_application_equipment",
+        "question_title": "Did Pesticide application equipment, and it is maintained to prevent leakage or contamination of products ?",
+        "type": "dropdown",
+        "is_require": true,
+        "options": [
+            {
+                "title": "There is no use of pesticides.",
+                "score": 3
+            },
+            {
+                "title": "Calibration and maintenance within current crop cycle",
+                "score": 2
+            },
+            {
+                "title": "Calibration and maintenance within the past 2 years",
+                "score": 1
+            },
+            {
+                "title": "No calibration and maintenance within the past 2 years",
+                "score": 0
+            }
+        ]
+    },
+    {
+        "key": "do_you_use_herbicide",
+        "question_title": "Do you use herbicide?",
+        "type": "dropdown",
+        "is_require": true,
+        "options": [
+            {
+                "title": "Weeds are controlled without herbicides",
+                "score": 3
+            },
+            {
+                "title": "maximum of 1 herbicide application per season, which must meet the criteria for appropriate use",
+                "score": 2
+            },
+            {
+                "title": "up to 4 herbicide applications (must have distinct modes of action) per crop cycle, meeting all criteria for appropriate use",
+                "score": 1
+            },
+            {
+                "title": "Weeds are not effectively controlled or are managed with inappropriate herbicide use",
+                "score": 0
+            }
+        ]
+    },
+    {
+        "key": "preventive_weed_control_methods",
+        "question_title": "Have you use preventive weed control methods?",
+        "type": "radio",
+        "is_require": true,
+        "options": [
+            {
+                "title": "yes",
+                "questions": [
+                    {
+                        "key": "curative_weed_control_methods_are_used",
+                        "question_title": "What are the Curative weed control methods are used ?",
+                        "type": "dropdown",
+                        "is_require": true,
+                        "options": [
+                            {
+                                "title": "Farmer effectively controls weeds without the use of herbicide",
+                                "score": 3
+                            },
+                            {
+                                "title": "Farmer meets all the recommended criterias",
+                                "score": 3
+                            },
+                            {
+                                "title": "Farmer meets all the recommended criterias except Herbicide selection and use responds to the target weed species",
+                                "score": 2
+                            },
+                            {
+                                "title": "Farmer meets only Preventative weed control methods, is used only if other curative methods are not effective on their own and national government recommended Herbicide selections",
+                                "score": 1
+                            },
+                            {
+                                "title": "Farmer does not follow any method",
+                                "score": 0
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "title": "no",
+                "score": 3
+            }
+        ]
+    },
+    {
+        "key": "do_you_use_insecticide",
+        "question_title": "Do you use insecticide?",
+        "type": "dropdown",
+        "is_require": true,
+        "options": [
+            {
+                "title": "Insect pests are managed without use of chemical insecticides",
+                "score": 3
+            },
+            {
+                "title": "maximum of 1 application of insecticides per crop cycle, only in the conditions for appropriate use",
+                "score": 2
+            },
+            {
+                "title": "maximum of 2 insecticides per crop cycle, both of which should be within the conditions of appropriate use",
+                "score": 1
+            },
+            {
+                "title": "Insect pests are not effectively managed or insecticides are used preventively or insecticides are applied before heading",
+                "score": 0
+            }
+        ]
+    },
+    {
+        "key": "preventive_insect_control_methods",
+        "question_title": "Have you used preventive insect control methods?",
+        "type": "radio",
+        "is_require": true,
+        "options": [
+            {
+                "title": "yes",
+                "questions": [
+                    {
+                        "key": "curative_weed_control_methods_are_used",
+                        "question_title": "What are the Curative weed control methods are used ?",
+                        "type": "dropdown",
+                        "is_require": true,
+                        "options": [
+                            {
+                                "title": "Farmer effectively controls weeds without the use of herbicide",
+                                "score": 3
+                            },
+                            {
+                                "title": "Farmer meets all the recommended criterias",
+                                "score": 3
+                            },
+                            {
+                                "title": "Farmer meets all the recommended criterias except Herbicide selection and use responds to the target weed species",
+                                "score": 2
+                            },
+                            {
+                                "title": "Farmer meets only Preventative weed control methods, is used only if other curative methods are not effective on their own and national government recommended Herbicide selections",
+                                "score": 1
+                            },
+                            {
+                                "title": "Farmer does not follow any method",
+                                "score": 0
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "title": "no",
+                "score": 3
+            }
+        ]
+    },
+    {
+        "key": "do_you_use_molluscicide",
+        "question_title": "Do you use molluscicide?",
+        "type": "dropdown",
+        "is_require": true,
+        "options": [
+            {
+                "title": "mollusc pests are managed without use of Molluscicide",
+                "score": 3
+            },
+            {
+                "title": "maximum 1 application of Molluscicide per crop cycle, but only if applied for rice younger than 30 days old",
+                "score": 2
+            },
+            {
+                "title": "maximum of 1 Molluscicide application per crop cycle, but it is done during fallow",
+                "score": 1
+            },
+            {
+                "title": "mollusc pests are not managed effectively or Molluscicide is over-applied or applied on rice older than 30 days",
+                "score": 0
+            }
+        ]
+    },
+    {
+        "key": "preventive_mollusc_control_methods",
+        "question_title": "Have you used preventive mollusc control methods?",
+        "type": "radio",
+        "is_require": true,
+        "options": [
+            {
+                "title": "yes",
+                "questions": [
+                    {
+                        "key": "curative_mollusc_control_methods_are_used",
+                        "question_title": "What are the Curative mollusc control methods are used ?",
+                        "type": "dropdown",
+                        "is_require": true,
+                        "options": [
+                            {
+                                "title": "Farmer effectively controls molluscs without the use of molluscicide",
+                                "score": 3
+                            },
+                            {
+                                "title": "Farmer meets all the recommended criterias",
+                                "score": 3
+                            },
+                            {
+                                "title": "Farmer meets all the recommended criterias except Molluscicide responds to target mollusc species and is used only within the first 3 weeks after crop establishment",
+                                "score": 2
+                            },
+                            {
+                                "title": "Farmer meets only Preventative mollusc control methods, Molluscicide is used only if other curative methods are not effective on their own and national government recommended molluscicide selections",
+                                "score": 1
+                            },
+                            {
+                                "title": "Farmer does not follow any method",
+                                "score": 0
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "title": "no",
+                "score": 3
+            }
+        ]
+    },
+    {
+        "key": "do_you_use_fungicide",
+        "question_title": "Do you use fungicide? ",
+        "type": "dropdown",
+        "is_require": true,
+        "options": [
+            {
+                "title": "diseases are managed without use of chemical control"
+            },
+            {
+                "title": "1 fungicide application, only in the conditions for appropriate use"
+            },
+            {
+                "title": "maximum 2 fungicide applications per crop cycle, only in the conditions for appropriate use"
+            },
+            {
+                "title": "diseases are not effectively managed or fungicides are applied in excess of requirements"
+            },
+            {
+                "title": "Farmer does not follow any method"
+            }
+        ]
+    },
+    {
+        "key": "have_you_used_preventive_disease_control_methods",
+        "question_title": "Have you used preventive disease control methods?",
+        "type": "radio",
+        "is_require": true,
+        "options": [
+            {
+                "title": "yes",
+                "questions": [
+                    {
+                        "key": "curative_disease_control_methods_are_used",
+                        "question_title": "What are the Curative disease control methods are used ?",
+                        "type": "dropdown",
+                        "is_require": true,
+                        "options": [
+                            {
+                                "title": "Farmer effectively controls diseases without the use of fungicide",
+                                "score": 3
+                            },
+                            {
+                                "title": "Farmer meets all the recommended criterias",
+                                "score": 3
+                            },
+                            {
+                                "title": "Farmer meets all the recommended criterias except Fungicide responds to the target disease type considers recent history of fungal disease and predicted weather patterns",
+                                "score": 2
+                            },
+                            {
+                                "title": "Farmer meets only Preventative disease control methods, fungicide is used only if other curative methods are not effective on their own and national government recommended fungicide selections",
+                                "score": 1
+                            },
+                            {
+                                "title": "Farmer does not follow any method",
+                                "score": 0
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "title": "no",
+                "score": 3
+            }
+        ]
+    },
+    {
+        "key": "do_you_use_rodenticide",
+        "question_title": "Do Do you use rodenticide? ",
+        "type": "dropdown",
+        "is_require": true,
+        "options": [
+            {
+                "title": "rodent pests are managed without use of rodenticides"
+            },
+            {
+                "title": "maximum 1 application of rodenticide per crop cycle"
+            },
+            {
+                "title": "more than 1 application of rodenticide per crop cycle"
+            },
+            {
+                "title": "Rodents are not managed effectively, or rodenticide is used too late to provide effective protection"
+            }
+        ]
+    },
+    {
+        "key": "preventive_rodent_control_methods",
+        "question_title": "Have you used preventive rodent control methods?",
+        "type": "radio",
+        "is_require": true,
+        "options": [
+            {
+                "title": "yes",
+                "questions": [
+                    {
+                        "key": "curative_rodent_control_methods_are_used",
+                        "question_title": "What are the Curative rodent control methods are used ?",
+                        "type": "dropdown",
+                        "is_require": true,
+                        "options": [
+                            {
+                                "title": "Farmer effectively controls rodents without the use of rodenticide",
+                                "score": 3
+                            },
+                            {
+                                "title": "Farmer meets all the recommended criterias",
+                                "score": 3
+                            },
+                            {
+                                "title": "Farmer meets all the recommended criterias except Rodenticide responds to target rodent species, is used before the reproductive growth phase of the crop to avoid an outbreak during grain filling",
+                                "score": 2
+                            },
+                            {
+                                "title": "Farmer meets only Preventative rodent control methods, rodenticide is used only if other curative methods are not effective on their own and national government recommended rodenticide selections",
+                                "score": 1
+                            },
+                            {
+                                "title": "Farmer does not follow any method",
+                                "score": 0
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "title": "no",
+                "score": 3
+            }
+        ]
+    },
+    {
+        "key": "have_you_used_bird_control_methods",
+        "question_title": "Have you used Bird control methods?",
+        "type": "radio",
+        "is_require": true,
+        "options": [
+            {
+                "title": "yes",
+                "questions": [
+                    {
+                        "key": "what_control_method_you_used",
+                        "question_title": "What control method you used?",
+                        "type": "dropdown",
+                        "is_require": true,
+                        "options": [
+                            {
+                                "title": "Bird pests are managed by non-lethal bird control methods",
+                                "score": 3
+                            },
+                            {
+                                "title": "Bird pests are managed by live trapping and all non-pest species are released alive",
+                                "score": 2
+                            },
+                            {
+                                "title": "Bird pests are managed through discriminatory shooting (hunting)",
+                                "score": 1
+                            },
+                            {
+                                "title": "Birds are indiscriminately persecuted by killing, poisoning, and/or hunting",
+                                "score": 0
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "title": "no",
+                "score": 3
+            }
+        ]
+    }
+]

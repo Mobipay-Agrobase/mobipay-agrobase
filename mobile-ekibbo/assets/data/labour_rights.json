@@ -1,0 +1,228 @@
+[
+    {
+        "key": "there_children_below_the_age_of_15",
+        "question_title": "Are there children below the age of 15 working on the farm?",
+        "type": "radio",
+        "is_require": true,
+        "section": "employment_of_children",
+        "options": [
+            {
+                "title": "yes",
+                "score": 3,
+                "is_multiple": true,
+                "questions": [
+                    {
+                        "key": "name_of_the_child",
+                        "question_title": "Name of the child",
+                        "type": "text_box",
+                        "is_require": true,
+                        "section": "employment_of_children"
+                    },
+                    {
+                        "key": "date_of_birth",
+                        "question_title": "Date of Birth",
+                        "type": "date_picker",
+                        "is_require": true,
+                        "section": "employment_of_children"
+                    },
+                    {
+                        "key": "age_of_chilren",
+                        "question_title": "Age",
+                        "type": "auto_fill",
+                        "section": "employment_of_children"
+                    },
+                    {
+                        "key": "id_proof",
+                        "question_title": "Id proof",
+                        "type": "upload",
+                        "section": "employment_of_children"
+                    },
+                    {
+                        "key": "good_evidences_for_children",
+                        "question_title": "Good evidences for children no hazard working",
+                        "type": "dropdown",
+                        "is_require": true,
+                        "section": "hazardous_work",
+                        "options": [
+                            {
+                                "title": "Work in dangerous locations",
+                                "score": 3
+                            },
+                            {
+                                "title": "Work with dangerous machinery, equipment, and tools",
+                                "score": 3
+                            },
+                            {
+                                "title": "Carry heavy loads",
+                                "score": 3
+                            },
+                            {
+                                "title": "Work with dangerous substances",
+                                "score": 3
+                            },
+                            {
+                                "title": "Work at night",
+                                "score": 3
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+   
+    {
+        "key": "children_living_on_the_farm_in_the_age",
+        "question_title": "Are there Children living on the farm in the age of compulsory schooling go to school all year long ?",
+        "type": "radio",
+        "is_require": true,
+        "section": "education",
+        "options": [
+            {
+                "title": "yes",
+                "score": 3
+            },
+            {
+                "title": "no",
+                "score": 2,
+                "questions": [
+                    {
+                        "key": "any_efforts_are_made_to_provide_them_education",
+                        "question_title": "Any efforts are made to provide them education?",
+                        "type": "radio",
+                        "is_require": true,
+                        "section": "education",
+                        "options": [
+                            {
+                                "title": "yes",
+                                "score": 1
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "key": "do_you_hire_any_worker_for_your_farm",
+        "question_title": "Do you hire any worker for your farm?",
+        "type": "radio",
+        "is_require": true,
+        "section": "forced_labor",
+        "options": [
+            {
+                "title": "yes",
+                "score": 1,
+                "questions": [
+                    {
+                        "key": "do_you_forced_compulsory_or_slave_labor_used",
+                        "question_title": "Do you forced, compulsory, or slave labor used, including trafficked and bonded labor, labor by prisoners, or the use of extortion, debt, threats, fines or penalties",
+                        "type": "radio",
+                        "is_require": true,
+                        "section": "forced_labor"
+                    },
+                    {
+                        "key": "select_the_following_criteria_are_met",
+                        "question_title": "Select the following criteria are met",
+                        "type": "dropdown",
+                        "is_require": true,
+                        "section": "forced_labor",
+                        "options": [
+                            {
+                                "title": "No withholding of (part of) the worker’s salary, benefits, property, or documents in order to force such worker to continue to work"
+                            },
+                            {
+                                "title": "Workers are not charged recruiting or hiring fees"
+                            },
+                            {
+                                "title": "Workers are allowed to leave the farm’s premises at the end of their shifts"
+                            },
+                            {
+                                "title": "Regular working hours of workers do not exceed 48 hours per week, with at least 1 full day of rest for every 6 consecutive days worked"
+                            },
+                            {
+                                "title": "Spouses and children of contracted workers are not forced to work on the farm"
+                            },
+                            {
+                                "title": "The farm does not participate In or allow human trafficking"
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "key": "discrimination_or_disrespectful_treatment",
+        "question_title": "Are there discrimination or disrespectful treatment of workers, including working household members?",
+        "type": "radio",
+        "is_require": true,
+        "section": "discrimination"
+    },
+    {
+        "key": "select_the_following_criteria_are_met_discrimination",
+        "question_title": "Select the following criteria are met discrimination",
+        "type": "dropdown",
+        "is_require": true,
+        "section": "discrimination",
+        "options": [
+            {
+                "title": "No discrimination on the basis of gender, ethnic background, national origin, religion, disability, sexual orientation, pregnancy, worker organization membership, or political affiliation"
+            },
+            {
+                "title": "No distinction, exclusion, or preference to harm equality of opportunity with regard to hiring, training,etc or other employment-related decision"
+            },
+            {
+                "title": "No job-related medical testing as a condition of employment (except lawful drug testing)"
+            },
+            {
+                "title": "No behavior, gesture, language, or physical contact that is sexually abusive, coercive, or threatening"
+            },
+            {
+                "title": "No bullying or physical punishment"
+            }
+        ]
+    },
+    {
+        "key": "select_the_following_criteria_are_met_freedom",
+        "question_title": "Select the following criteria are met Freedom of association",
+        "type": "dropdown",
+        "is_require": true,
+        "section": "freedom_of_association",
+        "options": [
+            {
+                "title": "Workers can freely establish and join workers’ organizations"
+            },
+            {
+                "title": "Labor organizations are allowed to conduct activities on-farm"
+            },
+            {
+                "title": "Effective functioning of labor organizations Is not blocked and representatives of such organizations are not discriminated against"
+            },
+            {
+                "title": "Farmer complies with collective bargaining agreements"
+            }
+        ]
+    },
+    {
+        "key": "select_the_following_criteria_are_met_wages",
+        "question_title": "Select the following criteria are met Wages",
+        "type": "dropdown",
+        "is_require": true,
+        "section": "wages",
+        "options": [
+            {
+                "title": "Wages of workers meet or exceed the legal minimum wage required under local or national laws and regulations"
+            },
+            {
+                "title": "Wages are paid in a timely manner and on a regular basis"
+            },
+            {
+                "title": "Wages are paid in a legal currency, or in another form acceptable to workers without creating any form of dependency"
+            },
+            {
+                "title": "Overtime is voluntary and is paid at the rate required by local or national laws and regulations, or as collectively negotiated"
+            }
+        ]
+    }
+]

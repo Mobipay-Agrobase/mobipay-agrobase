@@ -1,0 +1,198 @@
+[
+    {
+        "key": "woman_decisions_regarding_household_agricultural",
+        "question_title": "Women's control over decisions regarding household agricultural production",
+        "type": "dropdown",
+        "is_require": true,
+        "options": [
+            {
+                "title": "Women have at least equivalent decision-making power",
+                "score": 10
+            },
+            {
+                "title": "Women have some but less than equivalent decision-making power",
+                "score": 2
+            },
+            {
+                "title": "Women have none or marginal decision-making power",
+                "score": 0
+            }
+        ]
+    },
+    {
+        "key": "woman_decisions_regarding_their_own_labor_input",
+        "question_title": "Women's control over decisions regarding their own labor input",
+        "type": "dropdown",
+        "is_require": true,
+        "options": [
+            {
+                "title": "Women have at least equivalent decision-making power",
+                "score": 10
+            },
+            {
+                "title": "Women have some but less than equivalent decision-making power",
+                "score": 2
+            },
+            {
+                "title": "Women have none or marginal decision-making power",
+                "score": 0
+            }
+        ]
+    },
+    {
+        "key": "woman_satisfaction_regarding_their_labor_input",
+        "question_title": "Women’s satisfaction regarding their labor input",
+        "type": "dropdown",
+        "is_require": true,
+        "options": [
+            {
+                "title": "Women are satisfied",
+                "score": 10
+            },
+            {
+                "title": "Women are partly satisfied (e.g. no balance during peak labor-requiring periods)",
+                "score": 2
+            },
+            {
+                "title": "Women are structurally unsatisfied",
+                "score": 0
+            }
+        ]
+    },
+    {
+        "key": "women_access_information_and_capacity_building",
+        "question_title": "Women's access to information and capacity building",
+        "type": "dropdown",
+        "is_require": true,
+        "options": [
+            {
+                "title": "Women have equal access",
+                "score": 10
+            },
+            {
+                "title": "Women have less access",
+                "score": 2
+            },
+            {
+                "title": "Women have no access",
+                "score": 0
+            }
+        ]
+    },
+    {
+        "key": "women_access_to_seasonal_resources",
+        "question_title": "Women's access to seasonal resources for farm activities",
+        "type": "dropdown",
+        "is_require": true,
+        "options": [
+            {
+                "title": "Women have at least equivalent decision-making power and equal access",
+                "score": 10
+            },
+            {
+                "title": "Women have some but less than equivalent decision-making power and less than equal access",
+                "score": 2
+            },
+            {
+                "title": "Women have none or marginal decision-making power and no access",
+                "score": 0
+            }
+        ]
+    },
+    {
+        "key": "women_control_over_long_term_resources",
+        "question_title": "Women's control over long-term resources for farm activities",
+        "type": "dropdown",
+        "is_require": true,
+        "options": [
+            {
+                "title": "Women have at least equivalent decision-making power and ownership",
+                "score": 10
+            },
+            {
+                "title": "Women have some but less than equivalent decision-making power or ownership",
+                "score": 2
+            },
+            {
+                "title": "Women none or marginal decision-making power or ownership",
+                "score": 0
+            }
+        ]
+    },
+    {
+        "key": "women_control_over_decision_making",
+        "question_title": "Women's control over decision-making regarding household income",
+        "type": "dropdown",
+        "is_require": true,
+        "options": [
+            {
+                "title": "Women have at least equivalent decision-making power",
+                "score": 10
+            },
+            {
+                "title": "Women have some but less than equivalent decision-making power",
+                "score": 2
+            },
+            {
+                "title": "Women have none or marginal decision-making power",
+                "score": 0
+            }
+        ]
+    },
+    {
+        "key": "women_control_over_their_personal_income",
+        "question_title": "Women's control over their personal income",
+        "type": "dropdown",
+        "is_require": true,
+        "options": [
+            {
+                "title": "Women have equivalent or greater control",
+                "score": 10
+            },
+            {
+                "title": "Women have some but less than equivalent control",
+                "score": 2
+            },
+            {
+                "title": "Women have no or very limited control",
+                "score": 0
+            }
+        ]
+    },
+    {
+        "key": "women_participation_in_collective_decision_making",
+        "question_title": "Women's participation in collective-decision making",
+        "type": "dropdown",
+        "is_require": true,
+        "options": [
+            {
+                "title": "Women participate in group leadership, are active in group decisions and their voices are valued",
+                "score": 10
+            },
+            {
+                "title": "Women are present during group decisions, but their contributions are not given full weight",
+                "score": 2
+            },
+            {
+                "title": "Women are excluded from group decision making",
+                "score": 0
+            }
+        ]
+    },
+    {
+        "key": "violence_against_women",
+        "question_title": "Violence against women",
+        "type": "dropdown",
+        "is_require": true,
+        "options": [
+            {
+                "title": "There are no cases of violence",
+                "score": 10
+            },
+            {
+                "title": "There is at least one case of violence",
+                "score": 0
+            }
+        ]
+    }
+]

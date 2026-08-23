@@ -1,0 +1,191 @@
+[
+    {
+        "key": "type_of_irrigation_was_used",
+        "question_title": "Which type of Irrigation was used in the farm?",
+        "type": "dropdown",
+        "is_require": true,
+        "options": [
+            {
+                "title": "I do not use irrigation, I have a rainfed production system",
+                "questions": [
+                    {
+                        "key": "rainfed_production_system",
+                        "question_title": "Measures are in place to enhance water-use efficiency including:\n1. Timely and appropriate crop establishment according to local climate.\n2. Direct seeding or effective puddling, and strong bunds\n3. Use of varieties suitable for local climate (e.g., short or medium-duration varieties).\n4. Provision of on-site rainwater harvesting and storage for supplementary irrigation.\nIn this case farmer does not irrigate ?",
+                        "type": "dropdown",
+                        "is_require": false,
+                        "options": [
+                            {
+                                "title": "Farmer implements all four measures.",
+                                "score": 3
+                            },
+                            {
+                                "title": "Farmer implements measures 1, 2, and 3 only.",
+                                "score": 2
+                            },
+                            {
+                                "title": "Farmer implements measures 1 and 2 only.",
+                                "score": 1
+                            },
+                            {
+                                "title": "None of the above.",
+                                "score": 0
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "title": " I have an irrigated surface water production system that is flood prone",
+                "questions": [
+                    {
+                        "key": "irrigated_surface_water_production_system_that_is_flood_prone",
+                        "question_title": "Measures are in place to enhance water-use efficiency including:\n1. Timely crop establishment to avoid submergence of the crop during expected floods.\n2. At least one dry-down event (i.e., mid-season drainage of 7 days drained period/aeration), if possible.\n3. Leveling with provision for minor drainage conditions.\n4. Use of flood-tolerant varieties.\nIn this case the farmer is channeling water from a river or a stream. He/she will never pump water from the ground.",
+                        "type": "dropdown",
+                        "options": [
+                            {
+                                "title": "Farmer implements measure 1 and any two additional measures.",
+                                "score": 3
+                            },
+                            {
+                                "title": "Farmer implements measure 1 and any one additional measure listed.",
+                                "score": 2
+                            },
+                            {
+                                "title": "Farmer implements measure 1 only.",
+                                "score": 1
+                            },
+                            {
+                                "title": "None of the above.",
+                                "score": 0
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "title": "I have an irrigated surface/ground water production system that is not flood-prone",
+                "questions":[
+                    {
+                        "key": "irrigated_surface_or_ground_water_production_system_that_is_not_flood_prone",
+                        "question_title": "Measures are in place to enhance water-use efficiency including:\n1. One dry tillage before flooding if soil is cracked.\n2. Leveling and strong bunds.\n3. Dry seeding, or transplanting following land soak, effective puddling, and tillage within a 1-week period.\n4. Alternate wetting and drying.\n5. Use of short or medium-duration varieties with similar yield potential as long duration varieties\n6. Termination of irrigation at least 10-15 days before harvesting.\nIn this case there is not enough water from other sources and farmer is pumping water from the ground",
+                        "type": "dropdown",
+                        "options": [
+                            {
+                                "title": "Farmer implements all six measures.",
+                                "score": 3
+                            },
+                            {
+                                "title": "Farmer implements measures 2, 3, and 6 only.",
+                                "score": 2
+                            },
+                            {
+                                "title": "Farmer implements measures 2 and 4 only.",
+                                "score": 1
+                            },
+                            {
+                                "title": "None of the above.",
+                                "score": 0
+                            }
+                        ]                      
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "key": "irrigation_system_under_command_of_the_farmer_or_group",
+        "question_title": "The irrigation system under command of the farmer or group (supplied by surface and/or ground water) complies with the following criteria:\n1. The command area has sufficient internal canals for supply and drainage.\n2. There are no leakages in dikes.\n3. Sluices (if any) are functioning well.\n4. There is stakeholder involvement in decision making on the irrigation system.\nHow does the system work at community Level?",
+        "type": "dropdown",
+        "is_require": true,
+        "options": [
+            {
+                "title": "All four of the listed criteria are met.",
+                "score": 3
+            },
+            {
+                "title": "All four of the listed criteria are met.",
+                "score": 2
+            },
+            {
+                "title": "Any two of the listed criteria are met.",
+                "score": 1
+            },
+            {
+                "title": "None of the above.",
+                "score": 0
+            }
+        ]                      
+    },
+    {
+        "key": "how_do_you_make_sure_you_are_using_clean_water",
+        "question_title": "How do you make sure you are using clean water?",
+        "type": "dropdown",
+        "is_require": true,
+        "options": [
+            {
+                "title": "There is documented proof, not older than 3 years (per any method in footnote 15), that the inbound water is obtained from clean sources.",
+                "score": 3
+            },
+            {
+                "title": "Same as a, but the documented proof is older than 3 years.",
+                "score": 2
+            },
+            {
+                "title": "In case of (risks of) contaminated water, mitigation measures are taken to reduce the potential impact of contaminated water.",
+                "score": 1
+            },
+            {
+                "title": "None of the above.",
+                "score": 0
+            }
+        ]                      
+    },
+    {
+        "key": "laws_or_guidelines_about_water",
+        "question_title": "Are there laws or guidelines about how much water you use for rice farming?\nAre you involved in any discussions in your community or municipality about weather there should be guidance about water usage?",
+        "type": "dropdown",
+        "is_require": true,
+        "options": [
+            {
+                "title": "Groundwater extraction complies with sustainable water extraction licensing policies.",
+                "score": 3
+            },
+            {
+                "title": "Within the past 3 years, professional advice on sustainable groundwater use is sought and followed.",
+                "score": 2
+            },
+            {
+                "title": "There is active participation in watershed management and community groundwater water infrastructure projects.",
+                "score": 1
+            },
+            {
+                "title": "None of the above.",
+                "score": 0
+            }
+        ]                      
+    },
+    {
+        "key": "get_rid_of_your_water",
+        "question_title": "Do you ever need to get rid of your water? How do you get rid of your water?\nHave you ever created a hole to let water go? In case you open a hole, when did you do it in relation to the time you used agrochemicals?",
+        "type": "dropdown",
+        "is_require": true,
+        "options": [
+            {
+                "title": "There is surface (sideways) drainage, but no use of agrochemicals.",
+                "score": 3
+            },
+            {
+                "title": "Surface (sideways) drainage is delayed after surface application of agrochemicals by at least 4 days for fertilizers and 14 days for pesticides, or according to the product label.",
+                "score": 2
+            },
+            {
+                "title": "Surface (sideways) drainage is delayed after surface application of agrochemicals, but for fewer days due to unexpected need to protect crops.",
+                "score": 1
+            },
+            {
+                "title": "None of the above.",
+                "score": 0
+            }
+        ]                      
+    }
+]

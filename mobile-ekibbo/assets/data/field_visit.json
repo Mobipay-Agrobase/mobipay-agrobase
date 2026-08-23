@@ -1,0 +1,154 @@
+[
+    {
+        "key": "transaction_date",
+        "question_title": "Transaction Date",
+        "type": "auto_fill",
+        "is_require": true
+    },
+    {
+        "key": "date_of_event",
+        "question_title": "Date of Event",
+        "type": "date_picker",
+        "is_require": true
+    },
+    {
+        "key": "observation",
+        "question_title": "Observations",
+        "type": "dropdown",
+        "is_require": true,
+        "options": [
+            {
+                "title": "Land Preparation"
+            },
+            {
+                "title": "Sowing(transplanting)"
+            },
+            {
+                "title": "Fertilizer Application"
+            },
+            {
+                "title": "Irrigation"
+            },
+            {
+                "title": "Inter Cultivation"
+            },
+            {
+                "title": "Weed Management"
+            },
+            {
+                "title": "Infestation"
+            },
+            {
+                "title": "Harvesting"
+            },
+            {
+                "title": "Drying"
+            },
+            {
+                "title": "Packing"
+            },
+            {
+                "title": "Animal Shelter"
+            },
+            {
+                "title": "Endangered Species"
+            },
+            {
+                "title": "Soil Erosion"
+            },
+            {
+                "title": "Rain Damage"
+            },
+            {
+                "title": "Damping Off"
+            },
+            {
+                "title": "Thrips"
+            },
+            {
+                "title": "Aphids"
+            },
+            {
+                "title": "Mites"
+            },
+            {
+                "title": "Whitefly"
+            },
+            {
+                "title": "Borers (Helicoverpa/ Spodoptera)"
+            },
+            {
+                "title": "Midge Fly"
+            },
+            {
+                "title": "Die- Back"
+            },
+            {
+                "title": "Powdery Mildew"
+            },
+            {
+                "title": "Leaf Spot (Alternaria)"
+            },
+            {
+                "title": "Leaf Spot (Cercospora)"
+            },
+            {
+                "title": "Bacterial Wilt"
+            },
+            {
+                "title": "Fruit Rot (Anthracnose)"
+            },
+            {
+                "title": "Blight (Choanephora)"
+            },
+            {
+                "title": "Fusarium Wilt"
+            },
+            {
+                "title": "Virus"
+            },
+            {
+                "title": "Flood"
+            },
+            {
+                "title": "Pesticide Spraying"
+            },
+            {
+                "title": "Rhizome Rot"
+            },
+            {
+                "title": "Scale Insects"
+            },
+            {
+                "title": "Nematodes"
+            },
+            {
+                "title": "Shoot Borer"
+            },
+            {
+                "title": "Stem Borer"
+            },
+            {
+                "title": "Leaf Eating Caterpillar"
+            },
+            {
+                "title": "Soft Rot"
+            },
+            {
+                "title": "Others"
+            }
+        ]
+    },
+    {
+        "key": "observation_and_recommendation",
+        "question_title": "Observation and Recommendation",
+        "type": "text_box",
+        "is_require": false
+    },
+    {
+        "key": "photo_capture",
+        "question_title": "Photo Capture",
+        "type": "upload",
+        "is_require": false
+    }
+]

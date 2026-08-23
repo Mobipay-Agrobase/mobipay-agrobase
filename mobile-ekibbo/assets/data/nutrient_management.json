@@ -1,0 +1,137 @@
+[
+    {
+        "key": "apply_crop_rotation",
+        "question_title": "Do you apply crop rotation?",
+        "type": "radio",
+        "is_require": true
+    },
+    {
+        "key": "application_start_date",
+        "question_title": "Application Start Date",
+        "type": "date_picker",
+        "is_require": false
+    },
+    {
+        "key": "site_specific_nutrient_management",
+        "question_title": "Is Efficient and site-specific nutrient management is applied and documented.",
+        "type": "radio",
+        "is_require": true,
+        "options": [
+            {
+                "title": "yes",
+                "questions": [
+                    {
+                        "key": "efficient_nutrient_management_include",
+                        "is_require": true,
+                        "question_title": "Measures for efficient nutrient management include:\n1.Timing of fertilizer\n2.Amount of fertilizer\n3.Natural systems of soil fertility enhancement are used",
+                        "type": "dropdown",
+                        "options": [
+                            {
+                                "title": "Farmer complies with all elements listed in the requirement.",
+                                "score": 6
+                            },
+                            {
+                                "title": "Farmer complies with any two elements listed.",
+                                "score": 4
+                            },
+                            {
+                                "title": "Farmer complies with any one element listed.",
+                                "score": 2
+                            },
+                            {
+                                "title": "Farmer is non-compliant with any of the elements listed.",
+                                "score": 0
+                            }
+                        ]
+                    },
+                    {
+                        "key": "what_kind_of_fertilizer_you_using",
+                        "question_title": "What kind of fertilizer you using?",
+                        "type": "dropdown",
+                        "is_require": true,
+                        "options": [
+                            {
+                                "title": "Organic",
+                                "score": 3,
+                                "question": [
+                                    {
+                                        "key": "what_organic_mateial_used",
+                                        "question_title": "What organic Mateial used?",
+                                        "type": "multi_select",
+                                        "is_require": true,
+                                        "options": [
+                                            {
+                                                "title": "animal manure"
+                                            },
+                                            {
+                                                "title": "green manure"
+                                            },
+                                            {
+                                                "title": "mulch"
+                                            },
+                                            {
+                                                "title": "rice straw"
+                                            },
+                                            {
+                                                "title": "others"
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "key": "favorable_conditions_include",
+                                        "question_title": "Favorable conditions include:\n1. It can be applied in non-flooded fields in composted or de-composted state.\n2. There is sufficient time for its decomposition prior to flooding.\n3. It is available locally and in sufficient quantity.",
+                                        "type": "dropdown",
+                                        "is_require": true,
+                                        "options": [
+                                            {
+                                                "title": "Farmer uses organic material as fertilizer if all three conditions are present.",
+                                                "score": 3
+                                            },
+                                            {
+                                                "title": "Farmer uses organic material as fertilizer if conditions 1 and 2 are present, but not condition 3.",
+                                                "score": 2
+                                            },
+                                            {
+                                                "title": "Farmer does not use organic material as fertilizer because one or more of the listed conditions cannot be met.",
+                                                "score": 2
+                                            },
+                                            {
+                                                "title": "Farmer does not use organic material as fertilizer even though all conditions are present.",
+                                                "score": 1
+                                            },
+                                            {
+                                                "title": "Farmer incorporates organic material into flooded soils."
+                                            }
+                                        ]
+                                    }
+                                ]
+                            },
+                            {
+                                "title": "In-Organic",
+                                "score": 0,
+                                "questions": [
+                                    {
+                                        "key": "source_of_in_organic_material",
+                                        "question_title": "Source of In-Organic Material",
+                                        "type": "dropdown",
+                                        "is_require": true,
+                                        "options": [
+                                            {
+                                                "title": "registered and come from a noncounterfeit source",
+                                                "score": 3
+                                            },
+                                            {
+                                                "title": "Unknown",
+                                                "score": 0
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    }
+]

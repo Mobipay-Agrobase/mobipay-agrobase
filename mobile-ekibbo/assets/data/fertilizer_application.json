@@ -1,0 +1,312 @@
+[
+    {
+        "key": "date_of_event",
+        "question_title": "Date of Event",
+        "type": "date_picker",
+        "is_require": true,
+        "section": "fertilizer_application_information"
+    },
+    {
+        "key": "application_start_time",
+        "question_title": "Application Start time",
+        "type": "time_picker",
+        "is_require": true,
+        "section": "fertilizer_application_information"
+    },
+    {
+        "key": "application_end_time",
+        "question_title": "Application End time",
+        "type": "time_picker",
+        "is_require": true,
+        "section": "fertilizer_application_information"
+    },
+    {
+        "key": "crop_stage",
+        "question_title": "Crop Stage",
+        "type": "dropdown",
+        "is_require": true,
+        "section": "fertilizer_application_information",
+        "options": []
+    },
+    {
+        "key": "soil_type",
+        "question_title": "Soil type",
+        "type": "dropdown",
+        "is_require": false,
+        "section": "fertilizer_application_information",
+        "options": [
+            {
+                "title": "Black"
+            },
+            {
+                "title": "Red"
+            },
+            {
+                "title": "Sandy Loam"
+            },
+            {
+                "title": "Clay"
+            }
+        ]
+    },
+    {
+        "key": "soil_report",
+        "question_title": "Soil Report",
+        "type": "upload",
+        "is_require": false,
+        "section": "fertilizer_application_information"
+    },
+    {
+        "key": "fertilizer_details",
+        "question_title": "Fertilizer Details",
+        "is_multiple": true,
+        "type": "none"
+    },
+    {
+        "key": "fertilizer_mixed",
+        "question_title": "Fertilizer Mixed",
+        "type": "radio",
+        "is_require": true,
+        "section": "fertilizer_details"
+    },
+    {
+        "key": "fertilizer_type",
+        "question_title": "Fertilizer Type",
+        "type": "dropdown",
+        "is_require": true,
+        "section": "fertilizer_details",
+        "options": [
+            {
+                "title": "Chemical"
+            },
+            {
+                "title": "Organic-Green Manure"
+            },
+            {
+                "title": "Farm Yard Manure"
+            },
+            {
+                "title": "In-Organic"
+            }
+        ]
+    },
+    {
+        "key": "fertilizer_products",
+        "question_title": "Fertilizer products",
+        "type": "dropdown",
+        "is_require": false,
+        "section": "fertilizer_details",
+        "options": []
+    },
+    {
+        "key": "physical_state_of_the_product",
+        "question_title": "Physical State of the Product",
+        "type": "dropdown",
+        "is_require": true,
+        "section": "fertilizer_details",
+        "options": [
+            {
+                "title": "Solid"
+            },
+            {
+                "title": "Liquid"
+            },
+            {
+                "title": "Emulsion"
+            }
+        ]
+    },
+    {
+        "key": "recommended_fertilizer",
+        "question_title": "Recommended Fertilizer",
+        "type": "radio",
+        "is_require": true,
+        "section": "fertilizer_details"
+    },
+    {
+        "key": "applied_qty",
+        "question_title": "Applied Qty",
+        "type": "text_box",
+        "is_require": true,
+        "section": "fertilizer_details"
+    },
+    {
+        "key": "cost_of_the_fertilixer",
+        "question_title": "Cost of the fertilixer",
+        "type": "text_box",
+        "is_require": true,
+        "section": "fertilizer_details"
+    },
+    {
+        "key": "activity_done_by",
+        "question_title": "Activity Done By",
+        "type": "dropdown",
+        "is_require": true,
+        "section": "labour_and_cost_details",
+        "options": [
+            {
+                "title": "Self"
+            },
+            {
+                "title": "Family Workers"
+            },
+            {
+                "title": "Labour",
+                "is_multiple": true,
+                "questions": [
+                    {
+                        "key": "labour_gender",
+                        "question_title": "Gender",
+                        "type": "dropdown",
+                        "is_require": true,
+                        "section": "labour_and_cost_details",
+                        "parent": "Labour",
+                        "options": [
+                            {
+                                "title": "Male"
+                            },
+                            {
+                                "title": "Female"
+                            },
+                            {
+                                "title": "Other"
+                            }
+                        ]
+                    },
+                    {
+                        "key": "labour_age_group",
+                        "question_title": "Age Group",
+                        "type": "dropdown",
+                        "is_require": true,
+                        "section": "labour_and_cost_details",
+                        "parent": "Labour",
+                        "options": [
+                            {
+                                "title": "11-18"
+                            },
+                            {
+                                "title": "19-30"
+                            },
+                            {
+                                "title": "31-40"
+                            },
+                            {
+                                "title": "41-50"
+                            },
+                            {
+                                "title": "Above 50"
+                            }
+                        ]
+                    },
+                    {
+                        "key": "labour_man_days",
+                        "question_title": "Man-Days",
+                        "type": "text_box",
+                        "is_require": true,
+                        "section": "labour_and_cost_details",
+                        "parent": "Labour"
+                    },
+                    {
+                        "key": "labour_wages_per_day",
+                        "question_title": "Wages per Day",
+                        "type": "text_box",
+                        "is_require": true,
+                        "section": "labour_and_cost_details",
+                        "parent": "Labour"
+                    },
+                    {
+                        "key": "labour_total_cost",
+                        "question_title": "Cost",
+                        "type": "auto_fill",
+                        "is_require": true,
+                        "section": "labour_and_cost_details",
+                        "parent": "Labour"
+                    }
+                ]
+            },
+            {
+                "title": "Machine",
+                "is_multiple": true,
+                "questions": [
+                    {
+                        "key": "machine_name",
+                        "question_title": "Machine Name",
+                        "type": "text_box",
+                        "is_require": true,
+                        "section": "labour_and_cost_details",
+                        "parent": "Machine"
+                    },
+                    {
+                        "key": "machine_manufacture_year",
+                        "question_title": "Manufature Year",
+                        "type": "text_box",
+                        "is_require": true,
+                        "section": "labour_and_cost_details",
+                        "parent": "Machine"
+                    },
+                    {
+                        "key": "machine_ownership",
+                        "question_title": "Ownership",
+                        "type": "dropdown",
+                        "is_require": true,
+                        "section": "labour_and_cost_details",
+                        "parent": "Machine",
+                        "options": [
+                            {
+                                "title": "Self"
+                            },
+                            {
+                                "title": "Rental",
+                                "questions": [
+                                    {
+                                        "key": "machine_rental_charge_type",
+                                        "question_title": "Rental Charges types",
+                                        "type": "dropdown",
+                                        "is_require": true,
+                                        "section": "labour_and_cost_details",
+                                        "parent": "Machine",
+                                        "options": [
+                                            {
+                                                "title": "hour"
+                                            },
+                                            {
+                                                "title": "hectare"
+                                            },
+                                            {
+                                                "title": "other"
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "key": "machine_rental_charge",
+                                        "question_title": "Rental Charges ",
+                                        "type": "text_box",
+                                        "is_require": true,
+                                        "section": "labour_and_cost_details",
+                                        "parent": "Machine"
+                                    },
+                                    {
+                                        "key": "machine_fuel_charge",
+                                        "question_title": "Fuel Charges",
+                                        "type": "text_box",
+                                        "is_require": true,
+                                        "section": "labour_and_cost_details",
+                                        "parent": "Machine"
+                                    },
+                                    {
+                                        "key": "machine_total_cost",
+                                        "question_title": "Total Cost",
+                                        "type": "auto_fill",
+                                        "is_require": true,
+                                        "section": "labour_and_cost_details",
+                                        "parent": "Machine"
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    }
+]

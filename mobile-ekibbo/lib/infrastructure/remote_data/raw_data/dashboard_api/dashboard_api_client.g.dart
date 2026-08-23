@@ -40,7 +40,7 @@ class _DashboardApiClient implements DashboardApiClient {
     )
             .compose(
               _dio.options,
-              '/dashboard',
+              '/mobile/ekibbo-home',
               queryParameters: queryParameters,
               data: _data,
             )
@@ -80,7 +80,7 @@ class _DashboardApiClient implements DashboardApiClient {
     )
             .compose(
               _dio.options,
-              '/dashboard/farmer',
+              '/mobile/ekibbo-home-farmer',
               queryParameters: queryParameters,
               data: _data,
             )

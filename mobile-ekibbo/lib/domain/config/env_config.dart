@@ -22,13 +22,11 @@ class EnvConfig {
   // Weather service (independent of the Agrobase backend)
   static const String domainWeather = 'https://api.weatherapi.com/v1';
 
-  /// Agrobase web platform (Next.js API).
-  /// Android emulator reaches the host machine via 10.0.2.2.
-  /// Override at build time with:
-  ///   flutter build apk --dart-define=AGROBASE_API_BASE=https://your-domain
+  /// Agrobase web platform (Next.js API) — PRODUCTION.
+  /// Android emulator local-backend testing: --dart-define=AGROBASE_API_BASE=http://10.0.2.2:3000
   static const String domainOrigin = String.fromEnvironment(
     'AGROBASE_API_BASE',
-    defaultValue: 'http://10.0.2.2:3000',
+    defaultValue: 'https://mobipay-agrobase.vercel.app',
   );
 
   /// Main Agrobase API — all tenant-scoped data (farmers, plots, purchases,

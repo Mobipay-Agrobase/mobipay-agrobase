@@ -12,6 +12,6 @@ abstract class AuthApiClient {
   @POST('/auth/login')
   Future<BaseResponse<LoginModel>?> login(@Body() data);
 
-  @GET('/staff_details')
+  @GET('/mobile/ekibbo-profile')
   Future<BaseResponse<ProfileResponse>?> getProfile();
 }

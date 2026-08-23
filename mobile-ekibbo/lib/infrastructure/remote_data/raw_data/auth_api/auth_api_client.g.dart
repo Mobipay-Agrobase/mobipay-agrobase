@@ -64,7 +64,7 @@ class _AuthApiClient implements AuthApiClient {
     )
             .compose(
               _dio.options,
-              '/staff_details',
+              '/mobile/ekibbo-profile',
               queryParameters: queryParameters,
               data: _data,
             )

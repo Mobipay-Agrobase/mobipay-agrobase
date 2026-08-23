@@ -32,7 +32,7 @@ class _FarmerApiClient implements FarmerApiClient {
     )
             .compose(
               _dio.options,
-              '/farmer/drop_down_for_register',
+              '/mobile/ekibbo-register-dropdowns',
               queryParameters: queryParameters,
               data: _data,
             )
@@ -66,7 +66,7 @@ class _FarmerApiClient implements FarmerApiClient {
     )
             .compose(
               _dio.options,
-              '/farmer/registration',
+              '/mobile/ekibbo-farmer',
               queryParameters: queryParameters,
               data: _data,
             )
@@ -105,7 +105,7 @@ class _FarmerApiClient implements FarmerApiClient {
     )
             .compose(
               _dio.options,
-              '/farmer',
+              '/mobile/ekibbo-farmers',
               queryParameters: queryParameters,
               data: _data,
             )
@@ -140,7 +140,7 @@ class _FarmerApiClient implements FarmerApiClient {
     )
             .compose(
               _dio.options,
-              '/farmer/${id}',
+              '/mobile/ekibbo-farmer/${id}',
               queryParameters: queryParameters,
               data: _data,
             )
@@ -173,7 +173,7 @@ class _FarmerApiClient implements FarmerApiClient {
     )
             .compose(
               _dio.options,
-              '/farmer-detail',
+              '/mobile/ekibbo-farmer/me',
               queryParameters: queryParameters,
               data: _data,
             )
@@ -195,7 +195,7 @@ class _FarmerApiClient implements FarmerApiClient {
   @override
   Future<BaseResponse<FarmerSearchResponse>?> searchFarmer(String name) async {
     const _extra = <String, dynamic>{};
-    final queryParameters = <String, dynamic>{};
+    final queryParameters = <String, dynamic>{'search': name};
     final _headers = <String, dynamic>{};
     final Map<String, dynamic>? _data = null;
     final _result = await _dio.fetch<Map<String, dynamic>?>(
@@ -206,7 +206,7 @@ class _FarmerApiClient implements FarmerApiClient {
     )
             .compose(
               _dio.options,
-              '/farmer-search/${name}',
+              '/mobile/ekibbo-farmers',
               queryParameters: queryParameters,
               data: _data,
             )
@@ -255,7 +255,7 @@ class _FarmerApiClient implements FarmerApiClient {
     )
             .compose(
               _dio.options,
-              '/farmer',
+              '/mobile/ekibbo-farmers',
               queryParameters: queryParameters,
               data: _data,
             )
@@ -288,7 +288,7 @@ class _FarmerApiClient implements FarmerApiClient {
     )
             .compose(
               _dio.options,
-              '/farmer/update_personal_info',
+              '/mobile/ekibbo-farmer',
               queryParameters: queryParameters,
               data: _data,
             )

@@ -11,14 +11,14 @@ part 'dashboard_api_client.g.dart';
 @RestApi(baseUrl: '')
 abstract class DashboardApiClient {
   factory DashboardApiClient(Dio dio, {String baseUrl}) = _DashboardApiClient;
-  @GET('/dashboard')
+  @GET('/mobile/ekibbo-home')
   Future<BaseResponse<DashboardModel>?> getDashboardData(
     @Query('lat') double lat,
     @Query('lng') double lng,
     @Query('nearby_km') double nearbyKm,
   );
 
-  @GET('/dashboard/farmer')
+  @GET('/mobile/ekibbo-home-farmer')
   Future<BaseResponse<MDashboardFarmer>?> getDashboardFarmer(
     @Query('lat') double lat,
     @Query('lng') double lng,

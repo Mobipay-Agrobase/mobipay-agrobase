@@ -12,23 +12,23 @@ part 'location_api_client.g.dart';
 @RestApi(baseUrl: '')
 abstract class LocationApiClient {
   factory LocationApiClient(Dio dio, {String baseUrl}) = _LocationApiClient;
-  @GET('/country')
-  Future<BaseResponse<List<CountryModel>>?> getCountries();
-  @GET('/province')
-  Future<BaseResponse<List<ProvinceModel>>?> getAllProvinces();
-  @GET('/province_filter_by_country/{countryId}')
+  @GET('/mobile/ekibbo-geo')
+  Future<BaseResponse<List<CountryModel>>?> getCountries(@Query('type') String type);
+  @GET('/mobile/ekibbo-geo')
+  Future<BaseResponse<List<ProvinceModel>>?> getAllProvinces(@Query('type') String type);
+  @GET('/mobile/ekibbo-geo')
   Future<BaseResponse<List<ProvinceModel>>?> getProvincesBy(
-      @Path('countryId') int countryId);
-  @GET('/district_filter_by_province/{provinceId}')
+      @Query('type') String type, @Query('parentId') int countryId);
+  @GET('/mobile/ekibbo-geo')
   Future<BaseResponse<List<DistrictModel>>?> getDistrictsBy(
-      @Path('provinceId') int provinceId);
-  @GET('/district')
-  Future<BaseResponse<List<DistrictModel>>?> getAllDistricts();
-  @GET('/commune_filter_by_district/{districtId}')
+      @Query('type') String type, @Query('parentId') int provinceId);
+  @GET('/mobile/ekibbo-geo')
+  Future<BaseResponse<List<DistrictModel>>?> getAllDistricts(@Query('type') String type);
+  @GET('/mobile/ekibbo-geo')
   Future<BaseResponse<List<CommuneModel>>?> getCommuneBy(
-      @Path('districtId') int districtId);
-  @GET('/commune')
-  Future<BaseResponse<List<CommuneModel>>?> getAllCommunes();
-  @GET('/cooperatives')
-  Future<BaseResponse<List<MCooperative>>?> getCooperatives();
+      @Query('type') String type, @Query('parentId') int districtId);
+  @GET('/mobile/ekibbo-geo')
+  Future<BaseResponse<List<CommuneModel>>?> getAllCommunes(@Query('type') String type);
+  @GET('/mobile/ekibbo-geo')
+  Future<BaseResponse<List<MCooperative>>?> getCooperatives(@Query('type') String type);
 }

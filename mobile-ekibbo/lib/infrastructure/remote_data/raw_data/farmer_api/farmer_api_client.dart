@@ -21,29 +21,29 @@ part 'farmer_api_client.g.dart';
 abstract class FarmerApiClient {
   factory FarmerApiClient(Dio dio, {String baseUrl}) = _FarmerApiClient;
 
-  @GET('/farmer/drop_down_for_register')
+  @GET('/mobile/ekibbo-register-dropdowns')
   Future<BaseResponse<DropdownRegisterModel>?> getDropDownForRegister();
-  @POST('/farmer/registration')
+  @POST('/mobile/ekibbo-farmer')
   @MultiPart()
   Future<BaseResponse?> registerFarmer(@Body() FormData data);
 
-  @GET('/farmer')
+  @GET('/mobile/ekibbo-farmers')
   Future<BaseResponse<AllFarmerResponse>?> getAllFarmers(
     @Query('page') int? page,
     @Query('search') String search,
   );
 
-  @GET('/farmer/{id}')
+  @GET('/mobile/ekibbo-farmer/{id}')
   Future<BaseResponse<FarmerDetailResponse>?> getFarmer(
       @Path('id') int id, @Query('whereHasCultivation') int has);
-  
-  @GET('/farmer-detail')
+
+  @GET('/mobile/ekibbo-farmer/me')
   Future<BaseResponse<FarmerDetailResponse>?> getFarmerByRoleFarmer();
 
-  @GET('/farmer-search/{name}')
+  @GET('/mobile/ekibbo-farmers')
   Future<BaseResponse<FarmerSearchResponse>?> searchFarmer(
-      @Path('name') String name);
-  @GET('/farmer')
+      @Query('search') String name);
+  @GET('/mobile/ekibbo-farmers')
   Future<BaseResponse<AllFarmerResponse>?> searchFarmerDistribution(
     @Query('cooperative_id') int cooperativeId,
     @Query('province') String provinceId,
@@ -54,7 +54,7 @@ abstract class FarmerApiClient {
     @Query('page') int page,
   );
 
-  @POST('/farmer/update_personal_info')
+  @POST('/mobile/ekibbo-farmer')
   @MultiPart()
   Future<BaseResponse<FarmerModel>?> updateFarmer(@Body() FormData data);
 

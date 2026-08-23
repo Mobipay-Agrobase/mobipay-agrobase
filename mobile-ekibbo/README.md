@@ -31,21 +31,29 @@ the Ekibbo emerald-green identity.
 
 ## Configuration
 
-API base URL defaults to `http://10.0.2.2:3000` (Android emulator → host).
-Override for production builds:
+API base URL defaults to **https://mobipay-agrobase.vercel.app** (production).
+For local-backend testing (Android emulator → host machine):
 
 ```bash
-flutter build apk \
-  --dart-define=AGROBASE_API_BASE=https://your-agrobase-domain
+flutter run --dart-define=AGROBASE_API_BASE=http://10.0.2.2:3000
 ```
 
-## Build
+Weather widget: `AGROBASE_WEATHER_KEY` / `AGROBASE_WEATHER_Q` dart-defines
+(default key + Kampala, Uganda).
+
+## Test accounts (Ekibbo tenant)
+
+| Role | Phone (login) | Password |
+|------|---------------|----------|
+| Field Officer | `+256700111222` | `Ekibbo2026!` |
+| Farmer | `+256700333444` | `Ekibbo2026!` |
+
+## Run
 
 ```bash
 flutter pub get
 flutter gen-l10n
-flutter pub run flutter_launcher_icons          # regenerate launcher icons
-flutter run --dart-define=AGROBASE_API_BASE=http://10.0.2.2:3000
+flutter run    # points at production by default
 ```
 
 ## Structure

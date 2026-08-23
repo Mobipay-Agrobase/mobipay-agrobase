@@ -15,7 +15,7 @@ import 'package:agrobase_ekibbo/models/location/province/province_model.dart';
 class ApiAddress {
   static Future<List<CountryModel>> getCountries() async {
     try {
-      final res = await ApiProvider.instance.apiLocation.getCountries();
+      final res = await ApiProvider.instance.apiLocation.getCountries('country');
       if (res == null) {
         throw const FormatException('getCountries response null');
       }
@@ -40,7 +40,7 @@ class ApiAddress {
 
   static Future getAllProvices() async {
     try {
-      final res = await ApiProvider.instance.apiLocation.getAllProvinces();
+      final res = await ApiProvider.instance.apiLocation.getAllProvinces('province');
       if (res == null) throw const FormatException('getProvice response null');
       if (res.data == null) throw const FormatException('getProvice data null');
       return res.data;
@@ -52,7 +52,7 @@ class ApiAddress {
 
   static Future<List<ProvinceModel>> getProvices(int id) async {
     try {
-      final res = await ApiProvider.instance.apiLocation.getProvincesBy(id);
+      final res = await ApiProvider.instance.apiLocation.getProvincesBy('province', id);
       if (res == null) throw const FormatException('getProvice response null');
       if (res.data == null) throw const FormatException('getProvice data null');
       //BoxAddress.addProvinces(res.data as List<ProvinceModel>);
@@ -74,7 +74,7 @@ class ApiAddress {
 
   static Future<List<ProvinceModel>> getAllProvinces() async {
     try {
-      final res = await ApiProvider.instance.apiLocation.getAllProvinces();
+      final res = await ApiProvider.instance.apiLocation.getAllProvinces('province');
       if (res == null) throw const FormatException('getAllProvinces response null');
       if (res.data == null) throw const FormatException('getAllProvinces data null');
       BoxAddress.addProvinces(res.data as List<ProvinceModel>);
@@ -91,7 +91,7 @@ class ApiAddress {
   }
   static Future<List<DistrictModel>> getDistricts(id) async {
     try {
-      final res = await ApiProvider.instance.apiLocation.getDistrictsBy(id);
+      final res = await ApiProvider.instance.apiLocation.getDistrictsBy('district', id);
       if (res == null) throw const FormatException('getDistrict response null');
       if (res.data == null) {
         throw const FormatException('getDistrict data null');
@@ -114,7 +114,7 @@ class ApiAddress {
   }
   static Future<List<DistrictModel>> getAllDistricts() async {
     try {
-      final res = await ApiProvider.instance.apiLocation.getAllDistricts();
+      final res = await ApiProvider.instance.apiLocation.getAllDistricts('district');
       if (res == null) throw const FormatException('getAllDistricts response null');
       if (res.data == null) throw const FormatException('getAllDistricts data null');
       BoxAddress.addDistricts(res.data as List<DistrictModel>);
@@ -132,7 +132,7 @@ class ApiAddress {
 
   static Future<List<CommuneModel>> getCommunes(id) async {
     try {
-      final res = await ApiProvider.instance.apiLocation.getCommuneBy(id);
+      final res = await ApiProvider.instance.apiLocation.getCommuneBy('commune', id);
       if (res == null) throw const FormatException('getCommune response null');
       if (res.data == null) {
         throw const FormatException('getCommune data null');
@@ -155,7 +155,7 @@ class ApiAddress {
   }
   static Future<List<CommuneModel>> getAllCommunes() async {
     try {
-      final res = await ApiProvider.instance.apiLocation.getAllCommunes();
+      final res = await ApiProvider.instance.apiLocation.getAllCommunes('commune');
       if (res == null) throw const FormatException('getAllCommunes response null');
       if (res.data == null) throw const FormatException('getAllCommunes data null');
       BoxAddress.addCommune(res.data as List<CommuneModel>);
@@ -173,7 +173,7 @@ class ApiAddress {
 
   static Future<List<MCooperative>> getCooperatives() async {
     try {
-      final res = await ApiProvider.instance.apiLocation.getCooperatives();
+      final res = await ApiProvider.instance.apiLocation.getCooperatives('cooperatives');
       if (res == null) {
         throw const FormatException('getCooperatives response null');
       }

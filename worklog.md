@@ -315,3 +315,25 @@ Work Log:
 Stage Summary:
 - The five build failures traced to one root: 2023-era project + 2025 toolchain (Java 25 / Gradle 9 / AGP 8.13 / SDK 36). Each layer only surfaced after the previous one passed.
 - Timing bug was mine — withPlugin registered pre-evaluation; own-build.gradle overwrote it. State-checked afterEvaluate is the community-standard pattern and is Gradle 9-safe.
+
+---
+Task ID: 16
+Agent: Super Z
+Task: Web backlog — full-page CRUD, step-by-step timelines, E2E traceability chain
+
+Work Log:
+- NOTE: sandbox was reset mid-session; re-cloned from GitHub (nothing lost — all work was pushed)
+- Schema (additive, db push): ProductBatch.sourcePurchaseId, Sale.batchId + approvedAt/paidAt/deliveredAt + status default PENDING (lifecycle), Payment.purchaseId + Payment.saleId
+- 7 new pages: PurchaseFormPage, PurchaseDetailPage, SaleFormPage, SaleDetailPage, InputDistFormPage, InputDistDetailPage, E2eTracePage; shared ekb-stepper component (horizontal stepper + vertical timeline row)
+- 3 views rewired to page navigation (Purchases, Sales via regex, Input Distribution)
+- 4 new APIs: purchases/[id]/status (submit/approve/reject/pay — approve → ledger + traceability batch; pay → Payment row), sales/[id]/status (6 lifecycle actions — pay → Payment + TraceEvent SALE_PAID, deliver → Delivery record), input-distribution/[id]/repay (installment → ledger PAYMENT + balance), GET purchases/[id] (full chain payload)
+- E2E trace endpoint assembles purchase→batch→sales→invoices(computed)→payments→deliveries→inventory
+- Middleware fixes discovered in live testing: module regex [a-z_-]+ missed digits ('/api/e2e-trace' → module 'e' → 403) → now [a-z0-9_-]+; aliases traceability→trace, e2e-trace→trace
+- sales API: tenantId now set on create, batchId accepted, {data} envelope response; sale tenant scoping switched to Sale.tenantId (buyer-only sales supported)
+- E2E verified against live Neon (Ekibbo tenant): purchase→approve(ledger+batch)→pay / sale→approve→invoice→pay→deliver / e2e-trace shows full chain + inventory 98/50/48kg; RBAC: FO blocked from sales (403), Finance allowed
+- Cleanup: stray null-tenant test sale deleted; demo chain (Sarah Nakato purchase, Kampala Traders sale) left for user's UI walkthrough
+- tsc 0 errors, eslint clean; committed 5f3fcf1, pushed
+
+Stage Summary:
+- All 3 backlog items delivered: popups→pages, timelines on detail pages, E2E trace chain (payment/invoice/inventory)
+- Demo data live on production: login finance@ekibbo.co (password123) → Purchases/Sales lists → click rows to see timelines; E2E chain via detail pages

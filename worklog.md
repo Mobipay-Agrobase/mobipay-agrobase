@@ -265,3 +265,23 @@ Stage Summary:
 - User pulls → flutter clean && flutter pub get && flutter run
 - gen-l10n (auto or manual) regenerates equivalent l10n files in place; hand-generated versions guarantee compile even if generation is skipped
 - KGP 'Built-in Kotlin' warnings are informational — not blockers
+
+---
+Task ID: 13
+Agent: Super Z
+Task: Fix AAR metadata build failure + full Android pre-flight audit (user's third build failure)
+
+Work Log:
+- Diagnosed: :location:checkDebugAarMetadata failed — location v5 plugin pins compileSdk 33, its AndroidX deps (fragment 1.7.1, lifecycle 2.7.0, core 1.13.1, window 1.2.0…) require 34+
+- Central fix: root android/build.gradle afterEvaluate forces ALL com.android.* subprojects (every Flutter plugin) to compileSdk 36 — no per-plugin patching needed
+- Pre-flight audit caught the NEXT two failures before the user hit them:
+  • MainActivity.kt still in kotlin/com/terratech/terrafarm/ but namespace is com.mobipay.agrobase.ekibbo → manifest '.MainActivity' would not resolve → launch crash. Moved + package declaration fixed
+  • l10n.yaml synthetic-package warning → removed (no-op option)
+- Added android:usesCleartextTraffic=true (local backend testing via http://10.0.2.2:3000; Android 9+ blocks cleartext otherwise)
+- Audit verified: manifests XML-valid, styles/launch themes exist, profile manifest exists, zero terratech/terrafarm refs in android/+ios/, gradle braces balanced
+- Committed 47e7c52, pushed to origin/main
+
+Stage Summary:
+- Why the loop happened: each round surfaced a new LAYER (Java→Gradle 9→Dart→plugin AAR→namespace) because the original project targeted an old toolchain; the rebrand (appId change) made the namespace mismatch latent
+- This round fixed the plugin layer AND audited the remaining stack in one pass — no known issues left
+- User: git pull → flutter clean → flutter pub get → flutter run

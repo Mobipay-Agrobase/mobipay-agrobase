@@ -25,6 +25,7 @@ import 'package:agrobase_ekibbo/presentation/farmer_detail/widgets/finance_tab_v
 import 'package:agrobase_ekibbo/presentation/farmer_detail/widgets/insurance_tab_view.dart';
 import 'package:agrobase_ekibbo/presentation/farmer_detail/widgets/menu_tab_view.dart';
 import 'package:agrobase_ekibbo/presentation/farmer_detail/widgets/overview_view.dart';
+import 'package:agrobase_ekibbo/presentation/farmer_detail/widgets/farmer_extras_card.dart';
 
 class FarmerDetailScreen extends StatefulWidget {
   const FarmerDetailScreen({
@@ -225,6 +226,9 @@ class _FarmerDetailScreenState extends State<FarmerDetailScreen> {
                         ],
                       ),
                     ),
+                  ),
+                  SliverToBoxAdapter(
+                    child: FarmerExtrasCard(farmerId: widget.farmerId),
                   ),
                   SliverPersistentHeader(
                     pinned: true,

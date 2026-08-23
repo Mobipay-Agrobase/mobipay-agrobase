@@ -5,164 +5,196 @@ import { numericId } from '@/lib/mobile/ekibbo-adapter'
 import { resolveByNumericId, isMobileStaff } from '@/lib/mobile/ekibbo-mobile-utils'
 
 /**
- * GET /api/mobile/ekibbo-geo?type=country|province|district|commune|cooperatives&parentId=<numeric>
+ * GET /api/mobile/ekibbo-geo
+ *   ?type=region|sub-region|district|county|sub-county|parish|village|villages-flat|cooperatives
+ *   &parentId=<numeric id of the parent level>
  *
- * Serves the upstream mobile location cascade from the Agrobase geo
- * hierarchy:
- *   upstream Country  ← Region (top level)
- *   upstream Province ← SubRegion (children of a region)
- *   upstream District ← District (children of a sub-region)
- *   upstream Commune  ← SubCounty (all sub-counties under the district's counties)
- *   cooperatives      ← FarmerGroup (tenant-scoped, staff only)
+ * The FULL 7-level location hierarchy exactly as the web Location Master
+ * manages it:
+ *   Region → SubRegion → District → County → SubCounty → Parish → Village
  *
- * Geo data is system-wide (like /api/settings/geo/*). Staff screens only —
- * farmer-role accounts are rejected (mirrors web RBAC).
+ * (Legacy aliases kept for older app builds: country=region,
+ * province=sub-region, commune=sub-county.)
+ * Geo data is system-wide; cooperatives are tenant-scoped (staff only).
  */
 export async function GET(req: NextRequest) {
   try {
     const ctx = await getTenantContext(req)
-    if (!isMobileStaff(ctx.role)) {
-      return NextResponse.json({ result: false, message: 'Not authorized' }, { status: 403 })
-    }
-
     const { searchParams } = new URL(req.url)
-    const type = searchParams.get('type') || 'country'
+    let type = searchParams.get('type') || 'region'
     const parentIdRaw = searchParams.get('parentId') || ''
     const parentId = parentIdRaw ? parseInt(parentIdRaw, 10) : null
 
+    // Legacy aliases from earlier app builds
+    const ALIASES: Record<string, string> = {
+      country: 'region', province: 'sub-region', district: 'district',
+      commune: 'sub-county', village: 'village',
+    }
+    type = ALIASES[type] || type
+
     switch (type) {
-      case 'country': {
+      case 'region': {
         const regions = await db.region.findMany({
           select: { id: true, name: true, country: true },
           orderBy: { name: 'asc' },
-          take: 200,
+          take: 300,
         })
         return NextResponse.json({
           result: true,
           data: regions.map(r => ({
-            id: numericId(r.id),
-            country_name: r.name,
-            country_code: r.country,
+            id: numericId(r.id), region_name: r.name, country_code: r.country,
+            country_name: r.name, // legacy alias field
           })),
         })
       }
-      case 'province': {
-        let subRegions
+      case 'sub-region': {
+        let rows
         if (parentId != null) {
           const regions = await db.region.findMany({ select: { id: true }, take: 500 })
           const region = await resolveByNumericId(regions, parentId)
-          subRegions = region
+          rows = region
             ? await db.subRegion.findMany({
                 where: { regionId: region.id },
                 select: { id: true, name: true, regionId: true },
-                orderBy: { name: 'asc' },
-                take: 200,
+                orderBy: { name: 'asc' }, take: 300,
               })
             : []
         } else {
-          subRegions = await db.subRegion.findMany({
+          rows = await db.subRegion.findMany({
             select: { id: true, name: true, regionId: true },
-            orderBy: { name: 'asc' },
-            take: 500,
+            orderBy: { name: 'asc' }, take: 1000,
           })
         }
         return NextResponse.json({
           result: true,
-          data: subRegions.map(s => ({
-            id: numericId(s.id),
-            province_name: s.name,
-            province_code: '',
-            country_id: numericId(s.regionId),
+          data: rows.map(s => ({
+            id: numericId(s.id), sub_region_name: s.name, region_id: numericId(s.regionId),
+            province_name: s.name, country_id: numericId(s.regionId), // legacy alias fields
           })),
         })
       }
       case 'district': {
-        let districts
+        let rows
         if (parentId != null) {
-          const subRegions = await db.subRegion.findMany({ select: { id: true }, take: 1000 })
-          const subRegion = await resolveByNumericId(subRegions, parentId)
-          districts = subRegion
+          const subs = await db.subRegion.findMany({ select: { id: true }, take: 1500 })
+          const sub = await resolveByNumericId(subs, parentId)
+          rows = sub
             ? await db.district.findMany({
-                where: { subRegionId: subRegion.id },
+                where: { subRegionId: sub.id },
                 select: { id: true, name: true, subRegionId: true },
-                orderBy: { name: 'asc' },
-                take: 200,
+                orderBy: { name: 'asc' }, take: 300,
               })
             : []
         } else {
-          districts = await db.district.findMany({
+          rows = await db.district.findMany({
             select: { id: true, name: true, subRegionId: true },
-            orderBy: { name: 'asc' },
-            take: 500,
+            orderBy: { name: 'asc' }, take: 1000,
           })
         }
         return NextResponse.json({
           result: true,
-          data: districts.map(d => ({
-            id: numericId(d.id),
-            district_name: d.name,
-            district_code: '',
-            province_id: numericId(d.subRegionId),
+          data: rows.map(d => ({
+            id: numericId(d.id), district_name: d.name,
+            sub_region_id: numericId(d.subRegionId), province_id: numericId(d.subRegionId),
           })),
         })
       }
-      case 'commune': {
-        let subCounties
+      case 'county': {
+        let rows
         if (parentId != null) {
-          const districts = await db.district.findMany({ select: { id: true }, take: 1000 })
+          const districts = await db.district.findMany({ select: { id: true }, take: 1500 })
           const district = await resolveByNumericId(districts, parentId)
-          subCounties = district
-            ? await db.subCounty.findMany({
-                where: { county: { districtId: district.id } },
-                select: { id: true, name: true, countyId: true },
-                orderBy: { name: 'asc' },
-                take: 200,
+          rows = district
+            ? await db.county.findMany({
+                where: { districtId: district.id },
+                select: { id: true, name: true, districtId: true },
+                orderBy: { name: 'asc' }, take: 300,
               })
             : []
         } else {
-          subCounties = await db.subCounty.findMany({
+          rows = []
+        }
+        return NextResponse.json({
+          result: true,
+          data: rows.map(c => ({
+            id: numericId(c.id), county_name: c.name, district_id: numericId(c.districtId),
+          })),
+        })
+      }
+      case 'sub-county': {
+        let rows
+        if (parentId != null) {
+          const counties = await db.county.findMany({ select: { id: true }, take: 2000 })
+          const county = await resolveByNumericId(counties, parentId)
+          rows = county
+            ? await db.subCounty.findMany({
+                where: { countyId: county.id },
+                select: { id: true, name: true, countyId: true },
+                orderBy: { name: 'asc' }, take: 300,
+              })
+            : []
+        } else {
+          rows = await db.subCounty.findMany({
             select: { id: true, name: true, countyId: true },
-            orderBy: { name: 'asc' },
-            take: 500,
+            orderBy: { name: 'asc' }, take: 3000,
           })
         }
         return NextResponse.json({
           result: true,
-          data: subCounties.map(s => ({
-            id: numericId(s.id),
-            commune_name: s.name,
-            commune_code: '',
-            district_id: numericId(s.countyId),
+          data: rows.map(s => ({
+            id: numericId(s.id), sub_county_name: s.name, county_id: numericId(s.countyId),
+            commune_name: s.name, district_id: numericId(s.countyId), // legacy alias fields
+          })),
+        })
+      }
+      case 'parish': {
+        let rows
+        if (parentId != null) {
+          const subCounties = await db.subCounty.findMany({ select: { id: true }, take: 3000 })
+          const subCounty = await resolveByNumericId(subCounties, parentId)
+          rows = subCounty
+            ? await db.parish.findMany({
+                where: { subCountyId: subCounty.id },
+                select: { id: true, name: true, subCountyId: true },
+                orderBy: { name: 'asc' }, take: 300,
+              })
+            : []
+        } else {
+          rows = []
+        }
+        return NextResponse.json({
+          result: true,
+          data: rows.map(p => ({
+            id: numericId(p.id), parish_name: p.name, sub_county_id: numericId(p.subCountyId),
           })),
         })
       }
       case 'village': {
-        // Villages under a subcounty (through its parishes) — matches the
-        // web Location Master hierarchy ... > SubCounty > Parish > Village
-        let villages
+        let rows
         if (parentId != null) {
-          const subCounties = await db.subCounty.findMany({ select: { id: true }, take: 3000 })
-          const subCounty = await resolveByNumericId(subCounties, parentId)
-          villages = subCounty
+          const parishes = await db.parish.findMany({ select: { id: true }, take: 5000 })
+          const parish = await resolveByNumericId(parishes, parentId)
+          rows = parish
             ? await db.village.findMany({
-                where: { parish: { subCountyId: subCounty.id } },
-                select: { id: true, name: true },
-                orderBy: { name: 'asc' },
-                take: 300,
+                where: { parishId: parish.id },
+                select: { id: true, name: true, parishId: true },
+                orderBy: { name: 'asc' }, take: 500,
               })
             : []
         } else {
-          villages = []
+          rows = []
         }
         return NextResponse.json({
           result: true,
-          data: villages.map(v => ({
-            id: numericId(v.id),
-            village_name: v.name,
+          data: rows.map(v => ({
+            id: numericId(v.id), village_name: v.name, parish_id: numericId(v.parishId),
           })),
         })
       }
       case 'cooperatives': {
+        if (!isMobileStaff(ctx.role)) {
+          return NextResponse.json({ result: false, message: 'Not authorized' }, { status: 403 })
+        }
         const tf = buildTenantFilter(ctx, 'tenantId')
         const groups = await db.farmerGroup.findMany({
           where: tf,
@@ -173,10 +205,8 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({
           result: true,
           data: groups.map((g, i) => ({
-            id: numericId(g.id),
-            staff_id: 0,
-            cooperative_name: g.name,
-            cooperative_code: `GRP-${i + 1}`,
+            id: numericId(g.id), staff_id: 0,
+            cooperative_name: g.name, cooperative_code: `GRP-${i + 1}`,
           })),
         })
       }

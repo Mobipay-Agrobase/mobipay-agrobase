@@ -9,6 +9,8 @@ import 'package:agrobase_ekibbo/application/app_provider.dart';
 import 'package:agrobase_ekibbo/components/constant/text_style_constant.dart';
 import 'package:agrobase_ekibbo/domain/core/api_provider.dart';
 import 'package:agrobase_ekibbo/infrastructure/local_data/shared_manager.dart';
+import 'package:agrobase_ekibbo/infrastructure/local_data/ota_cache_service.dart';
+import 'package:agrobase_ekibbo/infrastructure/sync/sync_engine.dart';
 import 'package:agrobase_ekibbo/routes/navigator_manager.dart';
 import 'package:agrobase_ekibbo/routes/routes_manager.dart';
 import 'package:agrobase_ekibbo/domain/l10n/generated/app_localizations.dart';
@@ -41,7 +43,9 @@ class _MyAppState extends State<MyApp> {
     // shorebirdCodePush
     //     .currentPatchNumber()
     //     .then((value) => debugPrint('current patch number is $value'));
-    //_checkForUpdates();
+    // OTA data cache + offline auto-sync engine (connectivity watch).
+    OtaCacheService.instance.init();
+    SyncEngine.instance.init();
   }
 
   // Future<void> _checkForUpdates() async {

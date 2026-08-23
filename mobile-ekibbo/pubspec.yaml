@@ -67,6 +67,7 @@ dependencies:
   webview_flutter: ^4.5.0
   toast: ^0.3.0
 #  social_share: ^2.2.1
+  qr_flutter: ^4.1.0
   hive: ^2.0.5
   hive_flutter: ^1.1.0
 

@@ -1,27 +1,22 @@
 // ignore_for_file: use_build_context_synchronously
 
-import 'dart:io';
-
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_svg/svg.dart';
-import 'package:http_parser/http_parser.dart';
-import 'package:mime/mime.dart';
-import 'package:agrobase_ekibbo/application/app_provider.dart';
-import 'package:agrobase_ekibbo/components/custom_appbar.dart';
-import 'package:agrobase_ekibbo/components/g_image.dart';
-import 'package:agrobase_ekibbo/components/no_data_view.dart';
-import 'package:agrobase_ekibbo/components/option_bottom_dialog.dart';
+
 import 'package:agrobase_ekibbo/components/constant/color_constant.dart';
 import 'package:agrobase_ekibbo/components/constant/text_style_constant.dart';
+import 'package:agrobase_ekibbo/components/custom_appbar.dart';
 import 'package:agrobase_ekibbo/components/helpers/dialog_helper.dart';
-import 'package:agrobase_ekibbo/infrastructure/remote_data/api_data/api_farmer.dart';
-import 'package:agrobase_ekibbo/domain/l10n/app_lang.dart';
-import 'package:agrobase_ekibbo/models/farmer_local/farmer_local_model.dart';
-import 'package:agrobase_ekibbo/routes/navigator_manager.dart';
-import 'package:agrobase_ekibbo/routes/routes_manager.dart';
+import 'package:agrobase_ekibbo/infrastructure/local_data/hivebox_manager/box_farmer.dart';
+import 'package:agrobase_ekibbo/infrastructure/local_data/hivebox_manager/box_sync_log.dart';
+import 'package:agrobase_ekibbo/infrastructure/sync/sync_engine.dart';
 
+/// ─────────────────────────────────────────────────────────────────────────
+/// Sync Data screen — the offline queue control center:
+///   · Pending offline records (from Hive)
+///   · Sync now (all) — also runs AUTOMATICALLY when connectivity returns
+///   · Per-item retry for FAILED records (with the failure reason)
+///   · Full audit log of every attempt (local + server SyncAuditLog)
+/// ─────────────────────────────────────────────────────────────────────────
 class ListFarmerLocalScreen extends StatefulWidget {
   const ListFarmerLocalScreen({super.key});
 
@@ -30,326 +25,236 @@ class ListFarmerLocalScreen extends StatefulWidget {
 }
 
 class _ListFarmerLocalScreenState extends State<ListFarmerLocalScreen> {
-  late AppProvider appProvider;
+  List<Map<String, dynamic>> _pending = [];
+  List<Map<String, dynamic>> _auditLog = [];
+  bool _loading = true;
+  bool _syncing = false;
+  int _tabIndex = 0;
 
-  _syncAll() {
-    DialogHelper.showOkDialog(
-      context,
-      AppLang.local.ask_sync_all,
-      okAction: () async {
-        await _createMultiFarmer();
-      },
-      isCancel: true,
-    );
-  }
-
-  _createMultiFarmer() async {
-    final idSuccess = <int>[];
-    DialogHelper.showLoading();
-    for (var element
-        in NavigatorManager.contextRoot.read<AppProvider>().appFarmer.datas) {
-      final res = await _createFarmer(element);
-      if (res) idSuccess.add(element.id);
-    }
-    for (var element in idSuccess) {
-      NavigatorManager.contextRoot
-          .read<AppProvider>()
-          .updateState(AppEvent.appFarmerDeleteFromLocal, argument: element);
-    }
-    DialogHelper.hideLoading();
-  }
-
-  _createFarmer(MFarmerLocal farmer) async {
-    var form = FormData.fromMap(farmer.toUpdate());
-    form.files.addAll([
-      if (farmer.farmer_photo.isNotEmpty)
-        MapEntry(
-          'farmer_photo[]',
-          MultipartFile.fromFileSync(
-            farmer.farmer_photo,
-            contentType:
-                MediaType.parse(lookupMimeType(farmer.farmer_photo) ?? ''),
-          ),
-        ),
-      if (farmer.id_proof_photo_front.isNotEmpty)
-        MapEntry(
-          'id_proof_photo[]',
-          MultipartFile.fromFileSync(
-            farmer.id_proof_photo_front,
-            contentType: MediaType.parse(
-                lookupMimeType(farmer.id_proof_photo_front) ?? ''),
-          ),
-        ),
-      if (farmer.id_proof_photo_back.isNotEmpty)
-        MapEntry(
-          'id_proof_photo[]',
-          MultipartFile.fromFileSync(
-            farmer.id_proof_photo_back,
-            contentType: MediaType.parse(
-                lookupMimeType(farmer.id_proof_photo_back) ?? ''),
-          ),
-        ),
-    ]);
-
-    try {
-      final res = await ApiFarmer.registerFarmer(form);
-      if (res.result == false) {
-        if (res.message != null) {
-          DialogHelper.showToast(context, res.message);
-        }
+  @override
+  void initState() {
+    super.initState();
+    _load();
+    SyncEngine.instance.onAutoSyncComplete = (synced, failed) {
+      if (mounted) {
+        _load();
+        DialogHelper.showToast(context,
+            'Auto-sync: $synced synced${failed > 0 ? ', $failed failed (see audit log)' : ''}');
       }
-      return res.result;
-    } catch (_) {
-      DialogHelper.showToast(
-          context, AppLang.local.farmer_save_local_successfully);
-      return false;
-    }
+    };
   }
 
-  _onDelete(MFarmerLocal farmer) {
+  Future<void> _load() async {
+    setState(() => _loading = true);
+    final pending = await BoxFarmer.getAll();
+    final log = await BoxSyncLog.history();
+    setState(() {
+      _pending = pending.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+      _auditLog = log;
+      _loading = false;
+    });
+  }
+
+  Future<void> _syncAll() async {
+    if (_syncing) return;
+    setState(() => _syncing = true);
+    DialogHelper.showLoading();
+    final (synced, failed) = await SyncEngine.instance.syncAllQueues();
+    DialogHelper.hideLoading();
+    await _load();
+    setState(() => _syncing = false);
     DialogHelper.showOkDialog(
       context,
-      'Delete farmer ${farmer.full_name}?',
-      isCancel: true,
-      okAction: () {
-        context.read<AppProvider>().updateState(AppEvent.appFarmerDeleteFromLocal,
-            argument: farmer.id);
-        setState(() {});
-      },
+      failed > 0
+          ? 'Synced: $synced, Failed: $failed.\nFailed records stay in the queue with their reason — open the Audit Log tab and tap a failed row to re-sync it.'
+          : 'All records synced successfully ($synced).',
     );
   }
 
-  _onEdit(MFarmerLocal farmer) {
-    Navigator.of(context).pushNamed(RouterName.farmer_registration,
-        arguments: {"farmerData": farmer.toMap()});
+  Future<void> _retryOne(int localId) async {
+    setState(() => _syncing = true);
+    final (synced, failed) = await SyncEngine.instance.syncAllQueues(onlyLocalId: localId);
+    await _load();
+    setState(() => _syncing = false);
+    DialogHelper.showOkDialog(
+        context, failed > 0 ? 'Still failing — check the error detail in the audit log.' : 'Re-synced successfully.');
   }
 
   @override
   Widget build(BuildContext context) {
-    appProvider = context.watch<AppProvider>();
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: const CustomAppBar(
-        title: 'Sync Data Farmer',
+      appBar: CustomAppBar(
+        title: 'Sync Data',
+        color: ColorConstant.primary,
+        titleColor: Colors.white,
+        backColor: Colors.white,
       ),
-      body: appProvider.appFarmer.datas.isEmpty
-          ? const NoDataView()
-          : ListView(
-              padding: const EdgeInsets.all(16),
-              shrinkWrap: true,
-              children: appProvider.appFarmer.datas
-                  .map(
-                    (item) => _FarmerLocalItemView(
-                      farmer: item,
-                      onEdit: () => _onEdit(item),
-                      onDelete: () => _onDelete(item),
-                    ),
-                  )
-                  .toList(),
-            ),
-    );
-  }
-}
-
-class _FarmerLocalItemView extends StatelessWidget {
-  const _FarmerLocalItemView({
-    required this.farmer,
-    this.onDelete,
-    this.onEdit,
-  });
-  final MFarmerLocal farmer;
-  final Function()? onDelete;
-  final Function()? onEdit;
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.only(
-        left: 20,
-        right: 16,
-        top: 24,
-        bottom: 18,
-      ),
-      margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
-        color: ColorConstant.grayF7F8FA,
-        borderRadius: BorderRadius.circular(15),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          farmer.farmer_photo.isNotEmpty
-              ? ClipRRect(
-                  borderRadius: BorderRadius.circular(30),
-                  child: farmer.farmer_photo.contains('https://')
-                      ? GInternetImage(
-                          url: farmer.farmer_photo,
-                          width: 60,
-                          height: 60,
-                        )
-                      : GImage.file(
-                          file: File(farmer.farmer_photo),
-                          width: 60,
-                          height: 60,
-                        ),
-                )
-              : GImage.asset(
-                  name: 'avt_placeholder'.imgPNG,
-                  width: 60,
-                  height: 60,
-                ),
-          const SizedBox(
-            width: 16,
-          ),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+      body: _loading
+          ? const Center(child: CircularProgressIndicator(color: ColorConstant.primary))
+          : Column(
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        farmer.full_name,
-                        style: TextStyleConstant.quicksandW600(
-                          fontSize: 18,
+                // summary + actions
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  color: ColorConstant.grayF7F8FA,
+                  child: Column(
+                    children: [
+                      Row(
+                        children: [
+                          _summaryTile('Pending', _pending.length, const Color(0xFFB45309)),
+                          const SizedBox(width: 12),
+                          _summaryTile(
+                              'Failed (log)', _auditLog.where((l) => l['status'] == 'FAILED').length, const Color(0xFFDC2626)),
+                          const SizedBox(width: 12),
+                          _summaryTile('Synced (log)', _auditLog.where((l) => l['status'] == 'SUCCESS').length,
+                              const Color(0xFF059669)),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: ColorConstant.primary,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                          onPressed: _pending.isEmpty || _syncing ? null : _syncAll,
+                          icon: _syncing
+                              ? const SizedBox(
+                                  width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                              : const Icon(Icons.sync),
+                          label: Text(_pending.isEmpty ? 'Nothing to sync' : 'Sync All Now'),
                         ),
                       ),
-                    ),
-                    InkWell(
-                      onTap: () async {
-                        final r = await showModalBottomSheet(
-                          context: context,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          builder: (_) => OptionBottomDialog(
-                            title: AppLang.local.options,
-                            datas: [
-                              AppLang.local.edit,
-                              AppLang.local.delete,
-                            ],
-                            itemSelected: '',
-                          ),
-                        );
-                        if (r == 0) {
-                          onEdit?.call();
-                        } else if (r == 1) {
-                          onDelete?.call();
-                        }
-                      },
-                      child: const Icon(
-                        Icons.more_horiz,
-                        color: ColorConstant.text79,
+                      const SizedBox(height: 4),
+                      const Text(
+                        'Records captured offline sync automatically when internet returns.',
+                        style: TextStyle(fontSize: 11, color: ColorConstant.text79),
+                        textAlign: TextAlign.center,
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-                const SizedBox(
-                  height: 16,
-                ),
-                _buildRowInfo(
-                  'ic_location',
-                  farmer.village,
-                ),
-                const SizedBox(
-                  height: 14,
-                ),
+                // tabs
                 Row(
                   children: [
-                    Expanded(
-                      child: _buildRowInfo(
-                        'ic_calling',
-                        farmer.phone_number,
-                      ),
-                    ),
-                    Container(
-                      height: 24,
-                      width: 53,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(5),
-                        color: ColorConstant.primary,
-                      ),
-                      child: Center(
-                        child: Text(
-                          AppLang.local.call,
-                          style: TextStyleConstant.quicksandW500(
-                            fontSize: 12,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    )
+                    _tab('Pending Queue (${_pending.length})', 0),
+                    _tab('Audit Log (${_auditLog.length})', 1),
                   ],
+                ),
+                Expanded(
+                  child: _tabIndex == 0 ? _pendingList() : _auditList(),
                 ),
               ],
             ),
-          ),
-        ],
+    );
+  }
+
+  Widget _summaryTile(String label, int value, Color color) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: color.withOpacity(0.4)),
+        ),
+        child: Column(children: [
+          Text('$value', style: TextStyleConstant.worksansW600(fontSize: 20, color: color)),
+          Text(label, style: const TextStyle(fontSize: 10, color: ColorConstant.text79)),
+        ]),
       ),
     );
   }
 
-  Row _buildRowInfo(
-    String icon,
-    String title,
-  ) {
-    return Row(
-      children: [
-        SvgPicture.asset(
-          icon.iconSvg,
-          width: 16,
-          height: 16,
-          color: ColorConstant.text79,
-        ),
-        const SizedBox(
-          width: 10,
-        ),
-        Text(
-          title,
-          style: TextStyleConstant.robotoW400(
-            fontSize: 12,
-            color: ColorConstant.text79,
+  Widget _tab(String label, int index) {
+    final active = _tabIndex == index;
+    return Expanded(
+      child: InkWell(
+        onTap: () => setState(() => _tabIndex = index),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            border: Border(bottom: BorderSide(color: active ? ColorConstant.primary : Colors.transparent, width: 2)),
+            color: active ? ColorConstant.primary.withOpacity(0.05) : Colors.transparent,
           ),
-        )
-      ],
-    );
-  }
-}
-
-class _LoadingPercentView extends StatefulWidget {
-  const _LoadingPercentView({super.key});
-
-  @override
-  State<_LoadingPercentView> createState() => __LoadingPercentViewState();
-}
-
-class __LoadingPercentViewState extends State<_LoadingPercentView> {
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: Colors.black.withOpacity(0.3),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            LinearProgressIndicator(
-              minHeight: 10,
-              color: ColorConstant.primary,
-              backgroundColor: ColorConstant.greyEBEBEB,
-              borderRadius: BorderRadius.circular(5),
-            ),
-            const SizedBox(
-              height: 16,
-            ),
-            Text(
-              AppLang.local.process_take_time,
-              style: TextStyleConstant.robotoW600(
-                color: Colors.white,
-              ),
-            )
-          ],
+          child: Text(label,
+              textAlign: TextAlign.center,
+              style: TextStyleConstant.quicksandW600(
+                  fontSize: 13, color: active ? ColorConstant.primary : ColorConstant.text79)),
         ),
       ),
+    );
+  }
+
+  Widget _pendingList() {
+    if (_pending.isEmpty) {
+      return const Center(
+        child: Text('No offline records — everything is synced.', style: TextStyle(color: ColorConstant.text79)),
+      );
+    }
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: _pending.length,
+      itemBuilder: (_, i) {
+        final f = _pending[i];
+        return Card(
+          margin: const EdgeInsets.only(bottom: 10),
+          child: ListTile(
+            leading: const CircleAvatar(child: Icon(Icons.person_outline)),
+            title: Text(f['full_name'] ?? 'Unknown'),
+            subtitle: Text('${f['phone_number'] ?? ''} · ${f['village'] ?? ''}',
+                style: const TextStyle(fontSize: 12)),
+            trailing: IconButton(
+              icon: const Icon(Icons.cloud_upload, color: ColorConstant.primary),
+              tooltip: 'Sync this record',
+              onPressed: _syncing ? null : () => _retryOne(f['id'] as int),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _auditList() {
+    if (_auditLog.isEmpty) {
+      return const Center(
+        child: Text('No sync attempts yet.', style: TextStyle(color: ColorConstant.text79)),
+      );
+    }
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: _auditLog.length,
+      itemBuilder: (_, i) {
+        final l = _auditLog[i];
+        final ok = l['status'] == 'SUCCESS';
+        return Card(
+          margin: const EdgeInsets.only(bottom: 10),
+          child: ListTile(
+            leading: Icon(
+              ok ? Icons.check_circle : Icons.error_outline,
+              color: ok ? const Color(0xFF059669) : const Color(0xFFDC2626),
+            ),
+            title: Text('${l['type']} #${l['local_id']} — ${l['status']}'),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('${l['detail'] ?? ''}', style: const TextStyle(fontSize: 12)),
+                Text('${l['at'] ?? ''}', style: const TextStyle(fontSize: 10, color: ColorConstant.text79)),
+              ],
+            ),
+            isThreeLine: true,
+            trailing: !ok
+                ? TextButton(
+                    onPressed: _syncing ? null : () => _retryOne(l['local_id'] as int),
+                    child: const Text('Re-sync'),
+                  )
+                : null,
+          ),
+        );
+      },
     );
   }
 }

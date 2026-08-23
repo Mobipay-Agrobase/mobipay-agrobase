@@ -308,6 +308,23 @@ class _DrawerViewState extends State<DrawerView> {
           ),
         );
         break;
+      case DrawerMenuType.farmerList:
+        Navigator.of(context).pushNamed(RouterName.farmer_list);
+        break;
+      case DrawerMenuType.listPlot:
+        Navigator.of(context).pushNamed(
+          RouterName.list_plots,
+          arguments: DUserInfo.instance.user!.roleUser == EnumUserRole.farmer
+              ? null
+              : null,
+        );
+        break;
+      case DrawerMenuType.crops:
+        Navigator.of(context).pushNamed(RouterName.crop_harvest);
+        break;
+      case DrawerMenuType.carbon:
+        Navigator.of(context).pushNamed(RouterName.add_carbon_footprint);
+        break;
       default:
     }
   }

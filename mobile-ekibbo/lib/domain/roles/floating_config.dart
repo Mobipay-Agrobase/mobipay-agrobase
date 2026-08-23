@@ -14,11 +14,17 @@ import 'package:agrobase_ekibbo/routes/routes_manager.dart';
 /// quality, check fishing, stock) are excluded from the Ekibbo deployment.
 /// ─────────────────────────────────────────────────────────────────────────
 final List<MActionButton> floatingConfigs = [
-  // ── Field Officer daily workflow (order matters — matches Ekibbo ops) ──
+  // ── Field Officer daily workflow (order matches the Ekibbo web quick actions) ──
   MActionButton(
     routeName: RouterName.farmer_registration,
     icon: "ic_farmer",
-    title: AppLang.local.add_farmer,
+    title: "Register Farmer",
+    roleAccessed: [EnumUserRole.staff],
+  ),
+  MActionButton(
+    routeName: RouterName.farmer_list,
+    icon: "ic_profile",
+    title: "Farmer Registry",
     roleAccessed: [EnumUserRole.staff],
   ),
   MActionButton(

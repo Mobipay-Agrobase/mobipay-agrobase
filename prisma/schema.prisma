@@ -25,11 +25,13 @@ model Tenant {
   parent      Tenant?  @relation("TenantHierarchy", fields: [parentId], references: [id])
   children    Tenant[] @relation("TenantHierarchy")
   isActive    Boolean  @default(true)
-  features    String?  // JSON: tenant-specific feature flags e.g. {"purchaseWorkflow":true,"farmerLedger":true}
+  features    String?  // JSON: tenant-specific feature flags e.g. {"purchaseWorkflow":true,"farmerLedger":true
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   users       User[]
+  syncAuditLogs      SyncAuditLog[]
   farmerGroups FarmerGroup[]
   farmerProfiles FarmerProfile[]
   vslaGroups  VslaGroup[]
@@ -2309,6 +2311,26 @@ model MigrationLog {
   executedBy      String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+}
+
+// ─── MOBILE OFFLINE SYNC AUDIT TRAIL ────────────────────────────────────
+// Every offline-queue push attempt (success or failure) is recorded here so
+// the mobile Sync screen can show what happened and allow per-item re-sync.
+
+model SyncAuditLog {
+  id        String   @id @default(cuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  deviceId  String   // physical device that captured the record
+  localId   String   // Hive-box key on the device
+  type      String   // farmer, farmland, cultivation, purchase, ...
+  status    String   // SUCCESS | FAILED
+  remoteId  String?  // created/updated record id on success
+  error     String?  // failure reason
+  createdAt DateTime @default(now())
+
+  @@index([tenantId, deviceId])
+  @@index([tenantId, createdAt])
 }
 
 model IdMapping {

@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:agrobase_ekibbo/components/app_circular_indicator.dart';
 import 'package:agrobase_ekibbo/components/custom_appbar.dart';
+import 'package:agrobase_ekibbo/infrastructure/store_data/user_info.dart';
+import 'package:agrobase_ekibbo/domain/roles/role_config.dart';
+import 'package:agrobase_ekibbo/infrastructure/remote_data/api_data/api_farmer.dart';
 import 'package:agrobase_ekibbo/components/g_image.dart';
 import 'package:agrobase_ekibbo/components/no_data_view.dart';
 import 'package:agrobase_ekibbo/components/constant/color_constant.dart';
@@ -17,9 +20,9 @@ import 'package:agrobase_ekibbo/domain/core/api_provider.dart';
 class ListPlotScreen extends StatefulWidget {
   const ListPlotScreen({
     super.key,
-    required this.farmer,
+    this.farmer,
   });
-  final FarmerModel farmer;
+  final FarmerModel? farmer;
   @override
   State<ListPlotScreen> createState() => _ListPlotScreenState();
 }
@@ -29,13 +32,46 @@ class _ListPlotScreenState extends State<ListPlotScreen> {
   bool _isLoading = true;
   @override
   void initState() {
-    _getAllFarmLand();
     super.initState();
+    if (widget.farmer != null) {
+      _getAllFarmLand();
+    } else if (DUserInfo.instance.user!.roleUser == EnumUserRole.farmer) {
+      _loadOwnFarmer();
+    } else {
+      // Staff opened the registry-wide Farm Land Registry — pick a farmer first.
+      _pickFarmer();
+    }
+    _isLoading = widget.farmer == null;
   }
 
+  Future<void> _loadOwnFarmer() async {
+    final own = await ApiFarmer.getFarmerDetailRoleFarmer();
+    if (own != null) {
+      _selectedFarmer = own;
+      _getAllFarmLand();
+    } else {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _pickFarmer() async {
+    final picked = await Navigator.of(context).pushNamed(
+      RouterName.farmer_list,
+    );
+    setState(() => _isLoading = false);
+  }
+
+  FarmerModel? _selectedFarmer;
+
+  FarmerModel get effectiveFarmer => widget.farmer ?? _selectedFarmer!;
+
   _getAllFarmLand() async {
+    if (effectiveFarmer.id == null) {
+      setState(() => _isLoading = false);
+      return;
+    }
     final res = await ApiProvider.instance.apiFarmland
-        .getAllFarmLands(widget.farmer.id!);
+        .getAllFarmLands(effectiveFarmer.id!);
 
     if (res?.data != null) {
       setState(() {
@@ -62,7 +98,7 @@ class _ListPlotScreenState extends State<ListPlotScreen> {
                 ),
               ),
               TextSpan(
-                text: widget.farmer.fullName,
+                text: effectiveFarmer.fullName,
                 style: TextStyleConstant.quicksandW400(
                   fontSize: 12,
                   color: ColorConstant.text79,
@@ -76,7 +112,7 @@ class _ListPlotScreenState extends State<ListPlotScreen> {
               ? InkWell(
                   onTap: () => Navigator.of(context).pushNamed(
                     RouterName.add_plot,
-                    arguments: {'farmer': widget.farmer},
+                    arguments: {'farmer': effectiveFarmer},
                   ).then((value) {
                     if (value != null) {
                       _getAllFarmLand();
@@ -107,7 +143,7 @@ class _ListPlotScreenState extends State<ListPlotScreen> {
                       onTap: () => Navigator.of(context).pushNamed(
                         RouterName.plot_detail,
                         arguments: {
-                          'farmer': widget.farmer,
+                          'farmer': effectiveFarmer,
                           'plot': item,
                         },
                       ),

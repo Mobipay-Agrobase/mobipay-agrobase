@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:dio/dio.dart';
+import 'package:agrobase_ekibbo/domain/config/env_config.dart';
 import 'package:agrobase_ekibbo/domain/core/api_provider.dart';
 import 'package:agrobase_ekibbo/infrastructure/local_data/hivebox_manager/box_address.dart';
 import 'package:agrobase_ekibbo/infrastructure/local_data/hivebox_manager/box_dropdown.dart';
@@ -172,6 +174,58 @@ class ApiAddress {
     }
   }
 
+  /// Top-level regions from the web Location Master (7-level cascade root).
+  static Future<List<Map<String, dynamic>>> getRegions() async {
+    try {
+      final res = await ApiProvider.instance.apiLocation.getCountries('region');
+      if (res == null || res.data == null) return [];
+      return (res.data as List)
+          .map((e) => {
+                'id': (e as CountryModel).id ?? 0,
+                'name': e.countryName ?? '',
+              })
+          .toList();
+    } catch (e) {
+      debugPrint("getRegions $e");
+      return [];
+    }
+  }
+
+  /// Generic child-level fetch for the 7-level cascade:
+  /// sub-region | county | parish (each keyed by parent numeric id).
+  static Future<List<Map<String, dynamic>>> getChildren(String type, int parentId) async {
+    try {
+      final res = await _dio().get(
+        '/mobile/ekibbo-geo',
+        queryParameters: {'type': type, 'parentId': parentId},
+      );
+      if (res.statusCode != 200 || res.data['result'] != true) return [];
+      final data = res.data['data'] as List;
+      return data.map((e) {
+        final m = e as Map<String, dynamic>;
+        return {
+          'id': m['id'] as int,
+          'name': (m['sub_region_name'] ?? m['county_name'] ?? m['parish_name'] ?? '') as String,
+        };
+      }).toList();
+    } catch (e) {
+      debugPrint("getChildren($type) $e");
+      return [];
+    }
+  }
+
+  static Dio _dio() => Dio(BaseOptions(
+        baseUrl: EnvConfig.domainStream,
+        connectTimeout: const Duration(seconds: 15),
+        receiveTimeout: const Duration(seconds: 15),
+        validateStatus: (s) => true,
+        headers: {
+          'Authorization':
+              'Bearer ${SharedPreferencesProvider.instance.accessToken}',
+          'x-app-client': 'agrobase-ekibbo-flutter',
+        },
+      ));
+
   /// All districts from the web Location Master (mobile registration form
   /// starts at District level — matches the web Ekibbo flow).
   static Future<List<DistrictModel>> getAllDistrictsMaster() async {
@@ -186,10 +240,10 @@ class ApiAddress {
     }
   }
 
-  /// Villages under a subcounty (web Location Master hierarchy).
-  static Future<List<VillageModel>> getVillages(int subCountyId) async {
+  /// Villages under a parish (web Location Master hierarchy).
+  static Future<List<VillageModel>> getVillages(int parishId) async {
     try {
-      final res = await ApiProvider.instance.apiLocation.getVillages('village', subCountyId);
+      final res = await ApiProvider.instance.apiLocation.getVillages('village', parishId);
       if (res == null) throw const FormatException('villages response null');
       if (res.data == null) throw const FormatException('villages data null');
       return res.data ?? [];

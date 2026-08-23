@@ -15,6 +15,10 @@ enum SharedKey {
   userInfo,
   applang,
   appMode,
+  otaCatalog,
+  otaCatalogSyncedAt,
+  otaGeoSyncedAt,
+  deviceId,
 }
 
 enum EAppLang {
@@ -50,7 +54,9 @@ class SharedPreferencesProvider {
     _fetchFarmerLocal();
     accessToken = _getString(SharedKey.accessToken.name) ?? '';
     sellerToken = _getString(SharedKey.sellerToken.name) ?? '';
-    appLang = _getString(SharedKey.applang.name) ?? EAppLang.en.name;
+    // Ekibbo deployment is English-only; ignore any stale 'vi' value.
+    final storedLang = _getString(SharedKey.applang.name);
+    appLang = storedLang == EAppLang.vi.name ? EAppLang.en.name : (storedLang ?? EAppLang.en.name);
     appMode = _getString(SharedKey.appMode.name) ?? EAppMode.pro.name;
     isEnvPro = appMode == EAppMode.pro.name ? true : false;
     localLang = await DOrtherInfo.instance.setAppLang(appLang);
@@ -150,6 +156,21 @@ class SharedPreferencesProvider {
 
   String? _getString(String key) {
     return _shared.getString(key);
+  }
+
+  /// Public passthroughs for services that persist their own keys
+  /// (OTA cache, sync audit, device id).
+  void setString(String key, String value) => _setString(key, value);
+  String? getString(String key) => _getString(key);
+
+  /// Stable per-install device id (sync audit trail).
+  String get deviceId {
+    var id = _getString(SharedKey.deviceId.name);
+    if (id == null || id.isEmpty) {
+      id = 'dev-${DateTime.now().millisecondsSinceEpoch}';
+      _setString(SharedKey.deviceId.name, id);
+    }
+    return id;
   }
 
   _setList(String key, List<String> values) {

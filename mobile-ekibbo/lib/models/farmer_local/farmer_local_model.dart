@@ -24,6 +24,32 @@ class MFarmerLocal {
   // commune = Agrobase SubCounty, village = Agrobase Village name.
   String district_name;
   String commune_name;
+  // ── Web-platform datapoints (FarmerFormPage parity) ──
+  String education;            // education_level catalog
+  String first_name;
+  String last_name;
+  String spouse_name_guardian; // web 'Guardian/Parent Name'
+  String marital_status;       // marital_status catalog
+  String email;
+  String spouse_name;
+  String family_members;
+  String children_under_18;
+  String school_going_children;
+  String housing_ownership;    // housing_ownership catalog
+  String house_type;           // house_type catalog
+  String farmer_registration_under; // Agri / Aqua
+  String is_certified;         // 'true' / 'false'
+  String certification_type;
+  String ics_year;
+  // 7-level location (ids numeric-hashed, names for display + API)
+  int region;
+  int sub_region;
+  int county;
+  int parish;
+  String region_name;
+  String sub_region_name;
+  String county_name;
+  String parish_name;
   String lng;
   String lat;
   String proof_no;
@@ -66,6 +92,30 @@ class MFarmerLocal {
     required this.village,
     this.district_name = '',
     this.commune_name = '',
+    this.education = '',
+    this.first_name = '',
+    this.last_name = '',
+    this.spouse_name_guardian = '',
+    this.marital_status = '',
+    this.email = '',
+    this.spouse_name = '',
+    this.family_members = '',
+    this.children_under_18 = '',
+    this.school_going_children = '',
+    this.housing_ownership = '',
+    this.house_type = '',
+    this.farmer_registration_under = '',
+    this.is_certified = 'false',
+    this.certification_type = '',
+    this.ics_year = '',
+    this.region = 0,
+    this.sub_region = 0,
+    this.county = 0,
+    this.parish = 0,
+    this.region_name = '',
+    this.sub_region_name = '',
+    this.county_name = '',
+    this.parish_name = '',
     required this.lng,
     required this.lat,
     required this.proof_no,
@@ -109,6 +159,30 @@ class MFarmerLocal {
       village: map['village'] ?? '',
       district_name: map['district_name'] ?? '',
       commune_name: map['commune_name'] ?? '',
+      education: map['education'] ?? '',
+      first_name: map['first_name'] ?? '',
+      last_name: map['last_name'] ?? '',
+      spouse_name_guardian: map['spouse_name_guardian'] ?? '',
+      marital_status: map['marital_status'] ?? '',
+      email: map['email'] ?? '',
+      spouse_name: map['spouse_name'] ?? '',
+      family_members: map['family_members'] ?? '',
+      children_under_18: map['children_under_18'] ?? '',
+      school_going_children: map['school_going_children'] ?? '',
+      housing_ownership: map['housing_ownership'] ?? '',
+      house_type: map['house_type'] ?? '',
+      farmer_registration_under: map['farmer_registration_under'] ?? '',
+      is_certified: map['is_certified'] ?? 'false',
+      certification_type: map['certification_type'] ?? '',
+      ics_year: map['ics_year'] ?? '',
+      region: map['region'] ?? 0,
+      sub_region: map['sub_region'] ?? 0,
+      county: map['county'] ?? 0,
+      parish: map['parish'] ?? 0,
+      region_name: map['region_name'] ?? '',
+      sub_region_name: map['sub_region_name'] ?? '',
+      county_name: map['county_name'] ?? '',
+      parish_name: map['parish_name'] ?? '',
       lng: map['lng'] ?? '0',
       lat: map['lat'] ?? '0',
       proof_no: map['proof_no'] ?? '',
@@ -173,6 +247,33 @@ class MFarmerLocal {
       'commune': commune,
       'district_name': district_name,
       'commune_name': commune_name,
+      'education': education,
+      'first_name': first_name,
+      'last_name': last_name,
+      'guardian_name': spouse_name_guardian,
+      'first_name': first_name,
+      'last_name': last_name,
+      'spouse_name_guardian': spouse_name_guardian,
+      'marital_status': marital_status,
+      'email': email,
+      'spouse_name': spouse_name,
+      'family_members': family_members,
+      'children_under_18': children_under_18,
+      'school_going_children': school_going_children,
+      'housing_ownership': housing_ownership,
+      'house_type': house_type,
+      'farmer_registration_under': farmer_registration_under,
+      'is_certified': is_certified,
+      'certification_type': certification_type,
+      'ics_year': ics_year,
+      'region': region,
+      'sub_region': sub_region,
+      'county': county,
+      'parish': parish,
+      'region_name': region_name,
+      'sub_region_name': sub_region_name,
+      'county_name': county_name,
+      'parish_name': parish_name,
       'village': village,
       'lng': lng,
       'lat': lat,
@@ -212,6 +313,23 @@ class MFarmerLocal {
       'commune': commune,
       'district_name': district_name,
       'commune_name': commune_name,
+      'education': education,
+      'marital_status': marital_status,
+      'email': email,
+      'spouse_name': spouse_name,
+      'family_members': family_members,
+      'children_under_18': children_under_18,
+      'school_going_children': school_going_children,
+      'housing_ownership': housing_ownership,
+      'house_type': house_type,
+      'farmer_registration_under': farmer_registration_under,
+      'is_certified': is_certified,
+      'certification_type': certification_type,
+      'ics_year': ics_year,
+      'region_name': region_name,
+      'sub_region_name': sub_region_name,
+      'county_name': county_name,
+      'parish_name': parish_name,
       'village': village,
       'proof_no': proof_no,
       'gender': gender,

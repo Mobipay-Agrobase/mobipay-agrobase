@@ -12,6 +12,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:mime/mime.dart';
 import 'package:agrobase_ekibbo/application/app_provider.dart';
 import 'package:agrobase_ekibbo/infrastructure/remote_data/api_data/api_address.dart';
+import 'package:agrobase_ekibbo/infrastructure/local_data/ota_cache_service.dart';
 import 'package:agrobase_ekibbo/components/app_button.dart';
 import 'package:agrobase_ekibbo/components/app_form_field.dart';
 import 'package:agrobase_ekibbo/components/custom_appbar.dart';
@@ -26,7 +27,6 @@ import 'package:agrobase_ekibbo/components/helpers/date_helper.dart';
 import 'package:agrobase_ekibbo/components/helpers/dialog_helper.dart';
 import 'package:agrobase_ekibbo/infrastructure/remote_data/api_data/api_farmer.dart';
 import 'package:agrobase_ekibbo/models/distribution/model_cooperative.dart';
-import 'package:agrobase_ekibbo/models/dropdown/dropdown_data_model.dart';
 import 'package:agrobase_ekibbo/models/farmer_local/farmer_local_model.dart';
 import 'package:agrobase_ekibbo/models/location/commune/commune_model.dart';
 import 'package:agrobase_ekibbo/models/location/village/village_model.dart';
@@ -52,13 +52,25 @@ class _FarmerRegistrationScreenState extends State<FarmerRegistrationScreen> {
   XFile? _avtFile;
   XFile? _frontImg;
   XFile? _backImg;
-  // Web-platform aligned location cascade: District → Sub County → Village
+  // Web-platform aligned dropdowns — sourced from OTA cache (CatalogMaster)
+  List<String> _gendersList = [];
+  List<String> _educationLevels = [];
+  List<String> _maritalStatuses = [];
+  List<String> _idTypes = [];
+  List<String> _enrollmentPlaces = [];
+  List<String> _certTypes = [];
+  List<String> _housingOwnerships = [];
+  List<String> _houseTypes = [];
+
+  // 7-level location cascade from the web Location Master:
+  // Region → SubRegion → District → County → SubCounty → Parish → Village
+  List<Map<String, dynamic>> _regions = [];
+  List<Map<String, dynamic>> _subRegions = [];
   List<DistrictModel> _districts = [];
+  List<Map<String, dynamic>> _counties = [];
   List<CommuneModel> _communes = [];
+  List<Map<String, dynamic>> _parishes = [];
   List<VillageModel> _villages = [];
-  List<DropdownDataModel> _genders = [];
-  List<DropdownDataModel> _enrollmentPlace = [];
-  List<DropdownDataModel> _identityProofs = [];
   List<MCooperative> _cooperatives = [];
   bool _isUpdate = false;
 
@@ -105,19 +117,34 @@ class _FarmerRegistrationScreenState extends State<FarmerRegistrationScreen> {
   _initDataLocation() async {
     _latLng = LatLng(double.tryParse(mFarmerLocal.lat) ?? 0,
         double.tryParse(mFarmerLocal.lng) ?? 0);
+    await _getRegions();
     await _getDistrictsMaster();
     await _getCooperatives();
     if (mFarmerLocal.commune != 0) await _getCommune();
-    if (mFarmerLocal.commune != 0) await _getVillages(mFarmerLocal.commune);
+    if (mFarmerLocal.parish != 0) await _getVillages(mFarmerLocal.parish);
   }
 
   Future<void> _getDropdownData() async {
-    final res = await ApiAddress.getDropDownForRegister();
-    setState(() {
-      _genders = res.dataGender ?? [];
-      _enrollmentPlace = res.dataEnrollmentPlace ?? [];
-      _identityProofs = res.dataIdentityProof ?? [];
+    // OTA catalog cache — same CatalogMaster rows as the web platform.
+    final ota = OtaCacheService.instance;
+    // refresh in background (OTA update) but render from cache immediately
+    ota.refreshCatalog().then((_) {
+      if (mounted) setState(() => _fillCatalogLists());
     });
+    _fillCatalogLists();
+  }
+
+  void _fillCatalogLists() {
+    final ota = OtaCacheService.instance;
+    _gendersList = ota.categoryValues('gender');
+    _educationLevels = ota.categoryValues('education_level');
+    _maritalStatuses = ota.categoryValues('marital_status');
+    _idTypes = ota.categoryValues('national_id_type');
+    _enrollmentPlaces = ota.categoryValues('enrollment_place');
+    _certTypes = ota.categoryValues('certification_type');
+    _housingOwnerships = ota.categoryValues('housing_ownership');
+    _houseTypes = ota.categoryValues('house_type');
+    setState(() {});
   }
 
   _getCooperatives() async {
@@ -125,6 +152,33 @@ class _FarmerRegistrationScreenState extends State<FarmerRegistrationScreen> {
     if (_cooperatives.isNotEmpty) {
       setState(() {});
     }
+  }
+
+  /// Top-level regions from the web Location Master.
+  _getRegions() async {
+    _regions = await ApiAddress.getRegions();
+    if (_regions.isNotEmpty) setState(() {});
+  }
+
+  /// Sub-regions under the selected region.
+  _getSubRegions() async {
+    if (mFarmerLocal.region == 0) return;
+    _subRegions = await ApiAddress.getChildren('sub-region', mFarmerLocal.region);
+    setState(() {});
+  }
+
+  /// Counties under the selected district.
+  _getCounties() async {
+    if (mFarmerLocal.district == 0) return;
+    _counties = await ApiAddress.getChildren('county', mFarmerLocal.district);
+    setState(() {});
+  }
+
+  /// Parishes under the selected sub-county.
+  _getParishes() async {
+    if (mFarmerLocal.commune == 0) return;
+    _parishes = await ApiAddress.getChildren('parish', mFarmerLocal.commune);
+    setState(() {});
   }
 
   /// All districts from the web Location Master.
@@ -144,9 +198,9 @@ class _FarmerRegistrationScreenState extends State<FarmerRegistrationScreen> {
     }
   }
 
-  /// Villages under the selected sub-county (web Location Master).
-  _getVillages(int subCountyId) async {
-    _villages = await ApiAddress.getVillages(subCountyId);
+  /// Villages under the selected parish (web Location Master).
+  _getVillages(int parishId) async {
+    _villages = await ApiAddress.getVillages(parishId);
     setState(() {});
   }
 
@@ -167,15 +221,6 @@ class _FarmerRegistrationScreenState extends State<FarmerRegistrationScreen> {
     return index;
   }
 
-  int? indexIdentityProof() {
-    if (mFarmerLocal.identity_proof.isEmpty || _identityProofs.isEmpty) {
-      return null;
-    }
-    final index = _identityProofs
-        .indexWhere((element) => element.name == mFarmerLocal.identity_proof);
-    if (index == -1) return null;
-    return index;
-  }
 
   _onSaveToLocal() {
     mFarmerLocal.farmer_photo = _avtFile!.path;
@@ -200,11 +245,18 @@ class _FarmerRegistrationScreenState extends State<FarmerRegistrationScreen> {
       DialogHelper.showOkDialog(context, AppLang.local.please_choose_avt);
       return;
     }
-    if (mFarmerLocal.district == 0 ||
+    if (mFarmerLocal.region == 0 ||
+        mFarmerLocal.district == 0 ||
         mFarmerLocal.commune == 0 ||
         mFarmerLocal.village.isEmpty) {
       DialogHelper.showOkDialog(
-          context, 'Please select District, Sub County and Village');
+          context,
+          'Please select the full location: Region, District, Sub County and Village ( Parish completes the chain)');
+      return;
+    }
+    if (mFarmerLocal.farmer_registration_under.isEmpty) {
+      DialogHelper.showOkDialog(
+          context, 'Please select Farmer Registration Under (Agri/Aqua)');
       return;
     }
     if (mFarmerLocal.identity_proof.isNotEmpty) {
@@ -434,14 +486,12 @@ class _FarmerRegistrationScreenState extends State<FarmerRegistrationScreen> {
       padding: const EdgeInsets.only(top: 32),
       child: Column(
         children: [
-          _buildHeaderForm(AppLang.local.basic_information),
-          const SizedBox(
-            height: 20,
-          ),
+          _buildHeaderForm('Enrollment'),
+          const SizedBox(height: 20),
           Padding(
             padding: const EdgeInsets.only(bottom: 24.0),
             child: AppFormField(
-              hint: AppLang.local.enrollment_date,
+              hint: 'Enrollment Date',
               readOnly: true,
               initialValue: mFarmerLocal.enrollment_date,
               fillColor: ColorConstant.grayDBDBDB,
@@ -450,15 +500,15 @@ class _FarmerRegistrationScreenState extends State<FarmerRegistrationScreen> {
           Padding(
             padding: const EdgeInsets.only(bottom: 24.0),
             child: InputDropDownData(
-              hintText: AppLang.local.enrollment_place,
-              items: _enrollmentPlace.map((e) => e.name!).toList(),
-              itemIndex: mFarmerLocal.enrollment_place.isEmpty ||
-                      _enrollmentPlace.isEmpty
+              hintText: 'Enrollment Place',
+              items: _enrollmentPlaces,
+              itemIndex: mFarmerLocal.enrollment_place.isEmpty || _enrollmentPlaces.isEmpty
                   ? null
-                  : _enrollmentPlace.indexWhere(
-                      (e) => e.name == mFarmerLocal.enrollment_place),
+                  : _enrollmentPlaces.indexOf(mFarmerLocal.enrollment_place) == -1
+                      ? null
+                      : _enrollmentPlaces.indexOf(mFarmerLocal.enrollment_place),
               onChanged: (index) {
-                mFarmerLocal.enrollment_place = _enrollmentPlace[index].name!;
+                mFarmerLocal.enrollment_place = _enrollmentPlaces[index];
               },
             ),
           ),
@@ -467,18 +517,72 @@ class _FarmerRegistrationScreenState extends State<FarmerRegistrationScreen> {
               : Padding(
                   padding: const EdgeInsets.only(bottom: 24),
                   child: AppFormField(
-                    hint: AppLang.local.farmer_code,
+                    hint: 'Farmer Code (auto: e.g. MN0001L)',
                     readOnly: true,
                     initialValue: mFarmerLocal.farmer_code,
                     fillColor: ColorConstant.grayDBDBDB,
                   ),
                 ),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 24.0),
+            child: InputDropDownData(
+              hintText: 'Farmer Group *',
+              items: _cooperatives.map((e) => e.name).toList(),
+              itemIndex: indexCooperative(),
+              onChanged: (index) {
+                mFarmerLocal.cooperative_id = _cooperatives[index].id;
+              },
+            ),
+          ),
+          // ── Is Certified Farmer (YES/NO) — web parity ──
+          StatefulBuilder(builder: (context, s) {
+            return Column(children: [
+              InputDropDownData(
+                hintText: 'Is Certified Farmer',
+                items: const ['NO', 'YES'],
+                itemIndex: mFarmerLocal.is_certified == 'true' ? 1 : 0,
+                onChanged: (index) {
+                  s(() {
+                    mFarmerLocal.is_certified = index == 1 ? 'true' : 'false';
+                  });
+                },
+              ),
+              if (mFarmerLocal.is_certified == 'true') ...[
+                const SizedBox(height: 16),
+                InputDropDownData(
+                  hintText: 'Certification Type',
+                  items: _certTypes,
+                  itemIndex: mFarmerLocal.certification_type.isEmpty
+                      ? null
+                      : _certTypes.indexOf(mFarmerLocal.certification_type),
+                  onChanged: (index) {
+                    s(() {
+                      mFarmerLocal.certification_type = _certTypes[index];
+                    });
+                  },
+                ),
+                const SizedBox(height: 16),
+                AppFormField(
+                  hint: 'Year of ICS',
+                  keyboardType: TextInputType.number,
+                  initialValue: mFarmerLocal.ics_year,
+                  onChanged: (value) {
+                    mFarmerLocal.ics_year = value;
+                  },
+                ),
+              ],
+              const SizedBox(height: 24),
+            ]);
+          }),
+          // ── Farmer Registration Under (Agri / Aqua) — web parity ──
           InputDropDownData(
-            hintText: AppLang.local.cooperative,
-            items: _cooperatives.map((e) => e.name).toList(),
-            itemIndex: indexCooperative(),
+            hintText: 'Farmer Registration Under *',
+            items: const ['Agri', 'Aqua'],
+            itemIndex: mFarmerLocal.farmer_registration_under.isEmpty
+                ? null
+                : ['Agri', 'Aqua'].indexOf(mFarmerLocal.farmer_registration_under),
             onChanged: (index) {
-              mFarmerLocal.cooperative_id = _cooperatives[index].id;
+              mFarmerLocal.farmer_registration_under = index == 0 ? 'Agri' : 'Aqua';
             },
           ),
         ],
@@ -491,36 +595,46 @@ class _FarmerRegistrationScreenState extends State<FarmerRegistrationScreen> {
       padding: const EdgeInsets.only(top: 32),
       child: Column(
         children: [
-          _buildHeaderForm(AppLang.local.farmer_information),
-          const SizedBox(
-            height: 20,
-          ),
+          _buildHeaderForm('Personal Information'),
+          const SizedBox(height: 20),
           Padding(
             padding: const EdgeInsets.only(bottom: 24.0),
             child: AppFormField(
-              hint: AppLang.local.full_name,
-              initialValue: mFarmerLocal.full_name,
+              hint: 'First Name *',
+              initialValue: mFarmerLocal.first_name,
               validator: (v) {
-                if (v == null || v.isEmpty) {
-                  return AppLang.local.please_fill_name;
-                }
+                if (v == null || v.isEmpty) return 'Please fill first name';
                 return null;
               },
               onChanged: (value) {
-                mFarmerLocal.full_name = value;
+                mFarmerLocal.first_name = value;
+                _syncFullName();
               },
             ),
           ),
           Padding(
             padding: const EdgeInsets.only(bottom: 24.0),
             child: AppFormField(
-              hint: AppLang.local.phone_number,
+              hint: 'Last Name *',
+              initialValue: mFarmerLocal.last_name,
+              validator: (v) {
+                if (v == null || v.isEmpty) return 'Please fill last name';
+                return null;
+              },
+              onChanged: (value) {
+                mFarmerLocal.last_name = value;
+                _syncFullName();
+              },
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 24.0),
+            child: AppFormField(
+              hint: 'Contact Number *',
               keyboardType: TextInputType.phone,
               initialValue: mFarmerLocal.phone_number,
               validator: (v) {
-                if (v == null || v.isEmpty) {
-                  return AppLang.local.please_fill_phone;
-                }
+                if (v == null || v.isEmpty) return 'Please fill phone number';
                 return null;
               },
               onChanged: (value) {
@@ -531,12 +645,79 @@ class _FarmerRegistrationScreenState extends State<FarmerRegistrationScreen> {
           Padding(
             padding: const EdgeInsets.only(bottom: 24.0),
             child: InputDropDownData(
-              items: _genders.map((e) => e.name!).toList(),
-              hintText: AppLang.local.gender,
-              itemIndex: initIndex(
-                  _genders.map((e) => e.name!).toList(), mFarmerLocal.gender),
+              items: _gendersList,
+              hintText: 'Gender',
+              itemIndex: mFarmerLocal.gender.isEmpty ? null : _gendersList.indexOf(mFarmerLocal.gender),
               onChanged: (index) {
-                mFarmerLocal.gender = _genders[index].name!;
+                mFarmerLocal.gender = _gendersList[index];
+              },
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 24.0),
+            child: AppFormField(
+              hint: 'Date of Birth',
+              readOnly: true,
+              controller: _birthDateTxtController,
+              onTap: () async {
+                final now = DateTime.now();
+                final picked = await showDatePicker(
+                  context: context,
+                  initialDate: _birthDate ?? DateTime(now.year - 30),
+                  firstDate: DateTime(1930),
+                  lastDate: now,
+                );
+                if (picked != null) {
+                  setState(() {
+                    _birthDate = picked;
+                    _birthDateTxtController.text =
+                        DateHelper.convertDateToStr(picked, format: 'yyyy-MM-dd');
+                    mFarmerLocal.dob = _birthDateTxtController.text;
+                  });
+                }
+              },
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 24.0),
+            child: InputDropDownData(
+              items: _educationLevels,
+              hintText: 'Education',
+              itemIndex: mFarmerLocal.education.isEmpty ? null : _educationLevels.indexOf(mFarmerLocal.education),
+              onChanged: (index) {
+                mFarmerLocal.education = _educationLevels[index];
+              },
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 24.0),
+            child: InputDropDownData(
+              items: _maritalStatuses,
+              hintText: 'Marital Status',
+              itemIndex: mFarmerLocal.marital_status.isEmpty ? null : _maritalStatuses.indexOf(mFarmerLocal.marital_status),
+              onChanged: (index) {
+                mFarmerLocal.marital_status = _maritalStatuses[index];
+              },
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 24.0),
+            child: AppFormField(
+              hint: 'Guardian / Parent Name',
+              initialValue: mFarmerLocal.spouse_name_guardian,
+              onChanged: (value) {
+                mFarmerLocal.spouse_name_guardian = value;
+              },
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 24.0),
+            child: AppFormField(
+              hint: 'Email (optional)',
+              keyboardType: TextInputType.emailAddress,
+              initialValue: mFarmerLocal.email,
+              onChanged: (value) {
+                mFarmerLocal.email = value;
               },
             ),
           ),
@@ -551,61 +732,24 @@ class _FarmerRegistrationScreenState extends State<FarmerRegistrationScreen> {
               },
             );
           }),
-          const SizedBox(
-            height: 24,
-          ),
+          const SizedBox(height: 24),
           InputDropDownData(
-            hintText: AppLang.local.identity_proof,
-            items: _identityProofs.map((e) => e.name!).toList(),
-            itemIndex: indexIdentityProof(),
+            hintText: 'National ID Type',
+            items: _idTypes,
+            itemIndex: mFarmerLocal.identity_proof.isEmpty ? null : _idTypes.indexOf(mFarmerLocal.identity_proof),
             onChanged: (index) {
-              mFarmerLocal.identity_proof = _identityProofs[index].name!;
-              setState(() {});
+              mFarmerLocal.identity_proof = _idTypes[index];
             },
           ),
-          mFarmerLocal.identity_proof.isEmpty
-              ? const SizedBox.shrink()
-              : _buildIdentityInfo(),
-          const SizedBox(height: 24),
-          Padding(
-            padding: const EdgeInsets.only(bottom: 24.0),
-            child: InkWell(
-              onTap: _selectDate,
-              child: IgnorePointer(
-                child: AppFormField(
-                  controller: _birthDateTxtController,
-                  hint: AppLang.local.date_of_birth,
-                  readOnly: true,
-                  prefixIcon: Padding(
-                    padding: const EdgeInsets.only(left: 16, right: 16),
-                    child: SvgPicture.asset('ic_calendar'.iconSvg),
-                  ),
-                ),
-              ),
-            ),
-          ),
-          Row(
-            children: [
-              Text(
-                'SRP Certification',
-                style: TextStyleConstant.quicksandW600(
-                  color: ColorConstant.text79,
-                ),
-              ),
-              Checkbox(
-                value: mFarmerLocal.srp_certification == 1,
-                activeColor: ColorConstant.primary,
-                onChanged: (value) {
-                  setState(() {
-                    mFarmerLocal.srp_certification = value! ? 1 : 0;
-                  });
-                },
-              )
-            ],
-          ),
+          if (mFarmerLocal.identity_proof.isNotEmpty) _buildIdentityInfo(),
         ],
       ),
     );
+  }
+
+  void _syncFullName() {
+    mFarmerLocal.full_name =
+        '${mFarmerLocal.first_name} ${mFarmerLocal.last_name}'.trim();
   }
 
   Widget _buildContactInfoView() {
@@ -613,71 +757,226 @@ class _FarmerRegistrationScreenState extends State<FarmerRegistrationScreen> {
       padding: const EdgeInsets.only(top: 32, bottom: 32),
       child: Column(
         children: [
-          _buildHeaderForm(AppLang.local.contact_information),
-          const SizedBox(
-            height: 20,
+          _buildHeaderForm('Contact Information'),
+          const SizedBox(height: 20),
+          // ── 7-level location cascade — SAME hierarchy as the web
+          //    Location Master: Region → SubRegion → District → County →
+          //    SubCounty → Parish → Village (drives MN0001L farmer codes) ──
+          InputDropDownData(
+            items: _regions.map((e) => e['name'] as String).toList(),
+            hintText: 'Region *',
+            itemIndex: mFarmerLocal.region == 0 || _regions.isEmpty
+                ? null
+                : _regions.indexWhere((e) => e['id'] == mFarmerLocal.region),
+            onChanged: (index) {
+              setState(() {
+                mFarmerLocal.region = _regions[index]['id'] as int;
+                mFarmerLocal.region_name = _regions[index]['name'] as String;
+                mFarmerLocal.sub_region = 0;
+                mFarmerLocal.sub_region_name = '';
+                mFarmerLocal.district = 0;
+                mFarmerLocal.district_name = '';
+                mFarmerLocal.county = 0;
+                mFarmerLocal.county_name = '';
+                mFarmerLocal.commune = 0;
+                mFarmerLocal.commune_name = '';
+                mFarmerLocal.parish = 0;
+                mFarmerLocal.parish_name = '';
+                mFarmerLocal.village = '';
+                _subRegions = [];
+                _districts = [];
+                _counties = [];
+                _communes = [];
+                _parishes = [];
+                _villages = [];
+              });
+              _getSubRegions();
+            },
           ),
-          // ── Location cascade aligned with the WEB Location Master ──
-          // District → Sub County → Village (drives the MN0001L farmer code)
+          const SizedBox(height: 24),
+          InputDropDownData(
+            items: _subRegions.map((e) => e['name'] as String).toList(),
+            hintText: 'Sub Region *',
+            itemIndex: mFarmerLocal.sub_region == 0 || _subRegions.isEmpty
+                ? null
+                : _subRegions.indexWhere((e) => e['id'] == mFarmerLocal.sub_region),
+            onChanged: (index) {
+              setState(() {
+                mFarmerLocal.sub_region = _subRegions[index]['id'] as int;
+                mFarmerLocal.sub_region_name = _subRegions[index]['name'] as String;
+                mFarmerLocal.district = 0;
+                mFarmerLocal.district_name = '';
+                mFarmerLocal.county = 0;
+                mFarmerLocal.county_name = '';
+                mFarmerLocal.commune = 0;
+                mFarmerLocal.commune_name = '';
+                mFarmerLocal.parish = 0;
+                mFarmerLocal.parish_name = '';
+                mFarmerLocal.village = '';
+                _districts = [];
+                _counties = [];
+                _communes = [];
+                _parishes = [];
+                _villages = [];
+              });
+              _getDistricts();
+            },
+          ),
+          const SizedBox(height: 24),
           InputDropDownData(
             items: _districts.map((e) => e.districtName!).toList(),
             hintText: 'District *',
             itemIndex: mFarmerLocal.district == 0 || _districts.isEmpty
                 ? null
-                : _districts.indexWhere(
-                    (element) => element.id == mFarmerLocal.district),
+                : _districts.indexWhere((element) => element.id == mFarmerLocal.district),
             onChanged: (index) {
               setState(() {
                 mFarmerLocal.district = _districts[index].id!;
-                mFarmerLocal.district_name =
-                    _districts[index].districtName ?? '';
+                mFarmerLocal.district_name = _districts[index].districtName ?? '';
+                mFarmerLocal.county = 0;
+                mFarmerLocal.county_name = '';
                 mFarmerLocal.commune = 0;
                 mFarmerLocal.commune_name = '';
+                mFarmerLocal.parish = 0;
+                mFarmerLocal.parish_name = '';
                 mFarmerLocal.village = '';
+                _counties = [];
+                _communes = [];
+                _parishes = [];
+                _villages = [];
+              });
+              _getCounties();
+            },
+          ),
+          const SizedBox(height: 24),
+          InputDropDownData(
+            items: _counties.map((e) => e['name'] as String).toList(),
+            hintText: 'County *',
+            itemIndex: mFarmerLocal.county == 0 || _counties.isEmpty
+                ? null
+                : _counties.indexWhere((e) => e['id'] == mFarmerLocal.county),
+            onChanged: (index) {
+              setState(() {
+                mFarmerLocal.county = _counties[index]['id'] as int;
+                mFarmerLocal.county_name = _counties[index]['name'] as String;
+                mFarmerLocal.commune = 0;
+                mFarmerLocal.commune_name = '';
+                mFarmerLocal.parish = 0;
+                mFarmerLocal.parish_name = '';
+                mFarmerLocal.village = '';
+                _communes = [];
+                _parishes = [];
                 _villages = [];
               });
               _getCommune();
             },
           ),
-          const SizedBox(
-            height: 24,
-          ),
+          const SizedBox(height: 24),
           InputDropDownData(
             items: _communes.map((e) => e.communeName!).toList(),
             hintText: 'Sub County *',
             itemIndex: mFarmerLocal.commune == 0 || _communes.isEmpty
                 ? null
-                : _communes.indexWhere(
-                    (element) => element.id == mFarmerLocal.commune),
+                : _communes.indexWhere((element) => element.id == mFarmerLocal.commune),
             onChanged: (index) {
               setState(() {
                 mFarmerLocal.commune = _communes[index].id!;
-                mFarmerLocal.commune_name =
-                    _communes[index].communeName ?? '';
+                mFarmerLocal.commune_name = _communes[index].communeName ?? '';
+                mFarmerLocal.parish = 0;
+                mFarmerLocal.parish_name = '';
                 mFarmerLocal.village = '';
+                _parishes = [];
+                _villages = [];
               });
-              _getVillages(mFarmerLocal.commune);
+              _getParishes();
             },
           ),
-          const SizedBox(
-            height: 24,
+          const SizedBox(height: 24),
+          InputDropDownData(
+            items: _parishes.map((e) => e['name'] as String).toList(),
+            hintText: 'Parish *',
+            itemIndex: mFarmerLocal.parish == 0 || _parishes.isEmpty
+                ? null
+                : _parishes.indexWhere((e) => e['id'] == mFarmerLocal.parish),
+            onChanged: (index) {
+              setState(() {
+                mFarmerLocal.parish = _parishes[index]['id'] as int;
+                mFarmerLocal.parish_name = _parishes[index]['name'] as String;
+                mFarmerLocal.village = '';
+                _villages = [];
+              });
+              _getVillages(mFarmerLocal.parish);
+            },
           ),
+          const SizedBox(height: 24),
           InputDropDownData(
             items: _villages.map((e) => e.villageName ?? '').toList(),
             hintText: 'Village *',
             itemIndex: mFarmerLocal.village.isEmpty || _villages.isEmpty
                 ? null
-                : _villages.indexWhere(
-                    (element) => element.villageName == mFarmerLocal.village),
+                : _villages.indexWhere((element) => element.villageName == mFarmerLocal.village),
             onChanged: (index) {
               setState(() {
                 mFarmerLocal.village = _villages[index].villageName ?? '';
               });
             },
           ),
-          const SizedBox(
-            height: 24,
+          const SizedBox(height: 24),
+          // Family Information — web parity
+          AppFormField(
+            hint: 'Spouse Name',
+            initialValue: mFarmerLocal.spouse_name,
+            onChanged: (value) {
+              mFarmerLocal.spouse_name = value;
+            },
           ),
+          const SizedBox(height: 24),
+          AppFormField(
+            hint: 'No of Family Members',
+            keyboardType: TextInputType.number,
+            initialValue: mFarmerLocal.family_members,
+            onChanged: (value) {
+              mFarmerLocal.family_members = value;
+            },
+          ),
+          const SizedBox(height: 24),
+          AppFormField(
+            hint: 'Total Children below 18',
+            keyboardType: TextInputType.number,
+            initialValue: mFarmerLocal.children_under_18,
+            onChanged: (value) {
+              mFarmerLocal.children_under_18 = value;
+            },
+          ),
+          const SizedBox(height: 24),
+          AppFormField(
+            hint: 'Total School Going Children',
+            keyboardType: TextInputType.number,
+            initialValue: mFarmerLocal.school_going_children,
+            onChanged: (value) {
+              mFarmerLocal.school_going_children = value;
+            },
+          ),
+          const SizedBox(height: 24),
+          // Asset Information — web parity
+          InputDropDownData(
+            items: _housingOwnerships,
+            hintText: 'Housing Ownership',
+            itemIndex: mFarmerLocal.housing_ownership.isEmpty ? null : _housingOwnerships.indexOf(mFarmerLocal.housing_ownership),
+            onChanged: (index) {
+              mFarmerLocal.housing_ownership = _housingOwnerships[index];
+            },
+          ),
+          const SizedBox(height: 24),
+          InputDropDownData(
+            items: _houseTypes,
+            hintText: 'House Type',
+            itemIndex: mFarmerLocal.house_type.isEmpty ? null : _houseTypes.indexOf(mFarmerLocal.house_type),
+            onChanged: (index) {
+              mFarmerLocal.house_type = _houseTypes[index];
+            },
+          ),
+          const SizedBox(height: 24),
           InkWell(
             onTap: () => Navigator.push(
               context,

@@ -8,6 +8,7 @@ import 'package:agrobase_ekibbo/components/helpers/dialog_helper.dart';
 import 'package:agrobase_ekibbo/components/helpers/dialog_logs.dart';
 import 'package:agrobase_ekibbo/domain/l10n/app_lang.dart';
 import 'package:agrobase_ekibbo/infrastructure/remote_data/api_data/api_address.dart';
+import 'package:agrobase_ekibbo/infrastructure/local_data/ota_cache_service.dart';
 //import 'package:agrobase_ekibbo/routes/routes_manager.dart';
 
 class ScreenSettings extends StatefulWidget {
@@ -21,14 +22,12 @@ class _ScreenSettingsState extends State<ScreenSettings> {
   loadDataToLocal() async {
     try {
       DialogHelper.showLoading();
-      await ApiAddress.getCountries();
-      await ApiAddress.getAllProvinces();
-      await ApiAddress.getAllDistricts();
-      await ApiAddress.getAllCommunes();
+      // OTA refresh — dropdown catalog from CatalogMaster (web parity)
+      await OtaCacheService.instance.refreshCatalog();
+      // Geo + cooperatives into local boxes
+      await ApiAddress.getRegions();
+      await ApiAddress.getAllDistrictsMaster();
       await ApiAddress.getCooperatives();
-      await ApiAddress.getDropDownForRegister();
-      await ApiAddress.getDropDownForFarmland();
-      await ApiAddress.getDropdownCropData();
       DialogHelper.hideLoading();
       DialogHelper.showToastSuccess(context);
     } catch (e) {
@@ -48,28 +47,10 @@ class _ScreenSettingsState extends State<ScreenSettings> {
         padding: const EdgeInsets.symmetric(horizontal: 24),
         child: Column(
           children: [
+            // Language — Ekibbo deployment is English-only (no toggle).
             _buildSettingSwitchBtn(
-              AppLang.local.app_language,
-              SizedBox(
-                width: 130,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    Text('en', style: TextStyleConstant.quicksandW400()),
-                    Switch(
-                      activeColor: ColorConstant.primary,
-                      onChanged: (bool value) async {
-                        DialogHelper.showLoading();
-                        await context.read<AppProvider>().updateStateFuture(
-                            AppEvent.appSettingSwitchLanguage);
-                        DialogHelper.hideLoading();
-                      },
-                      value: context.watch<AppProvider>().appSettings.isVi,
-                    ),
-                    Text('vi ', style: TextStyleConstant.quicksandW400()),
-                  ],
-                ),
-              ),
+              'Language',
+              Text('English', style: TextStyleConstant.quicksandW400()),
             ),
             const SizedBox(height: 20),
             //cache data for offline

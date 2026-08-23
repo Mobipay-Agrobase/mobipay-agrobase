@@ -177,3 +177,28 @@ Stage Summary:
 - All Ekibbo web feedback items implemented and shipped to GitHub
 - DB schema pushed to Neon (additive nullable columns only)
 - Mobile Extension Officer login + dashboard PENDING — awaiting UI-UX screens from user (next message)
+
+---
+Task ID: 9
+Agent: Super Z
+Task: Ekibbo mobile app — Agrobase rebrand of upstream UI-UX (Field Officer + Farmer), offline-first, multi-tenant
+
+Work Log:
+- Analyzed Terra_Upstream_Screens.pptx (20 slides, 62 phone screenshots): extracted media, built contact sheets, VLM-analyzed Field Officer (slides 2-15) + Farmer (16-17) flows — login w/ role select, dashboard (stats cards + weather + tasks + farmers), drawer, sync data, farmer list/detail, plots/crops, procurement, carbon, queries
+- Extracted fa-upstream-mobile-terra_farm_pro.zip: Flutter app (471 dart files), clean architecture (application/components/domain/infrastructure/models/presentation/routes), Provider + Cubit, Dio + retrofit, Hive offline boxes, config-driven roles/drawer/FAB
+- Copied into repo as mobile-ekibbo/ (727 files)
+- Rebranded: package terra_farm→agrobase_ekibbo (305 files via sed), app title, Android appId com.mobipay.agrobase.ekibbo, iOS bundle/display name, deleted upstream.iml/.metadata/app_type_config
+- Zero remaining terra/farm-angel/hero/qavox references (verified by scan)
+- Theme: ColorConstant rewritten to Agrobase emerald (#059669 family) — distinct from upstream maroon; matches Ekibbo web dashboards
+- Brand assets: generated new app icon (leaf monogram, green gradient), wordmark (Agrobase + EKIBBO), tinted splash; updated Android mipmaps + iOS AppIcon set
+- API rewiring: env_config → AGROBASE_API_BASE dart-define (default 10.0.2.2:3000), removed farm-angel/hero.market domains; new AgrobaseAuthService → POST /api/auth/mobile-login; login screen rewired (role select Field Officer/Farmer, no prefilled creds)
+- Multi-tenant: UserModel + tenantId/tenantName, role mapping EKB_EXTENSION→staff / EKB_FARMER→farmer / TENANT_ADMIN→admin, TenantInterceptor (advisory tenant labels); authoritative isolation = server decodes Bearer token → x-tenant-id/x-tenant-scope (verified web middleware + mobile-login endpoint already support this)
+- Offline verified: Hive boxes (farmer/pond/species/dropdown/address) + AppProvider offline queue + Sync Data screen pushes registrations w/ photos and auto-removes on success
+- Ekibbo menus: drawer (Field Officer: Profile/Purchases/Input Distributions/Sale Intentions/Farmer Queries/News & Advisory/Settings; Farmer: Profile/Queries/News/Settings), FAB (Add Farmer/Plot/Purchase/Distribution/Crop/Crop Harvest/Sale Intention/Carbon Footprint); aqua modules excluded
+- README rewritten: features, roles, offline model, tenant model, build + config instructions
+- Static verification: bracket-balance + import-resolution checks on all modified files; full brand scan clean (Flutter SDK unavailable in sandbox — recommend flutter analyze on dev machine)
+
+Stage Summary:
+- mobile-ekibbo/ committed (70348d4) and pushed to origin/main
+- Same UI-UX as PPT, Agrobase branding, Ekibbo green, offline-first, tenant-isolated
+- API points at Agrobase web platform; feature screens beyond auth/farmer-registry still use upstream endpoint shapes — needs endpoint mapping per feature in next sprint (dashboard/farmers/plots align with existing /api/mobile/* routes)

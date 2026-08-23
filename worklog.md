@@ -396,3 +396,20 @@ Work Log:
 Stage Summary:
 - All 4 reported compile errors verified fixed; full-file sweep found no other issues
 - Lesson applied: added automated sanity script so future Dart edits are pre-checked before push
+
+---
+Task ID: 20
+Agent: Super Z
+Task: Runtime fixes from device testing (empty dropdowns, RangeError, GlobalKey, sub-tab 403s)
+
+Work Log:
+- Root-caused empty dropdowns: OtaCacheService/SyncEngine Dios built at app start with pre-login (empty) token → catalog GET 401 silently (no logger on private Dios) → cache empty. Geo worked (ApiProvider Dio, token set post-login). Fix: _auth() re-reads token before EVERY request in both services.
+- RangeError on farmer edit: unguarded indexOf → -1 when list empty w/ non-empty stored value. Added safeIndex/safeIndexWhere (null on empty/-1) to all 8 catalog dropdowns + all 7 cascade levels.
+- Duplicate GlobalKey crash: static scaffoldKey shared across dashboard instances; two routes during session-restore+login nav → Flutter assertion. Fix: per-instance key registered on NavigatorManager (made mutable).
+- Sub-tab 403s: new GET /api/mobile/ekibbo-farmer-tabs/[id] returns all 8 tab payloads in exact upstream shapes (family/assets/bank/finance/insurance/equipment/animals/certificate) from Agrobase tables + CatalogMaster; 16 client paths repointed (annotation + g.dart); tolerant PUT /api/mobile/ekibbo-farmer/[id] maps nested data_* payloads to FarmerProfile + replaces child rows (equipment/animals/insurance).
+- Live-verified: tabs endpoint payloads + counts; family update roundtrip persisted & read back
+- Runtime-risk sweep + full 480-file sanity clean; committed c71e285, pushed
+
+Stage Summary:
+- All 4 device-test issues fixed with live verification
+- Key lesson encoded: any new mobile service MUST re-read the token per request, never bake it into BaseOptions

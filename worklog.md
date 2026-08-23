@@ -285,3 +285,18 @@ Stage Summary:
 - Why the loop happened: each round surfaced a new LAYER (Java→Gradle 9→Dart→plugin AAR→namespace) because the original project targeted an old toolchain; the rebrand (appId change) made the namespace mismatch latent
 - This round fixed the plugin layer AND audited the remaining stack in one pass — no known issues left
 - User: git pull → flutter clean → flutter pub get → flutter run
+
+---
+Task ID: 14
+Agent: Super Z
+Task: Fix Gradle 9 'Cannot run afterEvaluate when project is already evaluated' (user's 4th build failure)
+
+Work Log:
+- Root cause of my own previous fix: subprojects { evaluationDependsOn(":app") } (upstream config) evaluates :app during root evaluation; Gradle 9 forbids afterEvaluate on already-evaluated projects → my compileSdk-36 override crashed at configuration phase (2s failure)
+- Fix: replaced afterEvaluate with pluginManager.withPlugin("com.android.library") { sub.android { compileSdk 36 } } — fires at plugin-application time (pre-evaluation), Gradle 9-safe; scoped to library plugins only (:app sets its own compileSdk)
+- Verified braces + no functional afterEvaluate left (comment text only)
+- Committed ab66989, pushed to origin/main
+
+User also asked (queued for AFTER mobile build confirms):
+1. Status check of Ekibbo feedback items (purchases/inputs) — implemented in web sprint (53089e9), deployed via Vercel
+2. NEW web requirements: convert all create/edit dialogs → full pages; sales detail pages with payment timeline (step-by-step); e2e traceability for payment/invoice/inventory

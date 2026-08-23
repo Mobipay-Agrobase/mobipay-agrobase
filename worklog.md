@@ -446,3 +446,18 @@ Work Log:
 
 Stage Summary:
 - Menu now matches Ekibbo team feedback exactly; farm land form has web datapoint parity; new module list screens serve real Agrobase data
+
+---
+Task ID: 23
+Agent: Super Z
+Task: Repair farm_land_model corruption (user's compile log — mass errors)
+
+Work Log:
+- Root cause: previous FarmLandModel patch used find('FarmLandModel({') — real ctor is 'FarmLandModel();' → find returned -1 → slice spliced params INTO line 1 (import 'packag + this.xxx + e:json...'). Balance sweep passed (no brace/paren delta) so corruption shipped. ApiFarmland helper ALSO silently no-op'd (wrong anchor file — method lives in api_address not api_farmland) while printing success.
+- Fix: farm_land_model.dart restored from 0cbb66c^ and re-extended with assertion-verified anchors (fields after 'String listLatLng', ctor untouched); .g.dart fromJson+toJson extended for 10 web-parity fields (serialization is generated); api_farmland.dart helper added WITH on-disk verification + import
+- Sweep hardened: truncated-import/stray-this. start detection (the invisible corruption class) + import resolution + balances + symbols. 481 files ALL CLEAN
+- Committed 5e721dc, pushed
+
+Stage Summary:
+- All patch scripts now assert anchors exist AND verify changes landed on disk before reporting success
+- Sweep catches the find()=-1 corruption class that balance checks cannot see

@@ -357,3 +357,24 @@ Stage Summary:
 - Both reported issues root-caused and fixed with live verification
 - Mobile geo now sources from the same Location Master tables as web; MN0001L codes generate from mobile registrations
 - Farm-land/cultivation season+crop dropdowns now come from web SeasonMaster/CropMaster
+
+---
+Task ID: 18
+Agent: Super Z
+Task: Complete mobile web-parity rebuild per user feedback (datapoints, 7-level location, menus, offline sync, OTA)
+
+Work Log:
+- Catalog: new /api/mobile/ekibbo-catalog (all CatalogMaster categories, deduped global+tenant copies; 33 categories/1023 items live); mobile OtaCacheService caches in SharedPreferences, refreshes on app start/reconnect/settings sync
+- Geo: full 7-level hierarchy (Region→SubRegion→District→County→SubCounty→Parish→Village) with legacy aliases; verified Mukono chain end-to-villages
+- Farmer form rebuilt to EXACT web datapoints: Enrollment (place/certified/cert type/ICS/registration under/farmer group), Personal (split names/education/marital/guardian/email/ID), Contact (7-level cascade), Family, Assets; SRP checkbox removed; all dropdowns from OTA catalog cache
+- MFarmerLocal extended with every web field incl. names for all 7 geo levels (offline-persisted + sent to API)
+- Farmer detail: new FarmerExtrasCard — Farmer ID card w/ QR (qr_flutter), Loyalty card (GOLD/SILVER/BRONZE pts), Climate Credit Score card; fed by new /api/mobile/ekibbo-farmer-detail/[id]
+- Offline sync complete: SyncEngine (20s connectivity watch → auto-sync + OTA on reconnect), /api/mobile/ekibbo-sync POST (batch, per-item results, SyncAuditLog model added+pushed) + GET (device audit history), Sync screen rebuilt (pending queue + audit log tabs, failure reasons, per-item re-sync)
+- Menus: drawer mirrors web FO sidebar incl. separate Carbon & Compliance; FAB leads with Register Farmer + Farmer Registry; Settings English-only (vi removed, stale vi reset)
+- Live-verified: catalog no dupes, 7-level cascade, farmer detail (loyalty/credit/QR), batch sync 1✓(MN0003L)+1✗(reason) + audit both sides
+- Fixed sandbox broken node_modules symlink (recurred after reset)
+- Committed 09f8ec4, pushed
+
+Stage Summary:
+- Every item from the user's list addressed; mobile now sources ALL reference data (catalog + geo) from the same web masters
+- Remaining known gap: farm-land/cultivation FORM field parity (seasons/crops dropdowns already wired via ekibbo-crop-dropdowns; full form parity next sprint if requested)

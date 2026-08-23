@@ -337,3 +337,23 @@ Work Log:
 Stage Summary:
 - All 3 backlog items delivered: popups→pages, timelines on detail pages, E2E trace chain (payment/invoice/inventory)
 - Demo data live on production: login finance@ekibbo.co (password123) → Purchases/Sales lists → click rows to see timelines; E2E chain via detail pages
+
+---
+Task ID: 17
+Agent: Super Z
+Task: Fix mobile issues from user testing — empty FO dashboard + location hierarchy mismatch
+
+Work Log:
+- Diagnosed empty dashboard: production API returned data fine; crash was app-side — FarmLandModel parser casts tag/listLatLng non-nullably, adapter omitted them → farmers WITH farm lands crashed the parse → api_dashboard catch re-threw (blind DioException cast) → FutureBuilder error → empty app bar
+- Fixes: mapFarmer farm_lands + tag/listLatLng; ekibbo-home + totalExpectedYield; defensive catch in api_dashboard (401/403 → session dialog, else null → NoDataView)
+- Data filtration: ekibbo-home scopes to logged-in officer via FarmerProfile.extensionOfficer name match (same linkage as web farmer form); my_farmers flag; fallback tenant-wide when no assignments
+- Location cascade rebuilt to match web Location Master: District → Sub County → Village dropdowns (was upstream Vietnamese Country/Province/District/Commune + village text); geo endpoint + type=village (via parishes); MFarmerLocal + district_name/commune_name sent; submit validation; VillageModel + getVillages client method
+- Crop/season dropdowns from web masters: new /api/mobile/ekibbo-crop-dropdowns (SeasonMaster + CropMaster global, unscoped like web /api/master); crop client repointed
+- Live verification: dashboard 1976 farmers with land-owning farmers parsing; 184 districts; Mukono→Nakisunga→63 villages (LUGALA ✓); 3 seasons + 10 crops; registration Mukono/Nakisunga/LUGALA → MN0002L; officer scoping (3 assigned → total_farmmer 3, my_farmers true)
+- Demo state left in DB: 3 farmers assigned to Moses Ekibbo (officer scoping demo), MN0001L/MN0002L registrations
+- Committed eaebce0, pushed to origin/main
+
+Stage Summary:
+- Both reported issues root-caused and fixed with live verification
+- Mobile geo now sources from the same Location Master tables as web; MN0001L codes generate from mobile registrations
+- Farm-land/cultivation season+crop dropdowns now come from web SeasonMaster/CropMaster

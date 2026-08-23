@@ -1,4 +1,4 @@
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:agrobase_ekibbo/domain/l10n/generated/app_localizations.dart';
 import 'package:agrobase_ekibbo/routes/navigator_manager.dart';
 
 class AppLang {

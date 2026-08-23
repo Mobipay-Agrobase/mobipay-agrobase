@@ -1,3 +1,8 @@
 arb-dir: lib/domain/l10n
 template-arb-file: app_en.arb
 output-localization-file: app_localizations.dart
+# Generate into the package (not the deprecated flutter_gen synthetic
+# package, which newer Flutter no longer creates) — imports resolve as
+# package:agrobase_ekibbo/domain/l10n/generated/app_localizations.dart
+synthetic-package: false
+output-dir: lib/domain/l10n/generated

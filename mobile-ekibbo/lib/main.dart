@@ -11,7 +11,7 @@ import 'package:agrobase_ekibbo/domain/core/api_provider.dart';
 import 'package:agrobase_ekibbo/infrastructure/local_data/shared_manager.dart';
 import 'package:agrobase_ekibbo/routes/navigator_manager.dart';
 import 'package:agrobase_ekibbo/routes/routes_manager.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:agrobase_ekibbo/domain/l10n/generated/app_localizations.dart';
 
 //final shorebirdCodePush = ShorebirdCodePush();
 

@@ -49,7 +49,7 @@ prisma/migrations/
 Thumbs.db
 
 # Uploads (user content)
-upload/
+/upload/
 
 # Tool results (internal)
 tool-results/

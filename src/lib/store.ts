@@ -26,6 +26,9 @@ export type ModuleKey =
   'equipment-master' | 'pesticide-master' | 'weed-master' | 'disease-master' | 'pest-master' | 'soiltype-master' |
   'location-master' | 'field-staff' | 'cooperatives' | 'farmer-groups' | 'farmer-mapping' |
   'farmer-detail' | 'farmer-create' | 'farmer-edit' |
+  'purchase-create' | 'purchase-edit' | 'purchase-detail' | 'e2e-trace' |
+  'sale-create' | 'sale-edit' | 'sale-detail' |
+  'input-dist-create' | 'input-dist-edit' | 'input-dist-detail' |
   'farmland-detail' | 'farmland-create' | 'farmland-edit' |
   'cultivation-detail' | 'cultivation-create' | 'cultivation-edit' |
   'training-create' | 'training-edit' | 'training-detail' |
@@ -54,6 +57,10 @@ interface AppState {
   selectedFarmLandId: string | null
   selectedCultivationId: string | null
   selectedTrainingId: string | null
+  selectedPurchaseId: string | null
+  selectedSaleId: string | null
+  selectedInputDistId: string | null
+  e2eTraceQuery: string | null
   selectedVslaGroupId: string | null
   user: AuthUser | null
   setActiveModule: (m: ModuleKey) => void
@@ -64,6 +71,10 @@ interface AppState {
   setSelectedFarmLandId: (id: string | null) => void
   setSelectedCultivationId: (id: string | null) => void
   setSelectedTrainingId: (id: string | null) => void
+  setSelectedPurchaseId: (id: string | null) => void
+  setSelectedSaleId: (id: string | null) => void
+  setSelectedInputDistId: (id: string | null) => void
+  setE2eTraceQuery: (q: string | null) => void
   setSelectedVslaGroupId: (id: string | null) => void
   setUser: (user: AuthUser | null) => void
 }
@@ -77,6 +88,10 @@ export const useAppStore = create<AppState>((set) => ({
   selectedFarmLandId: null,
   selectedCultivationId: null,
   selectedTrainingId: null,
+  selectedPurchaseId: null,
+  selectedSaleId: null,
+  selectedInputDistId: null,
+  e2eTraceQuery: null,
   selectedVslaGroupId: null,
   user: null,
   setActiveModule: (m) => set((state) => ({
@@ -95,6 +110,10 @@ export const useAppStore = create<AppState>((set) => ({
   setSelectedFarmLandId: (id) => set({ selectedFarmLandId: id }),
   setSelectedCultivationId: (id) => set({ selectedCultivationId: id }),
   setSelectedTrainingId: (id) => set({ selectedTrainingId: id }),
+  setSelectedPurchaseId: (id) => set({ selectedPurchaseId: id }),
+  setSelectedSaleId: (id) => set({ selectedSaleId: id }),
+  setSelectedInputDistId: (id) => set({ selectedInputDistId: id }),
+  setE2eTraceQuery: (q) => set({ e2eTraceQuery: q }),
   setSelectedVslaGroupId: (id) => set({ selectedVslaGroupId: id }),
   setUser: (user) => set({ user }),
 }))

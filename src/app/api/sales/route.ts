@@ -99,6 +99,7 @@ export async function POST(request: Request) {
 
     const sale = await db.sale.create({
       data: {
+        tenantId: ctx.tenantId,
         farmerId: body.farmerId || null,
         customerId: body.customerId || null,
         customerName: body.customerName || null,
@@ -113,6 +114,7 @@ export async function POST(request: Request) {
         paymentMethod: body.paymentMethod || null,
         loanDeducted: loanDeducted > 0 ? loanDeducted : null,
         loanBalanceAfter,
+        batchId: body.batchId || null,
         status: body.status || 'COMPLETED',
         approvedBy: body.approvedBy || null,
       },
@@ -151,7 +153,7 @@ export async function POST(request: Request) {
       }
     }
 
-    return NextResponse.json({ ...sale, loanDeducted, loanBalanceAfter, linkedLoanId }, { status: 201 })
+    return NextResponse.json({ data: sale, loanDeducted, loanBalanceAfter, linkedLoanId }, { status: 201 })
   } catch (error) {
     console.error('[sales POST] error:', error)
     return NextResponse.json({ error: 'Failed to create sale' }, { status: 500 })

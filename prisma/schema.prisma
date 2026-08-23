@@ -1548,6 +1548,8 @@ model Payment {
   amount          Float
   description     String?
   transactionRef  String?
+  purchaseId      String?  // E2E trace: purchase this payment settles
+  saleId          String?  // E2E trace: sale this payment settles
   status          String   @default("PENDING") // PENDING, PROCESSING, COMPLETED, FAILED
 
   // EKIBBO: Extension officer can update farmer phone during payment
@@ -1802,8 +1804,12 @@ model Sale {
   paymentMethod   String?  // MOBILE_MONEY, BANK, CASH, LOAN_DEDUCTION
   loanDeducted    Float?   // amount deducted for loan repayment (EKIBBO: loan deduction from produce)
   loanBalanceAfter Float?  // remaining loan balance after this sale deduction
-  status          String   @default("COMPLETED")
+  batchId         String?  // E2E trace: ProductBatch.batchId being sold
+  status          String   @default("PENDING")  // PENDING, APPROVED, INVOICED, PAID, DELIVERED, COMPLETED, CANCELLED
   approvedBy      String?  // extension officer who approved
+  approvedAt      DateTime?
+  paidAt          DateTime?
+  deliveredAt     DateTime?
   createdAt       DateTime @default(now())
 }
 
@@ -2450,6 +2456,7 @@ model ProductBatch {
   carbonFootprintId String?
   plotId            String?
   plot              Plot?     @relation(fields: [plotId], references: [id])
+  sourcePurchaseId  String?   // E2E trace: purchase that produced this batch
   traceEventCount   Int      @default(0)
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt

@@ -137,6 +137,11 @@ export default function SalesView() {
 
   useEffect(() => { fetchSales() }, [fetchSales])
 
+  const openDetail = (id: string) => {
+    useAppStore.getState().setSelectedSaleId(id)
+    useAppStore.getState().setActiveModule('sale-detail')
+  }
+
   const filtered = sales.filter(s => {
     const matchSearch = !search || s.farmerName.toLowerCase().includes(search.toLowerCase()) || s.product.toLowerCase().includes(search.toLowerCase())
     const matchCategory = !categoryFilter || (s.category || "Produce") === categoryFilter
@@ -181,7 +186,7 @@ export default function SalesView() {
           <Button variant="outline" size="sm" onClick={() => exportToCSV(sales, 'sales')} disabled={sales.length === 0} className="gap-2">
             <Download className="w-4 h-4" /> Export CSV
           </Button>
-          <Button onClick={openAdd} className="gap-2"><Plus className="w-4 h-4" /> New Sale</Button>
+          <Button onClick={() => useAppStore.getState().setActiveModule('sale-create')} className="gap-2"><Plus className="w-4 h-4" /> New Sale</Button>
         </div>
       </div>
 
@@ -246,7 +251,7 @@ export default function SalesView() {
                     </TableHeader>
                     <TableBody>
                       {paged.map(s => (
-                        <TableRow key={s.id} className="hover:bg-muted/50">
+                        <TableRow key={s.id} className="hover:bg-muted/50 cursor-pointer" onClick={() => openDetail(s.id)}>
                           <TableCell>
                             <div>
                               <p className="font-medium text-sm">{s.farmerName}</p>

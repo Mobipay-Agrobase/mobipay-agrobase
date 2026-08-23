@@ -276,7 +276,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // ─── 2. PERMISSION CHECK (basic module access) ───────────────────────────
-  const moduleMatch = pathname.match(/^\/api\/([a-z_-]+)/)
+  const moduleMatch = pathname.match(/^\/api\/([a-z0-9_-]+)/)
   if (moduleMatch) {
     // Map URL module names to permission module names (aliases)
     const MODULE_ALIASES: Record<string, string> = {
@@ -301,6 +301,8 @@ export async function middleware(request: NextRequest) {
       'logistics': 'transport',
       'quality': 'trace',
       'inventory': 'trace',
+      'traceability': 'trace',
+      'e2e-trace': 'trace',
       'escrow': 'payments',
       'settlements': 'payments',
       'api-keys': 'settings',

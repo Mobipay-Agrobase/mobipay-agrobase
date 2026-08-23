@@ -129,6 +129,12 @@ export default function PurchasesView() {
 
   useEffect(() => { fetchPurchases() }, [fetchPurchases])
 
+  const openDetail = (id: string) => {
+    useAppStore.getState().setSelectedPurchaseId(id)
+    useAppStore.getState().setActiveModule('purchase-detail')
+  }
+  const openCreate = () => useAppStore.getState().setActiveModule('purchase-create')
+
   const filtered = purchases.filter(p => {
     const matchSearch = !search || p.farmerName.toLowerCase().includes(search.toLowerCase()) || p.farmerCode.toLowerCase().includes(search.toLowerCase())
     const matchStatus = !statusFilter || p.status === statusFilter
@@ -200,7 +206,7 @@ export default function PurchasesView() {
           <p className="text-sm text-muted-foreground">Review and manage farmer produce purchases</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="default" className="gap-2" onClick={() => setShowCreate(true)}>
+          <Button variant="default" className="gap-2" onClick={openCreate}>
             <Plus className="w-4 h-4" /> New Purchase
           </Button>
           <Button variant="outline" className="gap-2" onClick={() => toast.info('Export feature coming soon')}>
@@ -274,7 +280,7 @@ export default function PurchasesView() {
                 </TableHeader>
                 <TableBody>
                   {paged.map(p => (
-                    <TableRow key={p.id} className="hover:bg-muted/50">
+                    <TableRow key={p.id} className="hover:bg-muted/50 cursor-pointer" onClick={() => openDetail(p.id)}>
                       <TableCell>
                         <div>
                           <p className="font-medium text-sm">{p.farmerName}</p>
@@ -304,7 +310,7 @@ export default function PurchasesView() {
                       <TableCell><Badge className={cn('text-[10px]', purchaseStatusColor[p.status] || '')}>{p.status}</Badge></TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
-                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setShowDetail(p)} title="View details">
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); openDetail(p.id) }} title="View details">
                             <Eye className="w-3.5 h-3.5" />
                           </Button>
                           {p.status !== 'PAID' && p.status !== 'REJECTED' && (
@@ -457,13 +463,6 @@ export default function PurchasesView() {
         </DialogContent>
       </Dialog>
 
-      {/* Create Purchase Dialog */}
-      <Dialog open={showCreate} onOpenChange={setShowCreate}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-          <DialogHeader><DialogTitle>New Purchase</DialogTitle></DialogHeader>
-          <NewPurchaseForm onClose={() => { setShowCreate(false); fetchPurchases() }} />
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }

@@ -53,6 +53,13 @@ const VslaView = lazy(() => import('@/components/modules/VslaView'))
 const SaccoView = lazy(() => import('@/components/modules/SaccoView'))
 const FarmerDetailFull = lazy(() => import('@/components/modules/FarmerDetailFull'))
 const FarmerFormPage = lazy(() => import('@/components/modules/FarmerFormPage'))
+const PurchaseFormPage = lazy(() => import('@/components/modules/PurchaseFormPage'))
+const PurchaseDetailPage = lazy(() => import('@/components/modules/PurchaseDetailPage'))
+const SaleFormPage = lazy(() => import('@/components/modules/SaleFormPage'))
+const SaleDetailPage = lazy(() => import('@/components/modules/SaleDetailPage'))
+const InputDistFormPage = lazy(() => import('@/components/modules/InputDistFormPage'))
+const InputDistDetailPage = lazy(() => import('@/components/modules/InputDistDetailPage'))
+const E2eTracePage = lazy(() => import('@/components/modules/E2eTracePage'))
 const FarmLandFormPage = lazy(() => import('@/components/modules/FarmLandFormPage'))
 const FarmLandDetailPage = lazy(() => import('@/components/modules/FarmLandDetailPage'))
 const CultivationFormPage = lazy(() => import('@/components/modules/CultivationFormPage'))
@@ -205,6 +212,40 @@ function ModuleRouter() {
       if (!selectedCultivationId) return <div className='text-center p-8 text-muted-foreground'>No cultivation selected</div>
       return <CultivationDetailPage key={selectedCultivationId} cultivationId={selectedCultivationId} onBack={() => useAppStore.getState().setActiveModule('cultivations')} />
     }
+    case 'purchase-create': return <PurchaseFormPage mode="create" />
+    case 'purchase-edit': {
+      const pid = useAppStore.getState().selectedPurchaseId
+      if (!pid) return <div className='text-center p-8 text-muted-foreground'>No purchase selected</div>
+      return <PurchaseFormPage key={pid} mode="edit" purchaseId={pid} />
+    }
+    case 'purchase-detail': {
+      const pid = useAppStore.getState().selectedPurchaseId
+      if (!pid) return <div className='text-center p-8 text-muted-foreground'>No purchase selected</div>
+      return <PurchaseDetailPage key={pid} purchaseId={pid} onBack={() => useAppStore.getState().setActiveModule('purchases')} />
+    }
+    case 'sale-create': return <SaleFormPage mode="create" />
+    case 'sale-edit': {
+      const sid = useAppStore.getState().selectedSaleId
+      if (!sid) return <div className='text-center p-8 text-muted-foreground'>No sale selected</div>
+      return <SaleFormPage key={sid} mode="edit" saleId={sid} />
+    }
+    case 'sale-detail': {
+      const sid = useAppStore.getState().selectedSaleId
+      if (!sid) return <div className='text-center p-8 text-muted-foreground'>No sale selected</div>
+      return <SaleDetailPage key={sid} saleId={sid} onBack={() => useAppStore.getState().setActiveModule('sales')} />
+    }
+    case 'input-dist-create': return <InputDistFormPage mode="create" />
+    case 'input-dist-edit': {
+      const iid = useAppStore.getState().selectedInputDistId
+      if (!iid) return <div className='text-center p-8 text-muted-foreground'>No distribution selected</div>
+      return <InputDistFormPage key={iid} mode="edit" distributionId={iid} />
+    }
+    case 'input-dist-detail': {
+      const iid = useAppStore.getState().selectedInputDistId
+      if (!iid) return <div className='text-center p-8 text-muted-foreground'>No distribution selected</div>
+      return <InputDistDetailPage key={iid} distributionId={iid} onBack={() => useAppStore.getState().setActiveModule('input-distribution')} />
+    }
+    case 'e2e-trace': return <E2eTracePage />
     case 'catalog-manager': return <CatalogManager />
     case 'farmer-groups': return <FarmerGroupsView />
     case 'data-quality': return <DataQualityView />
@@ -442,6 +483,7 @@ export default function HomePage() {
       }
       const ekbAllowed = new Set([
         'dashboard', 'farmers', 'farm-lands', 'cultivations', 'purchases', 'sales',
+        'purchase-create', 'sale-create', 'input-dist-create', 'e2e-trace',
         'input-aggregation', 'input-distribution', 'approvals', 'processing', 'deliveries',
         'consignments', 'trace', 'reports', 'training', 'farm-visits', 'surveys',
         'compliance', 'cost-of-cultivation', 'farmer-ledger',

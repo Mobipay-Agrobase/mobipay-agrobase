@@ -20,6 +20,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner'
 import { EmptyState, exportToCSV } from '@/components/ui/empty-state'
 import { FarmerSearchSelect } from '@/components/ui/farmer-search-select'
+import { useAppStore } from '@/lib/store'
 
 interface InputDistribution {
   id: string
@@ -86,6 +87,12 @@ export default function InputDistributionView() {
   }, [])
 
   useEffect(() => { fetchDistributions() }, [fetchDistributions])
+
+  const openDetail = (id: string) => {
+    useAppStore.getState().setSelectedInputDistId(id)
+    useAppStore.getState().setActiveModule('input-dist-detail')
+  }
+  const openCreate = () => useAppStore.getState().setActiveModule('input-dist-create')
 
   const handleDelete = async (id: string) => {
     if (!confirm('Delete this input distribution record?')) return
@@ -181,7 +188,7 @@ export default function InputDistributionView() {
           >
             <Download className="w-4 h-4" /> Export CSV
           </Button>
-          <Button onClick={() => { setEditing(null); setShowCreate(true) }} className="gap-2">
+          <Button onClick={openCreate} className="gap-2">
             <Plus className="w-4 h-4" /> Distribute Input
           </Button>
         </div>
@@ -200,7 +207,7 @@ export default function InputDistributionView() {
               title="No input distributions yet"
               description='Click "Distribute Input" to record the first distribution'
               actionLabel="Distribute Input"
-              onAction={() => { setEditing(null); setShowCreate(true) }}
+              onAction={openCreate}
             />
           ) : (
             <div className="max-h-[600px] overflow-y-auto">
@@ -225,7 +232,7 @@ export default function InputDistributionView() {
                   {filtered.map(d => {
                     const farmerName = d.farmer ? `${d.farmer.firstName} ${d.farmer.lastName}` : 'Unknown'
                     return (
-                      <TableRow key={d.id} className="hover:bg-muted/50">
+                      <TableRow key={d.id} className="hover:bg-muted/50 cursor-pointer" onClick={() => openDetail(d.id)}>
                         <TableCell>
                           <div>
                             <p className="font-medium text-sm">{farmerName}</p>
@@ -252,7 +259,7 @@ export default function InputDistributionView() {
                         </TableCell>
                         <TableCell>
                           <div className="flex gap-1">
-                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setEditing(d); setShowCreate(true) }} title="Edit">
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); useAppStore.getState().setSelectedInputDistId(d.id); useAppStore.getState().setActiveModule('input-dist-edit') }} title="Edit">
                               <Pencil className="w-3.5 h-3.5" />
                             </Button>
                             <Button variant="ghost" size="icon" className="h-7 w-7 text-red-600 hover:text-red-700" onClick={() => handleDelete(d.id)} title="Delete">

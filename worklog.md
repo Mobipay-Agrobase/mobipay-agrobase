@@ -461,3 +461,20 @@ Work Log:
 Stage Summary:
 - All patch scripts now assert anchors exist AND verify changes landed on disk before reporting success
 - Sweep catches the find()=-1 corruption class that balance checks cannot see
+
+---
+Task ID: 24
+Agent: Super Z
+Task: Fix app name, phone login, farm land 403 + save (UAT readiness)
+
+Work Log:
+- App name: "Agrobase Ekibbo" → "Mobipay-Agrobase" (main.dart title + AndroidManifest label)
+- Login: AgrobaseAuthService now normalizes phone — if input is digits-only (no @ or +), strips leading 0 and prepends +256. Officers type 700111222 instead of +256700111222
+- Farm land 403: 4 farmland GET/PUT paths were NOT repointed (get_all_farm_land/{id} → 403 in user log). New server endpoints: GET /mobile/ekibbo-farmlands/[farmerId] (list), GET /mobile/ekibbo-farmlands (staff), GET /mobile/ekibbo-farmland/[farmId] (detail+polygons), PUT /mobile/ekibbo-farmland/[farmId] (update). All in upstream mobile response shapes (AllFarmLandResponse/FarmlandDetailResponse)
+- Fixed: blanket POST→PUT in generated code accidentally changed the CREATE method — restored to POST (only update stays PUT)
+- tsc 0, sanity sweep clean; committed c6fc8ad, pushed
+
+Stage Summary:
+- All 3 reported issues fixed
+- Farm land list should now load (was 403); save should work (POST path was correct but the method type was broken)
+- Phone login works without country code

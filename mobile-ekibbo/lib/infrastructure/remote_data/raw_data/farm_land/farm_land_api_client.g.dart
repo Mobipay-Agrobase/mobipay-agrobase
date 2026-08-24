@@ -62,14 +62,14 @@ class _FarmLandApiClient implements FarmLandApiClient {
     final _data = data;
     final _result = await _dio.fetch<Map<String, dynamic>?>(
         _setStreamType<BaseResponse<dynamic>>(Options(
-      method: 'POST',
+      method: 'PUT',
       headers: _headers,
       extra: _extra,
       contentType: 'multipart/form-data',
     )
             .compose(
               _dio.options,
-              '/farmland/update_farmland/${farmId}',
+              '/mobile/ekibbo-farmland/${farmId}',
               queryParameters: queryParameters,
               data: _data,
             )
@@ -135,7 +135,7 @@ class _FarmLandApiClient implements FarmLandApiClient {
     )
             .compose(
               _dio.options,
-              '/get_all_farm_land/${farmerId}',
+              '/mobile/ekibbo-farmlands/${farmerId}',
               queryParameters: queryParameters,
               data: _data,
             )
@@ -168,7 +168,7 @@ class _FarmLandApiClient implements FarmLandApiClient {
     )
             .compose(
               _dio.options,
-              '/get_all_farm_land_by_staff',
+              '/mobile/ekibbo-farmlands',
               queryParameters: queryParameters,
               data: _data,
             )
@@ -202,7 +202,7 @@ class _FarmLandApiClient implements FarmLandApiClient {
     )
             .compose(
               _dio.options,
-              '/farmland/get_details/${farmId}',
+              '/mobile/ekibbo-farmland/${farmId}',
               queryParameters: queryParameters,
               data: _data,
             )
@@ -236,7 +236,7 @@ class _FarmLandApiClient implements FarmLandApiClient {
     )
             .compose(
               _dio.options,
-              '/farmland/get_cultivation/${farmId}',
+              '/mobile/ekibbo-cultivation/${farmId}',
               queryParameters: queryParameters,
               data: _data,
             )

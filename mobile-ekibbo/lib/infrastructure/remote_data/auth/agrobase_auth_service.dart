@@ -44,9 +44,19 @@ class AgrobaseAuthService {
     required String password,
   }) async {
     try {
+      // Normalize: if the input looks like a phone number (digits, no @),
+      // prepend +256 (Uganda) when no country code is present — officers
+      // shouldn't have to type +256 every time.
+      var normalized = phoneOrEmail.trim();
+      final isPhone = RegExp(r'^\d').hasMatch(normalized) && !normalized.contains('@');
+      if (isPhone && !normalized.startsWith('+')) {
+        // strip leading 0 if present, prepend +256
+        normalized = normalized.replaceFirst(RegExp(r'^0'), '');
+        normalized = '+256$normalized';
+      }
       final res = await _dio.post(
         '/auth/mobile-login',
-        data: {'email': phoneOrEmail, 'password': password},
+        data: {'email': normalized, 'password': password},
       );
 
       if (res.statusCode == 401) {

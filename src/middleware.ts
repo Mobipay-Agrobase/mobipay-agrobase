@@ -306,6 +306,8 @@ export async function middleware(request: NextRequest) {
       'ekibbo-sync': 'farmers',
       'ekibbo-catalog': 'farmers',
       'ekibbo-farmland': 'farmers',
+      'ekibbo-cultivation': 'farmers',
+      'ekibbo-farmlands': 'farmers',
       'ekibbo-farmer-tabs': 'farmers',
       'ekibbo-cultivation-dropdowns': 'farmers',
       'ekibbo-modules': 'farmers',

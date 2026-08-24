@@ -17,22 +17,22 @@ abstract class FarmLandApiClient {
   @MultiPart()
   Future<BaseResponse?> addFarmLand(@Body() FormData data);
 
-  @POST('/farmland/update_farmland/{farmId}')
+  @PUT('/mobile/ekibbo-farmland/{farmId}')
   @MultiPart()
   Future<BaseResponse?> updateFarmland(
       @Body() FormData data, @Path('farmId') int farmId);
 
   @GET('/mobile/ekibbo-farmland') //remove list all_farmer
   Future<BaseResponse<DropdownFarmLandModel>?> getFarmLandDropdownData();
-  @GET('/get_all_farm_land/{farmerId}')
+  @GET('/mobile/ekibbo-farmlands/{farmerId}')
   Future<BaseResponse<AllFarmLandResponse>?> getAllFarmLands(
       @Path('farmerId') int farmerId);
-  @GET('/get_all_farm_land_by_staff')
+  @GET('/mobile/ekibbo-farmlands')
   Future<BaseResponse<AllFarmLandResponse>?> getNearByPlot();
-  @GET('/farmland/get_details/{farmId}')
+  @GET('/mobile/ekibbo-farmland/{farmId}')
   Future<BaseResponse<FarmlandDetailResponse>?> getDetailFarmland(
       @Path('farmId') int farmId);
-  @GET('/farmland/get_cultivation/{farmId}')
+  @GET('/mobile/ekibbo-cultivation/{farmId}')
   Future<BaseResponse<AllCutivationResponse>?> getCultivations(
       @Path('farmId') int farmId);
   @GET(

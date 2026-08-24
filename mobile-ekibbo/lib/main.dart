@@ -63,7 +63,7 @@ class _MyAppState extends State<MyApp> {
         ChangeNotifierProvider(create: (_) => AppProvider()),
       ],
       child: MaterialApp(
-        title: 'Agrobase Ekibbo',
+        title: 'Mobipay-Agrobase',
         //builder: EasyLoading.init(),
         onGenerateRoute: RoutesManager.onGenerateRoute,
         initialRoute: RouterName.splash,

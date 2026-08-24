@@ -6,7 +6,12 @@ import 'package:agrobase_ekibbo/domain/l10n/app_lang.dart';
 import 'package:agrobase_ekibbo/routes/routes_manager.dart';
 
 class HeaderListFarmer extends StatelessWidget {
-  const HeaderListFarmer({super.key});
+  const HeaderListFarmer({super.key, this.isOfficerScoped = false});
+
+  /// True when the dashboard is scoped to the logged-in officer's assigned
+  /// farmers — the section then reads "My Farmers" so the list matches the
+  /// KPI card (Ekibbo spec: officers see only their allocation).
+  final bool isOfficerScoped;
 
   @override
   Widget build(BuildContext context) {
@@ -26,8 +31,7 @@ class HeaderListFarmer extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              //Todo: lang
-              AppLang.local.farmers,
+              isOfficerScoped ? 'My Farmers' : AppLang.local.farmers,
               style: TextStyleConstant.robotoW600(fontSize: 16),
             ),
             InkWell(

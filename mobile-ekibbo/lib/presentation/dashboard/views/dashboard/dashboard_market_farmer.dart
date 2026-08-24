@@ -74,7 +74,9 @@ class _DashboardMarketFarmerState extends State<DashboardMarketFarmer> {
                   const SliverToBoxAdapter(
                     child: SizedBox(height: 20),
                   ),
-                  const HeaderListFarmer(),
+                  HeaderListFarmer(
+                    isOfficerScoped: data.myFarmers == true,
+                  ),
                   SliverToBoxAdapter(
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -251,65 +253,53 @@ class _DashboardMarketFarmerState extends State<DashboardMarketFarmer> {
   }
 
   Widget _buildSummaryView(DashboardModel data) {
-    // KPI truth: the tenant-wide count (matches "View All Farmers"), with a
-    // fallback chain for older backends: tenant → officer-scoped → inline list.
-    final totalFarmers = data.totalFarmersTenant ??
-        data.totalFarmer ??
-        data.farmerList?.length ??
-        0;
-    // Officer-scoped count ("My Farmers") — only shown when the backend
-    // reports an officer assignment (my_farmers == true) so officers without
-    // assignments don't see two identical tiles.
-    final myFarmers = data.totalFarmer ?? 0;
-    final showMyFarmers = data.myFarmers == true && myFarmers != totalFarmers;
+    // Ekibbo spec: a Field Officer sees ONLY their allocated farmers — the
+    // KPI card sits in the total-farmers position but shows the officer's
+    // assigned count ("My Farmers"). Roles without farmer assignments
+    // (admins / ops managers) see the tenant-wide "Total Farmers".
+    // Backend contract: my_farmers == true → total_farmmer is officer-scoped.
+    final isOfficerScoped = data.myFarmers == true;
+    final cardTitle =
+        isOfficerScoped ? 'My Farmers' : AppLang.local.total_farmers;
+    final cardValue = isOfficerScoped
+        ? (data.totalFarmer ?? data.farmerList?.length ?? 0)
+        : (data.totalFarmersTenant ?? data.totalFarmer ?? data.farmerList?.length ?? 0);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       margin: const EdgeInsets.only(top: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+      child: Row(
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: SummaryItemVertical(
-                  title: AppLang.local.total_farmers,
-                  value: totalFarmers.toString(),
-                  icon: SvgPicture.asset(
-                    'ic_farmer'.iconSvg,
-                    color: ColorConstant.primary,
-                  ),
-                ),
+          Expanded(
+            child: SummaryItemVertical(
+              title: cardTitle,
+              value: cardValue.toString(),
+              icon: SvgPicture.asset(
+                'ic_farmer'.iconSvg,
+                color: ColorConstant.primary,
               ),
-              const SizedBox(
-                width: 16,
-              ),
-              Expanded(
-                flex: 2,
-                child: Column(
-                  children: [
-                    SummaryItemHorizontal(
-                      title: AppLang.local.total_hectares,
-                      value: '${(data.totalHectares ?? 0).toStringAsFixed(1)} ha',
-                    ),
-                    const SizedBox(
-                      height: 16,
-                    ),
-                    SummaryItemHorizontal(
-                      title: AppLang.local.est_yield_quantity,
-                      value: '${data.totalExpectedYield} kg',
-                    ),
-                  ],
-                ),
-              )
-            ],
-          ),
-          if (showMyFarmers) ...[
-            const SizedBox(height: 16),
-            SummaryItemHorizontal(
-              title: 'My Farmers (assigned to you)',
-              value: myFarmers.toString(),
             ),
-          ],
+          ),
+          const SizedBox(
+            width: 16,
+          ),
+          Expanded(
+            flex: 2,
+            child: Column(
+              children: [
+                SummaryItemHorizontal(
+                  title: AppLang.local.total_hectares,
+                  value: '${(data.totalHectares ?? 0).toStringAsFixed(1)} ha',
+                ),
+                const SizedBox(
+                  height: 16,
+                ),
+                SummaryItemHorizontal(
+                  title: AppLang.local.est_yield_quantity,
+                  value: '${data.totalExpectedYield} kg',
+                ),
+              ],
+            ),
+          )
         ],
       ),
     );

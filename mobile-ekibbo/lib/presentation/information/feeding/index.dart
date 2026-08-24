@@ -132,9 +132,15 @@ class _FeedingInformationState extends State<FeedingInformation> {
     _pondIndex = null;
     _catalogues.clear();
     _catalogueIndex = null;
-    NavigatorManager.contextRoot
-        .read<AppProvider>()
-        .updateState(AppEvent.appSearchResetData);
+    // Deferred: notifying listeners synchronously inside dispose() crashes
+    // with "setState() or markNeedsBuild() called when widget tree was locked"
+    // (the framework unmounts this screen with the tree locked). A microtask
+    // runs right after the tree unlocks — same event-loop turn, no crash.
+    Future.microtask(() {
+      NavigatorManager.contextRoot
+          .read<AppProvider>()
+          .updateState(AppEvent.appSearchResetData);
+    });
     super.dispose();
   }
 

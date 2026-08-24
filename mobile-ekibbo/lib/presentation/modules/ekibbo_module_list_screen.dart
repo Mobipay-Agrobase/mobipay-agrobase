@@ -1,17 +1,22 @@
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 
 import 'package:agrobase_ekibbo/components/constant/color_constant.dart';
 import 'package:agrobase_ekibbo/components/constant/text_style_constant.dart';
 import 'package:agrobase_ekibbo/components/custom_appbar.dart';
 import 'package:agrobase_ekibbo/components/no_data_view.dart';
-import 'package:agrobase_ekibbo/domain/config/env_config.dart';
-import 'package:agrobase_ekibbo/infrastructure/local_data/shared_manager.dart';
+import 'package:agrobase_ekibbo/infrastructure/remote_data/api_data/api_ekibbo_modules.dart';
+import 'package:agrobase_ekibbo/presentation/modules/ekibbo_farm_visit_form_screen.dart';
+import 'package:agrobase_ekibbo/presentation/modules/ekibbo_loan_form_screen.dart';
+import 'package:agrobase_ekibbo/presentation/modules/ekibbo_survey_form_screen.dart';
+import 'package:agrobase_ekibbo/presentation/modules/ekibbo_training_form_screen.dart';
 
 /// ─────────────────────────────────────────────────────────────────────────
-/// Ekibbo Field-Officer module list screen — serves Trainings, Farmer
-/// Visits, Surveys and Loans from the Agrobase platform
-/// (/api/mobile/ekibbo-modules?type=…), tenant-scoped.
+/// Ekibbo Field-Officer module list — Trainings, Farmer Visits, Surveys and
+/// Loans with FULL CRUD against the Agrobase platform tables
+/// (/api/mobile/ekibbo-modules), tenant-scoped:
+///   · FAB (+)        → create a new record
+///   · Tap a card     → edit the record (delete inside the form)
+///   · Pull to refresh
 /// ─────────────────────────────────────────────────────────────────────────
 class EkibboModuleListScreen extends StatefulWidget {
   const EkibboModuleListScreen({
@@ -38,29 +43,35 @@ class _EkibboModuleListScreenState extends State<EkibboModuleListScreen> {
   }
 
   Future<void> _load() async {
-    try {
-      final dio = Dio(BaseOptions(
-        baseUrl: EnvConfig.domainStream,
-        connectTimeout: const Duration(seconds: 15),
-        receiveTimeout: const Duration(seconds: 15),
-        validateStatus: (s) => true,
-        headers: {
-          'Authorization': 'Bearer ${SharedPreferencesProvider.instance.accessToken}',
-          'x-app-client': 'agrobase-ekibbo-flutter',
-        },
-      ));
-      final res = await dio.get('/mobile/ekibbo-modules', queryParameters: {'type': widget.type});
-      if (!mounted) return;
-      if (res.statusCode == 200 && res.data['result'] == true) {
-        setState(() {
-          _rows = (res.data['data'] as List).cast<Map<String, dynamic>>();
-          _loading = false;
-        });
-      } else {
-        setState(() => _loading = false);
-      }
-    } catch (_) {
-      if (mounted) setState(() => _loading = false);
+    setState(() => _loading = true);
+    final rows = await ApiEkibboModules.list(widget.type);
+    if (!mounted) return;
+    setState(() {
+      _rows = rows;
+      _loading = false;
+    });
+  }
+
+  /// Push the create/edit form for this module type; reload on save.
+  Future<void> _openForm({int? id}) async {
+    final changed = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (context) => _formFor(id)),
+    );
+    if (changed == true) _load();
+  }
+
+  Widget _formFor(int? id) {
+    switch (widget.type) {
+      case 'trainings':
+        return EkibboTrainingFormScreen(id: id);
+      case 'farm-visits':
+        return EkibboFarmVisitFormScreen(id: id);
+      case 'surveys':
+        return EkibboSurveyFormScreen(id: id);
+      case 'loans':
+        return EkibboLoanFormScreen(id: id);
+      default:
+        return const SizedBox.shrink();
     }
   }
 
@@ -68,19 +79,43 @@ class _EkibboModuleListScreenState extends State<EkibboModuleListScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: CustomAppBar(title: widget.title, color: ColorConstant.primary, titleColor: Colors.white),
+      appBar: CustomAppBar(
+        title: widget.title,
+        color: ColorConstant.primary,
+        titleColor: Colors.white,
+      ),
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: ColorConstant.primary,
+        child: const Icon(Icons.add, color: Colors.white),
+        onPressed: () => _openForm(),
+      ),
       body: RefreshIndicator(
         color: ColorConstant.primary,
         onRefresh: _load,
         child: _loading
-            ? const Center(child: CircularProgressIndicator(color: ColorConstant.primary))
+            ? const ListView(children: [
+                Padding(
+                  padding: EdgeInsets.only(top: 160),
+                  child: Center(
+                      child: CircularProgressIndicator(color: ColorConstant.primary)),
+                ),
+              ])
             : _rows.isEmpty
-                ? ListView(children: const [Padding(
-                    padding: EdgeInsets.only(top: 120),
-                    child: NoDataView(),
-                  )])
+                ? ListView(children: const [
+                    Padding(
+                      padding: EdgeInsets.only(top: 120),
+                      child: NoDataView(),
+                    ),
+                    Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 40, vertical: 12),
+                      child: Text(
+                        'Tap the + button to create your first record.',
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ])
                 : ListView.separated(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 88),
                     itemCount: _rows.length,
                     separatorBuilder: (_, __) => const SizedBox(height: 10),
                     itemBuilder: (_, i) => _card(_rows[i]),
@@ -91,43 +126,50 @@ class _EkibboModuleListScreenState extends State<EkibboModuleListScreen> {
 
   Widget _card(Map<String, dynamic> r) {
     final status = (r['status'] ?? '').toString();
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: ColorConstant.grayF7F8FA,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  _titleOf(r),
-                  style: TextStyleConstant.quicksandW600(fontSize: 15),
-                ),
-              ),
-              if (status.isNotEmpty)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: _statusColor(status).withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
+    return InkWell(
+      onTap: () => _openForm(id: r['id'] as int),
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: ColorConstant.grayF7F8FA,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
                   child: Text(
-                    status,
-                    style: TextStyleConstant.robotoW400(fontSize: 10, color: _statusColor(status)),
+                    _titleOf(r),
+                    style: TextStyleConstant.quicksandW600(fontSize: 15),
                   ),
                 ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Text(
-            _subtitleOf(r),
-            style: TextStyleConstant.robotoW400(fontSize: 12, color: ColorConstant.text79),
-          ),
-        ],
+                if (status.isNotEmpty)
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: _statusColor(status).withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      status,
+                      style: TextStyleConstant.robotoW400(
+                          fontSize: 10, color: _statusColor(status)),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              _subtitleOf(r),
+              style: TextStyleConstant.robotoW400(
+                  fontSize: 12, color: ColorConstant.text79),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -156,10 +198,17 @@ class _EkibboModuleListScreenState extends State<EkibboModuleListScreen> {
       case 'surveys':
         return '${r['questions'] ?? 0} questions · ${r['responses'] ?? 0} responses';
       case 'loans':
-        return 'UGX ${r['amount']} · ${r['date']}';
+        return 'UGX ${_fmtAmount(r['amount'])} · ${r['loan_product_name'] ?? ''} · ${r['date']}';
       default:
         return '';
     }
+  }
+
+  String _fmtAmount(dynamic n) {
+    final v = num.tryParse((n ?? 0).toString());
+    if (v == null) return '0';
+    return v.toInt().toString().replaceAllMapped(
+        RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => ',');
   }
 
   Color _statusColor(String s) {

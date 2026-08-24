@@ -93,7 +93,7 @@ class _EkibboModuleListScreenState extends State<EkibboModuleListScreen> {
         color: ColorConstant.primary,
         onRefresh: _load,
         child: _loading
-            ? const ListView(children: [
+            ? ListView(children: const [
                 Padding(
                   padding: EdgeInsets.only(top: 160),
                   child: Center(

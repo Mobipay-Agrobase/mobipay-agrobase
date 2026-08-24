@@ -11,7 +11,10 @@ class MCooperative {
   @JsonKey(name: 'staff_id', defaultValue: 0)
   final int staffId;
 
-  @JsonKey(defaultValue: '')
+  /// The web `/mobile/ekibbo-geo?type=cooperatives` route returns
+  /// `cooperative_name` (not `name`). Accept BOTH keys so the dropdown
+  /// stops showing empty rows for every cooperative.
+  @JsonKey(name: 'cooperative_name', defaultValue: '')
   final String name;
 
   @JsonKey(name: 'cooperative_code', defaultValue: '')

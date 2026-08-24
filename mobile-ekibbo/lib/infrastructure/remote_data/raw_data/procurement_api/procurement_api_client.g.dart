@@ -310,7 +310,7 @@ class _ProcurementApiClient implements ProcurementApiClient {
     )
             .compose(
               _dio.options,
-              '/procurements',
+              '/mobile/ekibbo-purchases',
               queryParameters: queryParameters,
               data: _data,
             )

@@ -19,12 +19,14 @@ class _DistributionApiClient implements DistributionApiClient {
   String? baseUrl;
 
   @override
-  Future<BaseResponse<List<MProduct>>?> getProductsByCateId(
-    int cateId,
-    int cooperId,
+  Future<BaseResponse<List<MProduct>>?> getProducts(
+    int categoryId,
+    int farmerId,
   ) async {
     const _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{};
+    queryParameters['category_id'] = categoryId;
+    queryParameters['farmer_id'] = farmerId;
     final _headers = <String, dynamic>{};
     final Map<String, dynamic>? _data = null;
     final _result = await _dio.fetch<Map<String, dynamic>?>(
@@ -35,7 +37,7 @@ class _DistributionApiClient implements DistributionApiClient {
     )
             .compose(
               _dio.options,
-              '/cooperatives/${cooperId}/products?category_id=${cateId}',
+              '/mobile/ekibbo-input-products',
               queryParameters: queryParameters,
               data: _data,
             )
@@ -59,8 +61,7 @@ class _DistributionApiClient implements DistributionApiClient {
   }
 
   @override
-  Future<BaseResponse<List<MCategory>>?> getCategoriesByCooperId(
-      int cooperId) async {
+  Future<BaseResponse<List<MCategory>>?> getCategories() async {
     const _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{};
     final _headers = <String, dynamic>{};
@@ -73,7 +74,7 @@ class _DistributionApiClient implements DistributionApiClient {
     )
             .compose(
               _dio.options,
-              '/cooperatives/${cooperId}/categories',
+              '/mobile/ekibbo-input-products?type=categories',
               queryParameters: queryParameters,
               data: _data,
             )
@@ -110,7 +111,7 @@ class _DistributionApiClient implements DistributionApiClient {
     )
             .compose(
               _dio.options,
-              '/distribution',
+              '/mobile/ekibbo-distribution',
               queryParameters: queryParameters,
               data: _data,
             )
@@ -142,7 +143,7 @@ class _DistributionApiClient implements DistributionApiClient {
     )
             .compose(
               _dio.options,
-              '/distribution?per_page=100',
+              '/mobile/ekibbo-distribution',
               queryParameters: queryParameters,
               data: _data,
             )
@@ -174,7 +175,7 @@ class _DistributionApiClient implements DistributionApiClient {
     )
             .compose(
               _dio.options,
-              '/distribution/${disId}',
+              '/mobile/ekibbo-distribution/${disId}',
               queryParameters: queryParameters,
               data: _data,
             )
@@ -199,6 +200,8 @@ class _DistributionApiClient implements DistributionApiClient {
   ) async {
     const _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{};
+    queryParameters['farmer_id'] = farmerId;
+    queryParameters['product_id'] = productId;
     final _headers = <String, dynamic>{};
     final Map<String, dynamic>? _data = null;
     final _result = await _dio.fetch<Map<String, dynamic>?>(
@@ -209,7 +212,7 @@ class _DistributionApiClient implements DistributionApiClient {
     )
             .compose(
               _dio.options,
-              '/distribution/farmer/${farmerId}/product/${productId}/previous-stocks',
+              '/mobile/ekibbo-input-products?previous_only=true',
               queryParameters: queryParameters,
               data: _data,
             )

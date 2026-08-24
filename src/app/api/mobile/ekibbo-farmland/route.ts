@@ -149,20 +149,38 @@ export async function POST(req: NextRequest) {
     const ct = req.headers.get('content-type') || ''
     if (ct.includes('multipart/form-data')) {
       const form = await req.formData()
+      const plottings: Record<number, { lat?: number; lng?: number }> = {}
       for (const [k, v] of form.entries()) {
-        if (typeof v === 'string') fields[k] = v
-        else if (v.size > 0 && v.size <= 2 * 1024 * 1024) {
+        if (typeof v === 'string') {
+          fields[k] = v
+          // Dio flattens nested lists in multipart as `farm_plottings[0][lat]`.
+          const pm = k.match(/^farm_plottings\[(\d+)\]\[(lat|lng)\]$/)
+          if (pm) {
+            const idx = Number(pm[1])
+            plottings[idx] = plottings[idx] || {}
+            const n = Number(v)
+            if (!Number.isNaN(n)) plottings[idx][pm[2] as 'lat' | 'lng'] = n
+          }
+        } else if (v.size > 0 && v.size <= 2 * 1024 * 1024) {
           const buf = Buffer.from(await v.arrayBuffer())
           const uri = `data:${v.type || 'image/jpeg'};base64,${buf.toString('base64')}`
           if (k.startsWith('farm_photo')) farmPhoto = uri
           else if (k.startsWith('land_document')) landDoc = uri
         }
       }
+      const flat = Object.keys(plottings)
+        .sort((a, b) => Number(a) - Number(b))
+        .map(k => plottings[Number(k)])
+        .filter(p => p.lat != null && p.lng != null) as Array<{ lat: number; lng: number }>
+      if (flat.length) fields.farm_plottings = flat
     } else {
       fields = await req.json().catch(() => ({}))
     }
 
-    const farmerNumId = parseInt(String(fields.farmerId ?? ''), 10)
+    // The mobile app posts the upstream FarmLandModel.toMap() shape which
+    // uses snake_case (`farmer_id`); the web form uses camelCase. Accept BOTH
+    // so farm land save never 400s on the key spelling.
+    const farmerNumId = parseInt(String(fields.farmerId ?? fields.farmer_id ?? ''), 10)
     if (Number.isNaN(farmerNumId)) {
       return NextResponse.json({ result: false, message: 'farmerId (numeric) is required' }, { status: 400 })
     }
@@ -175,9 +193,31 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ result: false, message: 'Farm/Plot name is required' }, { status: 400 })
     }
 
-    const polygonPoints: Array<{ lat: number; lng: number }> = Array.isArray(fields.polygonPoints)
+    // Polygon points: web form sends `polygonPoints`; the mobile app sends
+    // `farm_plottings: [{lat, lng}]` (or a `listLatLng` string). Normalize all.
+    if (typeof fields.farm_plottings === 'string') {
+      // Dio may JSON-encode the nested list into one form field.
+      try { fields.farm_plottings = JSON.parse(fields.farm_plottings) } catch { /* keep string */ }
+    }
+    let polygonPoints: Array<{ lat: number; lng: number }> = Array.isArray(fields.polygonPoints)
       ? fields.polygonPoints
       : []
+    if (polygonPoints.length === 0 && Array.isArray(fields.farm_plottings)) {
+      polygonPoints = (fields.farm_plottings as Array<Record<string, unknown>>)
+        .map(p => ({ lat: Number(p.lat), lng: Number(p.lng) }))
+        .filter(p => !Number.isNaN(p.lat) && !Number.isNaN(p.lng))
+    }
+    // Final fallback: parse the mobile's `listLatLng` ("[[lat,lng],[lat,lng]]").
+    if (polygonPoints.length === 0 && typeof fields.listLatLng === 'string') {
+      try {
+        const arr = JSON.parse(fields.listLatLng.replace(/,/g, ','))
+        if (Array.isArray(arr)) {
+          polygonPoints = (arr as Array<[number, number]>)
+            .map(p => ({ lat: Number(p[0]), lng: Number(p[1]) }))
+            .filter(p => !Number.isNaN(p.lat) && !Number.isNaN(p.lng))
+        }
+      } catch { /* not JSON — ignore */ }
+    }
     const lat = toNum(fields.lat ?? fields.gpsLatitude ?? (polygonPoints[0]?.lat))
     const lng = toNum(fields.lng ?? fields.gpsLongitude ?? (polygonPoints[0]?.lng))
 

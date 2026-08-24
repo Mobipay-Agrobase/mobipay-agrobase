@@ -42,7 +42,9 @@ abstract class ProcurementApiClient {
   @GET('/vendor_procurements')
   Future<BaseResponse<List<MRVendorProcurement>>> getVendorProcurements();
 
-  @GET('/procurements')
+  /// Purchases list — served from the WEB PLATFORM's Purchase table via
+  /// /mobile/ekibbo-purchases (tenant-scoped, Ekibbo-enhanced rows).
+  @GET('/mobile/ekibbo-purchases')
   Future<BaseResponse<MProcurementResponse>> getProcurements();
 
   @POST('/procurements')

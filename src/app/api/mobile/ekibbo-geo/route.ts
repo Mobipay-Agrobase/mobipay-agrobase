@@ -206,7 +206,12 @@ export async function GET(req: NextRequest) {
           result: true,
           data: groups.map((g, i) => ({
             id: numericId(g.id), staff_id: 0,
-            cooperative_name: g.name, cooperative_code: `GRP-${i + 1}`,
+            // Return BOTH key spellings so every app build deserializes the
+            // name correctly (older builds read `name`, newer read
+            // `cooperative_name`).
+            name: g.name,
+            cooperative_name: g.name,
+            cooperative_code: `GRP-${i + 1}`,
           })),
         })
       }

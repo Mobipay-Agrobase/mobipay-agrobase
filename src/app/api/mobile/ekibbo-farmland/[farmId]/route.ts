@@ -104,18 +104,48 @@ export async function PUT(
       return NextResponse.json({ result: false, message: 'Farm land not found' }, { status: 404 })
     }
 
-    const body = await req.json().catch(() => ({}))
+    // The mobile app sends MULTIPART FormData (photos + snake_case fields,
+    // the upstream FarmLandModel.toMap() shape); the web form sends JSON with
+    // camelCase keys. Parse BOTH.
+    const body: Record<string, any> = {}
+    const ct = req.headers.get('content-type') || ''
+    if (ct.includes('multipart/form-data')) {
+      const form = await req.formData()
+      for (const [k, v] of form.entries()) {
+        if (typeof v === 'string') body[k] = v
+      }
+    } else {
+      Object.assign(body, await req.json().catch(() => ({})))
+    }
+
+    const toNum = (v: any): number | undefined => {
+      if (v == null || v === '') return undefined
+      const n = Number(v)
+      return Number.isNaN(n) ? undefined : n
+    }
+
     await db.farmLand.update({
       where: { id: match.id },
       data: {
         name: body.name ?? body.farm_name ?? undefined,
-        sizeHectares: body.sizeHectares ? Number(body.sizeHectares) : undefined,
+        // Mobile sends total_land_holding (ha); web sends sizeHectares.
+        sizeHectares: toNum(body.sizeHectares ?? body.total_land_holding) ?? undefined,
         landOwnership: body.landOwnership ?? body.land_ownership ?? undefined,
         landSurveyNo: body.landSurveyNo ?? body.land_survey_no ?? undefined,
+        approachRoad: body.approachRoad ?? body.approach_road ?? undefined,
+        landTopology: body.landTopology ?? body.land_topology ?? undefined,
+        landGradient: body.landGradient ?? body.land_gradient ?? undefined,
         waterSource: body.waterSource ?? body.water_source ?? undefined,
         powerSource: body.powerSource ?? body.power_source ?? undefined,
         soilFertility: body.soilFertility ?? body.soil_fertility ?? undefined,
         irrigationType: body.irrigationType ?? body.irrigation_type ?? undefined,
+        fullTimeWorkers: toNum(body.fullTimeWorkers ?? body.full_time_workers),
+        partTimeWorkers: toNum(body.partTimeWorkers ?? body.part_time_workers),
+        seasonalWorkers: toNum(body.seasonalWorkers ?? body.seasonal_workers),
+        familyWorkers: toNum(body.familyWorkers ?? body.family_workers),
+        estYieldKg: toNum(body.estYieldKg ?? body.est_yield),
+        latitude: toNum(body.lat) ?? undefined,
+        longitude: toNum(body.lng) ?? undefined,
       },
     })
 

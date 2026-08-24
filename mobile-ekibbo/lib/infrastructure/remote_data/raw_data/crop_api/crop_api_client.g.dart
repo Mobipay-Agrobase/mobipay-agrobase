@@ -51,6 +51,38 @@ class _CropApiClient implements CropApiClient {
   }
 
   @override
+  Future<BaseResponse<DropdownCropModel>?> getCultivationDropdowns() async {
+    const _extra = <String, dynamic>{};
+    final queryParameters = <String, dynamic>{};
+    final _headers = <String, dynamic>{};
+    final Map<String, dynamic>? _data = null;
+    final _result = await _dio.fetch<Map<String, dynamic>?>(
+        _setStreamType<BaseResponse<DropdownCropModel>>(Options(
+      method: 'GET',
+      headers: _headers,
+      extra: _extra,
+    )
+            .compose(
+              _dio.options,
+              '/mobile/ekibbo-cultivation-dropdowns',
+              queryParameters: queryParameters,
+              data: _data,
+            )
+            .copyWith(
+                baseUrl: _combineBaseUrls(
+              _dio.options.baseUrl,
+              baseUrl,
+            ))));
+    final value = _result.data == null
+        ? null
+        : BaseResponse<DropdownCropModel>.fromJson(
+            _result.data!,
+            (json) => DropdownCropModel.fromJson(json as Map<String, dynamic>),
+          );
+    return value;
+  }
+
+  @override
   Future<BaseResponse<dynamic>?> addCrop(FormData data) async {
     const _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{};

@@ -81,7 +81,8 @@ class _ScreenAddProductState extends State<ScreenAddProduct> {
   }
 
   _getCategory() async {
-    if (widget.argument.cooperativeId == 0) return;
+    // Categories come from the web InputProduct master (tenant-scoped).
+    // The legacy cooperative scoping is intentionally dropped.
     _categories = await ApiDistribution.getCategoryByCooperId(
         widget.argument.cooperativeId);
     if (_categories.isNotEmpty) setState(() {});
@@ -90,7 +91,7 @@ class _ScreenAddProductState extends State<ScreenAddProduct> {
   _getProduct() async {
     if (_categories.isEmpty) return;
     _products = await ApiDistribution.getProductsByCateId(
-        categoryId, widget.argument.cooperativeId);
+        categoryId, widget.argument.farmerId);
     if (_products.isNotEmpty) setState(() {});
   }
 
@@ -116,6 +117,8 @@ class _ScreenAddProductState extends State<ScreenAddProduct> {
   }
 
   _getPreviousStock() async {
+    // Reads the previously-distributed quantity from the web
+    // InputDistribution ledger (via the product payload).
     final previousStock = await ApiDistribution.getPreviousStock(
         widget.argument.farmerId, productId);
     ctrlPreviousStock.text =

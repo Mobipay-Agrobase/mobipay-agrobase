@@ -24,12 +24,14 @@ import 'package:agrobase_ekibbo/components/helpers/dialog_helper.dart';
 import 'package:agrobase_ekibbo/domain/l10n/app_lang.dart';
 import 'package:agrobase_ekibbo/models/all_farmer/farmer_model.dart';
 import 'package:agrobase_ekibbo/models/cultivation/cultivation_model.dart';
+import 'package:agrobase_ekibbo/models/dropdown/crop/dropdown_crop_model.dart';
 import 'package:agrobase_ekibbo/models/dropdown/dropdown_data_model.dart';
 import 'package:agrobase_ekibbo/models/farm_land/farm_land_model.dart';
 import 'package:agrobase_ekibbo/presentation/farmer_list/views/screen_search_farmer.dart';
 import 'package:agrobase_ekibbo/routes/argument_model.dart';
 import 'package:agrobase_ekibbo/domain/core/api_provider.dart';
 import 'package:agrobase_ekibbo/infrastructure/local_data/shared_manager.dart';
+import 'package:agrobase_ekibbo/infrastructure/remote_data/api_data/api_farmland.dart';
 import 'package:agrobase_ekibbo/routes/navigator_manager.dart';
 
 class AddCropScreen extends StatefulWidget {
@@ -49,6 +51,12 @@ class AddCropScreen extends StatefulWidget {
 class _AddCropScreenState extends State<AddCropScreen> {
   List<SeasonModel> _seasons = [];
   List<DropdownMasterModel> _cropCultivates = [];
+
+  /// ALL crop varieties from the CropVariety master (each carries crop_id).
+  /// Fetched once with the cultivation dropdowns, then filtered locally by
+  /// the selected crop — the variety list depends on the crop (Ekibbo
+  /// requirement) and now loads from the WEB Crop/CropVariety masters.
+  List<CropVarietyMasterModel> _allVarieties = [];
   List<FarmLandModel> _farmlandsOrigin = [];
   List<FarmLandModel> _farmlands = [];
   int? _seasonsIndex;
@@ -72,7 +80,10 @@ class _AddCropScreenState extends State<AddCropScreen> {
   DateTime? dateSowing;
   DateTime? dateExpect;
 
-  List<DropdownMasterModel> _varieties = [];
+  List<CropVarietyMasterModel> _varieties = [];
+
+  /// Farm land id to auto-select once the farmer's lands arrive (edit mode).
+  int? _pendingFarmId;
   @override
   void initState() {
     _getCropDropdown();
@@ -90,45 +101,92 @@ class _AddCropScreenState extends State<AddCropScreen> {
   }
 
   _getCropDropdown() async {
-    final res = await ApiProvider.instance.apiCrop.getCropDropdownData();
+    // Uses /mobile/ekibbo-cultivation-dropdowns: seasons + CROPS from the
+    // CropMaster + ALL crop varieties (with crop_id). Farm lands are NOT in
+    // this payload (they depend on the chosen farmer) — they are fetched
+    // separately via /mobile/ekibbo-farmlands/{farmerId} once a farmer is
+    // picked (see _loadFarmlandsFor).
+    final res = await ApiProvider.instance.apiCrop.getCultivationDropdowns();
     if (res?.data != null) {
       setState(() {
         _seasons = res!.data?.season ?? [];
         _cropCultivates = res.data?.cropInformation ?? [];
-        _farmlandsOrigin = res.data?.farmLand ?? [];
+        _allVarieties = res.data?.cropVariety ?? [];
         _setData();
       });
     }
   }
 
-  _getVarieyty() async {
-    if (_cultivateIndex == null) {
+  /// Fetch the selected farmer's registered farm lands from the web
+  /// platform (/mobile/ekibbo-farmlands/{farmerId}) so the land picker is
+  /// populated correctly (previously it filtered an always-empty list).
+  _loadFarmlandsFor(int? farmerId) async {
+    if (farmerId == null) return;
+    final lands = await ApiFarmland.getFarmlandByFarmerId(farmerId);
+    if (!mounted) return;
+    setState(() {
+      _farmlandsOrigin = lands;
+      _farmlands = lands;
+      // Re-apply a pending pre-selection (edit mode) once the list lands.
+      if (_pendingFarmId != null) {
+        _farmIndex = _farmlands.getIndex((p0) => p0.id == _pendingFarmId);
+        if (_farmIndex != null) _pendingFarmId = null;
+      } else {
+        _farmIndex = null;
+      }
+    });
+  }
+
+  /// Dependent variety list: only the varieties whose crop_id matches the
+  /// selected crop. Runs entirely client-side after the single dropdown
+  //  fetch — no per-crop network call (the legacy /crops/get_crop_variety
+  /// endpoint does not exist on the web platform).
+  _getVarieyty() {
+    if (_cultivateIndex == null || _cropCultivates.isEmpty) {
+      setState(() {
+        _varieties = [];
+      });
       return;
     }
-    final res = await ApiProvider.instance.apiCrop
-        .getVariety(_cropCultivates[_cultivateIndex!].id!);
+    final selectedCropId = _cropCultivates[_cultivateIndex!].id;
     setState(() {
-      _varieties = res?.data?.cropVariety ?? [];
+      _varieties = _allVarieties
+          .where((v) => v.cropId == selectedCropId)
+          .toList();
     });
   }
 
   _setData() {
     if (widget.farmer != null) {
       initValueFarmer = widget.farmer!.showInputName;
-      _farmlands = _farmlandsOrigin
-          .where((e) => e.farmerId == widget.farmer!.id)
-          .toList();
+      // Fetch this farmer's lands from the server (the dropdown payload no
+      // longer carries farm lands without a farmerId).
+      _loadFarmlandsFor(widget.farmer!.id);
     }
     if (widget.farmland != null) {
       _farmIndex = _farmlands.getIndex((p0) => p0.id == widget.farmland!.id);
+      if (_farmIndex == null) {
+        // The land list may not be loaded yet — remember the selection and
+        // apply it after the lands arrive (see _loadFarmlandsFor).
+        _pendingFarmId = widget.farmland!.id;
+      }
     }
     if (widget.crop != null) {
       final crop = widget.crop!;
-      _farmIndex = _farmlands.getIndex((p0) => p0.id == crop.farmLandId);
+      _pendingFarmId = crop.farmLandId;
       _seasonsIndex = _seasons.getIndex((p0) => p0.id == crop.season?.id);
       _cultivateIndex =
           _cropCultivates.getIndex((p0) => p0.id == crop.cropsMaster?.id);
       _variety = crop.cropVariety;
+      // Pre-populate the dependent variety list for the pre-selected crop
+      // so the dropdown shows the right rows (and the saved value stays
+      // selected) when EDITING an existing cultivation.
+      if (_cultivateIndex != null && _cropCultivates.isNotEmpty) {
+        final selectedCropId = _cropCultivates[_cultivateIndex!].id;
+        _varieties = _allVarieties
+            .where((v) => v.cropId == selectedCropId)
+            .toList();
+      }
       if (crop.sowingDate != null) {
         ctrlSowingDate.text = crop.sowingDate!;
         dateSowing = DateHelper.convertStrToDate(crop.sowingDate!);
@@ -306,10 +364,11 @@ class _AddCropScreenState extends State<AddCropScreen> {
                               if (res is ArgumentScreenSearchFarmer) {
                                 setState(() {
                                   initValueFarmer = res.farmerSelected;
-                                  _farmlands = _farmlandsOrigin
-                                      .where((e) => e.farmerId == res.farmerId)
-                                      .toList();
                                 });
+                                // Fetch the newly selected farmer's lands
+                                // from the web platform so the land picker
+                                // actually populates.
+                                await _loadFarmlandsFor(res.farmerId);
                               }
                             },
                           ),

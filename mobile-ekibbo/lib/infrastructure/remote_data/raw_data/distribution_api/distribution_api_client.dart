@@ -7,29 +7,40 @@ import 'package:agrobase_ekibbo/models/distribution/model_product.dart';
 
 part 'distribution_api_client.g.dart';
 
+/// Input Allocation (Input Distribution) — served by the WEB PLATFORM's
+/// tenant-scoped InputProduct / InputDistribution tables:
+///   GET  /mobile/ekibbo-input-products?type=categories
+///   GET  /mobile/ekibbo-input-products?category_id=&farmer_id=
+///   POST /mobile/ekibbo-distribution      (multipart)
+///   GET  /mobile/ekibbo-distribution      (history)
+/// The legacy upstream `/cooperatives/{id}/...` routes no longer exist.
 @RestApi(baseUrl: '')
 abstract class DistributionApiClient {
   factory DistributionApiClient(Dio dio, {String baseUrl}) =
       _DistributionApiClient;
 
-  @GET('/cooperatives/{cooperId}/products?category_id={cateId}')
-  Future<BaseResponse<List<MProduct>>?> getProductsByCateId(
-      @Path('cateId') int cateId, @Path('cooperId') int cooperId);
+  @GET('/mobile/ekibbo-input-products')
+  Future<BaseResponse<List<MProduct>>?> getProducts(
+    @Query('category_id') int categoryId,
+    @Query('farmer_id') int farmerId,
+  );
 
-  @GET('/cooperatives/{cooperId}/categories')
-  Future<BaseResponse<List<MCategory>>?> getCategoriesByCooperId(
-      @Path('cooperId') int cooperId);
+  @GET('/mobile/ekibbo-input-products?type=categories')
+  Future<BaseResponse<List<MCategory>>?> getCategories();
 
-  @POST('/distribution')
+  @POST('/mobile/ekibbo-distribution')
   Future<BaseResponse?> createDistribution(@Body() FormData data);
 
-  @GET('/distribution?per_page=100')
+  @GET('/mobile/ekibbo-distribution')
   Future<BaseResponse<DataDistribution>?> getDistributions();
 
-  @GET('/distribution/{disId}')
-  Future<BaseResponse<MDistribution>?> getDistributionById(@Path('disId') int disId);
+  @GET('/mobile/ekibbo-distribution/{disId}')
+  Future<BaseResponse<MDistribution>?> getDistributionById(
+      @Path('disId') int disId);
 
-  @GET('/distribution/farmer/{farmer_id}/product/{product_id}/previous-stocks')
+  @GET('/mobile/ekibbo-input-products?previous_only=true')
   Future<BaseResponse?> getPreviousStock(
-      @Path('farmer_id') int farmerId, @Path('product_id') int productId);
+    @Query('farmer_id') int farmerId,
+    @Query('product_id') int productId,
+  );
 }

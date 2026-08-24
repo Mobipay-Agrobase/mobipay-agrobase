@@ -192,9 +192,26 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 Padding(
                   padding: const EdgeInsets.only(bottom: 16, top: 10),
-                  child: GImage.asset(
-                    name: 'logo'.imgPNG,
-                    height: 50,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Mobipay-Agrobase',
+                        style: TextStyleConstant.quicksandW700(
+                          fontSize: 18,
+                          color: ColorConstant.primary,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Ekibbo Field Operations',
+                        style: TextStyleConstant.robotoW400(
+                          fontSize: 11,
+                          color: ColorConstant.text79,
+                        ),
+                      ),
+                    ],
                   ),
                 )
               ],

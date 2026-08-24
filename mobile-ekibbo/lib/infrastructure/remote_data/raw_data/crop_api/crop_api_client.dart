@@ -13,6 +13,12 @@ abstract class CropApiClient {
   @GET('/mobile/ekibbo-crop-dropdowns')
   Future<BaseResponse<DropdownCropModel>?> getCropDropdownData();
 
+  /// Seasons + Crops (CropMaster) + Crop Varieties (CropVariety, with
+  /// crop_id for dependent filtering) + the farmer's farm lands — all from
+  /// the WEB masters in a single call.
+  @GET('/mobile/ekibbo-cultivation-dropdowns')
+  Future<BaseResponse<DropdownCropModel>?> getCultivationDropdowns();
+
   @POST('/add_crops')
   @MultiPart()
   Future<BaseResponse?> addCrop(@Body() FormData data);

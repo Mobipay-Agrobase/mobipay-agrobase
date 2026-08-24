@@ -57,8 +57,11 @@ export async function GET(req: NextRequest) {
     })
     const scopedIds = scopedFarmers.map(f => f.id)
 
-    const [farmerCount, lands, cultivations, farmers] = await Promise.all([
+    const [farmerCount, tenantFarmerCount, lands, cultivations, farmers] = await Promise.all([
       db.farmerProfile.count({ where: officerWhere }),
+      // Tenant-wide count so the dashboard KPI always matches the
+      // "View All Farmers" list (which is tenant-scoped, not officer-scoped).
+      db.farmerProfile.count({ where: { ...tf, status: 'ACTIVE' } }),
       db.farmLand.findMany({
         where: scopedIds.length ? { farmerId: { in: scopedIds } } : { farmer: { ...tf } },
         select: { sizeHectares: true },
@@ -84,6 +87,7 @@ export async function GET(req: NextRequest) {
       result: true,
       data: {
         total_farmmer: farmerCount,
+        total_farmers_tenant: tenantFarmerCount,
         total_hectares: Math.round(totalHectares * 100) / 100,
         total_plot: lands.length,
         totalExpectedYield: Math.round(totalExpectedYield * 10) / 10,

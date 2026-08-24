@@ -527,3 +527,38 @@ Stage Summary:
 - Field Officers can now create/edit/delete Trainings, Farmer Visits, Surveys (with questions) and Loan Applications from the mobile app — all writing to the same web-platform tables (web/mobile data parity)
 - Training enrollment (attendance) manageable from the training edit screen
 - Everything verified LIVE against the real database, not just compiled
+
+---
+Task ID: 28
+Agent: Super Z
+Task: Fix dispose() tree-lock crash + single officer-scoped farmer KPI card
+
+Work Log:
+- NOTE: sandbox was reset between sessions — re-cloned from GitHub (all prior
+  commits intact through 5a00497). Push requires the GitHub PAT again (the
+  credential was wiped with the sandbox).
+- CRASH ROOT CAUSE: 10 screens called
+  NavigatorManager.contextRoot.read<AppProvider>().updateState(appSearchResetData)
+  SYNCHRONOUSLY inside dispose(). On route pop the framework unmounts the screen
+  inside BuildOwner.finalizeTree() with the tree LOCKED — notifyListeners() tried
+  to mark the _InheritedProviderScope dirty → "setState() or markNeedsBuild()
+  called when widget tree was locked" (stack pointed at
+  _ScreenAddDistributionState.dispose:61).
+- Fix: Future.microtask() wrapper around the reset in all 10 screens (runs after
+  tree unlock, same event-loop turn): add-distribution, add-crop, pond-reg,
+  stock creation, stock transfer, crop-harvest, information species/feeding/
+  check-fishing/mortality. Assertion-verified patch script + on-disk verify.
+- DASHBOARD KPI (user request): removed the second "My Farmers (assigned to
+  you)" tile; the KPI card in the total-farmers position now shows the officer's
+  ALLOCATED count titled "My Farmers" when my_farmers == true (backend already
+  scopes total_farmmer to the officer's assignments); unscoped roles (admin/ops)
+  still see tenant-wide "Total Farmers". Farmer-list section header reads
+  "My Farmers" when scoped so card/header/list describe the same set.
+- Sanity sweep recreated (sandbox reset lost the script): 487 dart files pass
+  balance + import-resolution + const-ctor-misuse checks + on-disk symbol
+  verification for all 12 touched files.
+- Committed 12f8203 locally; push pending PAT.
+
+Stage Summary:
+- Crash class eliminated app-wide (not just the reported screen)
+- Dashboard now matches Ekibbo spec: officer sees only their allocation

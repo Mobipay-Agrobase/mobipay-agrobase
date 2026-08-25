@@ -562,3 +562,36 @@ Work Log:
 Stage Summary:
 - Crash class eliminated app-wide (not just the reported screen)
 - Dashboard now matches Ekibbo spec: officer sees only their allocation
+
+---
+Task ID: 29
+Agent: Super Z
+Task: Fix 7-level location cascade — districts unfiltered, sub-counties not loading
+
+Work Log:
+- Sandbox reset again mid-session — re-cloned from GitHub (token re-set on remote)
+- ROOT CAUSE 1 (district shows all): farmer_registration_screen's sub-region
+  onChanged called _getDistrictsMaster() → /mobile/ekibbo-geo?type=district
+  WITHOUT parentId → server returns all 184 districts. Fix: _getDistricts()
+  passes the selected sub-region (parentId filtering already worked server-side);
+  legacy records (district set, sub_region==0) fall back to the full list for pre-fill
+- ROOT CAUSE 2 (sub-county empty): _getCommune() passed mFarmerLocal.DISTRICT as
+  parent, but sub-counties resolve by COUNTY parent → numeric district id never
+  matched a county row → server returned [] every time. Fix: pass
+  mFarmerLocal.county (+ guard county == 0)
+- ROOT CAUSE 3 (found during fix): _initDataLocation never loaded
+  sub-region/county/parish lists on EDIT — saved values couldn't display.
+  Now chains level-by-level: regions → sub-regions → districts → counties →
+  sub-counties → parishes → villages
+- LIVE VERIFIED against production Neon DB (dev server, 9/9 checks):
+  districts 184 unfiltered vs 15 under BUGANDA NORTH; sub-counties 0 rows with
+  district parent (bug proof) vs 7 rows with county parent; full chain walked
+  CENTRAL → BUGANDA NORTH → BUIKWE → BUIKWE COUNTY → BUIKWE → KITAZI → 7 villages
+- Also removed a broken node_modules symlink from the repo (pointed at a
+  nonexistent sandbox path)
+- Sanity sweep: 487 dart files clean + 8 on-disk symbol checks pass
+- Committed f93f1f8, pushed to origin main
+
+Stage Summary:
+- Both user-reported cascade bugs fixed and proven with live data
+- Edit-mode pre-fill for the whole 7-level cascade also fixed

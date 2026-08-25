@@ -116,9 +116,14 @@ class _FarmerRegistrationScreenState extends State<FarmerRegistrationScreen> {
     _latLng = LatLng(double.tryParse(mFarmerLocal.lat) ?? 0,
         double.tryParse(mFarmerLocal.lng) ?? 0);
     await _getRegions();
-    await _getDistrictsMaster();
     await _getCooperatives();
-    if (mFarmerLocal.commune != 0) await _getCommune();
+    // Full 7-level cascade pre-fill for EDIT mode: each child list loads
+    // only after its parent is known, so the saved selection displays.
+    if (mFarmerLocal.region != 0) await _getSubRegions();
+    await _getDistricts();
+    if (mFarmerLocal.district != 0) await _getCounties();
+    if (mFarmerLocal.county != 0) await _getCommune();
+    if (mFarmerLocal.commune != 0) await _getParishes();
     if (mFarmerLocal.parish != 0) await _getVillages(mFarmerLocal.parish);
   }
 
@@ -182,19 +187,33 @@ class _FarmerRegistrationScreenState extends State<FarmerRegistrationScreen> {
     setState(() {});
   }
 
-  /// All districts from the web Location Master.
-  _getDistrictsMaster() async {
+  /// Districts under the SELECTED SUB-REGION (web Location Master cascade).
+  /// Loads only the mapped children — not every district in the country.
+  _getDistricts() async {
     if (!mounted) return;
-    _districts = await ApiAddress.getAllDistrictsMaster();
+    if (mFarmerLocal.sub_region == 0) {
+      // No sub-region chosen yet. For legacy records saved before the
+      // sub-region level existed (district set, sub_region == 0) fall back
+      // to the full list so their pre-fill still works; otherwise keep the
+      // dropdown empty until a sub-region is selected.
+      if (mFarmerLocal.district == 0) return;
+      _districts = await ApiAddress.getAllDistrictsMaster();
+    } else {
+      _districts = await ApiAddress.getDistricts(mFarmerLocal.sub_region);
+    }
     if (_districts.isNotEmpty) {
       setState(() {});
     }
-    }
+  }
 
-  /// Sub-counties under the selected district (web Location Master).
+  /// Sub-counties under the SELECTED COUNTY (web Location Master cascade:
+  /// Region → SubRegion → District → County → SubCounty → Parish → Village).
+  /// Previously this passed the DISTRICT id — the server resolves
+  /// sub-counties by their COUNTY parent, so the lookup always missed and
+  /// the dropdown stayed empty.
   _getCommune() async {
-    if (_districts.isEmpty) return;
-    _communes = await ApiAddress.getCommunes(mFarmerLocal.district);
+    if (mFarmerLocal.county == 0) return;
+    _communes = await ApiAddress.getCommunes(mFarmerLocal.county);
     if (!mounted) return;
     if (_communes.isNotEmpty) {
       setState(() {});
@@ -837,7 +856,7 @@ class _FarmerRegistrationScreenState extends State<FarmerRegistrationScreen> {
                 _parishes = [];
                 _villages = [];
               });
-              _getDistrictsMaster();
+              _getDistricts();
             },
           ),
           const SizedBox(height: 24),

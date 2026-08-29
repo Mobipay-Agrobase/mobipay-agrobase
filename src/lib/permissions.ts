@@ -56,9 +56,12 @@ const ROLE_PERMISSIONS: RolePerms = {
   // ─── EKIBBO-Specific Roles (from EKIBBO requirements Excel) ───
 
   // EKIBBO Managing Director (Eric): Full access — same as TENANT_ADMIN.
-  // NOTE: Marketplace, Payments, Loans, Carbon, MFI, Communication, Feedback and
+  // NOTE: Marketplace, Payments, Carbon, MFI, Communication, Feedback and
   // Impact Assessment are NOT part of the Ekibbo product — stripped so this role
   // cannot reach those APIs/menus (separate-tenant separation).
+  // Loans: the Ekibbo mobile app ships a Loans module for field officers —
+  // the MD configures the LoanProduct master data those applications use
+  // (web: Loans → Products → New Product). No delete permission.
   EKB_MD: [
     'dashboard:*',
     'farmers:*',
@@ -79,6 +82,7 @@ const ROLE_PERMISSIONS: RolePerms = {
     'agritrack:*',
     'farm_visits:*',
     'transport:*',
+    'loans:read', 'loans:create', 'loans:update',
     'profile:*',
     'billing:read',
   ],

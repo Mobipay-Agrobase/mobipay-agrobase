@@ -595,3 +595,51 @@ Work Log:
 Stage Summary:
 - Both user-reported cascade bugs fixed and proven with live data
 - Edit-mode pre-fill for the whole 7-level cascade also fixed
+
+---
+Task ID: 8
+Agent: Super Z
+Task: Field-team feedback — "cannot apply for loan (select product)" + "cannot update profile"
+
+Work Log:
+- Sandbox reset again — re-cloned from GitHub (PAT re-set on remote), all commits intact
+- ROOT CAUSE (loan): LoanProduct table had ZERO rows for the EKIBBO Coffee Exporters
+  tenant (only Agrobase Uganda had 3) → mobile loan form dropdown empty →
+  "Please choose a loan product" toast blocks submission. No web UI could create
+  LoanProduct rows either — the MFI portal manages a DIFFERENT table (MfiLoanProduct)
+- Seeded 3 coffee-appropriate UAT products for EKIBBO tenant (Coffee Input Loan 12%
+  50k–500k 6mo; Coffee Harvest Loan 10% 100k–1M 3mo; Farm Equipment Loan 15%
+  200k–2M 12mo) — dropdown populates live, no app update needed
+- Built LoanProduct management for the web (answers "who adds the product?"):
+  new POST/PUT /api/loans/products (perm-gated loans:create / loans:update,
+  tenant-scoped, duplicate-name guard, partial-update merge) + LoansView Products
+  tab now has "New Product" button and click-to-edit cards with active toggle
+- Unblocked the MD path (3 gates): EKB_MD granted loans:read/create/update;
+  'loans' removed from EKB_HIDDEN_MODULES; 'loans' added to ekbAllowed router
+  list; LOANS ModuleEntitlement enabled in DB (was disabled)
+- ROOT CAUSE (profile): profile screen was read-only display, no PUT endpoint
+  existed on /api/mobile/ekibbo-profile
+- Added PUT /api/mobile/ekibbo-profile (first/last name, phone, email; phone
+  unique-check with friendly 409; email format check; role/tenant never editable)
+- Mobile: new ApiEkibboProfile service + Profile screen Edit button (app bar
+  pencil + Edit Profile button) opening a bottom-sheet form; on save also syncs
+  the cached UserModel so the drawer name/phone update immediately; replaced the
+  always-empty Gender row with Role
+- LIVE SMOKE TEST (dev server + real Neon DB, bearer tokens as Moses Ekibbo
+  EKB_EXTENSION and Eric Agyei EKB_MD): 12/12 pass — products dropdown (3),
+  loan create with real product id, invalid-product rejection, loans list,
+  profile PUT + dup-phone 409 + bad-email 400 + GET roundtrip, MD product
+  create + partial edit (caught and fixed missing-fields fallback in PUT),
+  officer 403 on product creation, unauth 401
+- Dart sanity sweep recreated (488 files): balance + imports + symbol checks clean
+- tsc --noEmit 0 errors; eslint clean on all 6 touched web files; permissions
+  jest suite 28/28
+- Smoke-test artifacts cleaned from DB (test loans + UAT Smoke Test Product deleted)
+
+Stage Summary:
+- Field officers can NOW apply for loans: 3 seeded products appear in the dropdown
+- Product ownership clarified: EKIBBO MD (Eric/Sophie) manages LoanProducts on web
+  → Loans → Products; TENANT_ADMIN/SUPER_ADMIN also allowed; field officers are
+  correctly blocked from product creation
+- Profile self-service edit now works end-to-end on mobile (needs APK rebuild to
+  ship the UI; the PUT endpoint itself is live once deployed)

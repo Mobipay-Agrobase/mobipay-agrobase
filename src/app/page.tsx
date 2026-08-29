@@ -488,6 +488,7 @@ export default function HomePage() {
         'consignments', 'trace', 'reports', 'training', 'farm-visits', 'surveys',
         'compliance', 'cost-of-cultivation', 'farmer-ledger',
         'agritrack',
+        'loans', // LoanProduct master data mgmt for the mobile Loans module (MD/admin only, perm-gated in sidebar)
         'profile', 'support-tickets', 'farmer-detail', 'farmer-create', 'farmer-edit',
         'farmland-detail', 'farmland-create', 'farmland-edit',
         'cultivation-detail', 'cultivation-create', 'cultivation-edit',

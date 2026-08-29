@@ -4,7 +4,7 @@ import React, { useEffect, useState, useCallback } from 'react'
 import { cn } from '@/lib/utils'
 import {
   DollarSign, Calculator, Plus, CheckCircle, Clock, XCircle, AlertTriangle,
-  TrendingUp, FileText, Users, ArrowRight, Loader2, ChevronLeft, ChevronRight
+  TrendingUp, FileText, Users, ArrowRight, Loader2, ChevronLeft, ChevronRight, Pencil
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -46,6 +46,8 @@ export default function LoansView() {
   const [loading, setLoading] = useState(true)
   const [showCalc, setShowCalc] = useState(false)
   const [showApply, setShowApply] = useState(false)
+  const [showProductForm, setShowProductForm] = useState(false)
+  const [editingProduct, setEditingProduct] = useState<any>(null)
   const [activeTab, setActiveTab] = useState(activeSubTab || 'applications')
 
   const loadData = useCallback(async () => {
@@ -155,32 +157,45 @@ export default function LoansView() {
       )}
 
       {activeTab === 'products' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {products.length === 0 ? (
-            <div className="col-span-full text-center py-12 text-muted-foreground">
-              <FileText className="w-10 h-10 mx-auto mb-3 opacity-40" />
-              <p className="font-medium">No loan products configured</p>
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-semibold">Loan Products</h3>
+              <p className="text-xs text-muted-foreground">Master data for loan applications — the field-officer mobile app reads these for its product dropdown.</p>
             </div>
-          ) : (
-            products.map((p: any) => (
-              <Card key={p.id} className="hover:shadow-md transition-shadow">
-                <CardContent className="p-5">
-                  <div className="flex items-start justify-between mb-3">
-                    <h4 className="font-semibold text-sm">{p.name}</h4>
-                    <Badge className={p.isActive ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300' : 'bg-gray-100 text-gray-600'}>
-                      {p.isActive ? 'Active' : 'Inactive'}
-                    </Badge>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3 text-xs">
-                    <div><p className="text-muted-foreground">Interest Rate</p><p className="font-semibold">{p.interestRate}%</p></div>
-                    <div><p className="text-muted-foreground">Max Duration</p><p className="font-semibold">{p.maxDuration} months</p></div>
-                    <div><p className="text-muted-foreground">Min Amount</p><p className="font-semibold">UGX {p.minAmount?.toLocaleString()}</p></div>
-                    <div><p className="text-muted-foreground">Max Amount</p><p className="font-semibold">UGX {p.maxAmount?.toLocaleString()}</p></div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))
-          )}
+            <Button size="sm" onClick={() => { setEditingProduct(null); setShowProductForm(true) }} className="gap-2">
+              <Plus className="w-4 h-4" /> New Product
+            </Button>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {products.length === 0 ? (
+              <div className="col-span-full text-center py-12 text-muted-foreground">
+                <FileText className="w-10 h-10 mx-auto mb-3 opacity-40" />
+                <p className="font-medium">No loan products configured</p>
+                <p className="text-xs mt-1">Add a product so field officers can submit loan applications.</p>
+              </div>
+            ) : (
+              products.map((p: any) => (
+                <Card key={p.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => { setEditingProduct(p); setShowProductForm(true) }}>
+                  <CardContent className="p-5">
+                    <div className="flex items-start justify-between mb-3">
+                      <h4 className="font-semibold text-sm">{p.name}</h4>
+                      <Badge className={p.isActive ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300' : 'bg-gray-100 text-gray-600'}>
+                        {p.isActive ? 'Active' : 'Inactive'}
+                      </Badge>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3 text-xs">
+                      <div><p className="text-muted-foreground">Interest Rate</p><p className="font-semibold">{p.interestRate}%</p></div>
+                      <div><p className="text-muted-foreground">Max Duration</p><p className="font-semibold">{p.maxDuration} months</p></div>
+                      <div><p className="text-muted-foreground">Min Amount</p><p className="font-semibold">UGX {p.minAmount?.toLocaleString()}</p></div>
+                      <div><p className="text-muted-foreground">Max Amount</p><p className="font-semibold">UGX {p.maxAmount?.toLocaleString()}</p></div>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground mt-3 flex items-center gap-1"><Pencil className="w-3 h-3" /> Click to edit</p>
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </div>
         </div>
       )}
 
@@ -197,6 +212,18 @@ export default function LoansView() {
         <DialogContent className="max-w-lg">
           <DialogHeader><DialogTitle>Apply for Loan</DialogTitle></DialogHeader>
           <ApplyLoanForm products={products} onClose={() => setShowApply(false)} onSaved={() => { setShowApply(false); loadData() }} />
+        </DialogContent>
+      </Dialog>
+
+      {/* Create / Edit Loan Product Dialog */}
+      <Dialog open={showProductForm} onOpenChange={(open) => { setShowProductForm(open); if (!open) setEditingProduct(null) }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader><DialogTitle>{editingProduct ? 'Edit Loan Product' : 'New Loan Product'}</DialogTitle></DialogHeader>
+          <ProductFormDialog
+            product={editingProduct}
+            onClose={() => { setShowProductForm(false); setEditingProduct(null) }}
+            onSaved={() => { setShowProductForm(false); setEditingProduct(null); loadData() }}
+          />
         </DialogContent>
       </Dialog>
 
@@ -277,6 +304,90 @@ function ApplyLoanForm({ products, onClose, onSaved }: { products: any[]; onClos
       <DialogFooter className="gap-2">
         <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
         <Button type="submit" disabled={saving} className="gap-2">{saving && <Loader2 className="w-4 h-4 animate-spin" />} Submit Application</Button>
+      </DialogFooter>
+    </form>
+  )
+}
+
+function ProductFormDialog({ product, onClose, onSaved }: { product: any; onClose: () => void; onSaved: () => void }) {
+  const isEdit = !!product
+  const [saving, setSaving] = useState(false)
+  const [form, setForm] = useState({
+    name: product?.name ?? '',
+    interestRate: product?.interestRate?.toString() ?? '',
+    minAmount: product?.minAmount?.toString() ?? '',
+    maxAmount: product?.maxAmount?.toString() ?? '',
+    maxDuration: product?.maxDuration?.toString() ?? '',
+    gracePeriod: product?.gracePeriod?.toString() ?? '0',
+    isActive: product?.isActive ?? true,
+  })
+
+  const update = (k: string, v: any) => setForm(p => ({ ...p, [k]: v }))
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!form.name || !form.interestRate || !form.maxAmount || !form.maxDuration) {
+      toast.error('Name, interest rate, max amount and max duration are required')
+      return
+    }
+    setSaving(true)
+    try {
+      const payload = {
+        name: form.name,
+        interestRate: parseFloat(form.interestRate),
+        minAmount: form.minAmount ? parseFloat(form.minAmount) : 0,
+        maxAmount: parseFloat(form.maxAmount),
+        maxDuration: parseInt(form.maxDuration),
+        gracePeriod: form.gracePeriod ? parseInt(form.gracePeriod) : 0,
+        isActive: form.isActive,
+      }
+      const res = await fetch(isEdit ? `/api/loans/products?id=${product.id}` : '/api/loans/products', {
+        method: isEdit ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      const data = await res.json()
+      if (res.ok) {
+        toast.success(isEdit ? 'Loan product updated' : 'Loan product created')
+        onSaved()
+      } else {
+        toast.error(data.error || 'Failed to save product')
+      }
+    } catch {
+      toast.error('Network error')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="space-y-1.5">
+        <Label>Product Name *</Label>
+        <Input value={form.name} onChange={e => update('name', e.target.value)} placeholder="e.g. Coffee Input Loan" required />
+      </div>
+      <div className="grid grid-cols-3 gap-3">
+        <div className="space-y-1.5"><Label>Interest Rate % *</Label><Input type="number" step="0.1" value={form.interestRate} onChange={e => update('interestRate', e.target.value)} placeholder="12" required /></div>
+        <div className="space-y-1.5"><Label>Min Amount (UGX)</Label><Input type="number" value={form.minAmount} onChange={e => update('minAmount', e.target.value)} placeholder="50000" /></div>
+        <div className="space-y-1.5"><Label>Max Amount (UGX) *</Label><Input type="number" value={form.maxAmount} onChange={e => update('maxAmount', e.target.value)} placeholder="500000" required /></div>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1.5"><Label>Max Duration (months) *</Label><Input type="number" value={form.maxDuration} onChange={e => update('maxDuration', e.target.value)} placeholder="6" required /></div>
+        <div className="space-y-1.5"><Label>Grace Period (months)</Label><Input type="number" value={form.gracePeriod} onChange={e => update('gracePeriod', e.target.value)} placeholder="0" /></div>
+      </div>
+      <div className="flex items-center gap-2">
+        <input
+          id="product-active"
+          type="checkbox"
+          checked={form.isActive}
+          onChange={e => update('isActive', e.target.checked)}
+          className="rounded"
+        />
+        <Label htmlFor="product-active" className="text-sm font-normal cursor-pointer">Active (visible in application forms & mobile app)</Label>
+      </div>
+      <DialogFooter className="gap-2">
+        <DialogClose asChild><Button type="button" variant="outline" onClick={onClose}>Cancel</Button></DialogClose>
+        <Button type="submit" disabled={saving} className="gap-2">{saving && <Loader2 className="w-4 h-4 animate-spin" />} {isEdit ? 'Save Changes' : 'Create Product'}</Button>
       </DialogFooter>
     </form>
   )

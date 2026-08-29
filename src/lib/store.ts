@@ -120,11 +120,15 @@ export const useAppStore = create<AppState>((set) => ({
 
 // Menus that are NOT applicable to the Ekibbo tenant and must be hidden for all
 // EKB_* roles (sidebar, command palette, and module-router guard).
+// NOTE: 'loans' is no longer hidden — the Ekibbo mobile app ships a Loans
+// module for field officers, and the MD/TENANT_ADMIN must be able to manage
+// the LoanProduct master data on the web (Loans → Products). Visibility is
+// still permission-gated, so only roles with loans:read (EKB_MD, admins) see it.
 export const EKB_HIDDEN_MODULES = [
-  'marketplace', 'payments', 'loans',           // Core Operations
-  'carbon', 'crop-insurance',                    // Farm Management
-  'crop-stages',                                 // Farm Management — not relevant to EKIBBO
-  'impact-assessment',                           // Intelligence
-  'communication', 'feedback', 'channel-sim',    // Engagement
-  'mfi',                                         // Finance
+  'marketplace', 'payments',                       // Core Operations
+  'carbon', 'crop-insurance',                      // Farm Management
+  'crop-stages',                                   // Farm Management — not relevant to EKIBBO
+  'impact-assessment',                             // Intelligence
+  'communication', 'feedback', 'channel-sim',      // Engagement
+  'mfi',                                           // Finance
 ] as const

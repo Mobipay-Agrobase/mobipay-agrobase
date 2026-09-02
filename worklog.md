@@ -702,3 +702,17 @@ Work Log:
 
 Stage Summary:
 - CI/CD pipeline fully operational: push to main → GitHub Actions → production deploy on Vercel. This closes the gap left by the broken native Git integration (repo org move).
+
+---
+Task ID: 9 (quick wins + dashboard feedback audit)
+Agent: main (Super Z)
+Task: Case-insensitive login + Farm Visit/Survey attachments + audit new dashboard feedback
+
+Work Log:
+- Fixed case-sensitive login: email lookup with mode:'insensitive' in src/lib/auth.ts (NextAuth), /api/auth/mobile-login, and both reset-password routes (replaced fragile .toLowerCase() which breaks on mixed-case stored emails).
+- Wired EkibboAttachmentSection into mobile Farm Visit form (relatedType FARM_VISIT, after Status dropdown) and Survey form (relatedType SURVEY, after Add Question) — mirrors proven Training wiring; server relatedType is free-form string so no API change needed.
+- Audited new dashboard feedback (8 items + NB) against EkbiboDashboards.tsx / ekibbo-analytics API / schema — results in chat summary; headline: schema foundation mostly exists, dashboard redesign NOT done.
+
+Stage Summary:
+- Commit 7531f60 pushed; CI auto-deploy in progress.
+- Dashboard feedback verdict: ~35% overall — removals not applied, trainings-by-funder/inputs/loans analytics missing, drill-downs (year/season/month, geo, buyer) missing, role dashboards not unified.

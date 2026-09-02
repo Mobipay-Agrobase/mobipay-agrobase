@@ -127,7 +127,7 @@ export function LocationPicker({
         })
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [value?.villageId, value?.regionId, value?.districtId, value?.region, value?.district])
 
   const parentIdOf = (key: LevelKey) => {

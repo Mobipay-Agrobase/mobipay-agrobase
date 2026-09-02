@@ -1,4 +1,22 @@
-name: CI/CD Pipeline
+# ============================================
+# Agrobase V3 — Unified CI/CD Pipeline
+# Single source of truth: quality → test → build → migrate → docker → vercel
+#
+# Fix history (2026-09-02):
+#   - Consolidated ci.yml + deploy.yml + ci-cd.yml (all 3 previously ran
+#     duplicate quality/build stages on every push to main).
+#   - Lint is now blocking (8 pre-existing errors fixed in-repo).
+#   - Docker build fixed: prisma/schema.prisma is now copied before `npm ci`
+#     (postinstall `prisma generate` needs the schema — previous builds failed).
+#   - DB migration runs right after quality (before Vercel's native Git deploy
+#     finishes) to close the schema-vs-deploy race window.
+#   - Vercel CI deploy is gated on the VERCEL_TOKEN secret: when absent it
+#     skips gracefully (native Git integration on Vercel already deploys
+#     https://mobipay-agrobase.vercel.app on every push to main).
+#     VERCEL_PROJECT_ID / VERCEL_ORG_ID are set as repo secrets.
+# ============================================
+
+name: CI/CD
 
 on:
   push:
@@ -6,23 +24,21 @@ on:
   pull_request:
     branches: [main]
 
-env:
-  DATABASE_URL: ${{ secrets.DATABASE_URL }}
-  DIRECT_URL: ${{ secrets.DIRECT_URL }}
-  NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
+concurrency:
+  group: cicd-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  # ─── Stage 1: Quality Checks ────────────────────────────────────
+  # ─── Stage 1: Quality Gates (blocking) ──────────────────────────
   quality:
-    name: Type Check + Lint
+    name: Lint + Type Check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
 
       - name: Install dependencies
@@ -35,44 +51,149 @@ jobs:
         run: npx tsc --noEmit
 
       - name: ESLint
-        run: npx next lint
-        continue-on-error: true # Don't block deploy on lint warnings
+        run: npm run lint
 
-  # ─── Stage 2: Build ─────────────────────────────────────────────
-  build:
-    name: Production Build
+  # ─── Stage 2: Unit Tests ────────────────────────────────────────
+  test:
+    name: Unit Tests
     runs-on: ubuntu-latest
     needs: quality
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
 
-      - name: Install dependencies
-        run: npm ci
+      - run: npm ci
+      - run: npx prisma generate
+      - run: npm test
 
-      - name: Generate Prisma Client
-        run: npx prisma generate
+  # ─── Stage 3: Production Build ──────────────────────────────────
+  build:
+    name: Next.js Build
+    runs-on: ubuntu-latest
+    needs: quality
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - run: npm ci
+      - run: npx prisma generate
 
       - name: Build Next.js
         run: npm run build
         env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          DIRECT_URL: ${{ secrets.DIRECT_URL }}
-          NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
+          # Real DB URL on trusted branches; inert placeholder elsewhere.
+          # The build itself is DB-independent (all data pages are dynamic).
+          DATABASE_URL: ${{ secrets.DATABASE_URL || 'postgresql://agrobase:placeholder@localhost:5432/agrobase_v3?schema=public' }}
 
-  # ─── Stage 3: Deploy to Vercel (main only) ──────────────────────
-  deploy:
-    name: Deploy to Vercel
+  # ─── Stage 4: DB Migration (main only, early) ────────────────────
+  # Runs right after quality — in parallel with build — so the Neon schema
+  # is updated BEFORE Vercel's native Git integration finishes deploying,
+  # closing the old schema-vs-deploy race window.
+  migrate:
+    name: DB Schema Sync
     runs-on: ubuntu-latest
-    needs: [quality, build]
+    needs: quality
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - run: npm ci
+      - run: npx prisma generate
+
+      - name: Push schema to database (direct, non-pooled connection)
+        run: npx prisma db push --accept-data-loss
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+
+  # ─── Stage 5: Docker Build & Push to GHCR (main only) ───────────
+  docker:
+    name: Docker Image → GHCR
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=sha,prefix=
+            type=ref,event=branch
+            latest
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ─── Stage 6: Vercel CI Deploy (optional, token-gated) ──────────
+  # The production site deploys automatically via Vercel's native Git
+  # integration. This job additionally deploys through CI only when a
+  # VERCEL_TOKEN secret exists. Add it (vercel.com/account/tokens) to
+  # switch from skip → deploy. VERCEL_ORG_ID and VERCEL_PROJECT_ID are
+  # already configured as repo secrets.
+  deploy-gate:
+    name: Vercel Deploy Gate
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    outputs:
+      enabled: ${{ steps.gate.outputs.enabled }}
+    steps:
+      - name: Check VERCEL_TOKEN presence
+        id: gate
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          if [ -n "$VERCEL_TOKEN" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+            echo "VERCEL_TOKEN detected — CI-based Vercel deploy is ENABLED."
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::notice title=Vercel::VERCEL_TOKEN secret is not set — skipping CI Vercel deploy. Vercel's native Git integration already deploys every push to main. To enable CI-based deploys: create a token at https://vercel.com/account/tokens and add it as the VERCEL_TOKEN repo secret."
+          fi
+
+  deploy:
+    name: Deploy to Vercel (CI)
+    runs-on: ubuntu-latest
+    needs: [build, migrate, deploy-gate]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && needs.deploy-gate.outputs.enabled == 'true'
+    steps:
+      - uses: actions/checkout@v5
 
       - name: Install Vercel CLI
         run: npm install -g vercel@latest
@@ -88,36 +209,12 @@ jobs:
         env:
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+          NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
 
       - name: Deploy to Vercel
         run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
         env:
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-
-  # ─── Stage 4: Post-Deploy DB Migration ──────────────────────────
-  migrate:
-    name: Run Database Migrations
-    runs-on: ubuntu-latest
-    needs: deploy
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Generate Prisma Client
-        run: npx prisma generate
-
-      - name: Push schema to database
-        run: npx prisma db push --accept-data-loss
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          DIRECT_URL: ${{ secrets.DIRECT_URL }}

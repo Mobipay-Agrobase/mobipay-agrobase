@@ -4,43 +4,36 @@
 # Multi-stage, security-hardened, optimized for East Africa deployment
 # ============================================
 
-# --- Stage 1: Dependencies (layer-cached) ---
-FROM node:22-alpine AS deps
-RUN apk add --no-cache libc6-compat openssl
-WORKDIR /app
-
-# Copy lockfiles first for cache optimization
-COPY package.json package-lock.json* ./
-
-# Install dependencies only (skip devDependencies in production)
-RUN \
-  if [ -f package-lock.json ]; then npm ci --omit=dev; \
-  else npm install --omit=dev; \
-  fi
-
-# --- Stage 2: Build ---
+# --- Stage 1: Build ---
 FROM node:22-alpine AS builder
 RUN apk add --no-cache libc6-compat openssl
 WORKDIR /app
 
-# Copy ALL dependencies (including dev) for build
+# Copy manifest + prisma schema first (npm ci postinstall runs `prisma generate`,
+# which requires prisma/schema.prisma to be present in the image)
 COPY package.json package-lock.json* ./
+COPY prisma ./prisma
+
+# Install ALL dependencies (dev deps are needed for the Next.js build)
 RUN npm ci
 
 # Copy source
 COPY . .
 
-# Generate Prisma client
+# Re-generate Prisma client (in case schema changed after npm ci)
 RUN npx prisma generate
 
 # Next.js production build
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
 ENV NEXT_SKIP_TYPECHECK=true
+# Inert placeholder for build-time Prisma client instantiation (runtime value
+# is injected via docker-compose / k8s env). Mirrors the known-passing CI setup.
+ENV DATABASE_URL="postgresql://agrobase:placeholder@localhost:5432/agrobase_v3?schema=public"
 
 RUN npm run build
 
-# --- Stage 3: Production Runner (minimal attack surface) ---
+# --- Stage 2: Production Runner (minimal attack surface) ---
 FROM node:22-alpine AS runner
 RUN apk add --no-cache libc6-compat wget ca-certificates tzdata && \
     cp /usr/share/zoneinfo/Africa/Kampala /etc/localtime && \

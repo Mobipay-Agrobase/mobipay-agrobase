@@ -96,7 +96,7 @@ export default function PolygonMap({
       polygonRef.current = null
       markersRef.current = []
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [])
 
   // Redraw polygon + markers when points change
@@ -140,7 +140,7 @@ export default function PolygonMap({
     const a = calcArea(points)
     setArea(a)
     onChange?.(points, a)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [points])
 
   // Try to use GPS

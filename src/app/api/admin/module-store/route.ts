@@ -103,8 +103,8 @@ export async function POST(req: NextRequest) {
     }
 
     // Don't allow disabling core modules
-    const module = ALL_MODULES.find(m => m.code === moduleCode)
-    if (module?.isCore && !isEnabled) {
+    const moduleDef = ALL_MODULES.find(m => m.code === moduleCode)
+    if (moduleDef?.isCore && !isEnabled) {
       return NextResponse.json({ error: 'Core modules cannot be disabled' }, { status: 400 })
     }
 

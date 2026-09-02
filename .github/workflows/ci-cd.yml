@@ -14,6 +14,11 @@
 #     skips gracefully (native Git integration on Vercel already deploys
 #     https://mobipay-agrobase.vercel.app on every push to main).
 #     VERCEL_PROJECT_ID / VERCEL_ORG_ID are set as repo secrets.
+#   - 2026-09-02 (deploy session): VERCEL_TOKEN secret added — CI deploy is
+#     now ACTIVE. This is the primary deploy path because the repo was moved
+#     to the Mobipay-Agrobase org, which broke Vercel's native Git
+#     integration (last native deploy: a191cd2). ENCRYPTION_KEY added to the
+#     deploy build env, matching the Vercel project env.
 # ============================================
 
 name: CI/CD
@@ -212,6 +217,7 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           DIRECT_URL: ${{ secrets.DIRECT_URL }}
           NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
+          ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY }}
 
       - name: Deploy to Vercel
         run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}

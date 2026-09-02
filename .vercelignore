@@ -1,0 +1,35 @@
+# Non-web directories (Flutter apps, design templates, backups, internal tooling)
+# NOTE: leading "/" anchors patterns to the repo root so src/lib/mobile etc. stay included
+/mobile/
+/mobile-ekibbo/
+/skills/
+/_disabled/
+/_backup_vsla_v1/
+/tool-results/
+/agent-ctx/
+/examples/
+/mini-services/
+/.zscripts/
+/download/
+/data/ekibbo-csv/
+/tests/
+/docs/
+
+# CI/Docker artifacts not needed on Vercel
+/Dockerfile
+/Dockerfile.dev
+/docker-compose.yml
+/docker-compose.dev.yml
+/Caddyfile
+/.dockerignore
+/playwright.config.ts
+/jest.config.ts
+/jest.setup.ts
+/billing-engine-changes.tar.gz
+/apply-billing-engine.sh
+/gap-analysis-text.txt
+/EKIBBO_Audit_Comparison.md
+/FULL_VSLA_MODULE_README.md
+/VSLA_INTEGRATION_ARCHITECTURE.md
+/SECURITY_FIXES.md
+/worklog.md

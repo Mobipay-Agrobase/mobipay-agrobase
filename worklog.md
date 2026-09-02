@@ -666,3 +666,23 @@ Stage Summary:
 - Coffee purchase forms now exactly Fresh, Kiboko, FAQ per Ekibbo
 - DB columns applied to production Neon; deployment = git push (Vercel auto-build)
 - Follow-ups for Eric: rotate all secrets in .env history; verify Vercel dashboard env vars exist (they predate repo .env — header says "Created by Vercel CLI"); Ekibbo's remaining module reviews (Farmer profiling → Master data list) pending their next feedback round
+
+---
+Task ID: 7 (deploy session)
+Agent: main (Super Z)
+Task: Deploy all pending changes to Vercel + durably fix CI/CD pipeline
+
+Work Log:
+- Diagnosed CI/CD breakage: Vercel project (prj_JQW8sO1n8b8E9E4W9mzkof0m898Q) git link still points at pre-transfer repo path (pm-karthicksivaraj/mobipay-agrobase). Native auto-deploy stopped after a191cd2; 4 newer commits (091f5cd..f86d54c) were never deployed. GitHub Actions CI itself was green (run #220).
+- Generated + set ENCRYPTION_KEY (48-char) in Vercel env (production + preview) — field-crypto previously THREW in prod on any PII write/read because the key was never set.
+- Added root-anchored .vercelignore (excludes mobile/, mobile-ekibbo/, skills/, _disabled/, _backup_vsla_v1/, tool-results/, agent-ctx/, data/ekibbo-csv/, tests/, docs/, Docker/CI artifacts). First deploy attempt failed (unanchored `mobile/` pattern also excluded src/lib/mobile/); fixed by anchoring all patterns with leading `/`.
+- Deployed f86d54c to production via Vercel CLI (new token): dpl_qm9fDsgpzK5jgbWoXPokZoe4PKvf → READY, aliased to https://mobipay-agrobase.vercel.app.
+- Verified: site HTTP 200, NextAuth providers OK, login as sophie@ekibbo.com works (session role EKB_MD), /api/trainings returns live data. NOTE: login is case-sensitive — Sophie@ekibbo.com (capital S) returns 401; filed as improvement item.
+- Attempted to re-link Vercel git integration to Mobipay-Agrobase org via API — blocked: requires account-level GitHub Login Connection (browser flow). Durable fix instead: GitHub-Actions-based deploy.
+- Set repo secrets via GitHub API (PyNaCl sealed box): VERCEL_TOKEN (activates the gated CI deploy job) + ENCRYPTION_KEY (synced to new Vercel value).
+- Updated ci-cd.yml: ENCRYPTION_KEY added to deploy-job build env + deploy-path comment.
+
+Stage Summary:
+- Production is live with all EKiBBO feedback changes (Training Scheduling+Reporting, coffee forms Fresh/Kiboko/FAQ, security untrack, mobile photo-attachment commit).
+- CI/CD path: push → GitHub Actions (quality → test → build → migrate → docker → vercel deploy --prebuilt --prod). Native Vercel git integration remains broken until org-level GitHub App reinstall (optional alternative).
+- Secrets now: DATABASE_URL, DIRECT_URL, ENCRYPTION_KEY, NEXTAUTH_SECRET, VERCEL_ORG_ID, VERCEL_PROJECT_ID, VERCEL_TOKEN.

@@ -1,6 +1,8 @@
 import { db } from '@/lib/db'
 import { NextResponse } from 'next/server'
 import { getTenantContext } from '@/lib/tenant'
+import { hasPermission } from '@/lib/permissions'
+import { isFarmerRole, ownFarmerProfileId } from '@/lib/mobile/ekibbo-mobile-utils'
 
 export async function GET(request: Request) {
   try {
@@ -17,11 +19,19 @@ export async function GET(request: Request) {
 
     // Filter through farmer tenantId
     if (!ctx.isSuperAdmin) {
-      const validFarmerIds = await db.farmerProfile.findMany({
-        where: { tenantId: { in: ctx.tenantScope as string[] } },
-        select: { id: true },
-      })
-      where.farmerId = { in: validFarmerIds.map(f => f.id) }
+      // Farmer sessions are SELF-SERVICE (mirrors the mobile scope): a
+      // farmer sees only their OWN produce sales, never the tenant-wide
+      // sales book.
+      if (isFarmerRole(ctx.role)) {
+        const ownId = await ownFarmerProfileId(ctx.userId)
+        where.farmerId = ownId ?? 'none' // no profile → sees nothing
+      } else {
+        const validFarmerIds = await db.farmerProfile.findMany({
+          where: { tenantId: { in: ctx.tenantScope as string[] } },
+          select: { id: true },
+        })
+        where.farmerId = { in: validFarmerIds.map(f => f.id) }
+      }
     }
 
     const [data, total] = await Promise.all([
@@ -44,6 +54,11 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const ctx = await getTenantContext()
+    // Write gate: only roles with sales:create may record sales
+    // (EKB_FARMER has sales:read only — self-service, no writes).
+    if (!hasPermission(ctx.role || '', 'sales:create')) {
+      return NextResponse.json({ error: 'Insufficient permissions to create sales' }, { status: 403 })
+    }
     const body = await request.json()
 
     // ─── EKIBBO: Auto loan deduction from produce sold ───

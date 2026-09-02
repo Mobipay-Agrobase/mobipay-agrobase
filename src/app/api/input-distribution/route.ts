@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getTenantContext, buildTenantFilter } from '@/lib/tenant'
+import { hasPermission } from '@/lib/permissions'
 
 /**
  * GET /api/input-distribution?farmerId=xxx
@@ -42,6 +43,11 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const ctx = await getTenantContext(request)
+    // Write gate: distributing inputs requires input_aggregation:create
+    // (MD/OPS/FIN_ASSISTANT/EXTENSION among EKB roles).
+    if (!hasPermission(ctx.role || '', 'input_aggregation:create')) {
+      return NextResponse.json({ error: 'Insufficient permissions to distribute inputs' }, { status: 403 })
+    }
     const body = await request.json()
     const {
       farmerId, inputType, inputName, quantity, unit, unitCost,

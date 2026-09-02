@@ -124,8 +124,13 @@ export const useAppStore = create<AppState>((set) => ({
 // module for field officers, and the MD/TENANT_ADMIN must be able to manage
 // the LoanProduct master data on the web (Loans → Products). Visibility is
 // still permission-gated, so only roles with loans:read (EKB_MD, admins) see it.
+// NOTE: 'payments' is no longer hidden — farmer payment settlements recorded
+// through the purchase workflow (approve → record payment) must be visible to
+// financial/management roles. Visibility is permission-gated, so only roles
+// with payments:read (EKB_MD, EKB_OPS_MANAGER, EKB_FINANCE, EKB_FIN_ASSISTANT)
+// see the Payments module; MEC/Extension/Farmer do not.
 export const EKB_HIDDEN_MODULES = [
-  'marketplace', 'payments',                       // Core Operations
+  'marketplace',                                   // Core Operations
   'carbon', 'crop-insurance',                      // Farm Management
   'crop-stages',                                   // Farm Management — not relevant to EKIBBO
   'impact-assessment',                             // Intelligence

@@ -70,3 +70,18 @@ export async function farmerSelfAccess(
   })
   return !!own
 }
+
+/**
+ * Resolve the signed-in farmer-role user's OWN FarmerProfile id.
+ * Used by web list endpoints (purchases/sales/payments) to scope farmer
+ * sessions to their own records — mirrors the mobile self-service scope.
+ * Returns null for staff roles / users without a farmer profile.
+ */
+export async function ownFarmerProfileId(userId?: string): Promise<string | null> {
+  if (!userId) return null
+  const f = await db.farmerProfile.findFirst({
+    where: { userId },
+    select: { id: true },
+  })
+  return f?.id ?? null
+}

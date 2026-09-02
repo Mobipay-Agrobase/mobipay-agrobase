@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getTenantContext, buildTenantFilter } from '@/lib/tenant'
+import { hasPermission } from '@/lib/permissions'
 
 /**
  * GET /api/purchases/[id] — full purchase detail with E2E chain:
@@ -35,6 +36,11 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const ctx = await getTenantContext(req)
+  // Write gate: draft edits require purchases:update (farmer roles are
+  // read-only on purchases).
+  if (!hasPermission(ctx.role || '', 'purchases:update')) {
+    return NextResponse.json({ error: 'Insufficient permissions to update purchases' }, { status: 403 })
+  }
   const tf = buildTenantFilter(ctx, 'tenantId') as any
   const body = await req.json()
   const existing = await db.purchase.findFirst({ where: { id, farmer: { ...tf } } })
@@ -46,6 +52,10 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const ctx = await getTenantContext(req)
+  // Write gate: deletion requires purchases:delete (MD/OPS only among EKB roles).
+  if (!hasPermission(ctx.role || '', 'purchases:delete')) {
+    return NextResponse.json({ error: 'Insufficient permissions to delete purchases' }, { status: 403 })
+  }
   const tf = buildTenantFilter(ctx, 'tenantId') as any
   const existing = await db.purchase.findFirst({ where: { id, farmer: { ...tf } } })
   if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 })

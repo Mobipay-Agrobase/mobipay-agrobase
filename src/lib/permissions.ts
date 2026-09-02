@@ -83,6 +83,7 @@ const ROLE_PERMISSIONS: RolePerms = {
     'farm_visits:*',
     'transport:*',
     'loans:read', 'loans:create', 'loans:update',
+    'payments:read',
     'profile:*',
     'billing:read',
   ],
@@ -94,6 +95,7 @@ const ROLE_PERMISSIONS: RolePerms = {
     'training:*',
     'farm_visits:*',
     'purchases:*', 'purchases:approve',
+    'payments:read',
     'input_aggregation:*',
     'surveys:read',
     'reports:read', 'reports:export',
@@ -108,6 +110,7 @@ const ROLE_PERMISSIONS: RolePerms = {
     'farmers:read',           // view only — no create/edit
     'purchases:read', 'purchases:approve',
     'sales:*',
+    'payments:read',
     'reports:read', 'reports:export',
     'trace:read',
     'profile:read', 'profile:update',
@@ -121,6 +124,7 @@ const ROLE_PERMISSIONS: RolePerms = {
     'purchases:read', 'purchases:create', 'purchases:update',  // draft only
     'sales:read', 'sales:create', 'sales:update',              // draft only
     'input_aggregation:read', 'input_aggregation:create',
+    'payments:read',
     'profile:read', 'profile:update',
   ],
 

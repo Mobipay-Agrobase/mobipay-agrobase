@@ -1,6 +1,8 @@
 import { db } from '@/lib/db'
 import { NextResponse } from 'next/server'
 import { getTenantContext } from '@/lib/tenant'
+import { hasPermission } from '@/lib/permissions'
+import { isFarmerRole, ownFarmerProfileId } from '@/lib/mobile/ekibbo-mobile-utils'
 import { createPurchaseLedgerEntries, updateInputDistributionBalance, createTraceabilityBatch, recordPurchaseImpactEvent } from '@/lib/ekbibo/connectors'
 
 export async function GET(request: Request) {
@@ -18,14 +20,22 @@ export async function GET(request: Request) {
 
     // Filter through farmer tenantId OR purchase tenantId (EKIBBO enhancement)
     if (!ctx.isSuperAdmin) {
-      const validFarmerIds = await db.farmerProfile.findMany({
-        where: { tenantId: { in: ctx.tenantScope as string[] } },
-        select: { id: true },
-      })
-      where.OR = [
-        { farmerId: { in: validFarmerIds.map(f => f.id) } },
-        { tenantId: { in: ctx.tenantScope as string[] } },
-      ]
+      // Farmer sessions are SELF-SERVICE (mirrors the mobile scope): a
+      // farmer sees only purchases of their own produce, never the tenant-wide
+      // purchase book.
+      if (isFarmerRole(ctx.role)) {
+        const ownId = await ownFarmerProfileId(ctx.userId)
+        where.farmerId = ownId ?? 'none' // no profile → sees nothing
+      } else {
+        const validFarmerIds = await db.farmerProfile.findMany({
+          where: { tenantId: { in: ctx.tenantScope as string[] } },
+          select: { id: true },
+        })
+        where.OR = [
+          { farmerId: { in: validFarmerIds.map(f => f.id) } },
+          { tenantId: { in: ctx.tenantScope as string[] } },
+        ]
+      }
     }
 
     const [data, total] = await Promise.all([
@@ -48,6 +58,11 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const ctx = await getTenantContext()
+    // Write gate: only roles with purchases:create may record purchases
+    // (EKB_FARMER has purchases:read only — self-service, no writes).
+    if (!hasPermission(ctx.role || '', 'purchases:create')) {
+      return NextResponse.json({ error: 'Insufficient permissions to create purchases' }, { status: 403 })
+    }
     const body = await request.json()
 
     // Check if this is an EKIBBO enhanced purchase (has moistureReading or dailyPrice)

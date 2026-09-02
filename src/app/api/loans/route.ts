@@ -1,6 +1,7 @@
 import { db } from '@/lib/db'
 import { NextResponse } from 'next/server'
 import { getTenantContext, buildTenantFilter } from '@/lib/tenant'
+import { hasPermission } from '@/lib/permissions'
 
 export async function GET() {
   try {
@@ -30,6 +31,12 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const ctx = await getTenantContext()
+    // Write gate: loan applications require loans:create
+    // (EKB_MD among EKB web roles; field officers use the mobile modules
+    // route, which is isMobileStaff-gated).
+    if (!hasPermission(ctx.role || '', 'loans:create')) {
+      return NextResponse.json({ error: 'Insufficient permissions to create loan applications' }, { status: 403 })
+    }
     const body = await request.json()
 
     // Verify loan product belongs to tenant

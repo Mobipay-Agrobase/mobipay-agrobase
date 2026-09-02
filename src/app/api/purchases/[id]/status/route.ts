@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getTenantContext, buildTenantFilter } from '@/lib/tenant'
+import { hasPermission } from '@/lib/permissions'
 import { createPurchaseLedgerEntries, createTraceabilityBatch } from '@/lib/ekbibo/connectors'
 
 /**
@@ -33,6 +34,20 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       include: { farmer: { select: { id: true, firstName: true, lastName: true, phone: true } } },
     })
     if (!purchase) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+
+    // RBAC enforcement (mirrors the documented permission matrix):
+    // approve / reject / pay (farmer payment) require 'purchases:approve'.
+    // Without this, draft-only roles (EKB_FIN_ASSISTANT) and submit-only
+    // roles (EKB_EXTENSION) could approve purchases and record farmer
+    // payments — live-verified RBAC gap. 'submit' stays open to creators.
+    if (action === 'approve' || action === 'reject' || action === 'pay') {
+      if (!hasPermission(ctx.role || '', 'purchases:approve')) {
+        return NextResponse.json(
+          { error: 'Only roles with purchase approval rights can approve, reject, or record farmer payments' },
+          { status: 403 },
+        )
+      }
+    }
 
     const now = new Date()
 

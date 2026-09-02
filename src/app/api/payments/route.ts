@@ -14,9 +14,30 @@ export async function GET(request: Request) {
     const where: Record<string, unknown> = {}
     if (status) where.status = status
     if (type) where.type = type
-    // Filter through paymentAccount tenantId
+    // Tenant scoping: a payment belongs to the tenant when it is linked to
+    // the tenant's PaymentAccount, OR it settles a tenant purchase/sale
+    // (the purchase & sale "pay" flows link via purchaseId/saleId — those
+    // payments must stay visible in the tenant Payments module).
     if (!ctx.isSuperAdmin) {
-      where.paymentAccount = { tenantId: { in: ctx.tenantScope as string[] } }
+      const scope = ctx.tenantScope as string[]
+      const [purchases, sales] = await Promise.all([
+        db.purchase.findMany({
+          where: { OR: [{ tenantId: { in: scope } }, { farmer: { tenantId: { in: scope } } }] },
+          select: { id: true },
+          take: 20000,
+        }),
+        db.sale.findMany({
+          where: { OR: [{ tenantId: { in: scope } }, { farmer: { tenantId: { in: scope } } }] },
+          select: { id: true },
+          take: 20000,
+        }),
+      ])
+      const or: Record<string, unknown>[] = [
+        { paymentAccount: { tenantId: { in: scope } } },
+      ]
+      if (purchases.length) or.push({ purchaseId: { in: purchases.map(p => p.id) } })
+      if (sales.length) or.push({ saleId: { in: sales.map(s => s.id) } })
+      where.OR = or
     }
 
     const [data, total] = await Promise.all([
@@ -40,6 +61,16 @@ export async function POST(request: Request) {
   try {
     const ctx = await getTenantContext()
     const body = await request.json()
+    // Link to the tenant's active PaymentAccount when one exists so the
+    // payment is visible in the tenant Payments module (see GET scoping).
+    let paymentAccountId: string | null = null
+    if (ctx.tenantId) {
+      const account = await db.paymentAccount.findFirst({
+        where: { tenantId: ctx.tenantId, isActive: true },
+        select: { id: true },
+      })
+      paymentAccountId = account?.id ?? null
+    }
     const payment = await db.payment.create({
       data: {
         type: body.type,
@@ -49,6 +80,9 @@ export async function POST(request: Request) {
         description: body.description,
         transactionRef: `PAY-${Date.now()}`,
         status: 'PENDING',
+        paymentAccountId,
+        purchaseId: body.purchaseId || null,
+        saleId: body.saleId || null,
       }
     })
     return NextResponse.json(payment, { status: 201 })

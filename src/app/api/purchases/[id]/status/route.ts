@@ -107,6 +107,17 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       const paymentRef = body.transactionRef || `PAY-${Date.now()}`
       const amount = Number(body.amount ?? purchase.netPayment ?? purchase.totalAmount ?? 0)
 
+      // Link to the tenant's active PaymentAccount so the farmer payment is
+      // visible in the tenant Payments module (matches /api/payments GET).
+      let paymentAccountId: string | null = null
+      if (ctx.tenantId) {
+        const account = await db.paymentAccount.findFirst({
+          where: { tenantId: ctx.tenantId, isActive: true },
+          select: { id: true },
+        }).catch(() => null)
+        paymentAccountId = account?.id ?? null
+      }
+
       const payment = await db.payment.create({
         data: {
           type: 'BULK_PURCHASE',
@@ -118,6 +129,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
           description: `Purchase settlement: ${purchase.commodity} ${(purchase.netWeight ?? purchase.quantity)}kg`,
           transactionRef: paymentRef,
           purchaseId: id,
+          paymentAccountId,
           status: 'COMPLETED',
         },
       })

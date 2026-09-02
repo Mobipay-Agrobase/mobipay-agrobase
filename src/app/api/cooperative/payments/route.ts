@@ -92,6 +92,12 @@ export async function POST(request: Request) {
     }
 
     // Create a payment record as a cooperative payment proxy
+    // Linked to the tenant's active PaymentAccount so it is visible in the
+    // tenant Payments module (matches /api/payments GET scoping).
+    const account = await db.paymentAccount.findFirst({
+      where: { tenantId: ctx.tenantId!, isActive: true },
+      select: { id: true },
+    }).catch(() => null)
     const totalDeductions = (deductions || []).reduce((sum, d) => sum + d.amount, 0)
     const paymentAmount = (amount || 0) - totalDeductions
 
@@ -103,6 +109,7 @@ export async function POST(request: Request) {
         amount: paymentAmount > 0 ? paymentAmount : amount || 0,
         description: `${phase} payment${intakeId ? ` for intake ${intakeId}` : ''}${deductions?.length ? ` (${deductions.length} deductions)` : ''}`,
         transactionRef: `COOP-${phase}-${Date.now()}`,
+        paymentAccountId: account?.id ?? null,
         status: 'PENDING',
       },
     })

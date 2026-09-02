@@ -48,6 +48,16 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     if (action === 'pay') {
       const transactionRef = body.transactionRef || `PAY-${Date.now()}`
       const amount = Number(body.amount ?? sale.netAmount ?? sale.totalAmount ?? 0)
+      // Link to the tenant's active PaymentAccount so the sale settlement is
+      // visible in the tenant Payments module (matches /api/payments GET).
+      let paymentAccountId: string | null = null
+      if (ctx.tenantId) {
+        const account = await db.paymentAccount.findFirst({
+          where: { tenantId: ctx.tenantId, isActive: true },
+          select: { id: true },
+        }).catch(() => null)
+        paymentAccountId = account?.id ?? null
+      }
       const payment = await db.payment.create({
         data: {
           type: 'MARKETPLACE',
@@ -57,6 +67,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
           description: `Sale settlement: ${sale.product} ${sale.quantity}${sale.category === 'INPUT' ? ' units' : 'kg'}`,
           transactionRef,
           saleId: id,
+          paymentAccountId,
           status: 'COMPLETED',
         },
       })

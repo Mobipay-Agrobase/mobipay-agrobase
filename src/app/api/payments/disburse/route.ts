@@ -157,6 +157,12 @@ export async function POST(request: NextRequest) {
       }
 
       // Create all payments in a transaction (atomic — all or nothing)
+      // Linked to the tenant's active PaymentAccount so they are visible in
+      // the tenant Payments module (matches /api/payments GET scoping).
+      const account = await db.paymentAccount.findFirst({
+        where: { tenantId: ctx.tenantId!, isActive: true },
+        select: { id: true },
+      }).catch(() => null)
       const payments = await db.$transaction(
         data.recipients.map((r) =>
           db.payment.create({
@@ -167,6 +173,7 @@ export async function POST(request: NextRequest) {
               amount: r.amount,
               description: data.description || `Bulk disbursement to ${r.name}`,
               transactionRef: r.reference || `DISB-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+              paymentAccountId: account?.id ?? null,
               status: 'PENDING',
             },
           })
@@ -217,6 +224,10 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    const account = await db.paymentAccount.findFirst({
+      where: { tenantId: ctx.tenantId!, isActive: true },
+      select: { id: true },
+    }).catch(() => null)
     const payment = await db.payment.create({
       data: {
         type: data.type,
@@ -225,6 +236,7 @@ export async function POST(request: NextRequest) {
         amount: data.amount,
         description: data.description || null,
         transactionRef: data.reference || `DISB-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        paymentAccountId: account?.id ?? null,
         status: 'PENDING',
       },
     })

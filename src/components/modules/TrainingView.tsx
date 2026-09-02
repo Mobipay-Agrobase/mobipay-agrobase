@@ -40,6 +40,13 @@ interface Training {
   materialsUsed?: string | null
   notes?: string | null
   groupId?: string | null
+  // ─── EKIBBO extensions (Scheduling + Reporting) ───
+  mainTopic?: string | null
+  funder?: string | null
+  findings?: string | null
+  challenges?: string | null
+  recommendations?: string | null
+  group?: { id: string; name: string; groupCode?: string | null } | null
   _count?: { attendance: number }
   attendance?: Array<{
     id: string
@@ -61,13 +68,26 @@ interface Farmer {
   phone?: string
 }
 
+// ─── Ekibbo training types (Ekibbo feedback: Group training or Farmer visit) ───
 const TRAINING_TYPES = [
   { value: 'GROUP_TRAINING', label: 'Group Training' },
-  { value: 'FARM_VISIT', label: 'Farm Visit' },
-  { value: 'DEMO_PLOT', label: 'Demo Plot' },
-  { value: 'WORKSHOP', label: 'Workshop' },
-  { value: 'FIELD_DAY', label: 'Field Day' },
+  { value: 'FARM_VISIT', label: 'Farmer Visit' },
 ]
+
+// ─── Ekibbo main topics ───
+const MAIN_TOPICS: Record<string, string> = {
+  BAMBOO: 'Bamboo',
+  REGENERATIVE_AGRICULTURE: 'Regenerative Agriculture',
+  FINANCIAL_LITERACY: 'Financial Literacy',
+}
+
+// ─── Ekibbo training funders ───
+const FUNDERS: Record<string, string> = {
+  EKIBBO: 'EKiBBO',
+  ETG: 'ETG',
+  ENABEL: 'Enabel',
+  DOEN: 'Doen',
+}
 
 const TRAINING_STATUS = [
   { value: 'SCHEDULED', label: 'Scheduled' },
@@ -96,7 +116,7 @@ export default function TrainingView() {
   const [trainings, setTrainings] = useState<Training[]>([])
   const [loading, setLoading] = useState(true)
   const [detail, setDetail] = useState<Training | null>(null)
-  const [activeTab, setActiveTab] = useState<'list' | 'flow'>('list')
+  const [activeTab, setActiveTab] = useState<'scheduling' | 'reports' | 'flow'>('scheduling')
 
   const fetchTrainings = useCallback(async () => {
     setLoading(true)
@@ -130,7 +150,9 @@ export default function TrainingView() {
 
   const totalAttendees = trainings.reduce((s, t) => s + (t._count?.attendance || 0), 0)
   const completedCount = trainings.filter(t => t.status === 'COMPLETED').length
-  const scheduledCount = trainings.filter(t => t.status === 'SCHEDULED').length
+  const scheduledCount = trainings.filter(t => t.status === 'SCHEDULED' || t.status === 'ONGOING').length
+  const reportedTrainings = trainings.filter(t => t.status === 'COMPLETED' || t.findings || t.challenges || t.recommendations)
+  const scheduledTrainings = trainings.filter(t => !reportedTrainings.includes(t))
 
   return (
     <div className="space-y-4">
@@ -154,34 +176,39 @@ export default function TrainingView() {
         </CardContent></Card>
       </div>
 
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'list' | 'flow')}>
+      {/* ─── Ekibbo two-part structure: Scheduling | Reporting ─── */}
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'scheduling' | 'reports' | 'flow')}>
         <div className="flex items-center justify-between">
           <TabsList>
-            <TabsTrigger value="list" className="gap-1.5"><ListChecks className="w-3.5 h-3.5" /> Trainings</TabsTrigger>
-            <TabsTrigger value="flow" className="gap-1.5"><ClipboardList className="w-3.5 h-3.5" /> How It Works</TabsTrigger>
+            <TabsTrigger value="scheduling" className="gap-1.5"><Calendar className="w-3.5 h-3.5" /> Scheduling</TabsTrigger>
+            <TabsTrigger value="reports" className="gap-1.5"><ClipboardList className="w-3.5 h-3.5" /> Reports</TabsTrigger>
+            <TabsTrigger value="flow" className="gap-1.5"><ListChecks className="w-3.5 h-3.5" /> How It Works</TabsTrigger>
           </TabsList>
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={() => exportToCSV(trainings, 'trainings')} disabled={trainings.length === 0} className="gap-2">
               <Download className="w-4 h-4" /> Export CSV
             </Button>
-            <Button onClick={() => { setSelectedTrainingId(null); setActiveModule('training-create') }} className="gap-2">
-              <Plus className="w-4 h-4" /> Schedule Training
-            </Button>
+            {activeTab !== 'reports' && (
+              <Button onClick={() => { setSelectedTrainingId(null); setActiveModule('training-create') }} className="gap-2">
+                <Plus className="w-4 h-4" /> Schedule Training
+              </Button>
+            )}
           </div>
         </div>
 
-        <TabsContent value="list" className="mt-4">
+        {/* ─── Part 1: Scheduling (planned trainings) ─── */}
+        <TabsContent value="scheduling" className="mt-4">
           {loading ? (
             <TrainingSkeleton />
-          ) : trainings.length === 0 ? (
+          ) : scheduledTrainings.length === 0 ? (
             <EmptyState
-              icon={GraduationCap}
+              icon={Calendar}
               title="No trainings scheduled"
-              description='Click "Schedule Training" to create the first one'
+              description='Click "Schedule Training" to plan the first one — type, main topic, funder, trainer and farmer group'
             />
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-              {trainings.map((t) => (
+              {scheduledTrainings.map((t) => (
                 <Card key={t.id} className="hover:shadow-md transition-shadow">
                   <CardContent className="p-5">
                     <div className="flex items-start gap-3 mb-3">
@@ -190,7 +217,7 @@ export default function TrainingView() {
                       </div>
                       <div className="min-w-0 flex-1">
                         <h4 className="font-semibold text-sm truncate">{t.topic}</h4>
-                        {t.trainerName && <p className="text-xs text-muted-foreground">Trainer: {t.trainerName}</p>}
+                        {t.mainTopic && <p className="text-xs text-muted-foreground">{MAIN_TOPICS[t.mainTopic] || t.mainTopic}</p>}
                       </div>
                       <div className="flex gap-1">
                         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setSelectedTrainingId(t.id); setActiveModule('training-edit') }}>
@@ -206,15 +233,80 @@ export default function TrainingView() {
                       <div className="flex items-center gap-1"><Calendar className="w-3 h-3" />{t.date ? new Date(t.date).toLocaleDateString() : '—'}</div>
                       {t.location && <div className="flex items-center gap-1"><MapPin className="w-3 h-3" />{t.location}</div>}
                     </div>
+                    {t.trainerName && <p className="text-xs text-muted-foreground mb-2">Trainer: {t.trainerName}</p>}
                     <div className="mt-3 flex items-center gap-2 flex-wrap">
                       {t.type && <Badge className={cn('text-[10px]', typeColor[t.type] || '')}>{(TRAINING_TYPES.find(x => x.value === t.type)?.label) || t.type}</Badge>}
                       {t.status && <Badge className={cn('text-[10px]', statusColor[t.status] || '')}>{t.status}</Badge>}
+                      {t.funder && <Badge variant="outline" className="text-[10px]">{FUNDERS[t.funder] || t.funder}</Badge>}
+                      {t.group && <Badge variant="outline" className="text-[10px] gap-1"><Users className="w-3 h-3" />{t.group.name}</Badge>}
                       <Badge variant="outline" className="text-[10px]">
                         <Users className="w-3 h-3 mr-1" />{t._count?.attendance || 0} enrolled
                       </Badge>
                     </div>
-                    <Button variant="outline" size="sm" className="w-full mt-3 gap-1.5" onClick={() => setDetail(t)}>
-                      <Eye className="w-3.5 h-3.5" /> Manage Enrollment & Attendance
+                    <div className="mt-3 grid grid-cols-2 gap-2">
+                      <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setDetail(t)}>
+                        <Eye className="w-3.5 h-3.5" /> Enrollment
+                      </Button>
+                      <Button size="sm" variant="secondary" className="gap-1.5" onClick={() => { setSelectedTrainingId(t.id); setActiveModule('training-report') }}>
+                        <ClipboardList className="w-3.5 h-3.5" /> Submit Report
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        {/* ─── Part 2: Reports (completed trainings with findings) ─── */}
+        <TabsContent value="reports" className="mt-4">
+          {loading ? (
+            <TrainingSkeleton />
+          ) : reportedTrainings.length === 0 ? (
+            <EmptyState
+              icon={ClipboardList}
+              title="No training reports yet"
+              description='Submit a report from the Scheduling tab after a training takes place — attendees, findings, challenges, recommendations & attachments'
+            />
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {reportedTrainings.map((t) => (
+                <Card key={t.id} className="hover:shadow-md transition-shadow">
+                  <CardContent className="p-5">
+                    <div className="flex items-start gap-3 mb-3">
+                      <div className="w-10 h-10 rounded-lg bg-emerald-100 dark:bg-emerald-950/40 flex items-center justify-center shrink-0">
+                        <ClipboardList className="w-5 h-5 text-emerald-600" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <h4 className="font-semibold text-sm truncate">{t.topic}</h4>
+                        <p className="text-xs text-muted-foreground">
+                          {t.date ? new Date(t.date).toLocaleDateString() : '—'}
+                          {t.durationMinutes ? ` · ${t.durationMinutes} min` : ''}
+                          {t.group ? ` · ${t.group.name}` : ''}
+                        </p>
+                      </div>
+                      <div className="flex gap-1">
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setSelectedTrainingId(t.id); setActiveModule('training-report') }}>
+                          <Pencil className="w-3.5 h-3.5" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-red-600 hover:text-red-700" onClick={() => handleDelete(t.id)}>
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 flex-wrap mb-3">
+                      {t.mainTopic && <Badge className="text-[10px] bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300">{MAIN_TOPICS[t.mainTopic] || t.mainTopic}</Badge>}
+                      {t.funder && <Badge variant="outline" className="text-[10px]">{FUNDERS[t.funder] || t.funder}</Badge>}
+                      {t.status && <Badge className={cn('text-[10px]', statusColor[t.status] || '')}>{t.status}</Badge>}
+                      <Badge variant="outline" className="text-[10px]">
+                        <Users className="w-3 h-3 mr-1" />{t._count?.attendance || 0} attendees
+                      </Badge>
+                    </div>
+                    {t.findings && <div className="text-xs mb-1.5"><span className="font-medium">Findings:</span> <span className="text-muted-foreground">{t.findings}</span></div>}
+                    {t.challenges && <div className="text-xs mb-1.5"><span className="font-medium">Challenges:</span> <span className="text-muted-foreground">{t.challenges}</span></div>}
+                    {t.recommendations && <div className="text-xs mb-1.5"><span className="font-medium">Recommendations:</span> <span className="text-muted-foreground">{t.recommendations}</span></div>}
+                    <Button variant="outline" size="sm" className="w-full mt-3 gap-1.5" onClick={() => { setSelectedTrainingId(t.id); setActiveModule('training-report') }}>
+                      <Eye className="w-3.5 h-3.5" /> View Full Report
                     </Button>
                   </CardContent>
                 </Card>
@@ -491,6 +583,9 @@ function TrainingDetail({ training, onUpdate }: { training: Training; onUpdate: 
               <div className="flex flex-wrap gap-2 mt-2">
                 {training.type && <Badge className={cn('text-[10px]', typeColor[training.type] || '')}>{training.type.replace(/_/g, ' ')}</Badge>}
                 {training.status && <Badge className={cn('text-[10px]', statusColor[training.status] || '')}>{training.status}</Badge>}
+                {training.mainTopic && <Badge variant="outline" className="text-[10px]">{MAIN_TOPICS[training.mainTopic] || training.mainTopic}</Badge>}
+                {training.funder && <Badge variant="outline" className="text-[10px]">{FUNDERS[training.funder] || training.funder}</Badge>}
+                {training.group && <Badge variant="outline" className="text-[10px] gap-1"><Users className="w-3 h-3" />{training.group.name}{training.group.groupCode ? ` (${training.group.groupCode})` : ''}</Badge>}
               </div>
             </div>
           </div>

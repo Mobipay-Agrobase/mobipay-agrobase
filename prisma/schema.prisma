@@ -311,12 +311,14 @@ model FarmerGroup {
   collectionDay     String?  // Monday, Tuesday, etc.
   collectionCenter  String?  // name of collection center
   youthCount        Int?     // number of youth in group
+  groupCode         String?  // EKIBBO group code (groups of 25-35 farmers share a code)
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   farmers    FarmerProfile[]
   vslaGroups VslaGroup[]
+  trainings  Training[]
 }
 
 // --- FARMER PROFILING ---
@@ -1584,17 +1586,25 @@ model Training {
   createdAt   DateTime @default(now())
 
   // ─── Training Program Flow (CRUD + enrollment) ───
-  type            String   @default("GROUP_TRAINING") // GROUP_TRAINING | FARM_VISIT | DEMO_PLOT | WORKSHOP | FIELD_DAY
+  type            String   @default("GROUP_TRAINING") // GROUP_TRAINING | FARM_VISIT
   status          String   @default("SCHEDULED")      // SCHEDULED | ONGOING | COMPLETED | CANCELLED
   conductedById   String?                            // User who conducts (extension officer)
   startTime       DateTime?
   endTime         DateTime?
-  durationMinutes Int?
+  durationMinutes Int?                               // Reporting: time spent on training
   expectedAttendees Int?
   materialsUsed   String?   // JSON array: ["Booklet", "Seed samples"]
   notes           String?
   groupId         String?   // optional: link to a FarmerGroup (group-based training)
   cohortId        String?   // optional: link to a program cohort (CCRP, SMILE, etc.)
+
+  // ─── EKIBBO Training Extensions (Ekibbo feedback — Scheduling + Reporting) ───
+  mainTopic       String?  // BAMBOO | REGENERATIVE_AGRICULTURE | FINANCIAL_LITERACY
+  funder          String?  // EKIBBO | ETG | ENABEL | DOEN
+  findings        String?  // Reporting: findings from the training
+  challenges      String?  // Reporting: challenges encountered
+  recommendations String?  // Reporting: recommendations
+  group           FarmerGroup? @relation(fields: [groupId], references: [id])
 
   attendance  TrainingAttendance[]
 }

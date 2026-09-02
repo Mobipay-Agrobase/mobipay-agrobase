@@ -52,3 +52,22 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Failed to create attachment' }, { status: 500 })
   }
 }
+
+export async function DELETE(request: Request) {
+  try {
+    const ctx = await getTenantContext()
+    const { searchParams } = new URL(request.url)
+    const id = searchParams.get('id') || ''
+    if (!id) return NextResponse.json({ error: 'id is required' }, { status: 400 })
+
+    const existing = await db.fileAttachment.findFirst({
+      where: { id, tenantId: ctx.tenantId },
+    })
+    if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+
+    await db.fileAttachment.delete({ where: { id } })
+    return NextResponse.json({ message: 'Deleted successfully' })
+  } catch (error) {
+    return NextResponse.json({ error: 'Failed to delete attachment' }, { status: 500 })
+  }
+}

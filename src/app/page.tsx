@@ -82,6 +82,7 @@ const LoansView = lazy(() => import('@/components/modules/LoansView'))
 const ReportsView = lazy(() => import('@/components/modules/ReportsView'))
 const TrainingView = lazy(() => import('@/components/modules/TrainingView'))
 const TrainingFormPage = lazy(() => import('@/components/modules/TrainingFormPage'))
+const TrainingReportPage = lazy(() => import('@/components/modules/TrainingReportPage'))
 const SettingsView = lazy(() => import('@/components/modules/SettingsView'))
 const CommunicationView = lazy(() => import('@/components/modules/CommunicationView'))
 const AgriTrackView = lazy(() => import('@/components/modules/AgriTrackView'))
@@ -279,6 +280,11 @@ function ModuleRouter() {
       if (!tid) return <div className='text-center p-8 text-muted-foreground'>No training selected</div>
       return <TrainingFormPage key={tid} mode="edit" trainingId={tid} />
     }
+    case 'training-report': {
+      const rid = useAppStore.getState().selectedTrainingId
+      if (!rid) return <div className='text-center p-8 text-muted-foreground'>No training selected</div>
+      return <TrainingReportPage key={rid} trainingId={rid} />
+    }
     case 'settings': return <SettingsView />
     case 'communication': return <CommunicationView />
     case 'agritrack': return <AgriTrackView />
@@ -443,7 +449,7 @@ export default function HomePage() {
         'farmer-detail', 'farmer-create', 'farmer-edit',
         'farmland-detail', 'farmland-create', 'farmland-edit',
         'cultivation-detail', 'cultivation-create', 'cultivation-edit',
-        'training-create', 'training-edit',
+        'training-create', 'training-edit', 'training-report',
         ...MASTER_DATA_KEYS,
       ])
       if ((role === 'SACCO_ADMIN' || role === 'SACCO_OFFICER') && !saccoAllowed.has(activeModule)) {
@@ -457,7 +463,7 @@ export default function HomePage() {
         'farmer-detail', 'farmer-create', 'farmer-edit',
         'farmland-detail', 'farmland-create', 'farmland-edit',
         'cultivation-detail', 'cultivation-create', 'cultivation-edit',
-        'training-create', 'training-edit',
+        'training-create', 'training-edit', 'training-report',
         ...MASTER_DATA_KEYS,
       ])
       if (role === 'VSLA_PROVIDER_ADMIN' && !vslaProviderAllowed.has(activeModule)) {
@@ -492,7 +498,7 @@ export default function HomePage() {
         'profile', 'support-tickets', 'farmer-detail', 'farmer-create', 'farmer-edit',
         'farmland-detail', 'farmland-create', 'farmland-edit',
         'cultivation-detail', 'cultivation-create', 'cultivation-edit',
-        'training-create', 'training-edit',
+        'training-create', 'training-edit', 'training-report',
         'settings',
         ...MASTER_DATA_KEYS,
       ])

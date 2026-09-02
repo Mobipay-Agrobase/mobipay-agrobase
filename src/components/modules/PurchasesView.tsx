@@ -492,15 +492,16 @@ const COMMODITIES = [
 ]
 
 // Commodity "Form" options — the physical form in which produce is delivered
+// Ekibbo feedback: coffee purchases only include Fresh, Kiboko, FAQ
 const COMMODITY_FORMS: Record<string, string[]> = {
-  coffee: ['Fresh Cherry', 'Wet Parchment', 'Dry Parchment', 'Green Beans', 'Dry Cherry'],
+  coffee: ['Fresh', 'Kiboko', 'FAQ'],
   cocoa: ['Wet Beans', 'Dry Beans', 'Pods'],
   vanilla: ['Green Vanilla', 'Cured Vanilla'],
   cassava: ['Fresh Tubers', 'Dry Chips', 'Flour'],
   avocado: ['Fresh Fruit'],
   jackfruit: ['Fresh Fruit', 'Slices'],
 }
-const DEFAULT_FORMS = ['Fresh Cherry', 'Wet Parchment', 'Dry Parchment', 'Green Beans', 'Other']
+const DEFAULT_FORMS = ['Fresh', 'Kiboko', 'FAQ', 'Other']
 
 const DEFAULT_MOISTURE_THRESHOLD = 13 // % — standard for coffee/cocoa parchment
 

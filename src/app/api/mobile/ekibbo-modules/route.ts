@@ -111,6 +111,7 @@ export async function GET(req: NextRequest) {
           const t = await db.training.findFirst({
             where: { id: match.id },
             include: {
+              group: { select: { id: true, name: true, groupCode: true } },
               attendance: {
                 orderBy: { createdAt: 'desc' },
                 include: { farmer: { select: { id: true, firstName: true, lastName: true, farmerCode: true, phone: true } } },
@@ -131,6 +132,16 @@ export async function GET(req: NextRequest) {
               status: t.status,
               expected_attendees: t.expectedAttendees,
               notes: t.notes ?? '',
+              // ─── EKIBBO extensions (Scheduling + Reporting) ───
+              main_topic: t.mainTopic ?? '',
+              funder: t.funder ?? '',
+              duration_minutes: t.durationMinutes,
+              findings: t.findings ?? '',
+              challenges: t.challenges ?? '',
+              recommendations: t.recommendations ?? '',
+              group_id: t.groupId ? numericId(t.groupId) : 0,
+              group_name: t.group?.name ?? '',
+              group_code: t.group?.groupCode ?? '',
               attendees: t.attendance.length,
               attendance: t.attendance.map(a => ({
                 id: numericId(a.id),
@@ -148,11 +159,17 @@ export async function GET(req: NextRequest) {
           select: {
             id: true, topic: true, date: true, location: true,
             trainerName: true, status: true, type: true,
+            mainTopic: true, funder: true, groupId: true,
             _count: { select: { attendance: true } },
           },
           orderBy: { date: 'desc' },
           take: 100,
         })
+        const groupIds = [...new Set(rows.map(r => r.groupId).filter(Boolean))] as string[]
+        const groups = groupIds.length
+          ? await db.farmerGroup.findMany({ where: { id: { in: groupIds } }, select: { id: true, name: true, groupCode: true } })
+          : []
+        const groupName = new Map(groups.map(g => [g.id, g.name]))
         return NextResponse.json({
           result: true,
           data: rows.map(t => ({
@@ -163,7 +180,33 @@ export async function GET(req: NextRequest) {
             trainer: t.trainerName,
             status: t.status,
             type: t.type,
+            main_topic: t.mainTopic ?? '',
+            funder: t.funder ?? '',
+            group_name: groupName.get(t.groupId ?? '') ?? '',
             attendees: t._count.attendance,
+          })),
+        })
+      }
+
+      // ── FARMER GROUPS (dropdown for the Ekibbo training scheduling form) ──
+      case 'farmer-groups': {
+        const groups = await db.farmerGroup.findMany({
+          where: { ...tf, isActive: true },
+          select: {
+            id: true, name: true, groupCode: true, location: true,
+            _count: { select: { farmers: true } },
+          },
+          orderBy: { name: 'asc' },
+          take: 500,
+        })
+        return NextResponse.json({
+          result: true,
+          data: groups.map(g => ({
+            id: numericId(g.id),
+            name: g.name,
+            group_code: g.groupCode ?? '',
+            location: g.location ?? '',
+            farmer_count: g._count.farmers,
           })),
         })
       }
@@ -348,6 +391,19 @@ export async function POST(req: NextRequest) {
       case 'trainings': {
         const topic = String(body.topic ?? '').trim()
         if (!topic) return bad('Topic is required')
+        // Resolve the farmer group (numeric id → real cuid, tenant-scoped)
+        let groupId: string | null = null
+        const groupNum = parseInt(String(body.group_id ?? body.groupId ?? ''), 10)
+        if (!Number.isNaN(groupNum) && groupNum > 0) {
+          const groups = await db.farmerGroup.findMany({
+            where: { ...tf, isActive: true },
+            select: { id: true },
+            take: 5000,
+          })
+          const match = groups.find(g => numericId(g.id) === groupNum)
+          if (!match) return bad('Farmer group not found', 404)
+          groupId = match.id
+        }
         const t = await db.training.create({
           data: {
             tenantId: ctx.tenantId,
@@ -364,6 +420,14 @@ export async function POST(req: NextRequest) {
             materialsUsed: body.materialsUsed || null,
             notes: body.notes || null,
             conductedById: ctx.userId,
+            // ─── EKIBBO extensions (Scheduling + Reporting) ───
+            mainTopic: body.mainTopic || body.main_topic || null,
+            funder: body.funder || null,
+            groupId,
+            durationMinutes: body.durationMinutes != null && body.durationMinutes !== '' ? Number(body.durationMinutes) : (body.duration_minutes != null && body.duration_minutes !== '' ? Number(body.duration_minutes) : null),
+            findings: body.findings || null,
+            challenges: body.challenges || null,
+            recommendations: body.recommendations || null,
           },
         })
         return NextResponse.json({
@@ -536,13 +600,29 @@ export async function PUT(req: NextRequest) {
     const { searchParams } = new URL(req.url)
     const type = searchParams.get('type') || ''
     const numeric = parseInt(searchParams.get('id') || '', 10)
-    if (Number.isNaN(numeric)) return bad('id is required')
+    // training-attendance is identified by body {training_id, farmer_id}, not ?id=
+    if (type !== 'training-attendance' && Number.isNaN(numeric)) return bad('id is required')
     const body = await req.json().catch(() => ({}))
 
     switch (type) {
       case 'trainings': {
         const match = await resolveTraining(tf, numeric)
         if (!match) return bad('Training not found', 404)
+        // Resolve the farmer group when provided (numeric id → real cuid)
+        let groupId: string | null | undefined
+        const groupNum = parseInt(String(body.group_id ?? body.groupId ?? ''), 10)
+        if (!Number.isNaN(groupNum) && groupNum > 0) {
+          const groups = await db.farmerGroup.findMany({
+            where: { ...tf, isActive: true },
+            select: { id: true },
+            take: 5000,
+          })
+          const gMatch = groups.find(g => numericId(g.id) === groupNum)
+          if (!gMatch) return bad('Farmer group not found', 404)
+          groupId = gMatch.id
+        } else if (groupNum === 0) {
+          groupId = null // explicit clear
+        }
         await db.training.update({
           where: { id: match.id },
           data: {
@@ -550,7 +630,7 @@ export async function PUT(req: NextRequest) {
             ...(body.description !== undefined && { description: body.description || null }),
             ...(body.date !== undefined && { date: body.date ? new Date(body.date) : undefined }),
             ...(body.location !== undefined && { location: body.location || null }),
-            ...(body.trainerName !== undefined && { trainerName: body.trainerName || null }),
+            ...((body.trainerName !== undefined || body.trainer !== undefined) && { trainerName: (body.trainerName ?? body.trainer) || null }),
             ...(body.type !== undefined && { type: body.type }),
             ...(body.status !== undefined && { status: body.status }),
             ...(body.expectedAttendees !== undefined && {
@@ -558,9 +638,61 @@ export async function PUT(req: NextRequest) {
                 ? Number(body.expectedAttendees) : null,
             }),
             ...(body.notes !== undefined && { notes: body.notes || null }),
+            // ─── EKIBBO extensions (Scheduling + Reporting) ───
+            ...(body.mainTopic !== undefined && { mainTopic: body.mainTopic || body.main_topic || null }),
+            ...(body.main_topic !== undefined && body.mainTopic === undefined && { mainTopic: body.main_topic || null }),
+            ...(body.funder !== undefined && { funder: body.funder || null }),
+            ...(groupId !== undefined && { groupId }),
+            ...(body.durationMinutes !== undefined && {
+              durationMinutes: body.durationMinutes !== null && body.durationMinutes !== '' ? Number(body.durationMinutes) : null,
+            }),
+            ...(body.duration_minutes !== undefined && body.durationMinutes === undefined && {
+              durationMinutes: body.duration_minutes !== null && body.duration_minutes !== '' ? Number(body.duration_minutes) : null,
+            }),
+            ...(body.findings !== undefined && { findings: body.findings || null }),
+            ...(body.challenges !== undefined && { challenges: body.challenges || null }),
+            ...(body.recommendations !== undefined && { recommendations: body.recommendations || null }),
           },
         })
         return NextResponse.json({ result: true, message: 'Training updated' })
+      }
+
+      // ── TRAINING ATTENDANCE (mark a farmer attended/absent) ──
+      case 'training-attendance': {
+        const trainingNum = parseInt(String(body.training_id ?? ''), 10)
+        const farmerNum = parseInt(String(body.farmer_id ?? ''), 10)
+        if (Number.isNaN(trainingNum) || Number.isNaN(farmerNum)) {
+          return bad('training_id and farmer_id are required')
+        }
+        const match = await resolveTraining(tf, trainingNum)
+        if (!match) return bad('Training not found', 404)
+        const farmer = await resolveFarmerByNumericId(tf, farmerNum)
+        if (!farmer) return bad('Farmer not found', 404)
+        const existing = await db.trainingAttendance.findFirst({
+          where: { trainingId: match.id, farmerId: farmer.id },
+        })
+        const attended = body.attended !== undefined ? !!body.attended : true
+        if (!existing) {
+          await db.trainingAttendance.create({
+            data: {
+              trainingId: match.id,
+              farmerId: farmer.id,
+              enrolledAt: new Date(),
+              enrollmentStatus: attended ? 'ATTENDED' : 'ENROLLED',
+              attended,
+              enrolledById: ctx.userId,
+            },
+          })
+        } else {
+          await db.trainingAttendance.update({
+            where: { id: existing.id },
+            data: {
+              attended,
+              enrollmentStatus: attended ? 'ATTENDED' : 'ABSENT',
+            },
+          })
+        }
+        return NextResponse.json({ result: true, message: attended ? 'Marked attended' : 'Marked absent' })
       }
 
       case 'farm-visits': {

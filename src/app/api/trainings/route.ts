@@ -26,6 +26,7 @@ export async function GET(request: Request) {
             orderBy: { createdAt: 'desc' },
             include: { farmer: { select: { id: true, firstName: true, lastName: true, farmerCode: true } } },
           },
+          group: { select: { id: true, name: true, groupCode: true } },
         },
         orderBy: { date: 'desc' },
       }),
@@ -43,6 +44,15 @@ export async function POST(request: Request) {
     const ctx = await getTenantContext(request)
     if (!ctx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     const body = await request.json()
+
+    // Optional: validate the farmer group belongs to this tenant
+    let groupId: string | null = body.groupId || null
+    if (groupId) {
+      const tf = buildTenantFilter(ctx, 'tenantId') as any
+      const group = await db.farmerGroup.findFirst({ where: { id: groupId, ...tf }, select: { id: true } })
+      if (!group) return NextResponse.json({ error: 'Farmer group not found' }, { status: 400 })
+    }
+
     const training = await db.training.create({
       data: {
         tenantId: ctx.tenantId,
@@ -58,6 +68,14 @@ export async function POST(request: Request) {
         expectedAttendees: body.expectedAttendees ? parseInt(body.expectedAttendees) : null,
         materialsUsed: body.materialsUsed || null,
         notes: body.notes || null,
+        // ─── EKIBBO extensions (Scheduling + Reporting) ───
+        mainTopic: body.mainTopic || null,
+        funder: body.funder || null,
+        groupId,
+        durationMinutes: body.durationMinutes != null && body.durationMinutes !== '' ? Number(body.durationMinutes) : null,
+        findings: body.findings || null,
+        challenges: body.challenges || null,
+        recommendations: body.recommendations || null,
       },
     })
     return NextResponse.json({ data: training }, { status: 201 })

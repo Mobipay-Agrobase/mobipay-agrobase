@@ -117,4 +117,27 @@ class ApiEkibboModules {
     if (res.statusCode == 200 && res.data['result'] == true) return true;
     throw Exception(_moduleError(res));
   }
+
+  /// Farmer groups for the training scheduling dropdown (Ekibbo feedback).
+  /// Row shape: {id, name, group_code, location, farmer_count}
+  static Future<List<Map<String, dynamic>>> farmerGroups() async {
+    final data = await _get('farmer-groups');
+    if (data is List) return data.cast<Map<String, dynamic>>();
+    return [];
+  }
+
+  /// Mark a farmer attended/absent on a training (Reporting flow).
+  static Future<bool> markAttendance(int trainingId, int farmerId, {bool attended = true}) async {
+    final res = await _dio().put(
+      '/mobile/ekibbo-modules',
+      queryParameters: {'type': 'training-attendance'},
+      data: {
+        'training_id': trainingId,
+        'farmer_id': farmerId,
+        'attended': attended,
+      },
+    );
+    if (res.statusCode == 200 && res.data['result'] == true) return true;
+    throw Exception(_moduleError(res));
+  }
 }

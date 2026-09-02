@@ -31,7 +31,7 @@ export type ModuleKey =
   'input-dist-create' | 'input-dist-edit' | 'input-dist-detail' |
   'farmland-detail' | 'farmland-create' | 'farmland-edit' |
   'cultivation-detail' | 'cultivation-create' | 'cultivation-edit' |
-  'training-create' | 'training-edit' | 'training-detail' |
+  'training-create' | 'training-edit' | 'training-detail' | 'training-report' |
   'roles-permissions' |
   'super-admin-overview' | 'super-admin-tenants' | 'super-admin-revenue' | 'super-admin-impact' | 'super-admin-users' | 'super-admin-mobile' | 'super-admin-config' | 'super-admin-module-store' | 'reset-dashboard' | 'reset-beneficiaries' | 'reset-vouchers' | 'reset-merchants' | 'reset-cash' | 'reset-reports'
 

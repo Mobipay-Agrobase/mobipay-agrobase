@@ -15,8 +15,9 @@ import { toast } from 'sonner'
 import { FarmerSearchSelect } from '@/components/ui/farmer-search-select'
 
 const COMMODITIES = ['coffee', 'cocoa', 'vanilla', 'cassava', 'avocado', 'jackfruit']
+// Ekibbo feedback: coffee purchases only include Fresh, Kiboko, FAQ
 const COMMODITY_FORMS: Record<string, string[]> = {
-  coffee: ['Fresh Cherry', 'Wet Parchment', 'Dry Parchment', 'Green Beans', 'Dry Cherry'],
+  coffee: ['Fresh', 'Kiboko', 'FAQ'],
   cocoa: ['Wet Beans', 'Dry Beans', 'Pods'],
   vanilla: ['Green Vanilla', 'Cured Vanilla'],
   cassava: ['Fresh Tubers', 'Dry Chips', 'Flour'],

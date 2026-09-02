@@ -55,6 +55,8 @@ export async function POST(request: NextRequest) {
         location: body.location || null,
         companyId: body.companyId || null,
         isVsla: body.isVsla || false,
+        // ─── EKIBBO extension: group code (groups of 25-35 farmers) ───
+        groupCode: body.groupCode?.trim() || null,
       },
       include: {
         _count: { select: { farmers: true } },

@@ -643,3 +643,26 @@ Stage Summary:
   correctly blocked from product creation
 - Profile self-service edit now works end-to-end on mobile (needs APK rebuild to
   ship the UI; the PUT endpoint itself is live once deployed)
+
+---
+Task ID: 4
+Agent: Super Z (main)
+Task: Implement Ekibbo team web+app feedback — Training module (Scheduling + Reporting) and Purchase coffee forms (Fresh, Kiboko, FAQ)
+
+Work Log:
+- Verified live site as sophie@ekibbo.com (EKB_MD): confirmed Training module single-form gap and coffee form list (Fresh Cherry, Wet Parchment, Dry Parchment, Green Beans, Dry Cherry)
+- Prisma: Training += mainTopic, funder, findings, challenges, recommendations + group relation (groupId FK); FarmerGroup += groupCode; durationMinutes reused for time-spent
+- DB pre-flight: 12 trainings, none had groupId set → FK safe; applied via prisma db push against Neon directUrl (additive nullable columns only, no data loss)
+- Web API: /api/trainings POST/PUT/GET accept+return Ekibbo fields (group included, tenant-scoped group validation); /api/farmer-groups POST/PUT accept groupCode; CREATED /api/attachments/upload (multipart→base64 data-URI in FileAttachment.fileUrl, 5MB cap, images/PDF only) + DELETE on /api/attachments — both were missing while AttachmentsSection already called them
+- Web UI: TrainingFormPage rebuilt as Ekibbo Scheduling form (type: Group Training|Farmer Visit only; Main topic: Bamboo/Regenerative Agriculture/Financial Literacy; specific topic; funder: EKiBBO/ETG/Enabel/Doen; date; trainer; farmer-group dropdown with codes); NEW TrainingReportPage (same fields + time-spent, attendee checkboxes from group members, findings/challenges/recommendations, AttachmentsSection photos+attendance form, submits status=COMPLETED and syncs ATTENDED/ABSENT); TrainingView tabs → Scheduling | Reports | How It Works with funder/group badges and Submit Report actions; store+page routing for 'training-report' module key added to SACCO/VSLA_PROVIDER/EKIBBO allowlists
+- Purchases: COMMODITY_FORMS.coffee → Fresh, Kiboko, FAQ in PurchaseFormPage + PurchasesView (DEFAULT_FORMS updated)
+- Mobile API (/api/mobile/ekibbo-modules): trainings GET list/detail return main_topic/funder/group_name/group_code/duration_minutes/findings/challenges/recommendations; POST/PUT accept them (+ group_id numeric→cuid resolution, tenant-scoped); NEW GET type=farmer-groups; NEW PUT type=training-attendance {training_id, farmer_id, attended} marking ATTENDED/ABSENT (PUT id-required guard bypassed for this type)
+- Mobile Flutter: ekibbo_training_form_screen rebuilt — Scheduling section (type/main topic/specific topic/funder/date/trainer/farmer-group dropdown with codes+member counts) + Reporting section (time spent, findings, challenges, recommendations) + attendance rows with Mark-Attended chips; ApiEkibboModules += farmerGroups(), markAttendance()
+- Verification: prisma validate OK; tsc --noEmit 0 errors (fixed missing = in useState, fixed ||/&& precedence spread in PUT); next build succeeds (BUILD routes compiled incl. attachments/upload); Flutter file structural checks balanced; dart SDK unavailable here so Flutter static analysis skipped
+- SECURITY: .env (prod DATABASE_URL, DIRECT_URL, NEXTAUTH_SECRET, ENCRYPTION_KEY) was TRACKED IN PUBLIC REPO — un-tracked via git rm --cached (kept locally); rotation still MANDATORY since history retains it
+
+Stage Summary:
+- Ekibbo feedback fully implemented on web; mobile app gets the same Scheduling+Reporting fields plus attendance marking (photo attachments web-only for now)
+- Coffee purchase forms now exactly Fresh, Kiboko, FAQ per Ekibbo
+- DB columns applied to production Neon; deployment = git push (Vercel auto-build)
+- Follow-ups for Eric: rotate all secrets in .env history; verify Vercel dashboard env vars exist (they predate repo .env — header says "Created by Vercel CLI"); Ekibbo's remaining module reviews (Farmer profiling → Master data list) pending their next feedback round

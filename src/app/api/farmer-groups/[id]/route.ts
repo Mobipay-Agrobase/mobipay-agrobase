@@ -19,6 +19,8 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     if (body.companyId !== undefined) data.companyId = body.companyId || null
     if (body.isVsla !== undefined) data.isVsla = body.isVsla
     if (body.isActive !== undefined) data.isActive = body.isActive
+    // ─── EKIBBO extension: group code (groups of 25-35 farmers) ───
+    if (body.groupCode !== undefined) data.groupCode = body.groupCode?.trim() || null
 
     const updated = await db.farmerGroup.update({
       where: { id },

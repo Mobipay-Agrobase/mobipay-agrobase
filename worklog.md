@@ -716,3 +716,22 @@ Work Log:
 Stage Summary:
 - Commit 7531f60 pushed; CI auto-deploy in progress.
 - Dashboard feedback verdict: ~35% overall — removals not applied, trainings-by-funder/inputs/loans analytics missing, drill-downs (year/season/month, geo, buyer) missing, role dashboards not unified.
+
+---
+Task ID: 10 (dashboard feedback rework)
+Agent: main (Super Z)
+Task: Implement ALL 8 EKiBBO dashboard feedback items + unified MD/OPS/MEC dashboard
+
+Work Log:
+- New API /api/dashboard/ekibbo-insights: 8 sections computed server-side (farmerProfile, trainings, purchases, sales, revenue, loans, inputs, loyalty) with season logic (A=Mar–Aug, B=Sep–Feb), youth=18–35, commodity normalization (coffee forms → Coffee), canonical buyer catalog per produce, geo drill tree (district→sub-county→village), per-section try/catch.
+- New component EkibboInsightsDashboard.tsx: unified dashboard; MD+OPS render with canApprove, MEC without. Sections per feedback order: approvals (gated) → farmer profiling (youth/gender/district/multi-crop; removals applied) → trainings by topic+funder → purchases (drill: year/season/month + geo, summary chart kept, coffee forms) → sales (drill + per-buyer companies) → revenue (per produce, time) → loans (all disaggregations) → inputs (all disaggregations + by type + seedlings by crop) → loyalty per year/season with View Details dialog.
+- EkbiboDashboards.tsx: exported shared primitives; replaced EkbMd/EkbOpsManager/EkbMec bodies with unified wrapper (removed FarmGeoMap + ~1,350 lines of old MD/OPS/MEC dashboard code).
+- Fixed pre-existing bug: sales aggregation used non-existent s.commodity (always 'Unknown') — now uses Sale.product.
+- Verified locally: eslint clean, tsc --noEmit clean (with raised heap; container OOMs on full build — CI build green).
+- CI run 33633693989 on 557cf0c: ALL 7 jobs green (lint, tests, build, migrate, docker, vercel deploy). Production dpl_t8QbNKTY4xsHEvhkQEkPQP2YcJVz READY.
+- LIVE verification (real data): login as sophie@ekibbo.com → /api/dashboard/ekibbo-insights HTTP 200, all 8 sections populated; counts reconcile with /api/purchases (3), /api/trainings (1), /api/sales, VSLA loans (0). Unauthenticated → 401.
+- Headless browser (agent-browser): logged in, dashboard renders all 9 sections with real numbers (1,979 farmers; Buikwe 1,132 = 696 M / 436 F / 260 youth); drill-down dialog verified end-to-end (time tab year/season/month + location tab district → sub-county); zero console/page errors. Screenshots: download/ekibbo-insights-drilldown.png, ekibbo-insights-geo-drill.png.
+- Mobile decision (evidence-based): NO mobile changes — mobile officer dashboard shows My Farmers/Total Hectares/Est. Yield (none of the removed KPIs; zero matches for removal-list strings across the app) and mobile Training form already captures funder + mainTopic, so the by-funder dashboard is fully feedable from mobile. Drill-down management analytics are web-facing.
+
+Stage Summary:
+- All 8 feedback items + NB implemented for real, deployed, and verified live with real data. Loyalty=0 and multiCrop=0 are data-driven (the only sale has no farmer link; no CropProduction rows) — not bugs.

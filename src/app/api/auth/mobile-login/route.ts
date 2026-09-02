@@ -26,10 +26,13 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Find user by email or phone
+    // Find user by email or phone (case-insensitive email — "Sophie@ekibbo.com" == "sophie@ekibbo.com")
     const user = await db.user.findFirst({
       where: {
-        OR: [{ email }, { phone: email }],
+        OR: [
+          { email: { equals: email, mode: 'insensitive' } },
+          { phone: email },
+        ],
         isActive: true,
       },
       select: {

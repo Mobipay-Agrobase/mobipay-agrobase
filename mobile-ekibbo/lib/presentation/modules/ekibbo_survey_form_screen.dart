@@ -254,6 +254,17 @@ class _EkibboSurveyFormScreenState extends State<EkibboSurveyFormScreen> {
                             onTap: () => setState(
                                 () => _questions.add(_QuestionDraft())),
                           ),
+                          const SizedBox(height: 16),
+
+                          // ─── Attachments (survey photos / evidence) ───
+                          const EkibboLabel(
+                              'Attachments (photos / survey evidence)'),
+                          EkibboAttachmentSection(
+                            relatedType: 'SURVEY',
+                            relatedId: _isEdit ? widget.id.toString() : null,
+                            uploadDescription:
+                                'Survey — ${_titleCtrl.text.trim().isEmpty ? "field attachment" : _titleCtrl.text.trim()}',
+                          ),
                           const SizedBox(height: 24),
                         ],
                       ),

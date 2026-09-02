@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
     const user = await db.user.findFirst({
       where: validated.phone
         ? { phone: identifier!, isActive: true }
-        : { email: identifier!.toLowerCase(), isActive: true },
+        : { email: { equals: identifier, mode: 'insensitive' }, isActive: true },
       select: {
         id: true,
         tenantId: true,

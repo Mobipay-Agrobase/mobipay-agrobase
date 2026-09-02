@@ -303,6 +303,17 @@ class _EkibboFarmVisitFormScreenState extends State<EkibboFarmVisitFormScreen> {
                             selectedIndex: _statusIndex,
                             onChanged: (i) => setState(() => _statusIndex = i),
                           ),
+                          const SizedBox(height: 16),
+
+                          // ─── Attachments (visit photos / farm evidence) ───
+                          const EkibboLabel(
+                              'Attachments (photos / visit evidence)'),
+                          EkibboAttachmentSection(
+                            relatedType: 'FARM_VISIT',
+                            relatedId: _isEdit ? widget.id.toString() : null,
+                            uploadDescription:
+                                'Farm visit — ${_topicCtrl.text.trim().isEmpty ? "field attachment" : _topicCtrl.text.trim()}',
+                          ),
                           const SizedBox(height: 24),
                         ],
                       ),

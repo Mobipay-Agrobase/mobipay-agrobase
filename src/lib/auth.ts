@@ -23,7 +23,7 @@ export const authOptions: NextAuthOptions = {
         const user = await db.user.findFirst({
           where: {
             OR: [
-              { email: credentials.email },
+              { email: { equals: credentials.email, mode: 'insensitive' } },
               { phone: credentials.email },
             ],
             isActive: true,

@@ -23,10 +23,10 @@ import 'package:agrobase_ekibbo/routes/argument_model.dart';
 /// formed groups with group codes).
 ///
 /// Part 2 — Reporting (edit mode): time spent (minutes), findings,
-/// challenges, recommendations, and attendee attendance marking.
-///
-/// Photo/attachment upload for reports is available on the web platform;
-/// mobile reporting covers the structured fields + attendance here.
+/// challenges, recommendations, attendee attendance marking, and
+/// attachments (field photos + scanned attendance form) — uploaded to the
+/// same /api/attachments store the web platform uses, so reports are
+/// complete from either side.
 /// ─────────────────────────────────────────────────────────────────────────
 class EkibboTrainingFormScreen extends StatefulWidget {
   const EkibboTrainingFormScreen({super.key, this.id});
@@ -418,7 +418,7 @@ class _EkibboTrainingFormScreenState extends State<EkibboTrainingFormScreen> {
                           _sectionTitle('Reporting'),
                           const SizedBox(height: 8),
                           Text(
-                            'Fill after the training takes place — time spent, attendees, findings, challenges and recommendations. Photos and the attendance form can be attached on the web platform.',
+                            'Fill after the training takes place — time spent, attendees, findings, challenges, recommendations and photo attachments.',
                             style: TextStyleConstant.robotoW400(
                               fontSize: 11,
                               color: ColorConstant.text79,
@@ -451,6 +451,16 @@ class _EkibboTrainingFormScreenState extends State<EkibboTrainingFormScreen> {
                             hint: 'What should be done next or improved?',
                             controller: _recommendationsCtrl,
                             maxLines: 3,
+                          ),
+                          const SizedBox(height: 16),
+
+                          // ─── Attachments (photos + attendance form) ───
+                          _label('Attachments (photos / attendance form)'),
+                          EkibboAttachmentSection(
+                            relatedType: 'TRAINING',
+                            relatedId: _isEdit ? widget.id.toString() : null,
+                            uploadDescription:
+                                'Training report — ${_topicCtrl.text.trim().isEmpty ? "field attachment" : _topicCtrl.text.trim()}',
                           ),
 
                           // ─── Attendees (enrollment + attendance marking) ───

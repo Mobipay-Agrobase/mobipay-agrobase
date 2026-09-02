@@ -1,5 +1,9 @@
+import 'dart:io';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import 'package:http_parser/http_parser.dart';
+import 'package:mime/mime.dart';
 
 import 'package:agrobase_ekibbo/domain/config/env_config.dart';
 import 'package:agrobase_ekibbo/infrastructure/local_data/shared_manager.dart';
@@ -139,5 +143,118 @@ class ApiEkibboModules {
     );
     if (res.statusCode == 200 && res.data['result'] == true) return true;
     throw Exception(_moduleError(res));
+  }
+
+  // ─── Attachments (EKiBBO reporting: photos + attendance form) ───────────
+  // Uses the same /api/attachments endpoints as the web platform, so files
+  // uploaded from mobile are visible on web and vice-versa. The middleware
+  // accepts the mobile Bearer token on these routes.
+
+  /// Long-timeout Dio for uploads (field connections can be slow).
+  static Dio _uploadDio() {
+    return Dio(BaseOptions(
+      baseUrl: EnvConfig.domainStream,
+      connectTimeout: const Duration(seconds: 30),
+      sendTimeout: const Duration(minutes: 3),
+      receiveTimeout: const Duration(minutes: 3),
+      validateStatus: (s) => true,
+      headers: {
+        'Authorization': 'Bearer ${SharedPreferencesProvider.instance.accessToken}',
+        'x-app-client': 'agrobase-ekibbo-flutter',
+      },
+    ));
+  }
+
+  /// Upload one file (photo / scanned attendance form) linked to a record.
+  /// Mirrors the web limit: images & PDF only, max 5 MB.
+  static Future<Map<String, dynamic>> uploadAttachment(
+    String filePath, {
+    required String relatedId,
+    required String relatedType,
+    String? description,
+  }) async {
+    final file = File(filePath);
+    if (!await file.exists()) {
+      throw Exception('Selected file is no longer available');
+    }
+    final size = await file.length();
+    const maxBytes = 5 * 1024 * 1024;
+    if (size > maxBytes) {
+      throw Exception('File too large (max 5 MB)');
+    }
+    final mime = lookupMimeType(filePath) ?? 'application/octet-stream';
+    const allowed = [
+      'image/jpeg',
+      'image/png',
+      'image/webp',
+      'image/heic',
+      'application/pdf',
+    ];
+    if (!allowed.contains(mime)) {
+      throw Exception('Images and PDF only');
+    }
+
+    final fileName = filePath.split(Platform.pathSeparator).last;
+    final form = FormData.fromMap({
+      'file': await MultipartFile.fromFile(
+        filePath,
+        filename: fileName,
+        contentType: MediaType.parse(mime),
+      ),
+      'relatedId': relatedId,
+      'relatedType': relatedType,
+      'description': description ?? '',
+    });
+
+    final res = await _uploadDio().post('/attachments/upload', data: form);
+    if ((res.statusCode == 200 || res.statusCode == 201) &&
+        res.data is Map &&
+        res.data['data'] is Map) {
+      return (res.data['data'] as Map).cast<String, dynamic>();
+    }
+    throw Exception(_attachmentError(res));
+  }
+
+  /// List attachments linked to a record (newest first). Bounded to 20
+  /// rows to keep the data-URI payload sane on field connections.
+  static Future<List<Map<String, dynamic>>> listAttachments(
+    String relatedType,
+    String relatedId,
+  ) async {
+    final res = await _dio().get(
+      '/attachments',
+      queryParameters: {
+        'relatedType': relatedType,
+        'relatedId': relatedId,
+        'limit': 20,
+      },
+    );
+    if (res.statusCode == 200 &&
+        res.data is Map &&
+        res.data['data'] is List) {
+      return (res.data['data'] as List)
+          .whereType<Map>()
+          .map((m) => m.cast<String, dynamic>())
+          .toList();
+    }
+    throw Exception(_attachmentError(res));
+  }
+
+  /// Delete an attachment by its id. Throws with the server message.
+  static Future<bool> deleteAttachment(String id) async {
+    final res = await _dio().delete(
+      '/attachments',
+      queryParameters: {'id': id},
+    );
+    if (res.statusCode == 200) return true;
+    throw Exception(_attachmentError(res));
+  }
+
+  static String _attachmentError(Response res) {
+    if (res.data is Map) {
+      final msg = (res.data['error'] ?? res.data['message'] ?? '').toString();
+      if (msg.isNotEmpty) return msg;
+    }
+    return 'Request failed (HTTP ${res.statusCode})';
   }
 }

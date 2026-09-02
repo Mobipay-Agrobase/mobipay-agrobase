@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getTenantContext, buildTenantFilter } from '@/lib/tenant'
 import { numericId } from '@/lib/mobile/ekibbo-adapter'
+import { farmerSelfAccess } from '@/lib/mobile/ekibbo-mobile-utils'
 
 /**
  * GET /api/mobile/ekibbo-cultivation/[farmId]
@@ -32,12 +33,17 @@ export async function GET(
     // Resolve the numeric farm id → the tenant-scoped FarmLand row.
     const farms = await db.farmLand.findMany({
       where: { farmer: { ...tf } },
-      select: { id: true },
+      select: { id: true, farmerId: true },
       take: 10000,
     })
     const farm = farms.find(f => numericId(f.id) === farmNumId)
     if (!farm) {
       return NextResponse.json({ result: true, data: { cultivation: [] } })
+    }
+
+    // Farmer self-scope: farmers may only view THEIR OWN farm cultivations.
+    if (!(await farmerSelfAccess(ctx, farm.farmerId))) {
+      return NextResponse.json({ result: false, message: 'Not authorized' }, { status: 403 })
     }
 
     const rows = await db.cultivation.findMany({

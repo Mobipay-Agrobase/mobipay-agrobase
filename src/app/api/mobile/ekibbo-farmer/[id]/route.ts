@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getTenantContext, buildTenantFilter } from '@/lib/tenant'
 import { mapFarmer, resolveFarmerByNumericId, farmerSelect } from '@/lib/mobile/ekibbo-adapter'
+import { farmerSelfAccess } from '@/lib/mobile/ekibbo-mobile-utils'
 
 /**
  * GET /api/mobile/ekibbo-farmer/[id]
@@ -22,6 +23,7 @@ export async function GET(
     const { id } = await params
 
     let farmer: Record<string, unknown> | null = null
+    let farmerRealId: string | null = null
 
     if (id === 'me') {
       const own = await db.farmerProfile.findFirst({
@@ -29,6 +31,7 @@ export async function GET(
         select: farmerSelect,
       })
       farmer = own ? mapFarmer(own as any) : null
+      farmerRealId = own?.id ?? null
     } else {
       const numId = parseInt(id, 10)
       if (Number.isNaN(numId)) {
@@ -36,10 +39,16 @@ export async function GET(
       }
       const own = await resolveFarmerByNumericId(tf, numId)
       farmer = own ? mapFarmer(own) : null
+      farmerRealId = own?.id ?? null
     }
 
     if (!farmer) {
       return NextResponse.json({ result: false, message: 'Farmer not found' }, { status: 404 })
+    }
+
+    // Farmer self-scope: farmer tokens may only read their OWN profile.
+    if (!(await farmerSelfAccess(ctx, farmerRealId))) {
+      return NextResponse.json({ result: false, message: 'Not authorized' }, { status: 403 })
     }
 
     return NextResponse.json({ result: true, data: { farmer_data: farmer } })
@@ -87,6 +96,11 @@ export async function PUT(
     const farmer = await resolveFarmerByNumericId(tf, numId)
     if (!farmer) {
       return NextResponse.json({ result: false, message: 'Farmer not found' }, { status: 404 })
+    }
+
+    // Farmer self-scope: farmer tokens may only edit their OWN profile.
+    if (!(await farmerSelfAccess(ctx, farmer.id))) {
+      return NextResponse.json({ result: false, message: 'Not authorized' }, { status: 403 })
     }
 
     const body = await req.json().catch(() => ({}))

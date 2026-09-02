@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getTenantContext, buildTenantFilter } from '@/lib/tenant'
 import { numericId, resolveFarmerByNumericId } from '@/lib/mobile/ekibbo-adapter'
+import { farmerSelfAccess, isFarmerRole } from '@/lib/mobile/ekibbo-mobile-utils'
 
 /**
  * GET /api/mobile/ekibbo-farmlands/[farmerId]
@@ -25,6 +26,14 @@ export async function GET(
     if (farmerNumId && !Number.isNaN(farmerNumId)) {
       const farmer = await resolveFarmerByNumericId(tf, farmerNumId)
       farmerRealId = farmer?.id ?? null
+    }
+
+    // Farmer self-scope: farmers must request THEIR OWN farmlands; the
+    // tenant-wide listing branch is staff-only.
+    if (isFarmerRole(ctx.role)) {
+      if (!farmerRealId || !(await farmerSelfAccess(ctx, farmerRealId))) {
+        return NextResponse.json({ result: false, message: 'Not authorized' }, { status: 403 })
+      }
     }
 
     const lands = await db.farmLand.findMany({

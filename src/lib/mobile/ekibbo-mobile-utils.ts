@@ -35,3 +35,38 @@ const STAFF_ROLES = new Set([
 export function isMobileStaff(role: string | undefined): boolean {
   return !!role && STAFF_ROLES.has(role)
 }
+
+// ── Farmer self-scope guard ────────────────────────────────────────────────
+
+const FARMER_ROLES = new Set(['EKB_FARMER', 'FARMER', 'VSLA_MEMBER'])
+
+/** Farmer self-service roles (EKB_FARMER + generic FARMER/VSLA_MEMBER). */
+export function isFarmerRole(role: string | undefined): boolean {
+  return !!role && FARMER_ROLES.has(role)
+}
+
+/**
+ * Farmer self-scope guard (defense-in-depth on top of tenant isolation).
+ *
+ * Farmer roles are SELF-SERVICE: they may only reach their OWN farmer
+ * profile and its farm lands — mirroring the web RBAC (EKB_FARMER has no
+ * farmers:list). Without this, a farmer token could read/edit ANY farmer's
+ * profile, tabs (bank/finance info), farm lands and cultivations inside the
+ * tenant by guessing or obtaining another farmer's numeric id (e.g. from a
+ * shared QR ID card). Staff roles pass through unchanged — tenant isolation
+ * already scopes them.
+ *
+ * Returns true when the caller may access `targetFarmerId`.
+ */
+export async function farmerSelfAccess(
+  ctx: { role?: string; userId?: string },
+  targetFarmerId: string | null | undefined,
+): Promise<boolean> {
+  if (!isFarmerRole(ctx?.role)) return true
+  if (!ctx?.userId || !targetFarmerId) return false
+  const own = await db.farmerProfile.findFirst({
+    where: { id: targetFarmerId, userId: ctx.userId },
+    select: { id: true },
+  })
+  return !!own
+}

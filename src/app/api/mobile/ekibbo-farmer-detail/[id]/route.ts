@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getTenantContext, buildTenantFilter } from '@/lib/tenant'
 import { mapFarmer, farmerSelect, resolveFarmerByNumericId, numericId } from '@/lib/mobile/ekibbo-adapter'
+import { farmerSelfAccess } from '@/lib/mobile/ekibbo-mobile-utils'
 
 /**
  * GET /api/mobile/ekibbo-farmer-detail/[id]  (id = numeric | 'me')
@@ -76,6 +77,11 @@ export async function GET(
 
     if (!farmerId) {
       return NextResponse.json({ result: false, message: 'Farmer not found' }, { status: 404 })
+    }
+
+    // Farmer self-scope: farmer tokens may only read their OWN profile.
+    if (!(await farmerSelfAccess(ctx, farmerId))) {
+      return NextResponse.json({ result: false, message: 'Not authorized' }, { status: 403 })
     }
 
     const [farmer, group, lands, loyalty, creditScore] = await Promise.all([

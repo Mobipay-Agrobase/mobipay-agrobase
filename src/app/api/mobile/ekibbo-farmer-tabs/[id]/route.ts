@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getTenantContext, buildTenantFilter } from '@/lib/tenant'
 import { resolveFarmerByNumericId, numericId } from '@/lib/mobile/ekibbo-adapter'
+import { farmerSelfAccess } from '@/lib/mobile/ekibbo-mobile-utils'
 
 /**
  * GET /api/mobile/ekibbo-farmer-tabs/[id]  (id = numeric upstream id)
@@ -65,6 +66,12 @@ export async function GET(
     const farmer = await resolveFarmerByNumericId(tf, numId)
     if (!farmer) {
       return NextResponse.json({ result: true, data: {} }, { status: 200 })
+    }
+
+    // Farmer self-scope: farmer tokens may only read their OWN tabs
+    // (tabs include bank / finance / family PII).
+    if (!(await farmerSelfAccess(ctx, farmer.id))) {
+      return NextResponse.json({ result: false, message: 'Not authorized' }, { status: 403 })
     }
 
     const [full, catalog, insurances, equipments, animals, crops] = await Promise.all([

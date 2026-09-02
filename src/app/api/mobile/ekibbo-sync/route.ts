@@ -3,6 +3,7 @@ import { db } from '@/lib/db'
 import { getTenantContext, buildTenantFilter } from '@/lib/tenant'
 import { generateFarmerCode } from '@/lib/farmer-code'
 import { resolveFarmerByNumericId, numericId } from '@/lib/mobile/ekibbo-adapter'
+import { isMobileStaff } from '@/lib/mobile/ekibbo-mobile-utils'
 
 /**
  * /api/mobile/ekibbo-sync
@@ -22,6 +23,9 @@ import { resolveFarmerByNumericId, numericId } from '@/lib/mobile/ekibbo-adapter
 export async function GET(req: NextRequest) {
   try {
     const ctx = await getTenantContext(req)
+    if (!isMobileStaff(ctx.role)) {
+      return NextResponse.json({ result: false, message: 'Not authorized' }, { status: 403 })
+    }
     const tf = buildTenantFilter(ctx, 'tenantId')
     const { searchParams } = new URL(req.url)
     const deviceId = searchParams.get('deviceId') || ''
@@ -54,6 +58,9 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const ctx = await getTenantContext(req)
+    if (!isMobileStaff(ctx.role)) {
+      return NextResponse.json({ result: false, message: 'Not authorized' }, { status: 403 })
+    }
     if (!ctx.tenantId) {
       return NextResponse.json({ result: false, message: 'No tenant context' }, { status: 400 })
     }

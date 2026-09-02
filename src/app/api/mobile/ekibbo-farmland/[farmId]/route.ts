@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getTenantContext, buildTenantFilter } from '@/lib/tenant'
 import { numericId, resolveFarmerByNumericId } from '@/lib/mobile/ekibbo-adapter'
+import { farmerSelfAccess } from '@/lib/mobile/ekibbo-mobile-utils'
 
 /**
  * GET /api/mobile/ekibbo-farmland/[farmId]
@@ -23,12 +24,17 @@ export async function GET(
     // Resolve numeric → real farm land (tenant-scoped via farmer)
     const all = await db.farmLand.findMany({
       where: { farmer: { ...tf } },
-      select: { id: true },
+      select: { id: true, farmerId: true },
       take: 5000,
     })
     const match = all.find(f => numericId(f.id) === numId)
     if (!match) {
       return NextResponse.json({ result: false, message: 'Farm land not found' }, { status: 404 })
+    }
+
+    // Farmer self-scope: farmers may only view their OWN farm lands.
+    if (!(await farmerSelfAccess(ctx, match.farmerId))) {
+      return NextResponse.json({ result: false, message: 'Not authorized' }, { status: 403 })
     }
 
     const land = await db.farmLand.findFirst({
@@ -96,12 +102,17 @@ export async function PUT(
 
     const all = await db.farmLand.findMany({
       where: { farmer: { ...tf } },
-      select: { id: true },
+      select: { id: true, farmerId: true },
       take: 5000,
     })
     const match = all.find(f => numericId(f.id) === numId)
     if (!match) {
       return NextResponse.json({ result: false, message: 'Farm land not found' }, { status: 404 })
+    }
+
+    // Farmer self-scope: farmers may only edit their OWN farm lands.
+    if (!(await farmerSelfAccess(ctx, match.farmerId))) {
+      return NextResponse.json({ result: false, message: 'Not authorized' }, { status: 403 })
     }
 
     // The mobile app sends MULTIPART FormData (photos + snake_case fields,

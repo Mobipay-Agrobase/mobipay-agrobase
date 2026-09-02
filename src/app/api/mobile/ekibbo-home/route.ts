@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getTenantContext, buildTenantFilter } from '@/lib/tenant'
 import { mapFarmer, farmerSelect } from '@/lib/mobile/ekibbo-adapter'
+import { isMobileStaff } from '@/lib/mobile/ekibbo-mobile-utils'
 
 /**
  * GET /api/mobile/ekibbo-home
@@ -21,6 +22,10 @@ import { mapFarmer, farmerSelect } from '@/lib/mobile/ekibbo-adapter'
 export async function GET(req: NextRequest) {
   try {
     const ctx = await getTenantContext(req)
+    if (!isMobileStaff(ctx.role)) {
+      // Field-officer dashboard — farmer accounts use /ekibbo-home-farmer.
+      return NextResponse.json({ result: false, message: 'Not authorized' }, { status: 403 })
+    }
     if (!ctx.tenantId) {
       return NextResponse.json({ result: false, message: 'No tenant context' }, { status: 400 })
     }

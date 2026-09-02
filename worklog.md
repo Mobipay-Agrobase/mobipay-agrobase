@@ -686,3 +686,19 @@ Stage Summary:
 - Production is live with all EKiBBO feedback changes (Training Scheduling+Reporting, coffee forms Fresh/Kiboko/FAQ, security untrack, mobile photo-attachment commit).
 - CI/CD path: push → GitHub Actions (quality → test → build → migrate → docker → vercel deploy --prebuilt --prod). Native Vercel git integration remains broken until org-level GitHub App reinstall (optional alternative).
 - Secrets now: DATABASE_URL, DIRECT_URL, ENCRYPTION_KEY, NEXTAUTH_SECRET, VERCEL_ORG_ID, VERCEL_PROJECT_ID, VERCEL_TOKEN.
+
+---
+Task ID: 8 (deploy session, cont.)
+Agent: main (Super Z)
+Task: CI deploy job debugging + final verification
+
+Work Log:
+- Run b924e88: deploy job failed at `vercel pull` — "Could not retrieve Project Settings".
+- Run 5c7ad74: failed identically despite explicit .vercel/project.json + corrected VERCEL_PROJECT_ID/VERCEL_ORG_ID secrets.
+- Local repro isolated the cause: with this token, GET /v9/projects?teamId → 200 but GET /v2/teams/{teamId} → 403 and GET /v2/user → 404 (personal-account scope; `vercel pull` calls these). Source-based `vercel deploy` is unaffected (verified by today's CLI deploy).
+- Rewrote deploy job to skip pull/prebuild: `vercel deploy --prod --yes` from source (commit 751957e). Vercel-side build injects env from project env vars; .vercelignore keeps upload lean.
+- Run 33628996252 on 751957e: ALL jobs green — quality, tests, migrate, build, docker, and "Deploy to Vercel (CI)" SUCCESS.
+- Verified deployment dpl_9dcXaF4RutHV5ogeMYmJB1htZ9gY (READY, commit 751957e) aliased to https://mobipay-agrobase.vercel.app; site + /api/trainings HTTP 200.
+
+Stage Summary:
+- CI/CD pipeline fully operational: push to main → GitHub Actions → production deploy on Vercel. This closes the gap left by the broken native Git integration (repo org move).

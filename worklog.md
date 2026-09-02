@@ -735,3 +735,24 @@ Work Log:
 
 Stage Summary:
 - All 8 feedback items + NB implemented for real, deployed, and verified live with real data. Loyalty=0 and multiCrop=0 are data-driven (the only sale has no farmer link; no CropProduction rows) — not bugs.
+
+---
+Task ID: 11 (module double-check + hardening)
+Agent: main (Super Z)
+Task: Double-check purchase/input/payment/loan/loyalty modules across web+mobile for ALL roles; fix everything found for real
+
+Work Log:
+- Wrote scripts (persisted in /home/z/my-project/scripts/): verify_modules.py (role matrix), verify_modules_r2.py, verify_lifecycle_loan_input.py, verify_final_round.py.
+- Round 1 matrix (7 roles × 8 web + 8 mobile endpoints): no 5xx anywhere; permission 403s match the documented matrix. Found + fixed 2 sandbox users with stale hashes (fieldofficer@ekibbo.test / farmer@ekibbo.test → password123 via users API).
+- BUG 1 (security, live-verified): cross-farmer IDOR — a farmer token could read ANY farmer's detail/tabs (bank/family PII), farmlands, cultivations, and EDIT other farmers (PUT farmer + farmland). Fixed with farmerSelfAccess()/isFarmerRole() guard on 8 mobile routes (ae0307c) + 6 regression tests. Verified live: farmer→other=403, farmer→own=200, staff=200.
+- BUG 2 (payments, live-verified): purchase-pay/sale-pay/disburse/coop flows created Payment rows WITHOUT paymentAccountId while GET filtered strictly on paymentAccount.tenantId → farmer payment settlements INVISIBLE in Payments module (PAID purchase existed, 0 payments shown). Fixed: GET includes purchaseId/saleId tenant scoping; all creators link to tenant PaymentAccount (84cf5da). Verified: payments now listed (MD/OPS/FINANCE/FIN_ASSISTANT).
+- BUG 3 (RBAC, live-verified): FIN_ASSISTANT (draft-only) could APPROVE purchases; no write gates on financial module routes (middleware only checks module:read). Fixed: purchases:approve required for approve/reject/pay; create/update/delete gates on purchases, sales, payments, input-distribution, loans (0437e47). Verified: FA approve/pay/delete=403, MD=200.
+- Farmer web sessions now self-scoped (purchases/sales/payments lists → own records only, mirroring mobile); farmer create purchase=403.
+- Payments module un-hidden for EKB (permission-gated): payments:read → MD/OPS/FINANCE/FIN_ASSISTANT; MEC/Extension/Farmer excluded.
+- Input master seeded (data-level): EKIBBO Input Store dealer + 8 feedback-catalog products (coffee/bamboo/cocoa/shade seedlings, tarpaulin, pruning saw, NPK + organic fertilizer) — mobile picker 4 categories/8 products verified. input-products POST validation (400/403) instead of opaque 500 (f5666be).
+- Lifecycles verified live: loans (create→list→update→delete, mobile, EKB_EXTENSION), input distribution (create→list→web delete), purchase (create→approve→pay→payment visible→delete, MD), loyalty (8M sale → 800 pts GOLD → web KPI loyal=1 → delete → revert).
+- All test rows cleaned up (ZZ-* purchases, test distribution, test sale, test loan deleted).
+- CI: runs on ae0307c/cancelled-by-concurrency, 84cf5da/f5666be/0437e47 all green; production deployed + live-verified after each.
+
+Stage Summary:
+- 3 real bugs found by the double-check, all fixed, tested (34/34), deployed, and live-verified. Full role matrix + lifecycles green for purchase/input/payment/loan/loyalty on web AND mobile APIs.

@@ -38,6 +38,25 @@ export async function POST(request: Request) {
     const ctx = await getTenantContext(request)
     const tf = buildTenantFilter(ctx, 'tenantId') as any
     const body = await request.json()
+    // Validate required fields up-front (dealerId is a required relation —
+    // without this check a missing dealer produced an opaque 500).
+    if (!body.name || !body.dealerId) {
+      return NextResponse.json(
+        { error: 'name and dealerId are required' },
+        { status: 400 },
+      )
+    }
+    // Verify the dealer belongs to the caller's tenant (no cross-tenant ids).
+    const dealer = await db.inputDealer.findFirst({
+      where: { id: body.dealerId, ...tf },
+      select: { id: true },
+    })
+    if (!dealer) {
+      return NextResponse.json(
+        { error: 'Input dealer not found in your tenant' },
+        { status: 403 },
+      )
+    }
     const product = await db.inputProduct.create({
       data: {
         tenantId: ctx.tenantId,

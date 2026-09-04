@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
+import '../../features/auth/presentation/pages/forgot_password_page.dart';
 import '../../features/dashboard/presentation/pages/dashboard_page.dart';
 import '../../features/farmers/presentation/pages/farmers_page.dart';
 import '../../features/farmers/presentation/pages/farmer_detail_page.dart';
+import '../../features/farmers/presentation/pages/farmer_edit_page.dart';
 import '../../features/farm_lands/presentation/pages/farm_lands_page.dart';
 import '../../features/farm_lands/presentation/pages/farm_land_detail_page.dart';
 import '../../features/farm_lands/presentation/pages/farm_land_form_page.dart';
@@ -80,10 +82,20 @@ class AppRouter {
             path: '/login',
             builder: (_, __) => const LoginPage(),
           ),
+          // Self-service password reset (OTP via SMS)
+          GoRoute(
+            path: '/forgot-password',
+            builder: (_, __) => const ForgotPasswordPage(),
+          ),
           GoRoute(
             path: '/farmers/:id',
             builder: (_, state) =>
                 FarmerDetailPage(id: state.pathParameters['id']!),
+          ),
+          GoRoute(
+            path: '/farmers/:id/edit',
+            builder: (_, state) =>
+                FarmerEditPage(farmerId: state.pathParameters['id']!),
           ),
           GoRoute(
             path: '/plots/:id',

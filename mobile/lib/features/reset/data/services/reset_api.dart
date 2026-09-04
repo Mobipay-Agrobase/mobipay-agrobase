@@ -4,7 +4,9 @@ import 'package:http/http.dart' as http;
 class ResetApi {
   static const baseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://10.0.2.2:3000',
+    // Production API by default so release APKs work out of the box.
+    // Override for local dev: flutter run --dart-define=API_BASE_URL=http://10.0.2.2:3000
+    defaultValue: 'https://mobipay-agrobase.vercel.app',
   );
 
   static String? _token;

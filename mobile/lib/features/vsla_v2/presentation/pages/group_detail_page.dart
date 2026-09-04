@@ -32,7 +32,7 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
     try {
       final res = await http.get(
         Uri.parse('${VslaV2Api.baseUrl}/api/vsla-v2/groups/${widget.groupId}'),
-        headers: VslaV2Api._headers,
+        headers: VslaV2Api.headers,
       );
       if (res.statusCode == 200) {
         setState(() {

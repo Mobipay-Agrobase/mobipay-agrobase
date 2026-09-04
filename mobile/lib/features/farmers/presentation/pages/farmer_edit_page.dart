@@ -46,7 +46,7 @@ class _FarmerEditPageState extends State<FarmerEditPage> {
     try {
       final res = await ApiClient().get('/api/farmers/${widget.farmerId}');
       if (res.statusCode == 200) {
-        final body = await res.stream.bytesToString();
+        final body = res.body;
         final data = jsonDecode(body) as Map<String, dynamic>;
         final farmer = (data['data'] ?? data) as Map<String, dynamic>;
         setState(() {
@@ -105,7 +105,13 @@ class _FarmerEditPageState extends State<FarmerEditPage> {
       if (_farmSize.text.trim().isNotEmpty) {
         body['farmSize'] = double.tryParse(_farmSize.text.trim());
       }
-      if (_mainCrops.text.trim().isNotEmpty) body['mainCrops'] = _mainCrops.text.trim();
+      if (_mainCrops.text.trim().isNotEmpty) {
+        body['mainCrops'] = _mainCrops.text
+            .split(',')
+            .map((c) => c.trim())
+            .where((c) => c.isNotEmpty)
+            .toList();
+      }
       if (_familyMembers.text.trim().isNotEmpty) {
         body['familyMembers'] = int.tryParse(_familyMembers.text.trim());
       }
@@ -122,7 +128,7 @@ class _FarmerEditPageState extends State<FarmerEditPage> {
           Navigator.pop(context, true);
         }
       } else {
-        final body = await res.stream.bytesToString();
+        final body = res.body;
         final data = body.isNotEmpty ? jsonDecode(body) as Map<String, dynamic> : <String, dynamic>{};
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -197,7 +203,7 @@ class _FarmerEditPageState extends State<FarmerEditPage> {
                 TextFormField(controller: _email, decoration: _dec('Email'), keyboardType: TextInputType.emailAddress),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
-                  value: _gender,
+                  initialValue: const ['Male', 'Female'].contains(_gender) ? _gender : null,
                   decoration: _dec('Gender'),
                   items: const [
                     DropdownMenuItem(value: 'Male', child: Text('Male')),
@@ -207,7 +213,7 @@ class _FarmerEditPageState extends State<FarmerEditPage> {
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
-                  value: _education,
+                  initialValue: const ['None', 'Primary', 'O-Level', 'A-Level', 'Diploma', 'Degree'].contains(_education) ? _education : null,
                   decoration: _dec('Education'),
                   items: const [
                     DropdownMenuItem(value: 'None', child: Text('None')),
@@ -221,7 +227,7 @@ class _FarmerEditPageState extends State<FarmerEditPage> {
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
-                  value: _maritalStatus,
+                  initialValue: const ['Single', 'Married', 'Divorced', 'Widowed'].contains(_maritalStatus) ? _maritalStatus : null,
                   decoration: _dec('Marital Status'),
                   items: const [
                     DropdownMenuItem(value: 'Single', child: Text('Single')),

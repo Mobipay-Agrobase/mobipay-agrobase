@@ -1,0 +1,85 @@
+# ============================================
+# Mobile CI — Flutter analyze + APK build
+#
+# Runs on every push that touches either Flutter app (mobile/ = main
+# officer/farmer app, mobile-ekibbo/ = EKIBBO field app) and on
+# workflow_dispatch. Produces release APK artifacts so the team can
+# always grab the latest build from the Actions "Artifacts" section
+# without a local Flutter setup.
+#
+# - Flutter stable channel (satisfies both pubspecs' sdk ^3.12.0).
+# - APKs are baked with the production API base URL; the main app also
+#   supports runtime override via its in-app settings screen.
+# - `flutter analyze` fails on errors only (pre-existing infos/warnings
+#   are non-fatal: --no-fatal-infos --no-fatal-warnings). Both apps
+#   currently analyze with 0 errors.
+# ============================================
+
+name: Mobile CI
+
+on:
+  push:
+    branches: [main, staging]
+    paths:
+      - 'mobile/**'
+      - 'mobile-ekibbo/**'
+      - '.github/workflows/mobile-ci.yml'
+  pull_request:
+    paths:
+      - 'mobile/**'
+      - 'mobile-ekibbo/**'
+      - '.github/workflows/mobile-ci.yml'
+  workflow_dispatch:
+
+jobs:
+  apk:
+    name: ${{ matrix.app }} — analyze + APK
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [mobile, mobile-ekibbo]
+        include:
+          - app: mobile
+            artifact-name: agrobase-mobile-apk
+          - app: mobile-ekibbo
+            artifact-name: agrobase-ekibbo-apk
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Flutter (stable)
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Flutter version
+        working-directory: ${{ matrix.app }}
+        run: flutter --version
+
+      - name: Install dependencies
+        working-directory: ${{ matrix.app }}
+        run: flutter pub get
+
+      - name: Analyze (errors are fatal)
+        working-directory: ${{ matrix.app }}
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings
+
+      - name: Build release APK
+        working-directory: ${{ matrix.app }}
+        run: flutter build apk --release --dart-define=API_BASE_URL=https://mobipay-agrobase.vercel.app
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact-name }}
+          path: ${{ matrix.app }}/build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 30
+          if-no-files-found: error

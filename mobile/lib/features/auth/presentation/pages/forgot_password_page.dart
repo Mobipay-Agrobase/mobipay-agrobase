@@ -37,7 +37,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
     try {
       final res = await ApiClient().post('/api/auth/reset-password/request', body: {'phone': phone});
       if (res.statusCode == 200) {
-        final body = await res.stream.bytesToString();
+        final body = res.body;
         final data = body.isNotEmpty ? jsonDecode(body) as Map<String, dynamic> : <String, dynamic>{};
         setState(() {
           _otpSent = true;
@@ -110,7 +110,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
           Navigator.of(context).popUntil((route) => route.isFirst);
         }
       } else {
-        final body = await res.stream.bytesToString();
+        final body = res.body;
         final data = body.isNotEmpty ? jsonDecode(body) as Map<String, dynamic> : <String, dynamic>{};
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(

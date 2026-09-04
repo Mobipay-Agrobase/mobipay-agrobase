@@ -24,6 +24,8 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
       farmerAnimals: { orderBy: { createdAt: 'desc' } },
       farmerEquipment: { orderBy: { createdAt: 'desc' } },
       cropProductions: { orderBy: { createdAt: 'desc' } },
+      // Recent produce/input sales for the mobile farmer detail page
+      sales: { take: 10, orderBy: { createdAt: 'desc' } },
     }
   })
   if (!farmer) return NextResponse.json({ error: 'Farmer not found' }, { status: 404 })
@@ -116,7 +118,80 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     }
   }
 
-  return NextResponse.json({ data: { ...farmerDecrypted, loyalty: loyaltySummary } })
+  // ─── Inline financial summary (loans + sales) ─────────────────────────────
+  // Computed for every tenant (unlike loyalty, which is EKIBBO-only) so the
+  // mobile farmer detail page can render loan-balance / sales summary cards.
+  // Never throws — a failure here must not break the farmer-detail fetch.
+  let financialSummary: any = null
+  try {
+    const [loanApps, vslaLoanRows, produceSales] = await Promise.all([
+      // LoanApplication has no tenantId column; scoping by farmerId is safe
+      // because the farmer itself was already tenant-filtered above.
+      db.loanApplication.findMany({
+        where: { farmerId: id },
+        select: { amount: true, status: true, disbursedAt: true },
+      }),
+      db.vslaLoan.findMany({
+        where: { ...tf, farmerId: id },
+        select: { amount: true, totalRepayable: true, amountRepaid: true, status: true },
+      }),
+      db.sale.findMany({
+        where: { ...tf, farmerId: id, category: 'PRODUCE' },
+        select: { totalAmount: true, status: true, createdAt: true, loanBalanceAfter: true },
+        orderBy: { createdAt: 'desc' },
+      }),
+    ])
+
+    // Agribusiness loans (loan module): outstanding = sum of active loan
+    // amounts. EKIBBO's produce-sale loan deduction writes `loanBalanceAfter`
+    // on each Sale, so when present the most recent value is authoritative.
+    const agriActive = loanApps.filter((l) => l.status === 'DISBURSED' || l.status === 'OVERDUE')
+    const agriTotalBorrowed = loanApps
+      .filter((l) => ['DISBURSED', 'OVERDUE', 'COMPLETED'].includes(l.status))
+      .reduce((sum, l) => sum + (l.amount || 0), 0)
+    const lastBalanceAfter = produceSales.find((s) => s.loanBalanceAfter != null)?.loanBalanceAfter ?? null
+    const agriOutstanding =
+      lastBalanceAfter != null ? lastBalanceAfter : agriActive.reduce((sum, l) => sum + (l.amount || 0), 0)
+
+    // VSLA loans: outstanding = totalRepayable - amountRepaid on active loans
+    const vslaActive = vslaLoanRows.filter((l) => l.status === 'DISBURSED' || l.status === 'OVERDUE')
+    const vslaOutstanding = vslaActive.reduce(
+      (sum, l) => sum + Math.max((l.totalRepayable || 0) - (l.amountRepaid || 0), 0), 0
+    )
+    const vslaTotalRepaid = vslaLoanRows.reduce((sum, l) => sum + (l.amountRepaid || 0), 0)
+
+    // Sales: only settled statuses count toward totals (matches loyalty logic)
+    const validSales = produceSales.filter((s) => s.status === 'COMPLETED' || s.status === 'PAID')
+    const ytdFrom = new Date(Date.UTC(new Date().getUTCFullYear(), 0, 1))
+    const totalSalesValue = validSales.reduce((sum, s) => sum + (s.totalAmount || 0), 0)
+    const ytdSalesValue = validSales
+      .filter((s) => s.createdAt >= ytdFrom)
+      .reduce((sum, s) => sum + (s.totalAmount || 0), 0)
+
+    financialSummary = {
+      currency: 'UGX',
+      loanBalance: Math.round(agriOutstanding + vslaOutstanding),
+      loanBalanceBreakdown: {
+        agribusiness: Math.round(agriOutstanding),
+        vsla: Math.round(vslaOutstanding),
+      },
+      activeLoanCount: agriActive.length + vslaActive.length,
+      totalBorrowed: Math.round(
+        agriTotalBorrowed + vslaLoanRows.reduce((sum, l) => sum + (l.amount || 0), 0)
+      ),
+      vslaTotalRepaid: Math.round(vslaTotalRepaid),
+      sales: {
+        totalAllTime: Math.round(totalSalesValue),
+        ytd: Math.round(ytdSalesValue),
+        count: validSales.length,
+        lastSaleAt: validSales[0]?.createdAt ?? null,
+      },
+    }
+  } catch (e) {
+    console.error('Inline financial summary error:', e)
+  }
+
+  return NextResponse.json({ data: { ...farmerDecrypted, loyalty: loyaltySummary, financialSummary } })
 }
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {

@@ -33,7 +33,7 @@ class _GroupSettingsPageState extends State<GroupSettingsPage> {
     try {
       final res = await http.get(
         Uri.parse('${VslaV2Api.baseUrl}/api/vsla-v2/groups/${widget.groupId}'),
-        headers: VslaV2Api._headers,
+        headers: VslaV2Api.headers,
       );
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body)['group'];
@@ -80,7 +80,7 @@ class _GroupSettingsPageState extends State<GroupSettingsPage> {
 
       final res = await http.put(
         Uri.parse('${VslaV2Api.baseUrl}/api/vsla-v2/groups/${widget.groupId}'),
-        headers: VslaV2Api._headers,
+        headers: VslaV2Api.headers,
         body: jsonEncode(body),
       );
 

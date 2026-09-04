@@ -775,3 +775,44 @@ Work Log:
 
 Stage Summary:
 - All approved development work shipped to GitHub @ 06f0a7a. APKs downloadable from Actions → Mobile CI artifacts (30-day retention). Ops hygiene still open: CRON_SECRET placeholder, ENCRYPTION_KEY backup, PAT rotation (token was pasted in chat; rotate after use).
+
+---
+Task ID: 13 (Mobile CI NDK saga — APK pipeline fully green)
+Agent: main (Super Z)
+Task: Debug and fix the Mobile CI release-APK builds until both apps ship artifacts
+
+Work Log:
+- Run 1 (06f0a7a): mobile APK build failed — app's own ndkVersion 29.0.14033849
+  is PREVIEW-licensed; AGP auto-install refused on runner. Fixed app pin to
+  28.1.13356709 (315151a). mobile-ekibbo passed config + built.
+- Run 2 (315151a): failure moved to :root_jailbreak_sniffer — the pub package
+  pins NDK 29.0.14033849 in ITS OWN build.gradle (scan of all 183 plugins:
+  only one pinning NDK). Added CI license-accept + NDK install steps (b88fd43).
+- Run 3 (b88fd43): the install step itself failed — `yes | sdkmanager` under
+  the runner's default `-e -o pipefail` shell: yes gets SIGPIPE when
+  sdkmanager exits → step fails. Also /dev/null hid sdkmanager's output.
+  Fixed: no `yes |` for install, capture real exit code, log output,
+  downgrade install failure to ::warning:: (Gradle fails naturally if the
+  NDK is truly missing). ALSO added root gradle NDK override in
+  mobile/android/build.gradle.kts via subprojects{ afterEvaluate{} } (cc50d93).
+- Run 4 (cc50d93): "Cannot run Project.afterEvaluate(Action) when the project
+  is already evaluated" — evaluationDependsOn(":app") (in the subprojects
+  block) pulls :app's evaluation forward during root configuration, so
+  registering afterEvaluate on it from subprojects{} is illegal. NDK-29
+  fallback install step meanwhile SUCCEEDED (pipefail fix worked).
+  Fixed: replaced the hook with gradle.afterProject — fires after every
+  project's evaluation, before AGP NDK resolution, immune to the
+  already-evaluated error (ec5042f).
+- Run 5 (ec5042f): FULL SUCCESS. Both jobs green, artifacts uploaded:
+  agrobase-mobile-apk 30.0 MB, agrobase-ekibbo-apk 51.1 MB (30-day retention,
+  expire 2026-10-04). Web CI/CD on ec5042f also success; production
+  mobipay-agrobase.vercel.app responds 200.
+
+Stage Summary:
+- APK pipeline is fully operational end-to-end: every push touching mobile/**
+  or mobile-ekibbo/** now produces downloadable release APKs from Actions
+  artifacts, built with the production API base URL.
+- Defense in depth for the NDK problem: (1) gradle.afterProject forces all
+  Android modules onto stable NDK 28.1.13356709; (2) CI accepts SDK licenses
+  and best-effort installs NDK 29.0.14033849 as fallback.
+- Downloads: repo → Actions → "Mobile CI" (run ec5042f) → Artifacts.

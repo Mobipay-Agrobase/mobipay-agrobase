@@ -13,6 +13,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Separator } from '@/components/ui/separator'
 import { Input } from '@/components/ui/input'
 import { EkbStepper, EkbTimelineRow, type StepDef } from '@/components/ui/ekb-stepper'
+import { AttachmentsSection } from '@/components/attachments/AttachmentsSection'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 
@@ -200,6 +201,13 @@ export default function PurchaseDetailPage({
             </CardContent>
           </Card>
         </div>
+
+        {/* ── Evidence attachments (moisture photos, weighing slips, receipts) ── */}
+        <AttachmentsSection
+          relatedId={purchaseId}
+          relatedType="purchase"
+          description="Moisture photos, weighing slips, signed receipts and other purchase evidence"
+        />
 
         {/* ── E2E traceability chain ── */}
         <Card>

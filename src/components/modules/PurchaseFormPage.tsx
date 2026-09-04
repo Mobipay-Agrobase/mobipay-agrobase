@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent } from '@/components/ui/card'
 import { toast } from 'sonner'
 import { FarmerSearchSelect } from '@/components/ui/farmer-search-select'
+import { useStagedAttachments, StagedAttachmentsInput } from '@/components/attachments/StagedAttachments'
 
 const COMMODITIES = ['coffee', 'cocoa', 'vanilla', 'cassava', 'avocado', 'jackfruit']
 // Ekibbo feedback: coffee purchases only include Fresh, Kiboko, FAQ
@@ -38,6 +39,7 @@ export default function PurchaseFormPage({
   const { setActiveModule } = useAppStore()
   const [loading, setLoading] = useState(mode === 'edit')
   const [saving, setSaving] = useState(false)
+  const staged = useStagedAttachments()
   const [form, setForm] = useState<Record<string, string>>({
     farmerId: '', commodity: 'coffee', form: '',
     totalWeight: '', moistureReading: '', moistureThreshold: String(DEFAULT_MOISTURE_THRESHOLD),
@@ -129,6 +131,17 @@ export default function PurchaseFormPage({
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || 'Failed to save')
+      // Upload staged evidence files now that the purchase id exists
+      const savedId = mode === 'edit' ? purchaseId : (data as any)?.data?.id
+      if (savedId && staged.staged.length > 0) {
+        const result = await staged.uploadAll(String(savedId), 'purchase')
+        staged.clear()
+        if (result.failures.length > 0) {
+          toast.warning(`Purchase saved, but ${result.failures.length} attachment(s) failed — retry from the purchase detail page`)
+        } else {
+          toast.success(`${result.uploaded} attachment(s) uploaded`)
+        }
+      }
       toast.success(mode === 'edit' ? 'Purchase updated' : 'Purchase created — submit it for approval from the detail page')
       setActiveModule('purchases')
     } catch (e: any) {
@@ -211,6 +224,14 @@ export default function PurchaseFormPage({
                   <div className="space-y-1.5"><Label>Quality Deduction (kg)</Label><Input type="number" step="any" min="0" value={form.qualityDeduction} onChange={e => update('qualityDeduction', e.target.value)} placeholder="0.00" /></div>
                   <div className="space-y-1.5"><Label>Daily Price (UGX/kg) *</Label><Input type="number" step="any" min="0" value={form.dailyPrice} onChange={e => update('dailyPrice', e.target.value)} required /></div>
                 </div>
+                <StagedAttachmentsInput
+                  staged={staged.staged}
+                  onAdd={staged.addFiles}
+                  onRemove={staged.remove}
+                  onDescribe={staged.describe}
+                  uploading={saving}
+                  hint="Moisture meter photos, weighing slips, signed receipts — images/PDF, max 5 MB each. Uploaded automatically when the purchase is saved."
+                />
               </CardContent>
             </Card>
 

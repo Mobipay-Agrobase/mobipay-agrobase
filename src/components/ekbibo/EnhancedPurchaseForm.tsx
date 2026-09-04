@@ -3,7 +3,7 @@
 import React, { useMemo, useState } from 'react'
 import { cn } from '@/lib/utils'
 import {
-  Loader2, Save, Calculator, Scale, DollarSign, Camera, Droplet,
+  Loader2, Save, Calculator, Scale, DollarSign, Droplet,
   Bug, AlertCircle, UserPlus, X
 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
@@ -14,6 +14,7 @@ import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { DialogFooter, DialogClose, Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { useStagedAttachments, StagedAttachmentsInput } from '@/components/attachments/StagedAttachments'
 import { toast } from 'sonner'
 
 export interface EnhancedPurchaseFormProps {
@@ -40,13 +41,13 @@ export function EnhancedPurchaseForm({ farmers: initialFarmers, onClose, onSaved
   const [showQuickAdd, setShowQuickAdd] = useState(false)
   const [quickAdd, setQuickAdd] = useState({ firstName: '', lastName: '', phone: '', district: '' })
   const [quickAdding, setQuickAdding] = useState(false)
+  const staged = useStagedAttachments()
   const [form, setForm] = useState<Record<string, string>>({
     farmerId: '',
     commodity: 'coffee',
     variety: '',
     totalWeight: '',
     moistureReading: '',
-    moisturePhotoUrl: '',
     defectCount: '',
     qualityDeduction: '',
     dailyPrice: '',
@@ -130,9 +131,8 @@ export function EnhancedPurchaseForm({ farmers: initialFarmers, onClose, onSaved
         totalAmount: calc.purchaseTotal,
         status: 'PENDING',
         approvalStatus: 'SUBMITTED',
-        // EKIBBO enhanced fields
+        // EKIBBO enhanced fields (evidence files upload after creation — see below)
         moistureReading: form.moistureReading ? parseFloat(form.moistureReading) : null,
-        moisturePhotoUrl: form.moisturePhotoUrl || null,
         defectCount: form.defectCount ? parseInt(form.defectCount) : null,
         qualityDeduction: form.qualityDeduction ? parseFloat(form.qualityDeduction) : null,
         dailyPrice,
@@ -148,6 +148,17 @@ export function EnhancedPurchaseForm({ farmers: initialFarmers, onClose, onSaved
       })
       const data = await res.json().catch(() => ({}))
       if (res.ok) {
+        // Upload staged evidence files now that the purchase exists
+        const purchaseId = (data as any)?.data?.id
+        if (purchaseId && staged.staged.length > 0) {
+          const result = await staged.uploadAll(String(purchaseId), 'purchase')
+          staged.clear()
+          if (result.failures.length > 0) {
+            toast.warning(`Purchase created, but ${result.failures.length} attachment(s) failed — retry from the purchase detail page`)
+          } else {
+            toast.success(`${result.uploaded} attachment(s) uploaded`)
+          }
+        }
         toast.success('Purchase created successfully')
         onSaved()
       } else {
@@ -260,17 +271,15 @@ export function EnhancedPurchaseForm({ farmers: initialFarmers, onClose, onSaved
       </div>
 
       <div className="space-y-1.5">
-        <Label>Moisture Photo URL</Label>
-        <div className="relative">
-          <Camera className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            value={form.moisturePhotoUrl}
-            onChange={e => update('moisturePhotoUrl', e.target.value)}
-            placeholder="https://...  (paste URL; mobile camera coming soon)"
-            className="pl-9"
-          />
-        </div>
-        <p className="text-[11px] text-muted-foreground">Paste a URL for now. Mobile app will support camera capture.</p>
+        <StagedAttachmentsInput
+          staged={staged.staged}
+          onAdd={staged.addFiles}
+          onRemove={staged.remove}
+          onDescribe={staged.describe}
+          uploading={saving}
+          label="Quality evidence"
+          hint="Moisture meter photos, weighing slips, signed receipts — images/PDF, max 5 MB each. Uploaded automatically when the purchase is saved."
+        />
       </div>
 
       <Separator />

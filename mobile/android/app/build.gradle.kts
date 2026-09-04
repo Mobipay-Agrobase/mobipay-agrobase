@@ -6,7 +6,12 @@ plugins {
 android {
     namespace = "com.mobipay.agrobase_mobile"
     compileSdk = flutter.compileSdkVersion
-    ndkVersion = "29.0.14033849"
+    // Keep aligned with mobile-ekibbo (28.1.13356709): NDK 29.0.14033849 is
+    // preview-licensed and CI runners cannot accept that license, so Gradle's
+    // auto-install fails there. 28.1 is the newest stable NDK that GitHub
+    // Actions runners resolve cleanly; sqlite3_flutter_libs (the only native
+    // compile in this app) builds fine with it.
+    ndkVersion = "28.1.13356709"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17

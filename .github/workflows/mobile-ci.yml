@@ -56,23 +56,40 @@ jobs:
 
       # root_jailbreak_sniffer (pub package) pins NDK 29.0.14033849, which
       # ships under the PREVIEW SDK license — runner images pre-accept only
-      # stable licenses, so AGP's auto-install of that NDK fails during
-      # Gradle configuration. Accept all licenses and pre-install the pinned
-      # NDK so `flutter build apk` succeeds.
+      # stable licenses, so AGP's auto-install of that NDK can fail during
+      # Gradle configuration. The app's root build.gradle.kts overrides every
+      # module onto stable NDK 28.1 (primary fix); this install step is a
+      # BEST-EFFORT fallback in case that override misses a module. It must
+      # never fail the job by itself — the Gradle build fails naturally if
+      # the NDK is genuinely missing. Note: `yes |` is avoided because the
+      # default shell (-o pipefail) turns `yes`'s SIGPIPE into a job failure.
       - name: Accept Android SDK licenses (incl. preview)
         shell: bash
         run: |
           SDKM="${ANDROID_HOME:-/usr/local/lib/android/sdk}/cmdline-tools/latest/bin/sdkmanager"
           [ -x "$SDKM" ] || SDKM="$(command -v sdkmanager)"
-          yes | "$SDKM" --licenses > /dev/null 2>&1 || true
+          echo "Using sdkmanager: $SDKM"
+          set +e
+          yes | "$SDKM" --licenses > /tmp/lic.log 2>&1
+          echo "license acceptance finished (exit $? ignored)"
+          tail -5 /tmp/lic.log
 
-      - name: Install NDK 29.0.14033849 (pinned by root_jailbreak_sniffer)
+      - name: Install NDK 29.0.14033849 (fallback for root_jailbreak_sniffer pin)
         if: matrix.app == 'mobile'
         shell: bash
         run: |
           SDKM="${ANDROID_HOME:-/usr/local/lib/android/sdk}/cmdline-tools/latest/bin/sdkmanager"
           [ -x "$SDKM" ] || SDKM="$(command -v sdkmanager)"
-          yes | "$SDKM" "ndk;29.0.14033849" > /dev/null
+          set +e
+          "$SDKM" --install "ndk;29.0.14033849" > /tmp/ndk.log 2>&1
+          RC=$?
+          tail -15 /tmp/ndk.log
+          if [ $RC -ne 0 ]; then
+            echo "::warning::sdkmanager could not install ndk;29.0.14033849 (exit $RC) — relying on the root ndkVersion override to stable 28.1"
+          else
+            echo "NDK 29.0.14033849 installed as fallback"
+          fi
+          ls "${ANDROID_HOME:-/usr/local/lib/android/sdk}/ndk/" || true
 
       - name: Set up Flutter (stable)
         uses: subosito/flutter-action@v2

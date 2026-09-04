@@ -54,6 +54,26 @@ jobs:
           distribution: temurin
           java-version: '17'
 
+      # root_jailbreak_sniffer (pub package) pins NDK 29.0.14033849, which
+      # ships under the PREVIEW SDK license — runner images pre-accept only
+      # stable licenses, so AGP's auto-install of that NDK fails during
+      # Gradle configuration. Accept all licenses and pre-install the pinned
+      # NDK so `flutter build apk` succeeds.
+      - name: Accept Android SDK licenses (incl. preview)
+        shell: bash
+        run: |
+          SDKM="${ANDROID_HOME:-/usr/local/lib/android/sdk}/cmdline-tools/latest/bin/sdkmanager"
+          [ -x "$SDKM" ] || SDKM="$(command -v sdkmanager)"
+          yes | "$SDKM" --licenses > /dev/null 2>&1 || true
+
+      - name: Install NDK 29.0.14033849 (pinned by root_jailbreak_sniffer)
+        if: matrix.app == 'mobile'
+        shell: bash
+        run: |
+          SDKM="${ANDROID_HOME:-/usr/local/lib/android/sdk}/cmdline-tools/latest/bin/sdkmanager"
+          [ -x "$SDKM" ] || SDKM="$(command -v sdkmanager)"
+          yes | "$SDKM" "ndk;29.0.14033849" > /dev/null
+
       - name: Set up Flutter (stable)
         uses: subosito/flutter-action@v2
         with:

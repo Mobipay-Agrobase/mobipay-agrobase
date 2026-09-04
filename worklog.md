@@ -756,3 +756,22 @@ Work Log:
 
 Stage Summary:
 - 3 real bugs found by the double-check, all fixed, tested (34/34), deployed, and live-verified. Full role matrix + lifecycles green for purchase/input/payment/loan/loyalty on web AND mobile APIs.
+
+---
+Task ID: 12 (mobile improvements ship + purchase attachments)
+Agent: main (Super Z)
+Task: Complete remaining mobile app development & improvement, finish web purchase-flow attachments, push to GitHub
+
+Work Log:
+- [carried over from session 6, commit 41e1833] Farmer detail mobile page: fixed broken data mapping (never unwrapped { data }, read non-existent fields), added loan-balance/total-sales financial summary cards + recent sales; backend GET /api/farmers/:id now embeds financialSummary + 10 recent sales. Wired orphan /forgot-password and /farmers/:id/edit pages. Removed dead broken code (vsla_v3, main_v3, secure_http_client); flutter analyze 0 errors both apps. New .github/workflows/mobile-ci.yml builds release APKs (both apps) + uploads 30-day artifacts.
+- [session 7, commit 06f0a7a] Web purchase-flow real attachment uploads:
+  * New src/components/attachments/StagedAttachments.tsx — stage files pre-creation, upload to /api/attachments/upload right after save (relatedType='purchase'); guards mirror backend limits (images/PDF, 5MB).
+  * PurchaseFormPage (live create/edit flow): evidence picker + post-save upload; partial failure keeps purchase saved, retry from detail page.
+  * PurchaseDetailPage: AttachmentsSection (training-report pattern) — view/download/upload/delete evidence at any stage; approvers can check moisture photos before approving.
+  * EnhancedPurchaseForm (unrouted orphan, gap-list item): staged uploader replaces paste-URL "Moisture Photo URL" field.
+  * Backend unchanged — upload route already accepts arbitrary relatedType; FileAttachment stores base64 data URIs.
+- Verified: tsc --noEmit clean, eslint clean, next build green (sandbox needed --max-old-space-size=3072 for the TS-check phase; 4GB box limit, not a code issue).
+- PUSHED to origin/main with user PAT (one-time URL, token never persisted in config/files): 8f6dc7c..06f0a7a. GitHub Actions: Mobile CI (first-ever Flutter APK run) + CI/CD both green/in-progress on 06f0a7a.
+
+Stage Summary:
+- All approved development work shipped to GitHub @ 06f0a7a. APKs downloadable from Actions → Mobile CI artifacts (30-day retention). Ops hygiene still open: CRON_SECRET placeholder, ENCRYPTION_KEY backup, PAT rotation (token was pasted in chat; rotate after use).

@@ -816,3 +816,49 @@ Stage Summary:
   Android modules onto stable NDK 28.1.13356709; (2) CI accepts SDK licenses
   and best-effort installs NDK 29.0.14033849 as fallback.
 - Downloads: repo → Actions → "Mobile CI" (run ec5042f) → Artifacts.
+
+---
+Task ID: 14 (P0 security fix — signed mobile tokens + fail-closed tenant filter)
+Agent: Super Z
+Task: Close the forgeable mobile Bearer token vulnerability and the empty-scope
+tenant filter fail-open found in the multi-tenant architecture audit.
+
+Work Log:
+- Audit finding: /api/auth/mobile-login issued plain
+  base64(userId:role:tenantId:timestamp) tokens and src/middleware.ts decoded
+  them with NO signature or expiry check — anyone knowing the format could
+  craft a SUPER_ADMIN token for ANY tenant, bypassing all tenant isolation.
+- Verified both Flutter apps treat the token as opaque (role/tenantId come
+  from the login response's `user` JSON, never decoded client-side) → token
+  format could change with ZERO client changes.
+- New src/lib/mobile/mobile-token.ts: HMAC-SHA256-signed tokens via WebCrypto
+  (crypto.subtle) so the SAME code runs in the Edge middleware and Node route
+  handlers; constant-time signature comparison; expiry enforced server-side
+  (default 30 days, MOBILE_TOKEN_TTL_DAYS override); verification fails
+  closed on ANY error. Secret: MOBILE_TOKEN_SECRET falling back to
+  NEXTAUTH_SECRET (already set in prod — no Vercel change strictly required).
+- mobile-login/route.ts now issues signed tokens via createMobileToken().
+- middleware.ts Bearer path now verifies signature + expiry via
+  verifyMobileToken(); old unsigned tokens are rejected (401 → re-login).
+- tenant.ts buildTenantFilter: non-super-admin + EMPTY tenant scope now
+  returns { field: { in: [] } } (matches NOTHING). Previously returned {}
+  (unfiltered) which leaked cross-tenant data. Verified all ~15 call-site
+  patterns are spread-based, so `in: []` is safe.
+- Tests: src/lib/__tests__/mobile-token.test.ts (12 tests — roundtrip, the
+  original forge exploit, SUPER_ADMIN escalation via tamper, expiry, secret
+  rotation, missing-secret fail-closed, malformed inputs) and
+  tenant-filter.test.ts (6 tests). Full suite: 52/52 pass. tsc --noEmit
+  clean. eslint clean on all changed files.
+
+Stage Summary:
+- The forgeable-token hole is closed: signing key lives only server-side;
+  crafted SUPER_ADMIN/cross-tenant tokens are rejected (regression-tested).
+- Deployment impact: ALL existing mobile sessions are invalidated once —
+  field officers re-login once (login issues signed tokens; both apps
+  handle 401 → login screen). Web/NextAuth users unaffected.
+- Vercel: nothing required (NEXTAUTH_SECRET fallback). Recommended: add
+  MOBILE_TOKEN_SECRET (random 32+ chars) to decouple mobile-session
+  rotation from NextAuth; redeploy after adding any env var.
+- Follow-ups NOT yet done (next P0/P1 candidates): ekibbo app stores token
+  in plaintext SharedPreferences + accepts bad TLS certs (MyHttpOverrides);
+  SUPER_ADMIN simulate_tenant cookie is unsigned (web-side equivalent).

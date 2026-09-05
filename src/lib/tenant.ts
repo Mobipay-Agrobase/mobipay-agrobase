@@ -87,6 +87,8 @@ export async function getTenantContext(_req?: NextRequest | Request): Promise<Te
  * Build a Prisma where clause for tenant-scoped queries.
  * Returns an empty object for SUPER_ADMIN (no filtering),
  * or an `in` filter for the allowed tenant IDs.
+ * A non-super-admin with an empty scope gets a never-matching filter
+ * (fail-closed) instead of an unfiltered query.
  *
  * @param field - The Prisma field name to filter on (default: 'tenantId')
  *
@@ -99,8 +101,15 @@ export async function getTenantContext(_req?: NextRequest | Request): Promise<Te
  * ```
  */
 export function buildTenantFilter(ctx: TenantContext, field: string = 'tenantId'): Record<string, unknown> {
-  if (ctx.isSuperAdmin || ctx.tenantScope.length === 0) {
-    return {} // No filtering for super admin
+  // SUPER_ADMIN (not simulating) sees everything.
+  if (ctx.isSuperAdmin) {
+    return {}
+  }
+  // Fail CLOSED: a non-super-admin with an empty tenant scope matches NOTHING.
+  // (Previously this returned {} — an unfiltered query that leaked cross-tenant
+  // data. An empty `in: []` filter is safely spreadable just like the normal case.)
+  if (ctx.tenantScope.length === 0) {
+    return { [field]: { in: [] } }
   }
   return { [field]: { in: ctx.tenantScope } }
 }

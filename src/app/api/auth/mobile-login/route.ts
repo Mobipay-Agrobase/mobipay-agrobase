@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { verifyPassword } from '@/lib/password'
+import { createMobileToken } from '@/lib/mobile/mobile-token'
 
 /**
  * POST /api/auth/mobile-login
  *   Custom login endpoint for the Flutter mobile app.
- *   Returns a JWT-like token + user info as JSON (not cookie-based).
+ *   Returns a signed token + user info as JSON (not cookie-based).
  *
  *   Body: { email: string, password: string }
  *   Returns: { token, user: { id, email, name, role, tenantId } }
@@ -80,10 +81,12 @@ export async function POST(request: NextRequest) {
       data: { lastLogin: new Date() },
     })
 
-    // Generate a token containing user info (base64-encoded).
-    // Format: base64(userId:role:tenantId:timestamp)
-    // The middleware decodes this WITHOUT a DB call (Edge Runtime can't use Prisma).
-    const token = Buffer.from(`${user.id}:${user.role}:${user.tenantId}:${Date.now()}`).toString('base64')
+    // Issue a SIGNED token containing user info.
+    // Format: base64url(payload JSON).base64url(HMAC-SHA256(payload))
+    // The middleware verifies the signature + expiry WITHOUT a DB call
+    // (Edge Runtime can't use Prisma). Old unsigned tokens are rejected.
+    // Signing key: MOBILE_TOKEN_SECRET, falling back to NEXTAUTH_SECRET.
+    const token = await createMobileToken(user.id, user.role, user.tenantId)
 
     return NextResponse.json({
       token,

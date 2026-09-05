@@ -161,28 +161,26 @@ export async function middleware(request: NextRequest) {
   })
 
   // If no NextAuth cookie, try Bearer token (mobile app)
-  // The mobile app authenticates via /api/auth/mobile-login which returns
-  // a base64(userId:role:tenantId:timestamp) token. The middleware decodes
-  // it WITHOUT a DB call (Edge Runtime can't use Prisma).
+  // The mobile app authenticates via /api/auth/mobile-login which returns a
+  // signed token: base64url(payload).base64url(HMAC-SHA256(payload)).
+  // We verify the signature AND expiry WITHOUT a DB call (Edge Runtime can't
+  // use Prisma). Unsigned/old-format/tampered/expired tokens are rejected.
   if (!token?.userId) {
     const authHeader = request.headers.get('authorization')
     if (authHeader?.startsWith('Bearer ')) {
       const bearerToken = authHeader.slice(7)
       try {
-        const decoded = Buffer.from(bearerToken, 'base64').toString('utf-8')
-        const parts = decoded.split(':')
-        if (parts.length >= 4) {
-          const [bearerUserId, bearerRole, bearerTenantId] = parts
-          if (bearerUserId && bearerRole && bearerTenantId) {
-            token = {
-              userId: bearerUserId,
-              role: bearerRole,
-              tenantId: bearerTenantId,
-            } as any
-          }
+        const { verifyMobileToken } = await import('@/lib/mobile/mobile-token')
+        const payload = await verifyMobileToken(bearerToken)
+        if (payload) {
+          token = {
+            userId: payload.userId,
+            role: payload.role,
+            tenantId: payload.tenantId,
+          } as any
         }
       } catch {
-        // Invalid bearer token — fall through to 401
+        // Token verification failed (bad signature/expiry/secret) — fall through to 401
       }
     }
   }

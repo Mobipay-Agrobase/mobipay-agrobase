@@ -862,3 +862,36 @@ Stage Summary:
 - Follow-ups NOT yet done (next P0/P1 candidates): ekibbo app stores token
   in plaintext SharedPreferences + accepts bad TLS certs (MyHttpOverrides);
   SUPER_ADMIN simulate_tenant cookie is unsigned (web-side equivalent).
+
+---
+Task ID: 15 (P0 fix deployed to production + live verification)
+Agent: Super Z
+Task: Ship the signed-token + fail-closed-filter fix (cf72280, fa1e37b) to
+production and verify the exploit is dead on the live API.
+
+Work Log:
+- Pushed fa1e37b to origin/main → CI/CD run 33951239350: all jobs green
+  (lint/typecheck, DB schema sync, unit tests 52/52 incl. 18 new, Next build,
+  Docker → GHCR, Vercel deploy).
+- Added MOBILE_TOKEN_SECRET (64-char encrypted, production target) to the
+  Vercel project env via API BEFORE the deploy step ran, so the deployment
+  picked it up. NEXTAUTH_SECRET fallback remains as safety net.
+- Production deploy: aliased to https://mobipay-agrobase.vercel.app
+  (✓ Ready, 2026-09-05 07:04 UTC).
+- LIVE VERIFICATION against production:
+  * GET /api/health → 200
+  * Forged OLD-format token base64(attacker:SUPER_ADMIN:clFakeTenantId:ts)
+    as Bearer → 401 (this exact attack authenticated pre-fix)
+  * New-format token with garbage signature → 401
+  * No auth header → 401
+  * POST /api/auth/mobile-login (bad creds) → clean 401, endpoint healthy,
+    no 500s from the signing path.
+
+Stage Summary:
+- The forgeable-token vulnerability is CLOSED in production, verified live.
+- Mobile users will be logged out once (old unsigned tokens rejected);
+    re-login issues signed tokens — both Flutter apps are unaffected
+  code-wise (token treated as opaque).
+- Web/NextAuth users completely unaffected.
+- Rotation lever: changing MOBILE_TOKEN_SECRET in Vercel (then redeploy)
+    invalidates all mobile sessions without touching web sessions.

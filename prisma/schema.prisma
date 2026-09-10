@@ -351,8 +351,8 @@ model FarmerProfile {
   enrollmentDate  DateTime @default(now())
   enrollmentPlace String?  // At Farmer Place / At Cooperative / At Farmer Organization / At Warehouse
   icsYear         String?  // Year of ICS (show when isCertified = true)
-  farmerRegistrationUnder String?  // Agri / Aqua / other registration category
-  cooperativeId   String?  // linked cooperative (for FO users)
+  // Second review: "Registration under" removed (meaning unclear);
+  // cooperative removed in favor of farmer group (groupId above).
 
   // ─── ID Proof ───
   idProofPhotoUrl String?
@@ -365,17 +365,18 @@ model FarmerProfile {
   gpsLatitude     Float?
   gpsLongitude    Float?
   country         String?  // Uganda, Ghana, Kenya
-  province        String?  // Region/Province
+  // Second review: "Province" removed — Uganda has no provinces.
   district        String?
   commune         String?  // Sub-county / Constituency
   villageName     String?  // Village name (free text if no geo hierarchy)
   zipCode         String?
 
-  // ─── Family (from Excel: Family Information section) ───
-  familyMembers   Int?
+  // ─── Family (Second review: Spouse name → Next of kin contact;
+  //      Family members → Household size) ───
+  familyMembers   Int?     // Household size
   childrenUnder18 Int?
   schoolGoingChildren Int?
-  spouseName      String?
+  spouseName      String?  // Next of kin contact (relabeled per second review)
   childrenMaleUnder18  Int?
   childrenFemaleUnder18 Int?
   schoolGoingMale   Int?
@@ -403,16 +404,12 @@ model FarmerProfile {
   loanRepaymentDate DateTime?
 
   // ─── Insurance (from Excel: Insurance Information — multiple types) ───
-  insuranceData   String?  // JSON: { life: {provider,amount,enrolledDate,endDate}, health: {...}, crop: {...}, social: {...}, other: "..." }
+  insuranceData   String?  // JSON: { life: {provider,payoutAmount,season}, health: {...}, crop: {...}, social: {...}, other: "..." }
 
-  // ─── Farm Equipment (from Excel: Farm Equipment — multiple items) ───
-  farmEquipment   String?  // JSON: [{item, count}]
-
-  // ─── Farm ───
+  // ─── Farm (Second review: livestock + equipment modules removed) ───
   farmSize        Float?   // hectares
   farmOwnership   String?  // Owned, Rent, Lease
   mainCrops       String?  // JSON array of crop names
-  livestockTypes  String?  // JSON array
 
   // ─── EKIBBO Farmer Extensions (nullable) ───
   shadeTreeVarieties String?  // JSON: [{variety: "Banana", count: 5}, {variety: " Albizia", count: 3}]
@@ -452,8 +449,6 @@ model FarmerProfile {
   cropProductions CropProduction[]
   farmerBankAccounts FarmerBankAccount[]
   farmerInsurances   FarmerInsurance[]
-  farmerAnimals      FarmerAnimalHusbandry[]
-  farmerEquipment    FarmerFarmEquipment[]
   vslaMemberships VslaMember[]
   farmVisits      FarmVisit[]      @relation("FarmerVisits")
   impactAssessments ImpactAssessment[] @relation("FarmerImpact")
@@ -528,20 +523,24 @@ model FarmLand {
   sizeHectares Float?
   latitude    Float?
   longitude   Float?
+  // Second review (G-vii): ownership — Rented/leased, Sales agreement,
+  // Inherited, Family owned, Communal owned
   landOwnership String?
-  waterSource String?
   soilFertility String?
   isActive    Boolean  @default(true)
 
-  // ─── Farm Land Creation fields (from Excel: 26 new fields) ───
-  landSurveyNo    String?
-  approachRoad    String?  // JSON: ["close main road","inner field","close main canal"]
-  landTopology    String?  // Valley, Plains, Plateaus
-  landGradient    String?  // JSON: ["Up Land","Low Land"]
-  landDocumentUrl String?
-  powerSource     String?  // Solar, Electricity, Fuel
-  farmPhotoUrl    String?
-  // Soil & Irrigation
+  // ─── Second review (G): farm land rework ───
+  // (G-v) land typology REPLACED by neighbouring physical features:
+  // Rivers, Lakes, Swamp, Forest, Natural forest, Planted forest, Valley,
+  // Hill/mountain, Game park/Game reserve (JSON array, multi-select)
+  neighbouringFeatures String? // JSON: ["Rivers", "Swamp", ...]
+  // (G-ix) approach road REPLACED by access map (GPS point)
+  accessMapLat  Float?
+  accessMapLng  Float?
+  // Removed per second review: waterSource (ii), landSurveyNo (iv),
+  // powerSource (iii), farmPhotoUrl (vi), landGradient (viii),
+  // landDocumentUrl (i — replaced by polygon, FarmPolygon relation below),
+  // landTopology (v), approachRoad (ix).
   irrigationSource String? // JSON: ["Rainfed","Irrigated"]
   irrigationType   String? // Drip, Canal, Others
   // Labor
@@ -867,9 +866,11 @@ model FarmerInsurance {
   farmer          FarmerProfile @relation(fields: [farmerId], references: [id], onDelete: Cascade)
   insuranceType   String   // Life, Health, Crop, Social, Other
   provider        String?
-  amount          Float?
-  enrolledDate    DateTime?
-  endDate         DateTime?
+  // Second review (D): "Amount" → payout amount
+  payoutAmount    Float?
+  // Second review (D): start/end dates REPLACED by season
+  //   Season A = March–August, Season B = September–February
+  season          String?  // "A" | "B"
   cropInsured     String?  // for Crop insurance — which crop
   areaInsured     Float?   // for Crop insurance — how much area
   notes           String?
@@ -880,36 +881,7 @@ model FarmerInsurance {
   @@index([insuranceType])
 }
 
-model FarmerAnimalHusbandry {
-  id              String   @id @default(cuid())
-  farmerId        String
-  farmer          FarmerProfile @relation(fields: [farmerId], references: [id], onDelete: Cascade)
-  animalType      String   // Cattle, Goat, Sheep, Poultry, Pigs, etc.
-  count           Int
-  breedName       String?
-  fodder          String?
-  animalHousing   String?
-  revenue         Float?
-  animalForGrowth String?  // Meat, Milk, Eggs, Draught, etc.
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-
-  @@index([farmerId])
-}
-
-model FarmerFarmEquipment {
-  id              String   @id @default(cuid())
-  farmerId        String
-  farmer          FarmerProfile @relation(fields: [farmerId], references: [id], onDelete: Cascade)
-  equipmentName   String
-  count           Int      @default(1)
-  yearOfManufacture Int?
-  yearOfPurchase  Int?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-
-  @@index([farmerId])
-}
+// Second review (E/F): Livestock (animal husbandry) and Farm Equipment modules REMOVED.
 
 // --- COOPERATIVE EXTENSION (add fields to Company model) ---
 

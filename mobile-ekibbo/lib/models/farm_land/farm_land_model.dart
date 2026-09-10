@@ -20,16 +20,14 @@ class FarmLandModel {
   String? actualArea;
   @JsonKey(name: 'land_ownership')
   String? landOwnership;
-  @JsonKey(name: 'approach_road')
-  String? approachRoad;
-  @JsonKey(name: 'land_topology')
-  String? landTopology;
-  @JsonKey(name: 'land_gradient')
-  String? landGradient;
-  @JsonKey(name: 'farm_photo')
-  String? farmPhoto;
-  @JsonKey(name: 'land_document')
-  String? landDocument;
+  // Second review (G): typology/gradient/approach road/photos/land document
+  // removed; replaced by neighbouring physical features + access map.
+  @JsonKey(name: 'neighbouring_features')
+  String? neighbouringFeatures; // JSON array string
+  @JsonKey(name: 'access_map_lat')
+  String? accessMapLat;
+  @JsonKey(name: 'access_map_lng')
+  String? accessMapLng;
   String? lat;
   String? lng;
   List<FarmPlottingModel>? farmPlottings;
@@ -40,12 +38,7 @@ class FarmLandModel {
   String listLatLng = '';
 
   // ── Web-parity datapoints (FarmLandFormPage) ──
-  @JsonKey(name: 'land_survey_no')
-  String? landSurveyNo;
-  @JsonKey(name: 'water_source')
-  String? waterSource;
-  @JsonKey(name: 'power_source')
-  String? powerSource;
+  // Second review (G): land survey no / water source / power source removed
   @JsonKey(name: 'soil_fertility')
   String? soilFertility;
   @JsonKey(name: 'irrigation_type')

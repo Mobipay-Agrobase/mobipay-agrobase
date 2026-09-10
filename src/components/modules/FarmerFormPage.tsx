@@ -41,7 +41,7 @@ interface Farmer {
   email?: string; villageName?: string; country?: string; district?: string
   housingOwnership?: string; houseType?: string
   loanTakenLastYear?: boolean
-  spouseName?: string; schoolGoingChildren?: number; livestockTypes?: string
+  spouseName?: string; schoolGoingChildren?: number
   loanTakenFrom?: string; loanAmount?: number; loanPurpose?: string
   loanInterestPct?: number; loanInterestPeriod?: string
 }
@@ -135,7 +135,6 @@ function AddFarmerForm({ onClose, initialData, farmerId }: { onClose: () => void
       isCertified: false,
       certificationType: '',
       icsYear: '',
-      farmerRegistrationUnder: '',
       groupId: '',
       groupName: '',
 
@@ -155,7 +154,6 @@ function AddFarmerForm({ onClose, initialData, farmerId }: { onClose: () => void
 
       // Tab 3: Contact Information
       country: '',
-      province: '',
       district: '',
       commune: '',
       villageName: '',
@@ -190,13 +188,10 @@ function AddFarmerForm({ onClose, initialData, farmerId }: { onClose: () => void
       loanRepaymentDate: '',
 
       // Tab 7: Insurance Information
-      insurances: [] as Array<{ insuranceType: string; provider: string; insuranceAmount: string; enrolledDate: string; endDate: string; otherInfo: string }>,
+      // Second review (D): amount → payout amount; dates → season (A: Mar–Aug, B: Sep–Feb)
+  insurances: [] as Array<{ insuranceType: string; provider: string; payoutAmount: string; season: string; otherInfo: string }>,
 
-      // Tab 8: Farm Equipment
-      farmEquipments: [] as Array<{ equipmentItem: string; equipmentCount: string; yearOfManufacture: string; yearOfPurchase: string }>,
 
-      // Tab 9: Animal Husbandry
-      animals: [] as Array<{ farmAnimal: string; animalCount: string; fodder: string; animalHousing: string; revenue: string; breedName: string; animalForGrowth: string }>,
     }
     if (initialData) {
       Object.keys(defaults).forEach(k => {
@@ -211,9 +206,9 @@ function AddFarmerForm({ onClose, initialData, farmerId }: { onClose: () => void
       // we coerce here as defense-in-depth so a future API regression can't
       // take down the edit form.
       const arrayFields: (keyof typeof defaults)[] = [
-        'bankAccounts', 'insurances', 'farmEquipments', 'animals',
+        'bankAccounts', 'insurances',
         'consumerElectronics', 'vehicles', 'assets',
-        'mainCrops', 'livestockTypes',
+        'mainCrops',
       ]
       arrayFields.forEach(k => {
         const v = defaults[k]
@@ -240,8 +235,9 @@ function AddFarmerForm({ onClose, initialData, farmerId }: { onClose: () => void
       if (Array.isArray(defaults.insurances)) {
         defaults.insurances = (defaults.insurances as any[]).map(i => ({
           ...i,
-          enrolledDate: i.enrolledDate ? String(i.enrolledDate).slice(0, 10) : '',
-          endDate: i.endDate ? String(i.endDate).slice(0, 10) : '',
+          // Second review (D): map legacy amount/dates → payoutAmount/season
+          payoutAmount: i.payoutAmount ?? i.insuranceAmount ?? i.amount ?? '',
+          season: i.season ?? '',
         }))
       }
       if (typeof defaults.dateOfBirth === 'string' && defaults.dateOfBirth) {
@@ -282,7 +278,7 @@ function AddFarmerForm({ onClose, initialData, farmerId }: { onClose: () => void
     update('bankAccounts', next)
   }
 
-  const addInsurance = () => update('insurances', [...form.insurances, { insuranceType: '', provider: '', insuranceAmount: '', enrolledDate: '', endDate: '', otherInfo: '' }])
+  const addInsurance = () => update('insurances', [...form.insurances, { insuranceType: '', provider: '', payoutAmount: '', season: '', otherInfo: '' }])
   const removeInsurance = (i: number) => update('insurances', form.insurances.filter((_: any, idx: number) => idx !== i))
   const updateInsurance = (i: number, k: string, v: string) => {
     const next = [...form.insurances]
@@ -290,21 +286,6 @@ function AddFarmerForm({ onClose, initialData, farmerId }: { onClose: () => void
     update('insurances', next)
   }
 
-  const addEquipment = () => update('farmEquipments', [...form.farmEquipments, { equipmentItem: '', equipmentCount: '', yearOfManufacture: '', yearOfPurchase: '' }])
-  const removeEquipment = (i: number) => update('farmEquipments', form.farmEquipments.filter((_: any, idx: number) => idx !== i))
-  const updateEquipment = (i: number, k: string, v: string) => {
-    const next = [...form.farmEquipments]
-    next[i] = { ...next[i], [k]: v }
-    update('farmEquipments', next)
-  }
-
-  const addAnimal = () => update('animals', [...form.animals, { farmAnimal: '', animalCount: '', fodder: '', animalHousing: '', revenue: '', breedName: '', animalForGrowth: '' }])
-  const removeAnimal = (i: number) => update('animals', form.animals.filter((_: any, idx: number) => idx !== i))
-  const updateAnimal = (i: number, k: string, v: string) => {
-    const next = [...form.animals]
-    next[i] = { ...next[i], [k]: v }
-    update('animals', next)
-  }
 
   const toggleBadge = (field: string, value: string) => {
     const current: string[] = form[field] || []
@@ -316,11 +297,6 @@ function AddFarmerForm({ onClose, initialData, farmerId }: { onClose: () => void
     if (!form.firstName || !form.lastName || !form.phone) {
       toast.error('First name, last name, and phone are required')
       setActiveTab('personal')
-      return
-    }
-    if (!form.farmerRegistrationUnder) {
-      toast.error('Farmer Registration Under (Agri/Aqua) is required')
-      setActiveTab('enrollment')
       return
     }
     if (!form.groupId) {
@@ -346,7 +322,6 @@ function AddFarmerForm({ onClose, initialData, farmerId }: { onClose: () => void
         isCertified: bool(form.isCertified),
         certificationType: str(form.certificationType),
         icsYear: str(form.icsYear),
-        farmerRegistrationUnder: str(form.farmerRegistrationUnder),
         groupId: str(form.groupId),
 
         // Tab 2: Personal Information
@@ -365,7 +340,6 @@ function AddFarmerForm({ onClose, initialData, farmerId }: { onClose: () => void
 
         // Tab 3: Contact Information
         country: str(form.country),
-        province: str(form.province),
         district: str(form.district),
         commune: str(form.commune),
         villageName: str(form.villageName),
@@ -409,29 +383,9 @@ function AddFarmerForm({ onClose, initialData, farmerId }: { onClose: () => void
         insurances: form.insurances.length > 0 ? form.insurances.map((ins: any) => ({
           insuranceType: str(ins.insuranceType),
           provider: str(ins.provider),
-          insuranceAmount: num(ins.insuranceAmount),
-          enrolledDate: str(ins.enrolledDate),
-          endDate: str(ins.endDate),
+          payoutAmount: num(ins.payoutAmount),
+          season: str(ins.season),
           otherInfo: str(ins.otherInfo),
-        })) : undefined,
-
-        // Tab 8: Farm Equipment
-        farmEquipments: form.farmEquipments.length > 0 ? form.farmEquipments.map((eq: any) => ({
-          equipmentItem: str(eq.equipmentItem),
-          equipmentCount: num(eq.equipmentCount),
-          yearOfManufacture: str(eq.yearOfManufacture),
-          yearOfPurchase: str(eq.yearOfPurchase),
-        })) : undefined,
-
-        // Tab 9: Animal Husbandry
-        animals: form.animals.length > 0 ? form.animals.map((an: any) => ({
-          farmAnimal: str(an.farmAnimal),
-          animalCount: num(an.animalCount),
-          fodder: str(an.fodder),
-          animalHousing: str(an.animalHousing),
-          revenue: num(an.revenue),
-          breedName: str(an.breedName),
-          animalForGrowth: str(an.animalForGrowth),
         })) : undefined,
       }
       const res = await fetch(isEdit ? `/api/farmers/${farmerId}` : '/api/farmers', {
@@ -463,8 +417,6 @@ function AddFarmerForm({ onClose, initialData, farmerId }: { onClose: () => void
           <TabsTrigger value="assets" className="text-xs gap-1.5 rounded-lg"><Star className="w-3.5 h-3.5" /> Assets</TabsTrigger>
           <TabsTrigger value="finance" className="text-xs gap-1.5 rounded-lg"><DollarSign className="w-3.5 h-3.5" /> Finance</TabsTrigger>
           <TabsTrigger value="insurance" className="text-xs gap-1.5 rounded-lg"><Shield className="w-3.5 h-3.5" /> Insurance</TabsTrigger>
-          <TabsTrigger value="equipment" className="text-xs gap-1.5 rounded-lg"><Sprout className="w-3.5 h-3.5" /> Equipment</TabsTrigger>
-          <TabsTrigger value="animals" className="text-xs gap-1.5 rounded-lg"><Activity className="w-3.5 h-3.5" /> Animals</TabsTrigger>
         </TabsList>
 
         {/* ── Tab 1: Enrollment ── */}
@@ -500,13 +452,11 @@ function AddFarmerForm({ onClose, initialData, farmerId }: { onClose: () => void
                 <Select value={form.certificationType} onValueChange={v => update('certificationType', v)}>
                   <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Individual">Individual</SelectItem>
-                    <SelectItem value="Group">Group</SelectItem>
-                    <SelectItem value="RFA">RFA (Rainforest Alliance)</SelectItem>
-                    <SelectItem value="Rainforest Alliance">Rainforest Alliance</SelectItem>
+                    {/* Second review (A4): RA, Organic, Fairtrade, 4C */}
+                    <SelectItem value="RA">RA</SelectItem>
                     <SelectItem value="Organic">Organic</SelectItem>
-                    <SelectItem value="UTZ">UTZ</SelectItem>
                     <SelectItem value="Fairtrade">Fairtrade</SelectItem>
+                    <SelectItem value="4C">4C</SelectItem>
                   </SelectContent>
                 </Select>
               </FormField>
@@ -522,18 +472,7 @@ function AddFarmerForm({ onClose, initialData, farmerId }: { onClose: () => void
               </FormField>
             </div>
           )}
-          <FormField label="Farmer Registration Under *" required>
-            <div className="flex gap-4 pt-2">
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input type="radio" name="regUnder" checked={form.farmerRegistrationUnder === 'Agri'} onChange={() => update('farmerRegistrationUnder', 'Agri')} className="accent-primary" />
-                Agri
-              </label>
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input type="radio" name="regUnder" checked={form.farmerRegistrationUnder === 'Aqua'} onChange={() => update('farmerRegistrationUnder', 'Aqua')} className="accent-primary" />
-                Aqua
-              </label>
-            </div>
-          </FormField>
+          {/* Second review (A2): "Registration under" removed — meaning unclear */}
 
           {/* ── Farmer Group (Ekibbo: replaced Cooperative) ── */}
           <div className="space-y-1.5">
@@ -562,7 +501,7 @@ function AddFarmerForm({ onClose, initialData, farmerId }: { onClose: () => void
               }}
               onChange={sel => {
                 update('country', sel.country || 'Uganda')
-                update('province', sel.region || '')
+                // Second review (A1): province removed — Uganda has no provinces
                 update('district', sel.district || '')
                 update('commune', sel.subCounty || '')
                 update('villageName', sel.village || '')
@@ -679,11 +618,11 @@ function AddFarmerForm({ onClose, initialData, farmerId }: { onClose: () => void
 
         {/* ── Tab 4: Family Information ── */}
         <TabsContent value="family" className="mt-4 space-y-4 form-tab-content">
-          <FormField label="Spouse Name">
+          <FormField label="Next of Kin Contact">
             <Input value={form.spouseName} onChange={e => update('spouseName', e.target.value)} />
           </FormField>
           <div className="grid grid-cols-2 gap-3">
-            <FormField label="No of Family Members">
+            <FormField label="Household Size">
               <Input type="number" value={form.familyMembers} onChange={e => update('familyMembers', e.target.value)} />
             </FormField>
             <FormField label="Total Children below 18">
@@ -820,14 +759,15 @@ function AddFarmerForm({ onClose, initialData, farmerId }: { onClose: () => void
             </FormField>
             {form.loanTakenLastYear && (
               <div className="space-y-3">
-                <FormField label="Loan Taken From">
+                <FormField label="Sources (Crop Type Sold to EKiBBO)">
                   <Select value={form.loanTakenFrom} onValueChange={v => update('loanTakenFrom', v)}>
-                    <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder="Select crop type" /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Bank">Bank</SelectItem>
-                      <SelectItem value="Relative">Relative</SelectItem>
-                      <SelectItem value="Friend">Friend</SelectItem>
-                      <SelectItem value="Farming Contract">Farming Contract</SelectItem>
+                      {/* Second review (C): sources = crop type sold to EKiBBO */}
+                      <SelectItem value="Coffee">Coffee</SelectItem>
+                      <SelectItem value="Cocoa">Cocoa</SelectItem>
+                      <SelectItem value="Vanilla">Vanilla</SelectItem>
+                      <SelectItem value="Shade Trees">Shade Trees</SelectItem>
                       <SelectItem value="Other">Other</SelectItem>
                     </SelectContent>
                   </Select>
@@ -914,18 +854,20 @@ function AddFarmerForm({ onClose, initialData, farmerId }: { onClose: () => void
                     <FormField label="Provider" required>
                       <CatalogSelect category="insurance_company_uganda" value={ins.provider} onValueChange={v => updateInsurance(i, 'provider', v)} placeholder="Select provider" />
                     </FormField>
-                    <FormField label="Insurance Amount" required>
-                      <Input type="number" value={ins.insuranceAmount} onChange={e => updateInsurance(i, 'insuranceAmount', e.target.value)} required />
+                    <FormField label="Payout Amount" required>
+                      <Input type="number" value={ins.payoutAmount} onChange={e => updateInsurance(i, 'payoutAmount', e.target.value)} required />
                     </FormField>
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <FormField label="Insurance Enrolled Date">
-                      <Input type="date" value={ins.enrolledDate} onChange={e => updateInsurance(i, 'enrolledDate', e.target.value)} />
-                    </FormField>
-                    <FormField label="Insurance End Date">
-                      <Input type="date" value={ins.endDate} onChange={e => updateInsurance(i, 'endDate', e.target.value)} />
-                    </FormField>
-                  </div>
+                  <FormField label="Season">
+                    <div className="flex gap-4 pt-2">
+                      {(['A', 'B'] as const).map(se => (
+                        <label key={se} className="flex items-center gap-2 text-sm cursor-pointer">
+                          <input type="radio" name={`insSeason-${i}`} checked={ins.season === se} onChange={() => updateInsurance(i, 'season', se)} className="accent-primary" />
+                          Season {se}{se === 'A' ? ' (Mar–Aug)' : ' (Sep–Feb)'}
+                        </label>
+                      ))}
+                    </div>
+                  </FormField>
                   <FormField label="Other Insurance Info">
                     <Input value={ins.otherInfo} onChange={e => updateInsurance(i, 'otherInfo', e.target.value)} />
                   </FormField>
@@ -935,88 +877,8 @@ function AddFarmerForm({ onClose, initialData, farmerId }: { onClose: () => void
           ))}
         </TabsContent>
 
-        {/* ── Tab 8: Farm Equipment (multi-entry) ── */}
-        <TabsContent value="equipment" className="mt-4 space-y-4 form-tab-content">
-          <div className="flex items-center justify-between">
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Farm Equipment</p>
-            <Button type="button" variant="outline" size="sm" onClick={addEquipment} className="gap-1 h-7 text-xs">
-              <Plus className="w-3 h-3" /> Add Equipment
-            </Button>
-          </div>
-          {form.farmEquipments.length === 0 && (
-            <p className="text-xs text-muted-foreground italic">No equipment records added yet.</p>
-          )}
-          {form.farmEquipments.map((eq: any, i: number) => (
-            <div key={i} className="relative border rounded-lg p-3 space-y-3 bg-muted/20">
-              <Button type="button" variant="ghost" size="icon" className="absolute top-2 right-2 h-6 w-6" onClick={() => removeEquipment(i)}>
-                <X className="w-3.5 h-3.5" />
-              </Button>
-              <div className="grid grid-cols-2 gap-3">
-                <FormField label="Farm Equipment Item">
-                  <CatalogSelect category="farm_equipment" value={eq.equipmentItem} onValueChange={v => updateEquipment(i, 'equipmentItem', v)} placeholder="Select" />
-                </FormField>
-                <FormField label="Farm Equipment Item Count">
-                  <Input type="number" value={eq.equipmentCount} onChange={e => updateEquipment(i, 'equipmentCount', e.target.value)} />
-                </FormField>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <FormField label="Year of Manufacture">
-                  <Input value={eq.yearOfManufacture} onChange={e => updateEquipment(i, 'yearOfManufacture', e.target.value)} placeholder="e.g. 2022" />
-                </FormField>
-                <FormField label="Year of Purchase">
-                  <Input value={eq.yearOfPurchase} onChange={e => updateEquipment(i, 'yearOfPurchase', e.target.value)} placeholder="e.g. 2023" />
-                </FormField>
-              </div>
-            </div>
-          ))}
-        </TabsContent>
+        {/* Second review (E/F): Farm Equipment + Animal Husbandry tabs removed */}
 
-        {/* ── Tab 9: Animal Husbandry (multi-entry) ── */}
-        <TabsContent value="animals" className="mt-4 space-y-4 form-tab-content">
-          <div className="flex items-center justify-between">
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Animal Husbandry</p>
-            <Button type="button" variant="outline" size="sm" onClick={addAnimal} className="gap-1 h-7 text-xs">
-              <Plus className="w-3 h-3" /> Add Animal
-            </Button>
-          </div>
-          {form.animals.length === 0 && (
-            <p className="text-xs text-muted-foreground italic">No animal records added yet.</p>
-          )}
-          {form.animals.map((an: any, i: number) => (
-            <div key={i} className="relative border rounded-lg p-3 space-y-3 bg-muted/20">
-              <Button type="button" variant="ghost" size="icon" className="absolute top-2 right-2 h-6 w-6" onClick={() => removeAnimal(i)}>
-                <X className="w-3.5 h-3.5" />
-              </Button>
-              <div className="grid grid-cols-2 gap-3">
-                <FormField label="Farm Animal">
-                  <CatalogSelect category="animal_type" value={an.farmAnimal} onValueChange={v => updateAnimal(i, 'farmAnimal', v)} placeholder="Select" />
-                </FormField>
-                <FormField label="Animal Count">
-                  <Input type="number" value={an.animalCount} onChange={e => updateAnimal(i, 'animalCount', e.target.value)} />
-                </FormField>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <FormField label="Fodder">
-                  <CatalogSelect category="fodder" value={an.fodder} onValueChange={v => updateAnimal(i, 'fodder', v)} placeholder="Select" />
-                </FormField>
-                <FormField label="Animal Housing">
-                  <CatalogSelect category="animal_housing" value={an.animalHousing} onValueChange={v => updateAnimal(i, 'animalHousing', v)} placeholder="Select" />
-                </FormField>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <FormField label="Revenue">
-                  <Input type="number" value={an.revenue} onChange={e => updateAnimal(i, 'revenue', e.target.value)} />
-                </FormField>
-                <FormField label="Breed Name">
-                  <Input value={an.breedName} onChange={e => updateAnimal(i, 'breedName', e.target.value)} />
-                </FormField>
-              </div>
-              <FormField label="Animal for Growth">
-                <CatalogSelect category="animal_for_growth" value={an.animalForGrowth} onValueChange={v => updateAnimal(i, 'animalForGrowth', v)} placeholder="Select" />
-              </FormField>
-            </div>
-          ))}
-        </TabsContent>
       </Tabs>
 
       {/* Bottom action bar */}

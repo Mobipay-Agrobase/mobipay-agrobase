@@ -6,9 +6,6 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:http_parser/http_parser.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:mime/mime.dart';
 import 'package:provider/provider.dart';
 import 'package:agrobase_ekibbo/application/app_provider.dart';
 import 'package:agrobase_ekibbo/components/app_button.dart';
@@ -16,6 +13,7 @@ import 'package:agrobase_ekibbo/components/app_dropdown_button.dart';
 import 'package:agrobase_ekibbo/components/app_form_field.dart';
 import 'package:agrobase_ekibbo/components/custom_appbar.dart';
 import 'package:agrobase_ekibbo/components/g_image.dart';
+import 'package:agrobase_ekibbo/components/map_view.dart';
 import 'package:agrobase_ekibbo/components/input/input_next_data.dart';
 import 'package:agrobase_ekibbo/components/constant/color_constant.dart';
 import 'package:agrobase_ekibbo/components/constant/text_style_constant.dart';
@@ -54,20 +52,26 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
   final _areaTxtController = TextEditingController();
   final _farmNameTxtController = TextEditingController();
   final _totalLandTxtController = TextEditingController();
-  XFile? _farmImg;
-  XFile? _landImg;
   final _formKey = GlobalKey<FormState>();
-  List<DropdownDataModel> _ownerLands = [];
-  List<DropdownDataModel> _landGradients = [];
-  List<DropdownDataModel> _appoarchRoads = [];
-  List<DropdownDataModel> _landTopologs = [];
-  // Web-parity extra dropdowns (CatalogMaster via ekibbo-farmland)
-  List<DropdownDataModel> _waterSources = [];
-  List<DropdownDataModel> _powerSources = [];
+  // Second review (G-vii): ownership options hardcoded
+  static const List<String> _ownershipOptions = [
+    'Rented/leased',
+    'Sales agreement',
+    'Inherited',
+    'Family owned',
+    'Communal owned',
+  ];
+  // Second review (G-v): neighbouring physical features (replaces typology)
+  static const List<String> _featureOptions = [
+    'Rivers', 'Lakes', 'Swamp', 'Forest', 'Natural forest', 'Planted forest',
+    'Valley', 'Hill/mountain', 'Game park/Game reserve',
+  ];
+  final Set<String> _selectedFeatures = {};
+  // Second review (G-ix): access map point (replaces approach road)
+  LatLng? _accessMapPoint;
   List<DropdownDataModel> _soilFertility = [];
   List<DropdownDataModel> _irrigationTypes = [];
-  int? _waterIndex, _powerIndex, _fertilityIndex, _irrigationIndex;
-  final _surveyNoTxtController = TextEditingController();
+  int? _fertilityIndex, _irrigationIndex;
   final _estYieldTxtController = TextEditingController();
   final _fullTimeTxtController = TextEditingController();
   final _partTimeTxtController = TextEditingController();
@@ -78,9 +82,6 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
   int farmerId = 0;
 
   int? _ownerIndex;
-  int? _approachIndex;
-  int? _topologIndex;
-  int? _gradientIndex;
   String? _errorLandOwner;
 
   @override
@@ -91,7 +92,6 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
 
   @override
   void dispose() {
-    _surveyNoTxtController.dispose();
     _estYieldTxtController.dispose();
     _fullTimeTxtController.dispose();
     _partTimeTxtController.dispose();
@@ -100,8 +100,6 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
     _areaTxtController.dispose();
     _farmNameTxtController.dispose();
     _totalLandTxtController.dispose();
-    _farmImg = null;
-    _landImg = null;
     NavigatorManager.contextRoot
         .read<AppProvider>()
         .updateState(AppEvent.appSearchResetData);
@@ -113,12 +111,7 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
       final res = await ApiFarmland.getEkibboFarmlandDropdowns();
       if (!mounted) return;
       setState(() {
-        _ownerLands = res.dataLandWwnerShip ?? [];
-        _landGradients = res.dataLandGradient ?? [];
-        _appoarchRoads = res.dataAppoarchRoad ?? [];
-        _landTopologs = res.dataLandTopolog ?? [];
-        _waterSources = res.dataWaterSource ?? [];
-        _powerSources = res.dataPowerSource ?? [];
+        // Second review (G): removed fields no longer loaded
         _soilFertility = res.dataSoilFertility ?? [];
         _irrigationTypes = res.dataIrrigationType ?? [];
         if (widget.farmer != null) {
@@ -146,17 +139,18 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
             ))
         .toList();
     _areaTxtController.text = '${farmland.actualArea ?? 0}';
-    _ownerIndex =
-        _ownerLands.getIndex((p0) => p0.name == farmland.landOwnership);
-    _approachIndex =
-        _appoarchRoads.getIndex((p0) => p0.name == farmland.approachRoad);
-    _topologIndex =
-        _landTopologs.getIndex((p0) => p0.name == farmland.landTopology);
-    _gradientIndex =
-        _landGradients.getIndex((p0) => p0.name == farmland.landGradient);
-    _farmImg = farmland.farmPhoto != null ? XFile(farmland.farmPhoto!) : null;
-    _landImg =
-        farmland.landDocument != null ? XFile(farmland.landDocument!) : null;
+    _ownerIndex = _ownershipOptions.indexOf(farmland.landOwnership ?? '');
+    if (_ownerIndex == -1) _ownerIndex = null;
+    // Second review (G): neighbouring features + access map
+    if (farmland.neighbouringFeatures != null) {
+      try {
+        final list = farmland.neighbouringFeatures!.split(',');
+        _selectedFeatures.addAll(list.map((e) => e.trim()).where((e) => e.isNotEmpty));
+      } catch (_) {}
+    }
+    final lat = double.tryParse(farmland.accessMapLat ?? '');
+    final lng = double.tryParse(farmland.accessMapLng ?? '');
+    if (lat != null && lng != null) _accessMapPoint = LatLng(lat, lng);
   }
 
   _addPlotting() {
@@ -209,18 +203,13 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
             ..lat = e.latitude.toString()
             ..lng = e.longitude.toString())
           .toList();
-      farmLandModel.landOwnership = _ownerLands[_ownerIndex!].name;
-      farmLandModel.approachRoad =
-          _approachIndex != null ? _appoarchRoads[_approachIndex!].name : '';
-      farmLandModel.landTopology =
-          _topologIndex != null ? _landTopologs[_topologIndex!].name : '';
-      farmLandModel.landGradient =
-          _gradientIndex == null ? '' : _landGradients[_gradientIndex!].name;
-      farmLandModel.landSurveyNo = _surveyNoTxtController.text;
-      farmLandModel.waterSource =
-          _waterIndex == null ? '' : _waterSources[_waterIndex!].name ?? '';
-      farmLandModel.powerSource =
-          _powerIndex == null ? '' : _powerSources[_powerIndex!].name ?? '';
+      farmLandModel.landOwnership =
+          _ownerIndex != null ? _ownershipOptions[_ownerIndex!] : '';
+      // Second review (G): neighbouring features (JSON array) + access map
+      farmLandModel.neighbouringFeatures =
+          _selectedFeatures.isEmpty ? '' : _selectedFeatures.toList().join(', ');
+      farmLandModel.accessMapLat = _accessMapPoint?.latitude.toString();
+      farmLandModel.accessMapLng = _accessMapPoint?.longitude.toString();
       farmLandModel.soilFertility =
           _fertilityIndex == null ? '' : _soilFertility[_fertilityIndex!].name ?? '';
       farmLandModel.irrigationType =
@@ -230,39 +219,14 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
       farmLandModel.partTimeWorkers = _partTimeTxtController.text;
       farmLandModel.seasonalWorkers = _seasonalTxtController.text;
       farmLandModel.familyWorkers = _familyTxtController.text;
-      farmLandModel.farmPhoto = _farmImg?.path;
-      farmLandModel.landDocument = _landImg?.path;
       farmLandModel.lat = DataConstant.lat.toString();
       farmLandModel.lng = DataConstant.lng.toString();
       farmLandModel.tag = widget.farmland?.tag ?? '';
       farmLandModel.listLatLng = listLatLng.toString();
 
-      print(farmLandModel.toMap());
-      // return;
-
+      // Second review (G): farm photo + land document uploads removed —
+      // the polygon (farm land plotting) is the land record.
       final form = FormData.fromMap(farmLandModel.toMap());
-      if (isInternetAvailable) {
-        form.files.addAll([
-          if (_farmImg != null)
-            MapEntry(
-              'farm_photo[]',
-              await MultipartFile.fromFile(
-                farmLandModel.farmPhoto!,
-                contentType: MediaType.parse(
-                    lookupMimeType(farmLandModel.farmPhoto!) ?? ''),
-              ),
-            ),
-          if (_landImg != null)
-            MapEntry(
-              'land_document[]',
-              await MultipartFile.fromFile(
-                farmLandModel.landDocument!,
-                contentType: MediaType.parse(
-                    lookupMimeType(farmLandModel.landDocument!) ?? ''),
-              ),
-            ),
-        ]);
-      }
       if (widget.farmland == null) {
         await _insert(form);
         return;
@@ -458,26 +422,13 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
                         const SizedBox(
                           height: 24,
                         ),
-                        StatefulBuilder(
-                          builder: (_, s) => _buildImgView(
-                            AppLang.local.plots_photos,
-                            url: widget.farmland?.farmPhoto,
-                            chooseImg: () async {
-                              _farmImg = await CommonHelper.chooseImg();
-                              s(() {});
-                            },
-                            img: _farmImg,
-                          ),
-                        ),
-                        const SizedBox(
-                          height: 24,
-                        ),
+                        // Second review (G-vii): ownership — 5 options
                         AppDropdownButton(
                           hintText: '${AppLang.local.land_ownership} *',
-                          items: _ownerLands.map((e) => e.name ?? '').toList(),
+                          items: _ownershipOptions.toList(),
                           itemSelected: _ownerIndex == null
                               ? ''
-                              : _ownerLands[_ownerIndex!].name,
+                              : _ownershipOptions[_ownerIndex!],
                           onChanged: (v) {
                             setState(() {
                               _ownerIndex = v;
@@ -488,71 +439,97 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
                         const SizedBox(
                           height: 24,
                         ),
-                        AppDropdownButton(
-                          hintText: AppLang.local.approach_road,
-                          items: _appoarchRoads.map((e) => e.name!).toList(),
-                          itemSelected: _approachIndex == null
-                              ? ''
-                              : _appoarchRoads[_approachIndex!].name,
-                          onChanged: (v) {
-                            setState(() {
-                              _approachIndex = v;
-                            });
-                          },
+                        // ── Second review (G-v): neighbouring physical features ──
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            'Neighbouring Physical Features',
+                            style: TextStyleConstant.worksansW500(
+                              color: ColorConstant.gray6C757D,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: _featureOptions
+                              .map((f) => ChoiceChip(
+                                    label: Text(f),
+                                    selected: _selectedFeatures.contains(f),
+                                    onSelected: (sel) {
+                                      setState(() {
+                                        if (sel) {
+                                          _selectedFeatures.add(f);
+                                        } else {
+                                          _selectedFeatures.remove(f);
+                                        }
+                                      });
+                                    },
+                                  ))
+                              .toList(),
                         ),
                         const SizedBox(
                           height: 24,
                         ),
-                        AppDropdownButton(
-                          hintText: AppLang.local.land_topology,
-                          items: _landTopologs.map((e) => e.name!).toList(),
-                          itemSelected: _topologIndex == null
-                              ? ''
-                              : _landTopologs[_topologIndex!].name,
-                          onChanged: (v) {
-                            setState(() {
-                              _topologIndex = v;
-                            });
-                          },
+                        // ── Second review (G-ix): access map (replaces approach road) ──
+                        InkWell(
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => MapView(latLng: _accessMapPoint),
+                            ),
+                          ).then((value) {
+                            if (value != null && value is LatLng) {
+                              setState(() {
+                                _accessMapPoint = value;
+                              });
+                            }
+                          }),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              GImage.asset(
+                                name: 'map'.imgPNG,
+                                height: 50,
+                                width: 50,
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Access Map',
+                                      style: TextStyleConstant.worksansW500(
+                                        color: ColorConstant.text79,
+                                      ),
+                                    ),
+                                    if (_accessMapPoint != null)
+                                      Text(
+                                        '${_accessMapPoint!.latitude}, ${_accessMapPoint!.longitude}',
+                                        style:
+                                            TextStyleConstant.robotoW400(
+                                                fontSize: 12,
+                                                color: ColorConstant.text79),
+                                      )
+                                    else
+                                      Text(
+                                        'You can choose on map',
+                                        style:
+                                            TextStyleConstant.robotoW400(
+                                                fontSize: 12,
+                                                color: ColorConstant.text79),
+                                      ),
+                                  ],
+                                ),
+                              )
+                            ],
+                          ),
                         ),
                         const SizedBox(
                           height: 24,
                         ),
-                        AppDropdownButton(
-                          hintText: AppLang.local.land_gradient,
-                          items: _landGradients.map((e) => e.name!).toList(),
-                          itemSelected: _gradientIndex == null
-                              ? ''
-                              : _landGradients[_gradientIndex!].name,
-                          onChanged: (v) {
-                            setState(() {
-                              _gradientIndex = v;
-                            });
-                          },
-                        ),
-                        const SizedBox(
-                          height: 24,
-                        ),
-                        // ── Web-parity fields (FarmLandFormPage) ──
-                        AppFormField(
-                          labelText: 'Land Survey No',
-                          controller: _surveyNoTxtController,
-                        ),
-                        const SizedBox(height: 24),
-                        AppDropdownButton(
-                          hintText: 'Water Source',
-                          items: _waterSources.map((e) => e.name ?? '').toList(),
-                          itemSelected: _waterIndex == null ? '' : _waterSources[_waterIndex!].name ?? '',
-                          onChanged: (v) => setState(() => _waterIndex = v),
-                        ),
-                        const SizedBox(height: 24),
-                        AppDropdownButton(
-                          hintText: 'Power Source',
-                          items: _powerSources.map((e) => e.name ?? '').toList(),
-                          itemSelected: _powerIndex == null ? '' : _powerSources[_powerIndex!].name ?? '',
-                          onChanged: (v) => setState(() => _powerIndex = v),
-                        ),
-                        const SizedBox(height: 24),
                         AppDropdownButton(
                           hintText: 'Fertility Status',
                           items: _soilFertility.map((e) => e.name ?? '').toList(),
@@ -604,18 +581,6 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
                             )),
                           ],
                         ),
-                        const SizedBox(height: 24),
-                        StatefulBuilder(
-                          builder: (_, s) => _buildImgView(
-                            AppLang.local.land_document,
-                            url: widget.farmland?.landDocument,
-                            img: _landImg,
-                            chooseImg: () async {
-                              _landImg = await CommonHelper.chooseImg();
-                              s(() {});
-                            },
-                          ),
-                        )
                       ],
                     ),
                   ),
@@ -637,66 +602,6 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildImgView(
-    String title, {
-    XFile? img,
-    Function()? chooseImg,
-    String? url,
-  }) {
-    Widget view = Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        SvgPicture.asset(
-          'ic_bold_camera'.iconSvg,
-        ),
-        const SizedBox(
-          height: 4,
-        ),
-        Text(
-          AppLang.local.choose_photo,
-          style: TextStyleConstant.quicksandW600(
-            color: ColorConstant.text79,
-          ),
-        )
-      ],
-    );
-    if (img != null) {
-      view = GImage.file(file: File(img.path));
-    } else if (url != null) {
-      view = GInternetImage(url: url);
-    }
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style:
-              TextStyleConstant.worksansW500(color: ColorConstant.gray6C757D),
-        ),
-        const SizedBox(
-          height: 8,
-        ),
-        Row(
-          children: [
-            InkWell(
-              onTap: chooseImg,
-              child: Container(
-                height: 94,
-                width: 160,
-                clipBehavior: Clip.hardEdge,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(8),
-                  color: ColorConstant.grayF6F7F9,
-                ),
-                child: view,
-              ),
-            ),
-          ],
-        ),
-      ],
     );
   }
 
@@ -731,27 +636,3 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
   }
 }
 
-
-
-    // final data = {
-    //   'farmer': farmerId,
-    //   'farm_name': _farmNameTxtController.text,
-    //   'total_land_holding':
-    //       (double.tryParse(_totalLandTxtController.text) ?? 0),
-    //   'lat': points.first.latitude,
-    //   'lng': points.first.longitude,
-    //   'farm_land_ploting': '',
-    //   'actual_area': (m / 10000).toStringAsFixed(2),
-    //   'land_ownership': _ownerLands[_ownerIndex!].name,
-    //   'srp_score': '',
-    //   'carbon_index': '',
-    //   'approach_road':
-    //       _approachIndex != null ? _appoarchRoads[_approachIndex!].name : '',
-    //   'land_topology':
-    //       _topologIndex != null ? _landTopologs[_topologIndex!].name : '',
-    //   'land_gradient':
-    //       _gradientIndex == null ? '' : _landGradients[_gradientIndex!].name,
-    //   'list_lat_lng': listLatLng.toString(),
-    //   'staff_lat': DataConstant.lat,
-    //   'staff_lng': DataConstant.lng,
-    // };

@@ -36,24 +36,19 @@ import 'package:agrobase_ekibbo/presentation/carbon/cubit/carbon_cubit.dart';
 import 'package:agrobase_ekibbo/presentation/carbon/screens/add_carbon_footprint_screen.dart';
 import 'package:agrobase_ekibbo/presentation/dashboard/views/dashboard_screen.dart';
 import 'package:agrobase_ekibbo/presentation/distribution/screen_add_product.dart';
-import 'package:agrobase_ekibbo/presentation/farmer_detail/views/animal_husbandry_screen.dart';
 import 'package:agrobase_ekibbo/presentation/farmer_detail/views/certificate_info_screen.dart';
-import 'package:agrobase_ekibbo/presentation/farmer_detail/views/new_animal_husbandry_screen.dart';
 import 'package:agrobase_ekibbo/presentation/farmer_detail/views/asset_info_screen.dart';
 import 'package:agrobase_ekibbo/presentation/farmer_detail/views/bank_info_screen.dart';
 import 'package:agrobase_ekibbo/presentation/farmer_detail/views/edit_farmer_profile_screen.dart';
 import 'package:agrobase_ekibbo/presentation/farmer_detail/views/family_info_screen.dart';
-import 'package:agrobase_ekibbo/presentation/farmer_detail/views/farm_equipment_info_screen.dart';
 import 'package:agrobase_ekibbo/presentation/farmer_detail/views/farmer_detail_screen.dart';
 import 'package:agrobase_ekibbo/presentation/farmer_detail/views/finance_info_screen.dart';
 import 'package:agrobase_ekibbo/presentation/farmer_detail/views/insurance_info_screen.dart';
 import 'package:agrobase_ekibbo/presentation/farmer_detail/views/new_bank_screen.dart';
-import 'package:agrobase_ekibbo/presentation/farmer_detail/views/new_equipment_screen.dart';
 import 'package:agrobase_ekibbo/presentation/farmer_detail/views/new_insurance_screen.dart';
 import 'package:agrobase_ekibbo/presentation/plot/list_plot_screen.dart';
 import 'package:agrobase_ekibbo/presentation/login/views/login_screen.dart';
 import 'package:agrobase_ekibbo/presentation/plot/near_by_plot_screen.dart';
-import 'package:agrobase_ekibbo/presentation/plot/land_document_screen.dart';
 import 'package:agrobase_ekibbo/presentation/plot/plot_detail_screen.dart';
 import 'package:agrobase_ekibbo/presentation/procurement/child/screen_add_crop_harvest.dart';
 import 'package:agrobase_ekibbo/presentation/profile/profile_screen.dart';
@@ -154,16 +149,6 @@ class RoutesManager {
           farmerId: settings.arguments as int,
         );
         break;
-      case RouterName.new_animal:
-        Map<String, dynamic> map = {};
-        if (settings.arguments != null) {
-          map = settings.arguments as Map<String, dynamic>;
-        }
-        screen = NewAnimalHusbandryScreen(
-          animalRes: map['animal_res'],
-          animal: map['animal'],
-        );
-        break;
       case RouterName.new_insurance:
         Map<String, dynamic> map = {};
         if (settings.arguments != null) {
@@ -172,11 +157,6 @@ class RoutesManager {
         screen = NewInsuranceScreen(
           insurance: map['insurance'],
           dataCrop: map['data_crop'],
-        );
-        break;
-      case RouterName.animal_husbandry:
-        screen = AnimalHusbandryScreen(
-          farmerId: settings.arguments as int,
         );
         break;
       case RouterName.certificate_info:
@@ -227,12 +207,6 @@ class RoutesManager {
       case RouterName.transaction_calendar:
         screen = const TransactionCalendarScreen();
         break;
-      case RouterName.land_document:
-        screen = LandDocumentScreen(
-          landDocument:
-              settings.arguments != null ? settings.arguments as String : null,
-        );
-        break;
       case RouterName.crop_detail:
         screen = CropDetailScreen(
           cropId: settings.arguments as int,
@@ -275,13 +249,6 @@ class RoutesManager {
         screen = NewBankScreen(
           accountTypes: map['account_types'] as List<DropdownDataModel>,
           bank: map['bank'],
-        );
-        break;
-      case RouterName.new_equipment:
-        final map = settings.arguments as Map;
-        screen = NewEquipmentScreen(
-          equipmentTypes: map['equipment_types'] as List<DropdownDataModel>,
-          equipment: map['equipment'],
         );
         break;
       case RouterName.farm_land_plotting:
@@ -430,15 +397,11 @@ class RouterName {
   static const new_bank = '/new_bank';
   static const insurance_info = '/insurance_info';
   static const farm_equip = '/farm_equip';
-  static const new_equipment = '/new_equipment';
-  static const animal_husbandry = '/animal_husbandry';
-  static const new_animal = '/new_animal';
   static const new_insurance = '/new_insurance';
   static const certificate_info = '/certificate_info';
   static const scan_qr = '/scan_qr';
   static const splash = '/splash';
   static const profile = '/profile';
-  static const land_document = '/land_document';
   static const add_carbon_footprint = '/add_carbon_footprint';
   static const crop_detail = '/crop_detail';
   static const transaction_calendar = '/transaction_calendar';

@@ -4,6 +4,24 @@ import { getTenantContext, buildTenantFilter } from '@/lib/tenant'
 import { numericId, resolveFarmerByNumericId } from '@/lib/mobile/ekibbo-adapter'
 import { farmerSelfAccess } from '@/lib/mobile/ekibbo-mobile-utils'
 
+// Second review (G): neighbouring physical features — JSON array safe parse
+function safeJsonArr(raw: string | null): string[] {
+  if (!raw) return []
+  try {
+    const p = JSON.parse(raw)
+    return Array.isArray(p) ? p.map(String) : []
+  } catch { return [] }
+}
+
+// Arrays are JSON.stringified; strings pass through as-is.
+function toJsonOrString(v: any): string | null | undefined {
+  if (v === undefined) return undefined
+  if (v == null || v === '') return null
+  if (Array.isArray(v)) return JSON.stringify(v)
+  return String(v)
+}
+
+
 /**
  * GET /api/mobile/ekibbo-farmland/[farmId]
  * PUT /api/mobile/ekibbo-farmland/[farmId]  (update)
@@ -41,7 +59,7 @@ export async function GET(
       where: { id: match.id },
       select: {
         id: true, name: true, sizeHectares: true, landOwnership: true,
-        landSurveyNo: true, waterSource: true, powerSource: true,
+        neighbouringFeatures: true, accessMapLat: true, accessMapLng: true,
         soilFertility: true, irrigationType: true, estYieldKg: true,
         fullTimeWorkers: true, partTimeWorkers: true,
         seasonalWorkers: true, familyWorkers: true,
@@ -63,9 +81,8 @@ export async function GET(
           total_land_holding: Number(land.sizeHectares) || 0,
           actual_area: String(land.sizeHectares ?? 0),
           land_ownership: land.landOwnership,
-          land_survey_no: land.landSurveyNo,
-          water_source: land.waterSource,
-          power_source: land.powerSource,
+          neighbouring_features: safeJsonArr(land.neighbouringFeatures),
+          access_map: { lat: land.accessMapLat, lng: land.accessMapLng },
           soil_fertility: land.soilFertility,
           irrigation_type: land.irrigationType,
           est_yield: land.estYieldKg,
@@ -142,12 +159,11 @@ export async function PUT(
         // Mobile sends total_land_holding (ha); web sends sizeHectares.
         sizeHectares: toNum(body.sizeHectares ?? body.total_land_holding) ?? undefined,
         landOwnership: body.landOwnership ?? body.land_ownership ?? undefined,
-        landSurveyNo: body.landSurveyNo ?? body.land_survey_no ?? undefined,
-        approachRoad: body.approachRoad ?? body.approach_road ?? undefined,
-        landTopology: body.landTopology ?? body.land_topology ?? undefined,
-        landGradient: body.landGradient ?? body.land_gradient ?? undefined,
-        waterSource: body.waterSource ?? body.water_source ?? undefined,
-        powerSource: body.powerSource ?? body.power_source ?? undefined,
+        // Second review (G): neighbouring features + access map
+        neighbouringFeatures: body.neighbouringFeatures !== undefined || body.neighbouring_features !== undefined
+          ? toJsonOrString(body.neighbouringFeatures ?? body.neighbouring_features) : undefined,
+        accessMapLat: toNum(body.accessMapLat ?? body.access_map?.lat) ?? undefined,
+        accessMapLng: toNum(body.accessMapLng ?? body.access_map?.lng) ?? undefined,
         soilFertility: body.soilFertility ?? body.soil_fertility ?? undefined,
         irrigationType: body.irrigationType ?? body.irrigation_type ?? undefined,
         fullTimeWorkers: toNum(body.fullTimeWorkers ?? body.full_time_workers),

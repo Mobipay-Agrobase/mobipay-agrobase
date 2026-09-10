@@ -75,7 +75,7 @@ async function computeLocationHierarchy(tf: any) {
     const farmers = await db.farmerProfile.findMany({
       where: { ...tf, status: 'ACTIVE' },
       select: {
-        country: true, province: true, district: true, commune: true,
+        country: true, district: true, commune: true,
         villageName: true, gender: true,
       },
       take: 5000,
@@ -94,7 +94,6 @@ async function computeLocationHierarchy(tf: any) {
 
     return {
       country: group('country'),
-      province: group('province'),
       district: group('district'),
       commune: group('commune'),
       villageName: group('villageName'),

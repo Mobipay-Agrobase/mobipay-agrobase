@@ -18,11 +18,9 @@ FarmLandModel _$FarmLandModelFromJson(Map<String, dynamic> json) =>
           .toList()
       ..actualArea = json['actual_area'] as String?
       ..landOwnership = json['land_ownership'] as String?
-      ..approachRoad = json['approach_road'] as String?
-      ..landTopology = json['land_topology'] as String?
-      ..landGradient = json['land_gradient'] as String?
-      ..farmPhoto = json['farm_photo'] as String?
-      ..landDocument = json['land_document'] as String?
+      ..neighbouringFeatures = json['neighbouring_features'] as String?
+      ..accessMapLat = json['access_map_lat'] as String?
+      ..accessMapLng = json['access_map_lng'] as String?
       ..lat = json['lat'] as String?
       ..lng = json['lng'] as String?
       ..farmPlottings = (json['farmPlottings'] as List<dynamic>?)
@@ -33,9 +31,6 @@ FarmLandModel _$FarmLandModelFromJson(Map<String, dynamic> json) =>
           : FarmerModel.fromJson(json['farmer_details'] as Map<String, dynamic>)
       ..tag = json['tag'] as String
       ..listLatLng = json['listLatLng'] as String
-      ..landSurveyNo = json['land_survey_no'] as String?
-      ..waterSource = json['water_source'] as String?
-      ..powerSource = json['power_source'] as String?
       ..soilFertility = json['soil_fertility'] as String?
       ..irrigationType = json['irrigation_type'] as String?
       ..estYield = json['est_yield'] as String?
@@ -54,20 +49,15 @@ Map<String, dynamic> _$FarmLandModelToJson(FarmLandModel instance) =>
       'cultivation': instance.cultivation,
       'actual_area': instance.actualArea,
       'land_ownership': instance.landOwnership,
-      'approach_road': instance.approachRoad,
-      'land_topology': instance.landTopology,
-      'land_gradient': instance.landGradient,
-      'farm_photo': instance.farmPhoto,
-      'land_document': instance.landDocument,
+      'neighbouring_features': instance.neighbouringFeatures,
+      'access_map_lat': instance.accessMapLat,
+      'access_map_lng': instance.accessMapLng,
       'lat': instance.lat,
       'lng': instance.lng,
       'farmPlottings': instance.farmPlottings,
       'farmer_details': instance.farmerDetails,
       'tag': instance.tag,
       'listLatLng': instance.listLatLng,
-      'land_survey_no': instance.landSurveyNo,
-      'water_source': instance.waterSource,
-      'power_source': instance.powerSource,
       'soil_fertility': instance.soilFertility,
       'irrigation_type': instance.irrigationType,
       'est_yield': instance.estYield,

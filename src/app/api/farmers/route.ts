@@ -63,9 +63,7 @@ export async function GET(request: Request) {
       vehicle: f.vehicle ? JSON.parse(f.vehicle) : [],
       bankAccounts: f.bankAccounts ? JSON.parse(f.bankAccounts) : [],
       insuranceData: f.insuranceData ? JSON.parse(f.insuranceData) : null,
-      farmEquipment: f.farmEquipment ? JSON.parse(f.farmEquipment) : [],
       mainCrops: f.mainCrops ? JSON.parse(f.mainCrops) : [],
-      livestockTypes: f.livestockTypes ? JSON.parse(f.livestockTypes) : [],
       // P7: Decrypt PII fields for the response
       phone: f.phone && f.phone.startsWith('enc:v1:') ? decryptField(f.phone) : f.phone,
       nationalIdNo: f.nationalIdNo ? decryptField(f.nationalIdNo) : null,
@@ -101,9 +99,7 @@ export async function POST(request: Request) {
     if (body.vehicle) jsonData.vehicle = JSON.stringify(body.vehicle)
     if (body.bankAccounts) jsonData.bankAccounts = JSON.stringify(body.bankAccounts)
     if (body.insuranceData) jsonData.insuranceData = JSON.stringify(body.insuranceData)
-    if (body.farmEquipment) jsonData.farmEquipment = JSON.stringify(body.farmEquipment)
     if (body.mainCrops) jsonData.mainCrops = JSON.stringify(body.mainCrops)
-    if (body.livestockTypes) jsonData.livestockTypes = JSON.stringify(body.livestockTypes)
 
     // Create the farmer
     const farmer = await db.farmerProfile.create({
@@ -126,12 +122,10 @@ export async function POST(request: Request) {
         memberType: body.memberType || 'General',
         status: body.status || 'ACTIVE',
 
-        // Enrollment
+        // Enrollment (second review: registration-under + cooperative removed)
         enrollmentDate: body.enrollmentDate ? new Date(body.enrollmentDate) : new Date(),
         enrollmentPlace: body.enrollmentPlace,
         icsYear: body.icsYear,
-        farmerRegistrationUnder: body.farmerRegistrationUnder,
-        cooperativeId: body.cooperativeId,
         extensionOfficer: body.extensionOfficer,
 
         // ID Proof
@@ -140,18 +134,18 @@ export async function POST(request: Request) {
         // P7: Encrypt email at rest
         email: body.email ? encryptField(body.email) : null,
 
-        // Location
+        // Location (second review: province removed — Uganda has no provinces)
         gpsLatitude: body.gpsLatitude,
         gpsLongitude: body.gpsLongitude,
         country: body.country,
-        province: body.province,
         district: body.district,
         commune: body.commune,
         villageName: body.villageName,
         villageId: body.villageId,
         zipCode: body.zipCode,
 
-        // Family
+        // Family (second review: spouseName now stores next-of-kin contact;
+        // familyMembers = household size — column names unchanged)
         familyMembers: body.familyMembers,
         childrenUnder18: body.childrenUnder18,
         schoolGoingChildren: body.schoolGoingChildren,

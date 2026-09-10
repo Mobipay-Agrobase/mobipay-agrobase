@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getTenantContext, buildTenantFilter } from '@/lib/tenant'
 import { generateFarmerCode } from '@/lib/farmer-code'
-import { resolveFarmerByNumericId, numericId } from '@/lib/mobile/ekibbo-adapter'
+import { resolveFarmerByNumericId, numericId, resolveFarmerGroupByNumericId } from '@/lib/mobile/ekibbo-adapter'
 
 /**
  * POST /api/mobile/ekibbo-farmer  — register (or update) a farmer from the
@@ -101,6 +101,15 @@ export async function POST(req: NextRequest) {
       // Unresolvable id (e.g. cross-tenant or deleted) → fall through to create
     }
 
+    // Second review (A3): farmer group (numeric id from the mobile
+    // farmer-groups dropdown) resolved back to the FarmerGroup record.
+    const groupIdNum = parseInt(fields['group_id'] || fields['cooperative_id'] || '0', 10) || 0
+    let groupId: string | null = null
+    if (groupIdNum) {
+      const group = await resolveFarmerGroupByNumericId(tf, groupIdNum)
+      groupId = group?.id ?? null
+    }
+
     // Farmer code: Ekibbo location-based (MN0001L) when all three location
     // parts are present, otherwise the tenant-prefix fallback (EKB-00001).
     const farmerCode = await generateFarmerCode(ctx.tenantId, null, {
@@ -130,6 +139,13 @@ export async function POST(req: NextRequest) {
         enrollmentPlace: fields['enrollment_place'] || null,
         memberType: 'General',
         status: 'ACTIVE',
+        // Second review (A3/A4/B): persist group, certification + family data
+        groupId,
+        isCertified: fields['is_certified'] === 'true' || fields['is_certified'] === '1',
+        certificationType: fields['certification_type'] || null,
+        icsYear: fields['ics_year'] || null,
+        spouseName: fields['spouse_name'] || null,
+        familyMembers: fields['family_members'] ? parseInt(fields['family_members'], 10) : null,
       },
     })
 

@@ -168,14 +168,16 @@ class _FamilyInfoScreenState extends State<FamilyInfoScreen> {
                 height: 24,
               ),
               AppFormField(
-                labelText: AppLang.local.spouse_name,
+                // Second review (B): spouse name → next of kin contact
+                labelText: 'Next of Kin Contact',
                 controller: _spouseTxtController,
               ),
               const SizedBox(
                 height: 24,
               ),
               AppFormField(
-                labelText: AppLang.local.no_of_family_members,
+                // Second review (B): family members → household size
+                labelText: 'Household Size',
                 controller: _memberTxtController,
                 keyboardType: TextInputType.number,
               ),

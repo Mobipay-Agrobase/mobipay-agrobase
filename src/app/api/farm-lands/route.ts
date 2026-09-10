@@ -3,13 +3,16 @@ import { NextResponse } from 'next/server'
 import { getTenantContext, buildTenantFilter } from '@/lib/tenant'
 
 /**
- * GET /api/farm-lands?farmerId=xxx
- *   List farm lands for a farmer (or all farms in tenant scope)
+ * GET /api/farm-lands?farmerId=xxx&includeKpis=true
+ *   List farm lands for a farmer (or all farms in tenant scope).
+ *   Second review (H): includeKpis=true adds registry KPI aggregation —
+ *   total plots, total acreage, and total plants broken down per crop type.
  *
  * POST /api/farm-lands
- *   Create a new farm land with polygon points + all Excel fields.
+ *   Create a new farm land with polygon points.
  *   Body includes: farmerId, name, sizeHectares, latitude, longitude,
- *   polygonPoints (array of {lat, lng}), landOwnership, waterSource, etc.
+ *   polygonPoints (array of {lat, lng}), landOwnership, neighbouringFeatures,
+ *   accessMapLat/accessMapLng, etc.
  */
 export async function GET(request: Request) {
   try {
@@ -22,6 +25,8 @@ export async function GET(request: Request) {
     // Full polygon coordinates are only needed for the map view. The list/table
     // view only needs the point count, which is far cheaper to fetch.
     const includePolygons = searchParams.get('includePolygons') === 'true'
+    // Second review (H): KPI aggregation for the Farm Land Registry dashboard
+    const includeKpis = searchParams.get('includeKpis') === 'true'
 
     const where: Record<string, unknown> = {
       farmer: { ...buildTenantFilter(ctx, 'tenantId') },
@@ -60,13 +65,78 @@ export async function GET(request: Request) {
     }
     const farmsParsed = farms.map(f => ({
       ...f,
-      approachRoad: safeParse(f.approachRoad),
-      landGradient: safeParse(f.landGradient),
+      neighbouringFeatures: safeParse(f.neighbouringFeatures),
       irrigationSource: safeParse(f.irrigationSource),
       soilCriteria: safeParse(f.soilCriteria),
     }))
 
-    return NextResponse.json({ farms: farmsParsed, total, page, totalPages: Math.ceil(total / limit) })
+    // ─── Second review (H): Farm Land Registry KPI aggregation ────────
+    // Total land plots / total acreage / total plants (CropProduction
+    // treeCount grouped by crop type, with variety breakdown + shade
+    // trees from shadeTreeVarieties). Computed across the FULL tenant
+    // scope (not just the current page).
+    let kpis: unknown = null
+    if (includeKpis) {
+      const [plotCount, acreageAgg, cropProductions, shadeVarieties] = await Promise.all([
+        db.farmLand.count({ where }),
+        db.farmLand.aggregate({ where, _sum: { sizeHectares: true } }),
+        db.cropProduction.groupBy({
+          by: ['cropName', 'variety'],
+          where: { farmer: { ...buildTenantFilter(ctx, 'tenantId') } },
+          _sum: { treeCount: true },
+        }),
+        db.farmerProfile.findMany({
+          where: { ...buildTenantFilter(ctx, 'tenantId'), shadeTreeVarieties: { not: null } },
+          select: { shadeTreeVarieties: true },
+        }),
+      ])
+
+      // Aggregate plants per crop type; variety detail kept for the
+      // "View more details" breakdown (Coffee/Robusta, Cocoa/Trinitario…,
+      // Shade Trees, Bananas, Jackfruit, Avocado, Cassava, …).
+      const byCrop = new Map<string, number>()
+      const byVariety = new Map<string, number>()
+      for (const row of cropProductions) {
+        const crop = (row.cropName || '').trim()
+        const count = row._sum.treeCount || 0
+        byCrop.set(crop, (byCrop.get(crop) || 0) + count)
+        if (row.variety) {
+          const key = `${crop} — ${row.variety.trim()}`
+          byVariety.set(key, (byVariety.get(key) || 0) + count)
+        }
+      }
+      // Shade tree varieties stored on the farmer profile (JSON:
+      // [{variety, count}]) roll up under "Shade Trees".
+      for (const fp of shadeVarieties) {
+        try {
+          const arr = JSON.parse(fp.shadeTreeVarieties || '[]')
+          for (const v of arr) {
+            if (!v?.variety) continue
+            const n = parseInt(String(v.count)) || 0
+            byCrop.set('Shade Trees', (byCrop.get('Shade Trees') || 0) + n)
+            const key = `Shade Trees — ${String(v.variety).trim()}`
+            byVariety.set(key, (byVariety.get(key) || 0) + n)
+          }
+        } catch { /* ignore malformed JSON */ }
+      }
+
+      const plants = Array.from(byCrop.entries())
+        .map(([crop, count]) => ({ crop, count }))
+        .sort((a, b) => b.count - a.count)
+      const plantsByVariety = Array.from(byVariety.entries())
+        .map(([label, count]) => ({ label, count }))
+        .sort((a, b) => b.count - a.count)
+
+      kpis = {
+        totalPlots: plotCount,
+        totalAcreageHa: Number((acreageAgg._sum.sizeHectares || 0).toFixed(2)),
+        totalPlants: plants.reduce((s, p) => s + p.count, 0),
+        plants,
+        plantsByVariety,
+      }
+    }
+
+    return NextResponse.json({ farms: farmsParsed, total, page, totalPages: Math.ceil(total / limit), ...(kpis ? { kpis } : {}) })
   } catch (error) {
     console.error('Farm land list error:', error)
     return NextResponse.json({ error: 'Failed to fetch farm lands' }, { status: 500 })
@@ -80,9 +150,10 @@ export async function POST(request: Request) {
     const {
       farmerId, name, sizeHectares, latitude, longitude,
       polygonPoints, // array of { lat, lng, altitude? }
-      landOwnership, waterSource, soilFertility, landSurveyNo,
-      approachRoad, landTopology, landGradient, landDocumentUrl, powerSource,
-      farmPhotoUrl, irrigationSource, irrigationType,
+      landOwnership, soilFertility,
+      // Second review (G): new farm land fields
+      neighbouringFeatures, accessMapLat, accessMapLng,
+      irrigationSource, irrigationType,
       fullTimeWorkers, partTimeWorkers, seasonalWorkers, familyWorkers,
       lastChemicalApplicationDate, conventionalLands, fallowPastureLand,
       conventionalCrops, estYieldKg, certType, conversionStatus,
@@ -121,15 +192,10 @@ export async function POST(request: Request) {
         latitude: latitude ? parseFloat(latitude) : null,
         longitude: longitude ? parseFloat(longitude) : null,
         landOwnership,
-        waterSource,
         soilFertility,
-        landSurveyNo,
-        approachRoad: toJsonOrString(approachRoad),
-        landTopology,
-        landGradient: toJsonOrString(landGradient),
-        landDocumentUrl,
-        powerSource,
-        farmPhotoUrl,
+        neighbouringFeatures: toJsonOrString(neighbouringFeatures),
+        accessMapLat: accessMapLat ? parseFloat(accessMapLat) : null,
+        accessMapLng: accessMapLng ? parseFloat(accessMapLng) : null,
         irrigationSource: toJsonOrString(irrigationSource),
         irrigationType,
         fullTimeWorkers: fullTimeWorkers ? parseInt(fullTimeWorkers) : null,

@@ -95,7 +95,7 @@ export async function GET(
           vehicle: true, bankAccounts: true, bankName: true,
           loanTakenLastYear: true, loanTakenFrom: true, loanAmount: true,
           memberType: true, isCertified: true,
-          certificationType: true, icsYear: true, farmerRegistrationUnder: true,
+          certificationType: true, icsYear: true,
           extensionOfficer: true, nationalIdNo: true, dateOfBirth: true,
         },
       }),
@@ -144,7 +144,6 @@ export async function GET(
       is_certified: farmer.isCertified,
       certification_type: farmer.certificationType,
       ics_year: farmer.icsYear,
-      farmer_registration_under: farmer.farmerRegistrationUnder,
       extension_officer: farmer.extensionOfficer,
     }
 

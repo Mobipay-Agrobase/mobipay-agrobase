@@ -11,6 +11,7 @@ import 'package:http_parser/http_parser.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:mime/mime.dart';
 import 'package:agrobase_ekibbo/application/app_provider.dart';
+import 'package:agrobase_ekibbo/infrastructure/remote_data/api_data/api_ekibbo_modules.dart';
 import 'package:agrobase_ekibbo/infrastructure/remote_data/api_data/api_address.dart';
 import 'package:agrobase_ekibbo/infrastructure/local_data/ota_cache_service.dart';
 import 'package:agrobase_ekibbo/components/app_button.dart';
@@ -58,7 +59,8 @@ class _FarmerRegistrationScreenState extends State<FarmerRegistrationScreen> {
   List<String> _maritalStatuses = [];
   List<String> _idTypes = [];
   List<String> _enrollmentPlaces = [];
-  List<String> _certTypes = [];
+  // Second review (A4): certification types — RA, Organic, Fairtrade, 4C
+  final List<String> _certTypes = ['RA', 'Organic', 'Fairtrade', '4C'];
 
   // 7-level location cascade from the web Location Master:
   // Region → SubRegion → District → County → SubCounty → Parish → Village
@@ -70,6 +72,9 @@ class _FarmerRegistrationScreenState extends State<FarmerRegistrationScreen> {
   List<Map<String, dynamic>> _parishes = [];
   List<VillageModel> _villages = [];
   List<MCooperative> _cooperatives = [];
+  // Second review (A3): farmer group comes from the farmer-groups master
+  // (name + group code), replacing the cooperative source.
+  List<Map<String, dynamic>> _farmerGroups = [];
   bool _isUpdate = false;
 
   late LatLng _latLng;
@@ -144,13 +149,13 @@ class _FarmerRegistrationScreenState extends State<FarmerRegistrationScreen> {
     _maritalStatuses = ota.categoryValues('marital_status');
     _idTypes = ota.categoryValues('national_id_type');
     _enrollmentPlaces = ota.categoryValues('enrollment_place');
-    _certTypes = ota.categoryValues('certification_type');
     setState(() {});
   }
 
   _getCooperatives() async {
     if (!mounted) return;
     _cooperatives = await ApiAddress.getCooperatives();
+    _farmerGroups = await ApiEkibboModules.farmerGroups();
     if (_cooperatives.isNotEmpty) {
       setState(() {});
     }
@@ -253,12 +258,20 @@ class _FarmerRegistrationScreenState extends State<FarmerRegistrationScreen> {
   }
 
   int? indexCooperative() {
-    if (mFarmerLocal.cooperative_id == 0 || _cooperatives.isEmpty) return null;
-    final index = _cooperatives
-        .indexWhere((element) => element.id == mFarmerLocal.cooperative_id);
+    // Second review (A3): farmer groups (numeric ids from the mobile API)
+    if (mFarmerLocal.cooperative_id == 0) return null;
+    final index = _farmerGroups.indexWhere(
+        (g) => g['id'] == mFarmerLocal.cooperative_id);
     if (index == -1) return null;
     return index;
   }
+
+  List<String> get _farmerGroupNames => _farmerGroups
+      .map((g) => (g['name'] ?? '').toString() +
+          ((g['group_code'] ?? '').toString().isNotEmpty
+              ? ' (${g['group_code']})'
+              : ''))
+      .toList();
 
 
   _onSaveToLocal() {
@@ -291,11 +304,6 @@ class _FarmerRegistrationScreenState extends State<FarmerRegistrationScreen> {
       DialogHelper.showOkDialog(
           context,
           'Please select the full location: Region, District, Sub County and Village ( Parish completes the chain)');
-      return;
-    }
-    if (mFarmerLocal.farmer_registration_under.isEmpty) {
-      DialogHelper.showOkDialog(
-          context, 'Please select Farmer Registration Under (Agri/Aqua)');
       return;
     }
     if (mFarmerLocal.identity_proof.isNotEmpty) {
@@ -562,10 +570,12 @@ class _FarmerRegistrationScreenState extends State<FarmerRegistrationScreen> {
             padding: const EdgeInsets.only(bottom: 24.0),
             child: InputDropDownData(
               hintText: 'Farmer Group *',
-              items: _cooperatives.map((e) => e.name).toList(),
+              items: _farmerGroupNames,
               itemIndex: indexCooperative(),
               onChanged: (index) {
-                mFarmerLocal.cooperative_id = _cooperatives[index].id;
+                // Second review (A3): numeric farmer-group id
+                mFarmerLocal.cooperative_id =
+                    _farmerGroups[index]['id'] as int;
               },
             ),
           ),
@@ -607,17 +617,7 @@ class _FarmerRegistrationScreenState extends State<FarmerRegistrationScreen> {
               const SizedBox(height: 24),
             ]);
           }),
-          // ── Farmer Registration Under (Agri / Aqua) — web parity ──
-          InputDropDownData(
-            hintText: 'Farmer Registration Under *',
-            items: const ['Agri', 'Aqua'],
-            itemIndex: mFarmerLocal.farmer_registration_under.isEmpty
-                ? null
-                : ['Agri', 'Aqua'].indexOf(mFarmerLocal.farmer_registration_under),
-            onChanged: (index) {
-              mFarmerLocal.farmer_registration_under = index == 0 ? 'Agri' : 'Aqua';
-            },
-          ),
+          // Second review (A2): "Farmer Registration Under" removed
         ],
       ),
     );

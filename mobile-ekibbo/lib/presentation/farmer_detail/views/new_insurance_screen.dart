@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:agrobase_ekibbo/components/app_dropdown_button.dart';
 import 'package:agrobase_ekibbo/components/app_form_field.dart';
 import 'package:agrobase_ekibbo/components/custom_appbar.dart';
-import 'package:agrobase_ekibbo/components/date_form_field.dart';
 import 'package:agrobase_ekibbo/components/constant/color_constant.dart';
 import 'package:agrobase_ekibbo/components/constant/text_style_constant.dart';
 import 'package:agrobase_ekibbo/components/helpers/common_helper.dart';
@@ -28,23 +27,20 @@ class _NewInsuranceScreenState extends State<NewInsuranceScreen> {
   late InsuranceInfoModel _insurance;
   final ctrlLifeProvider = TextEditingController();
   final ctrlLifeAmount = TextEditingController();
-  String dateLifeEnroll = DateHelper.convertDateToStr(DateTime.now());
-  String dateLifeEnd = DateHelper.convertDateToStr(DateTime.now());
+  // Second review (D): season ('A' | 'B') replaces start/end dates
+  String seasonLife = 'A';
 
   final ctrlHealthProvider = TextEditingController();
   final ctrlHealthAmount = TextEditingController();
-  String dateHealthEnroll = DateHelper.convertDateToStr(DateTime.now());
-  String dateHealthEnd = DateHelper.convertDateToStr(DateTime.now());
+  String seasonHealth = 'A';
 
   final ctrlCropProvider = TextEditingController();
   final ctrlCropAmount = TextEditingController();
   int? _insuredIndex;
-  String dateCropEnroll = DateHelper.convertDateToStr(DateTime.now());
-  String dateCropEnd = DateHelper.convertDateToStr(DateTime.now());
+  String seasonCrop = 'A';
 
   final ctrlSocialProvider = TextEditingController();
-  String dateSocialEnroll = DateHelper.convertDateToStr(DateTime.now());
-  String dateSocialEnd = DateHelper.convertDateToStr(DateTime.now());
+  String seasonSocial = 'A';
 
   final _otherProviderTxtCtrler = TextEditingController();
 
@@ -81,11 +77,10 @@ class _NewInsuranceScreenState extends State<NewInsuranceScreen> {
       ctrlLifeAmount.text = '${_insurance.lifeInsuranceAmount ?? ''}';
       if (_insurance.lifeInsuranceEnrolledDate != null &&
           _insurance.lifeInsuranceEnrolledDate != '') {
-        dateLifeEnroll = _insurance.lifeInsuranceEnrolledDate!;
+        seasonLife = _insurance.lifeSeason ?? 'A';
       }
       if (_insurance.lifeInsuranceEndDate != null &&
           _insurance.lifeInsuranceEndDate != '') {
-        dateLifeEnd = _insurance.lifeInsuranceEndDate!;
       }
     }
     if (_insurance.healthInsurance == 'yes') {
@@ -93,11 +88,10 @@ class _NewInsuranceScreenState extends State<NewInsuranceScreen> {
       ctrlHealthAmount.text = '${_insurance.healthInsuranceAmount ?? ''}';
       if (_insurance.healthInsuranceEnrolledDate != null &&
           _insurance.healthInsuranceEnrolledDate != '') {
-        dateHealthEnroll = _insurance.healthInsuranceEnrolledDate!;
+        seasonHealth = _insurance.healthSeason ?? 'A';
       }
       if (_insurance.healthInsuranceEndDate != null &&
           _insurance.healthInsuranceEndDate != '') {
-        dateHealthEnd = _insurance.healthInsuranceEndDate!;
       }
     }
     if (_insurance.cropInsurance == 'yes') {
@@ -108,11 +102,10 @@ class _NewInsuranceScreenState extends State<NewInsuranceScreen> {
           int.tryParse(_insurance.cropInsured?.split(',').first ?? ''));
       if (_insurance.cropInsuranceEnrolledDate != null &&
           _insurance.cropInsuranceEnrolledDate != '') {
-        dateCropEnroll = _insurance.cropInsuranceEnrolledDate!;
+        seasonCrop = _insurance.cropSeason ?? 'A';
       }
       if (_insurance.cropInsuranceEndDate != null &&
           _insurance.cropInsuranceEndDate != '') {
-        dateCropEnd = _insurance.cropInsuranceEndDate!;
       }
     }
     if (_insurance.socialInsurance == 'yes') {
@@ -120,11 +113,10 @@ class _NewInsuranceScreenState extends State<NewInsuranceScreen> {
 
       if (_insurance.socialInsuranceEnrolledDate != null &&
           _insurance.socialInsuranceEnrolledDate != '') {
-        dateSocialEnroll = _insurance.socialInsuranceEnrolledDate!;
+        seasonSocial = _insurance.socialSeason ?? 'A';
       }
       if (_insurance.socialInsuranceEndDate != null &&
           _insurance.socialInsuranceEndDate != '') {
-        dateSocialEnd = _insurance.socialInsuranceEndDate!;
       }
     }
     if (_insurance.otherInsurance != null && _insurance.otherInsurance != '') {
@@ -136,14 +128,12 @@ class _NewInsuranceScreenState extends State<NewInsuranceScreen> {
     if (_insurance.lifeInsurance == 'yes') {
       _insurance.providerLifeInsurance = ctrlLifeProvider.text;
       _insurance.lifeInsuranceAmount = double.tryParse(ctrlLifeAmount.text);
-      _insurance.lifeInsuranceEnrolledDate = dateLifeEnroll;
-      _insurance.lifeInsuranceEndDate = dateLifeEnd;
+      _insurance.lifeSeason = seasonLife;
     }
     if (_insurance.healthInsurance == 'yes') {
       _insurance.providerHealthInsurance = ctrlHealthProvider.text;
       _insurance.healthInsuranceAmount = double.tryParse(ctrlHealthAmount.text);
-      _insurance.healthInsuranceEnrolledDate = dateHealthEnroll;
-      _insurance.healthInsuranceEndDate = dateHealthEnd;
+      _insurance.healthSeason = seasonHealth;
     }
     if (_insurance.cropInsurance == 'yes') {
       _insurance.providerCropInsurance = ctrlCropProvider.text;
@@ -151,13 +141,11 @@ class _NewInsuranceScreenState extends State<NewInsuranceScreen> {
       _insurance.cropInsured = _insuredIndex != null
           ? _dataCrop[_insuredIndex!].id.toString()
           : null;
-      _insurance.cropInsuranceEnrolledDate = dateCropEnroll;
-      _insurance.cropInsuranceEndDate = dateCropEnd;
+      _insurance.cropSeason = seasonCrop;
     }
     if (_insurance.socialInsurance == 'yes') {
       _insurance.providerSocialInsurance = ctrlSocialProvider.text;
-      _insurance.socialInsuranceEnrolledDate = dateSocialEnroll;
-      _insurance.socialInsuranceEndDate = dateSocialEnd;
+      _insurance.socialSeason = seasonSocial;
     }
     _insurance.otherInsurance = _otherProviderTxtCtrler.text;
     print(_insurance.toJson());
@@ -278,7 +266,7 @@ class _NewInsuranceScreenState extends State<NewInsuranceScreen> {
           Padding(
             padding: const EdgeInsets.only(top: 24),
             child: AppFormField(
-              labelText: AppLang.local.insurance_amount,
+              labelText: 'Payout Amount', // Second review (D)
               keyboardType: TextInputType.number,
               controller: ctrlLifeAmount,
             ),
@@ -286,27 +274,19 @@ class _NewInsuranceScreenState extends State<NewInsuranceScreen> {
           const SizedBox(
             height: 24,
           ),
-          DateFormField(
-            initialDate: dateLifeEnroll.isEmpty
-                ? DateTime.now()
-                : DateHelper.convertStrToDate(dateLifeEnroll),
-            hint: AppLang.local.enrollment_date,
-            onChanged: (date) {
-              dateLifeEnroll = DateHelper.convertDateToStr(date);
+          // Second review (D): start/end dates replaced by Season (A/B)
+          AppDropdownButton(
+            hintText: 'Season',
+            items: const ['Season A (Mar-Aug)', 'Season B (Sep-Feb)'],
+            itemSelected: seasonLife == 'A' ? 'Season A (Mar-Aug)' : (seasonLife == 'B' ? 'Season B (Sep-Feb)' : null),
+            onChanged: (value) {
+              setState(() {
+                if (value != null) {
+                  seasonLife = value.startsWith('Season A') ? 'A' : 'B';
+                }
+              });
             },
           ),
-          const SizedBox(
-            height: 24,
-          ),
-          DateFormField(
-            initialDate: dateLifeEnd.isEmpty
-                ? DateTime.now()
-                : DateHelper.convertStrToDate(dateLifeEnd),
-            hint: AppLang.local.end_date,
-            onChanged: (date) {
-              dateLifeEnd = DateHelper.convertDateToStr(date);
-            },
-          )
         ],
       ),
     );
@@ -324,7 +304,7 @@ class _NewInsuranceScreenState extends State<NewInsuranceScreen> {
           Padding(
             padding: const EdgeInsets.only(top: 24),
             child: AppFormField(
-              labelText: AppLang.local.insurance_amount,
+              labelText: 'Payout Amount', // Second review (D)
               keyboardType: TextInputType.number,
               controller: ctrlHealthAmount,
             ),
@@ -332,27 +312,19 @@ class _NewInsuranceScreenState extends State<NewInsuranceScreen> {
           const SizedBox(
             height: 24,
           ),
-          DateFormField(
-            initialDate: dateHealthEnroll.isEmpty
-                ? DateTime.now()
-                : DateHelper.convertStrToDate(dateHealthEnroll),
-            hint: AppLang.local.enrollment_date,
-            onChanged: (date) {
-              dateHealthEnroll = DateHelper.convertDateToStr(date);
+          // Second review (D): start/end dates replaced by Season (A/B)
+          AppDropdownButton(
+            hintText: 'Season',
+            items: const ['Season A (Mar-Aug)', 'Season B (Sep-Feb)'],
+            itemSelected: seasonHealth == 'A' ? 'Season A (Mar-Aug)' : (seasonHealth == 'B' ? 'Season B (Sep-Feb)' : null),
+            onChanged: (value) {
+              setState(() {
+                if (value != null) {
+                  seasonHealth = value.startsWith('Season A') ? 'A' : 'B';
+                }
+              });
             },
           ),
-          const SizedBox(
-            height: 24,
-          ),
-          DateFormField(
-            initialDate: dateHealthEnd.isEmpty
-                ? DateTime.now()
-                : DateHelper.convertStrToDate(dateHealthEnd),
-            hint: AppLang.local.end_date,
-            onChanged: (date) {
-              dateHealthEnd = DateHelper.convertDateToStr(date);
-            },
-          )
         ],
       ),
     );
@@ -370,27 +342,19 @@ class _NewInsuranceScreenState extends State<NewInsuranceScreen> {
           const SizedBox(
             height: 24,
           ),
-          DateFormField(
-            initialDate: dateSocialEnroll.isEmpty
-                ? DateTime.now()
-                : DateHelper.convertStrToDate(dateSocialEnroll),
-            hint: AppLang.local.enrollment_date,
-            onChanged: (date) {
-              dateSocialEnroll = DateHelper.convertDateToStr(date);
+          // Second review (D): start/end dates replaced by Season (A/B)
+          AppDropdownButton(
+            hintText: 'Season',
+            items: const ['Season A (Mar-Aug)', 'Season B (Sep-Feb)'],
+            itemSelected: seasonSocial == 'A' ? 'Season A (Mar-Aug)' : (seasonSocial == 'B' ? 'Season B (Sep-Feb)' : null),
+            onChanged: (value) {
+              setState(() {
+                if (value != null) {
+                  seasonSocial = value.startsWith('Season A') ? 'A' : 'B';
+                }
+              });
             },
           ),
-          const SizedBox(
-            height: 24,
-          ),
-          DateFormField(
-            initialDate: dateSocialEnd.isEmpty
-                ? DateTime.now()
-                : DateHelper.convertStrToDate(dateSocialEnd),
-            hint: AppLang.local.end_date,
-            onChanged: (date) {
-              dateSocialEnd = DateHelper.convertDateToStr(date);
-            },
-          )
         ],
       ),
     );
@@ -430,27 +394,19 @@ class _NewInsuranceScreenState extends State<NewInsuranceScreen> {
           const SizedBox(
             height: 24,
           ),
-          DateFormField(
-            initialDate: dateCropEnroll.isEmpty
-                ? DateTime.now()
-                : DateHelper.convertStrToDate(dateCropEnroll),
-            hint: AppLang.local.enrollment_date,
-            onChanged: (date) {
-              dateCropEnroll = DateHelper.convertDateToStr(date);
+          // Second review (D): start/end dates replaced by Season (A/B)
+          AppDropdownButton(
+            hintText: 'Season',
+            items: const ['Season A (Mar-Aug)', 'Season B (Sep-Feb)'],
+            itemSelected: seasonCrop == 'A' ? 'Season A (Mar-Aug)' : (seasonCrop == 'B' ? 'Season B (Sep-Feb)' : null),
+            onChanged: (value) {
+              setState(() {
+                if (value != null) {
+                  seasonCrop = value.startsWith('Season A') ? 'A' : 'B';
+                }
+              });
             },
           ),
-          const SizedBox(
-            height: 24,
-          ),
-          DateFormField(
-            initialDate: dateCropEnd.isEmpty
-                ? DateTime.now()
-                : DateHelper.convertStrToDate(dateCropEnd),
-            hint: AppLang.local.end_date,
-            onChanged: (date) {
-              dateCropEnd = DateHelper.convertDateToStr(date);
-            },
-          )
         ],
       ),
     );

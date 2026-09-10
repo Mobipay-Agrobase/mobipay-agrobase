@@ -90,26 +90,8 @@ interface FarmerDetail {
     id: string
     insuranceType: string
     provider: string | null
-    amount: number | null
-    enrolledDate: string | null
-    endDate: string | null
-  }>
-  farmerAnimals: Array<{
-    id: string
-    animalType: string
-    count: number
-    breedName: string | null
-    fodder: string | null
-    animalHousing: string | null
-    revenue: number | null
-    animalForGrowth: string | null
-  }>
-  farmerEquipment: Array<{
-    id: string
-    equipmentName: string
-    count: number
-    yearOfManufacture: number | null
-    yearOfPurchase: number | null
+    payoutAmount: number | null
+    season: string | null
   }>
 }
 
@@ -188,8 +170,6 @@ export function FarmerDetailFull({ farmerId, onBack }: Props) {
 
   const bankCount = farmer.farmerBankAccounts?.length || 0
   const insuranceCount = farmer.farmerInsurances?.length || 0
-  const animalCount = farmer.farmerAnimals?.length || 0
-  const equipmentCount = farmer.farmerEquipment?.length || 0
 
   return (
     <div className="flex flex-col h-full">
@@ -509,8 +489,6 @@ function ProfileAccordion({ farmer, onRefresh }: { farmer: FarmerDetail; onRefre
     { id: 'finance', label: 'Finance & Loans', icon: Banknote },
     { id: 'bank', label: 'Bank Accounts', icon: Landmark, count: farmer.farmerBankAccounts?.length || 0 },
     { id: 'insurance', label: 'Insurance', icon: Shield, count: farmer.farmerInsurances?.length || 0 },
-    { id: 'livestock', label: 'Livestock', icon: Users, count: farmer.farmerAnimals?.length || 0 },
-    { id: 'equipment', label: 'Equipment', icon: Tractor, count: farmer.farmerEquipment?.length || 0 },
   ]
   return (
     <div className="space-y-2">
@@ -533,9 +511,7 @@ function ProfileAccordion({ farmer, onRefresh }: { farmer: FarmerDetail; onRefre
                 {sec.id === 'family' && <FamilySection farmer={farmer} />}
                 {sec.id === 'finance' && <FinanceSection farmer={farmer} />}
                 {sec.id === 'bank' && <MultiEntrySection title="Bank Accounts" icon={Landmark} farmerId={farmer.id} endpoint="bank-accounts" dataKey="accounts" items={farmer.farmerBankAccounts || []} fields={[{ name: 'accountType', label: 'Account Type', type: 'select', options: ['Savings', 'Current', 'Fixed Deposit'] }, { name: 'accountNo', label: 'Account Number', type: 'text', required: true }, { name: 'bankName', label: 'Bank Name', type: 'text', required: true }, { name: 'branchDetails', label: 'Branch', type: 'text' }, { name: 'sortCode', label: 'Sort Code', type: 'text' }, { name: 'isPrimary', label: 'Primary Account', type: 'checkbox' }]} onRefresh={onRefresh} />}
-                {sec.id === 'insurance' && <MultiEntrySection title="Insurance Records" icon={Shield} farmerId={farmer.id} endpoint="insurances" dataKey="insurances" items={farmer.farmerInsurances || []} fields={[{ name: 'insuranceType', label: 'Insurance Type', type: 'select', options: ['Life', 'Health', 'Crop', 'Social', 'Other'], required: true }, { name: 'provider', label: 'Provider', type: 'text' }, { name: 'amount', label: 'Amount', type: 'number' }, { name: 'enrolledDate', label: 'Enrolled Date', type: 'date' }, { name: 'endDate', label: 'End Date', type: 'date' }]} onRefresh={onRefresh} />}
-                {sec.id === 'livestock' && <MultiEntrySection title="Animal Husbandry" icon={Users} farmerId={farmer.id} endpoint="animals" dataKey="animals" items={farmer.farmerAnimals || []} fields={[{ name: 'animalType', label: 'Animal Type', type: 'select', options: ['Cattle', 'Goat', 'Sheep', 'Poultry', 'Pigs', 'Rabbits', 'Fish', 'Bees'], required: true }, { name: 'count', label: 'Count', type: 'number', required: true }, { name: 'breedName', label: 'Breed', type: 'text' }, { name: 'fodder', label: 'Fodder', type: 'text' }, { name: 'animalHousing', label: 'Housing', type: 'text' }, { name: 'revenue', label: 'Revenue (UGX)', type: 'number' }, { name: 'animalForGrowth', label: 'Purpose', type: 'select', options: ['Meat', 'Milk', 'Eggs', 'Draught', 'Breeding', 'Other'] }]} onRefresh={onRefresh} />}
-                {sec.id === 'equipment' && <MultiEntrySection title="Farm Equipment" icon={Tractor} farmerId={farmer.id} endpoint="equipment" dataKey="equipment" items={farmer.farmerEquipment || []} fields={[{ name: 'equipmentName', label: 'Equipment Name', type: 'text', required: true }, { name: 'count', label: 'Count', type: 'number', required: true }, { name: 'yearOfManufacture', label: 'Year of Manufacture', type: 'number' }, { name: 'yearOfPurchase', label: 'Year of Purchase', type: 'number' }]} onRefresh={onRefresh} />}
+                {sec.id === 'insurance' && <MultiEntrySection title="Insurance Records" icon={Shield} farmerId={farmer.id} endpoint="insurances" dataKey="insurances" items={farmer.farmerInsurances || []} fields={[{ name: 'insuranceType', label: 'Insurance Type', type: 'select', options: ['Life', 'Health', 'Crop', 'Social', 'Other'], required: true }, { name: 'provider', label: 'Provider', type: 'text' }, { name: 'payoutAmount', label: 'Payout Amount', type: 'number' }, { name: 'season', label: 'Season', type: 'select', options: ['A', 'B'] }]} onRefresh={onRefresh} />}
               </div>
             )}
           </div>
@@ -585,8 +561,8 @@ function PersonalSection({ farmer }: { farmer: FarmerDetail }) {
 function FamilySection({ farmer }: { farmer: FarmerDetail }) {
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-      <InfoField label="Spouse Name" value={farmer.spouseName} />
-      <InfoField label="Family Members" value={farmer.familyMembers ? String(farmer.familyMembers) : ''} />
+      <InfoField label="Next of Kin Contact" value={farmer.spouseName} />
+      <InfoField label="Household Size" value={farmer.familyMembers ? String(farmer.familyMembers) : ''} />
       <InfoField label="Children under 18" value={farmer.childrenUnder18 ? String(farmer.childrenUnder18) : ''} />
       <InfoField label="School Going" value={farmer.schoolGoingChildren ? String(farmer.schoolGoingChildren) : ''} />
       <InfoField label="Housing Ownership" value={farmer.housingOwnership} />
@@ -614,7 +590,7 @@ function FinanceSection({ farmer }: { farmer: FarmerDetail }) {
           <div className="flex justify-between p-2 rounded-lg bg-muted/30"><span className="text-sm text-muted-foreground">Loan Taken</span><Badge variant={farmer.loanTakenLastYear ? 'default' : 'secondary'} className="text-[10px]">{farmer.loanTakenLastYear ? 'Yes' : 'No'}</Badge></div>
           {farmer.loanTakenLastYear && <>
             <div className="flex justify-between p-2 rounded-lg bg-muted/30"><span className="text-sm text-muted-foreground">Amount</span><span className="text-sm font-medium">{farmer.loanAmount ? `UGX ${farmer.loanAmount.toLocaleString()}` : '—'}</span></div>
-            <div className="flex justify-between p-2 rounded-lg bg-muted/30"><span className="text-sm text-muted-foreground">From</span><span className="text-sm font-medium">{farmer.loanTakenFrom || '—'}</span></div>
+            <div className="flex justify-between p-2 rounded-lg bg-muted/30"><span className="text-sm text-muted-foreground">Sources (Crop Type Sold to EKiBBO)</span><span className="text-sm font-medium">{farmer.loanTakenFrom || '—'}</span></div>
           </>}
         </div>
       </div>

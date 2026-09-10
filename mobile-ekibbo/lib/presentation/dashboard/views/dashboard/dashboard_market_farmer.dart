@@ -252,6 +252,43 @@ class _DashboardMarketFarmerState extends State<DashboardMarketFarmer> {
     );
   }
 
+
+  /// Second review (H): Total Plants breakdown dialog — per crop type
+  /// (Coffee/Robusta, Cocoa, Vanilla, Shade Trees, Bananas, …).
+  void _showPlantsBreakdown(DashboardModel data) {
+    final rows = data.plantsBreakdown ?? [];
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Total Plants — Breakdown'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: rows.isEmpty
+              ? const Text('No plant records yet.')
+              : ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: rows.length,
+                  itemBuilder: (_, i) => Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(child: Text(rows[i].crop ?? '')),
+                        Text('${(rows[i].count ?? 0).toInt()}'),
+                      ],
+                    ),
+                  ),
+                ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
   Widget _buildSummaryView(DashboardModel data) {
     // Ekibbo spec: a Field Officer sees ONLY their allocated farmers — the
     // KPI card sits in the total-farmers position but shows the officer's
@@ -286,16 +323,34 @@ class _DashboardMarketFarmerState extends State<DashboardMarketFarmer> {
             flex: 2,
             child: Column(
               children: [
-                SummaryItemHorizontal(
-                  title: AppLang.local.total_hectares,
-                  value: '${(data.totalHectares ?? 0).toStringAsFixed(1)} ha',
+                // Second review (H): Farm Land Registry KPIs —
+                // total land plots / total acreage / total plants
+                Row(
+                  children: [
+                    Expanded(
+                      child: SummaryItemHorizontal(
+                        title: 'Total Land Plots',
+                        value: '${(data.totalPlot ?? 0).toInt()}',
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: SummaryItemHorizontal(
+                        title: AppLang.local.total_hectares,
+                        value: '${(data.totalHectares ?? 0).toStringAsFixed(1)} ha',
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(
                   height: 16,
                 ),
-                SummaryItemHorizontal(
-                  title: AppLang.local.est_yield_quantity,
-                  value: '${data.totalExpectedYield} kg',
+                GestureDetector(
+                  onTap: () => _showPlantsBreakdown(data),
+                  child: SummaryItemHorizontal(
+                    title: 'Total Plants (view details)',
+                    value: '${(data.totalPlants ?? 0).toInt()}',
+                  ),
                 ),
               ],
             ),

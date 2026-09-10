@@ -124,10 +124,7 @@ class _PondRegScreenState extends State<PondRegScreen> {
     _areaTxtController.text = '${farmland.actualArea ?? 0}';
     _ownerIndex =
         _ownerLands.getIndex((p0) => p0.name == farmland.landOwnership);
-    _approachIndex =
-        _appoarchRoads.getIndex((p0) => p0.name == farmland.approachRoad);
-    _topologIndex =
-        _landTopologs.getIndex((p0) => p0.name == farmland.landTopology);
+    // Second review (G): approach road + land topology removed from FarmLandModel
   }
 
   _addPlotting() {
@@ -180,12 +177,7 @@ class _PondRegScreenState extends State<PondRegScreen> {
       'land_ownership': _ownerLands[_ownerIndex!].name,
       'srp_score': '',
       'carbon_index': '',
-      'approach_road':
-          _approachIndex != null ? _appoarchRoads[_approachIndex!].name : '',
-      'land_topology':
-          _topologIndex != null ? _landTopologs[_topologIndex!].name : '',
-      'land_gradient':
-          _gradientIndex == null ? '' : _landGradients[_gradientIndex!].name,
+      // Second review (G): approach_road / land_topology / land_gradient removed
       'list_lat_lng': listLatLng.toString(),
       'staff_lat': DataConstant.lat,
       'staff_lng': DataConstant.lng,
@@ -375,7 +367,6 @@ class _PondRegScreenState extends State<PondRegScreen> {
                         StatefulBuilder(
                           builder: (_, s) => _buildImgView(
                             'Photo',
-                            url: widget.farmland?.farmPhoto,
                             chooseImg: () async {
                               _farmImg = await CommonHelper.chooseImg();
                               s(() {});

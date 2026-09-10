@@ -106,7 +106,9 @@ export async function PUT(
     const body = await req.json().catch(() => ({}))
 
     // ── Family / assets / finance / certificate → FarmerProfile columns ──
-    const fam = pick(body, ['education', 'marial_status', 'spouse_name'])
+    // Second review (B): spouse_name now carries next-of-kin contact;
+    // no_of_family = household size (column mapping unchanged).
+    const fam = pick(body, ['education', 'marial_status', 'spouse_name', 'next_of_kin_contact', 'household_size'])
     const asset = pick(body, ['housing_ownership', 'house_type'])
     const fin = pick(body, ['loan_taken_last_year', 'loan_taken_from', 'loan_amount', 'loan_purpose'])
     const cert = pick(body, ['is_certified_farmer', 'certification_type', 'year_of_ics'])
@@ -115,6 +117,9 @@ export async function PUT(
     if (fam.education !== undefined) profileData.education = fam.education || null
     if (fam.marial_status !== undefined) profileData.maritalStatus = fam.marial_status || null
     if (fam.spouse_name !== undefined) profileData.spouseName = fam.spouse_name || null
+    // Second review (B): explicit next-of-kin contact + household size keys
+    if (fam.next_of_kin_contact !== undefined) profileData.spouseName = fam.next_of_kin_contact || null
+    if (fam.household_size !== undefined) profileData.familyMembers = parseInt(fam.household_size) || null
     if (fam.parent_name !== undefined) profileData.guardianName = fam.parent_name || null
     if (fam.no_of_family !== undefined) profileData.familyMembers = parseInt(fam.no_of_family) || null
     if (fam.total_child_under_18_going_school !== undefined) {
@@ -156,65 +161,62 @@ export async function PUT(
       await db.farmerProfile.update({ where: { id: farmer.id }, data: profileData })
     }
 
-    // ── Equipment rows (replace-all) ──
-    const equipArr = Array.isArray(body.farm_equipment) ? body.farm_equipment
-      : Array.isArray(body.data_equipment) ? body.data_equipment : null
-    if (equipArr) {
-      await db.farmerFarmEquipment.deleteMany({ where: { farmerId: farmer.id } })
-      for (const e of equipArr as any[]) {
-        const name = e.farm_equipment_items ?? e.equipmentItem ?? e.equipment_name
-        if (!name) continue
-        await db.farmerFarmEquipment.create({
-          data: {
-            farmerId: farmer.id,
-            equipmentName: String(name),
-            count: parseInt(e.count) || 1,
-            yearOfManufacture: parseInt(e.year_of_manufacture) || null,
-            yearOfPurchase: parseInt(e.year_of_purchase) || null,
-          },
-        })
-      }
-    }
-
-    // ── Animal husbandry rows (replace-all) ──
-    const animalArr = Array.isArray(body.animal_husbandry) ? body.animal_husbandry
-      : Array.isArray(body.data_animal) ? body.data_animal : null
-    if (animalArr) {
-      await db.farmerAnimalHusbandry.deleteMany({ where: { farmerId: farmer.id } })
-      for (const a of animalArr as any[]) {
-        const type = a.farm_animal ?? a.farmAnimal ?? a.animal_type
-        if (!type) continue
-        await db.farmerAnimalHusbandry.create({
-          data: {
-            farmerId: farmer.id,
-            animalType: String(type),
-            count: parseInt(a.animal_count ?? a.count) || 0,
-            breedName: a.breed_name ?? null,
-            fodder: a.fodder ?? null,
-            animalHousing: a.animal_housing ?? null,
-            revenue: parseFloat(a.revenue) || null,
-            animalForGrowth: a.animal_for_growth ?? null,
-          },
-        })
-      }
-    }
+    // Second review (E/F): farm equipment + animal husbandry modules REMOVED —
+    // payloads are ignored (mobile app no longer sends them).
 
     // ── Insurance rows (replace-all) ──
+    // Second review (D): amount → payout amount; dates → season ("A" | "B").
+    // Accepts BOTH shapes: explicit per-row {insurance_type, provider,
+    // payout_amount, season} and the mobile flat model (life/health/crop/
+    // social flags with per-section provider/amount/season keys).
     const insArr = Array.isArray(body.insurance_info) ? body.insurance_info
       : Array.isArray(body.data_insurance) ? body.data_insurance : null
     if (insArr) {
-      await db.farmerInsurance.deleteMany({ where: { farmerId: farmer.id } })
+      type InsRow = { insuranceType: string; provider?: string | null; payoutAmount?: number | null; season?: string | null; cropInsured?: string | null; areaInsured?: number | null }
+      const rows: InsRow[] = []
       for (const ins of insArr as any[]) {
-        const type = ins.insurance_type ?? ins.type
-        if (!type) continue
+        if (ins.insurance_type || ins.type) {
+          rows.push({
+            insuranceType: String(ins.insurance_type ?? ins.type),
+            provider: ins.provider ?? null,
+            payoutAmount: parseFloat(ins.payout_amount ?? ins.amount) || null,
+            season: ins.season ?? null,
+            cropInsured: ins.crop_insuranced ?? ins.cropInsured ?? null,
+            areaInsured: parseFloat(ins.area_insuranced ?? ins.areaInsured) || null,
+          })
+          continue
+        }
+        // Flat mobile shape — expand each enabled section
+        const sections: Array<[string, string | undefined, number | string | undefined, string | undefined]> = [
+          ['Life', ins.provider_life_insurance, ins.life_insurance_amount, ins.life_insurance_season],
+          ['Health', ins.provider_health_insurance, ins.health_insurance_amount, ins.health_insurance_season],
+          ['Crop', ins.provider_crop_insurance, ins.payout_amount, ins.crop_insurance_season],
+          ['Social', ins.provider_social_insurance, undefined, ins.social_insurance_season],
+        ]
+        for (const [sec, provider, amount, season] of sections) {
+          const enabled = ins[`${sec.toLowerCase()}_insurance`] === 'Yes' || ins[`${sec.toLowerCase()}_insurance`] === 'yes'
+          if (!enabled) continue
+          rows.push({
+            insuranceType: sec,
+            provider: provider ?? null,
+            payoutAmount: amount != null ? (parseFloat(String(amount)) || null) : null,
+            season: season ?? null,
+            cropInsured: sec === 'Crop' ? (ins.crop_insuranced ?? null) : null,
+            areaInsured: sec === 'Crop' ? (parseFloat(String(ins.area_insuranced)) || null) : null,
+          })
+        }
+      }
+      await db.farmerInsurance.deleteMany({ where: { farmerId: farmer.id } })
+      for (const row of rows) {
         await db.farmerInsurance.create({
           data: {
             farmerId: farmer.id,
-            insuranceType: String(type),
-            provider: ins.provider ?? null,
-            amount: parseFloat(ins.amount) || null,
-            cropInsured: ins.crop_insuranced ?? ins.cropInsured ?? null,
-            areaInsured: parseFloat(ins.area_insuranced ?? ins.areaInsured) || null,
+            insuranceType: row.insuranceType,
+            provider: row.provider ?? null,
+            payoutAmount: row.payoutAmount ?? null,
+            season: row.season ?? null,
+            cropInsured: row.cropInsured ?? null,
+            areaInsured: row.areaInsured ?? null,
           },
         })
       }

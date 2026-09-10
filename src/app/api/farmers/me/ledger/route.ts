@@ -44,7 +44,6 @@ export async function GET(req: NextRequest) {
         group: { select: { id: true, name: true } },
         villageName: true,
         district: true,
-        province: true,
         country: true,
       },
     })

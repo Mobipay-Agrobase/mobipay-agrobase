@@ -16,6 +16,11 @@ class DashboardModel {
   double? totalHectares;
   @JsonKey(name: 'total_plot')
   double? totalPlot;
+  // Second review (H): plants KPI + per-crop breakdown
+  @JsonKey(name: 'total_plants')
+  double? totalPlants;
+  @JsonKey(name: 'plants_breakdown')
+  List<PlantsBreakdown>? plantsBreakdown;
   @JsonKey(name: 'farmer_list')
   List<FarmerModel>? farmerList;
   double? totalExpectedYield;
@@ -28,4 +33,15 @@ class DashboardModel {
 
   factory DashboardModel.fromJson(Map<String, dynamic> json) =>
       _$DashboardModelFromJson(json);
+}
+
+
+/// Second review (H): per-crop plant counts for the Total Plants KPI card.
+@JsonSerializable()
+class PlantsBreakdown {
+  @JsonKey(name: 'crop')
+  String? crop;
+  @JsonKey(name: 'count')
+  double? count;
+  PlantsBreakdown({this.crop, this.count});
 }

@@ -1,5 +1,6 @@
 import 'package:agrobase_ekibbo/domain/l10n/app_lang.dart';
 
+// Second review (E/F): equipment + animal husbandry tabs REMOVED.
 enum FarmerDetailMenu {
   overview,
   about,
@@ -8,8 +9,6 @@ enum FarmerDetailMenu {
   bank,
   finance,
   insurance,
-  equipment,
-  animal,
   certificate,
 }
 
@@ -30,10 +29,6 @@ extension FarmerDetailMenuExt on FarmerDetailMenu {
         return AppLang.local.finance_info;
       case FarmerDetailMenu.insurance:
         return AppLang.local.insurance_info;
-      case FarmerDetailMenu.equipment:
-        return AppLang.local.farm_equipment;
-      case FarmerDetailMenu.animal:
-        return AppLang.local.animal_husbandry;
       case FarmerDetailMenu.certificate:
         return AppLang.local.certificate_info;
     }

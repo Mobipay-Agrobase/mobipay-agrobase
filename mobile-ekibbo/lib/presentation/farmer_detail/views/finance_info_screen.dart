@@ -28,12 +28,12 @@ class FinanceInfoScreen extends StatefulWidget {
 
 class _FinanceInfoScreenState extends State<FinanceInfoScreen> {
   bool _hasLoan = false;
+  // Second review (C): sources = crop type sold to EKiBBO
   final List<String> _loanFrom = [
-    'Bank',
-    'Relative',
-    'Friend',
-    'Farming',
-    'contract',
+    'Coffee',
+    'Cocoa',
+    'Vanilla',
+    'Shade Trees',
     'Other',
   ];
   int? _loanFromIndex;

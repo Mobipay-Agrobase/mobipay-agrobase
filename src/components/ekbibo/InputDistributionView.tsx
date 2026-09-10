@@ -5,7 +5,8 @@ import { cn } from '@/lib/utils'
 import { safeFetch, extractArray } from '@/lib/safe-fetch'
 import {
   Package, Plus, Search, Download, Pencil, Trash2, Loader2, Save,
-  DollarSign, Wallet, CheckCircle, AlertCircle, Boxes, X
+  DollarSign, Wallet, CheckCircle, AlertCircle, Boxes, X,
+  Wrench, Trees, Sprout
 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -118,6 +119,37 @@ export default function InputDistributionView() {
     })
   }, [distributions, search])
 
+  // ── Second review (J): 3 KPI cards — Tools / Fertilisers (kg) / Seedlings ──
+  const [showToolsDialog, setShowToolsDialog] = useState(false)
+  const [showSeedlingsDialog, setShowSeedlingsDialog] = useState(false)
+
+  const TOOL_TYPES = ['pruning_saw', 'secateurs', 'tarpaulin', 'tool', 'tools', 'equipment']
+  const isTool = (d: InputDistribution) => TOOL_TYPES.includes((d.inputType || '').toLowerCase().replace(/\s/g, '_')) || /saw|secateur|tarpaulin/i.test(d.inputType || '')
+  const isFert = (d: InputDistribution) => /fertil/i.test(d.inputType || '')
+  const isSeedling = (d: InputDistribution) => /seedling/i.test(d.inputType || '')
+
+  const toolKpis = useMemo(() => {
+    const rows = distributions.filter(isTool)
+    const map = new Map<string, number>()
+    for (const d of rows) {
+      const label = (d.inputName || d.inputType || 'Tool').replace(/_/g, ' ')
+      map.set(label, (map.get(label) || 0) + (Number(d.quantity) || 0))
+    }
+    return { total: rows.reduce((s2, d) => s2 + (Number(d.quantity) || 0), 0), items: Array.from(map.entries()).map(([label, count]) => ({ label, count })).sort((a, b) => b.count - a.count) }
+  }, [distributions])
+
+  const fertiliserKg = useMemo(() => distributions.filter(isFert).reduce((s2, d) => s2 + (Number(d.quantity) || 0), 0), [distributions])
+
+  const seedlingKpis = useMemo(() => {
+    const rows = distributions.filter(isSeedling)
+    const map = new Map<string, number>()
+    for (const d of rows) {
+      const label = (d.inputName || d.inputType || 'Seedling').replace(/_/g, ' ')
+      map.set(label, (map.get(label) || 0) + (Number(d.quantity) || 0))
+    }
+    return { total: rows.reduce((s2, d) => s2 + (Number(d.quantity) || 0), 0), items: Array.from(map.entries()).map(([label, count]) => ({ label, count })).sort((a, b) => b.count - a.count) }
+  }, [distributions])
+
   const totalDistributions = distributions.length
   const totalValue = distributions.reduce((s, d) => s + (Number(d.totalCost) || 0), 0)
   const outstandingBalance = distributions.reduce((s, d) => s + (Number(d.balanceRemaining) || 0), 0)
@@ -125,25 +157,70 @@ export default function InputDistributionView() {
 
   return (
     <div className="space-y-4">
-      {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card><CardContent className="p-4 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 flex items-center justify-center"><Boxes className="w-5 h-5 text-emerald-600" /></div>
-          <div><p className="text-xs text-muted-foreground">Total Distributions</p><p className="text-xl font-bold">{totalDistributions}</p></div>
-        </CardContent></Card>
-        <Card><CardContent className="p-4 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/40 flex items-center justify-center"><DollarSign className="w-5 h-5 text-blue-600" /></div>
-          <div><p className="text-xs text-muted-foreground">Total Value</p><p className="text-lg font-bold">{fmtUGX(totalValue)}</p></div>
-        </CardContent></Card>
-        <Card><CardContent className="p-4 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/40 flex items-center justify-center"><Wallet className="w-5 h-5 text-amber-600" /></div>
-          <div><p className="text-xs text-muted-foreground">Outstanding Balance</p><p className="text-lg font-bold">{fmtUGX(outstandingBalance)}</p></div>
-        </CardContent></Card>
-        <Card><CardContent className="p-4 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-green-50 dark:bg-green-950/40 flex items-center justify-center"><CheckCircle className="w-5 h-5 text-green-600" /></div>
-          <div><p className="text-xs text-muted-foreground">Fully Repaid</p><p className="text-xl font-bold">{fullyRepaidCount}</p></div>
-        </CardContent></Card>
+      {/* Second review (J): 3 KPI cards — Tools / Fertilisers (kg) / Seedlings */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card className="cursor-pointer hover:ring-2 hover:ring-blue-400/60 transition-all" onClick={() => setShowToolsDialog(true)}>
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/40 flex items-center justify-center"><Wrench className="w-5 h-5 text-blue-600" /></div>
+            <div>
+              <p className="text-xs text-muted-foreground">Tools (total number)</p>
+              <p className="text-xl font-bold">{toolKpis.total}</p>
+              <p className="text-[10px] text-blue-600 font-medium">View details →</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/40 flex items-center justify-center"><Sprout className="w-5 h-5 text-amber-600" /></div>
+            <div>
+              <p className="text-xs text-muted-foreground">Fertilisers (kg)</p>
+              <p className="text-xl font-bold">{fertiliserKg.toLocaleString()}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="cursor-pointer hover:ring-2 hover:ring-emerald-400/60 transition-all" onClick={() => setShowSeedlingsDialog(true)}>
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 flex items-center justify-center"><Trees className="w-5 h-5 text-emerald-600" /></div>
+            <div>
+              <p className="text-xs text-muted-foreground">Seedlings (total numbers)</p>
+              <p className="text-xl font-bold">{seedlingKpis.total.toLocaleString()}</p>
+              <p className="text-[10px] text-emerald-600 font-medium">View details →</p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
+
+      {/* Second review (J): Tools detail dialog — pruning saws, secateurs, tarpaulins */}
+      <Dialog open={showToolsDialog} onOpenChange={setShowToolsDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>Tools — Details</DialogTitle></DialogHeader>
+          <div className="space-y-2">
+            {toolKpis.items.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">No tools distributed yet.</p>}
+            {toolKpis.items.map(t => (
+              <div key={t.label} className="flex items-center justify-between p-2.5 rounded-lg border bg-muted/20">
+                <span className="text-sm capitalize">{t.label}</span>
+                <span className="text-sm font-bold">{t.count.toLocaleString()}</span>
+              </div>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Second review (J): Seedlings detail dialog — Cocoa, Coffee, Shade trees, Bamboo (Asper, Strictus, Vulgaris Green) */}
+      <Dialog open={showSeedlingsDialog} onOpenChange={setShowSeedlingsDialog}>
+        <DialogContent className="max-w-md max-h-[70vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>Seedlings — Details</DialogTitle></DialogHeader>
+          <div className="space-y-2">
+            {seedlingKpis.items.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">No seedlings distributed yet.</p>}
+            {seedlingKpis.items.map(t => (
+              <div key={t.label} className="flex items-center justify-between p-2.5 rounded-lg border bg-muted/20">
+                <span className="text-sm">{t.label}</span>
+                <span className="text-sm font-bold">{t.count.toLocaleString()}</span>
+              </div>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Toolbar */}
       <div className="flex flex-col sm:flex-row gap-2 sm:items-center justify-between">

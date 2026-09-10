@@ -76,6 +76,7 @@ Map<String, dynamic> _$FarmerModelToJson(FarmerModel instance) =>
       'gender': instance.gender,
       'dob': instance.dob,
       'farmer_code': instance.farmerCode,
+      'group_name': instance.groupName,
       'farmer_photo': instance.farmerPhoto,
       'id_proof_photo_url': instance.idProofPhoto,
       'created_at': instance.createdAt,

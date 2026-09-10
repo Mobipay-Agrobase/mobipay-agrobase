@@ -30,8 +30,7 @@ export async function GET(
   }
   const farmParsed = {
     ...farm,
-    approachRoad: safeParse(farm.approachRoad),
-    landGradient: safeParse(farm.landGradient),
+    neighbouringFeatures: safeParse(farm.neighbouringFeatures),
     irrigationSource: safeParse(farm.irrigationSource),
     soilCriteria: safeParse(farm.soilCriteria),
   }
@@ -70,15 +69,11 @@ export async function PUT(
     if (body.latitude !== undefined) data.latitude = body.latitude ? parseFloat(body.latitude) : null
     if (body.longitude !== undefined) data.longitude = body.longitude ? parseFloat(body.longitude) : null
     if (body.landOwnership !== undefined) data.landOwnership = body.landOwnership
-    if (body.waterSource !== undefined) data.waterSource = body.waterSource
     if (body.soilFertility !== undefined) data.soilFertility = body.soilFertility
-    if (body.landSurveyNo !== undefined) data.landSurveyNo = body.landSurveyNo
-    if (body.approachRoad !== undefined) data.approachRoad = toJsonOrString(body.approachRoad)
-    if (body.landTopology !== undefined) data.landTopology = body.landTopology
-    if (body.landGradient !== undefined) data.landGradient = toJsonOrString(body.landGradient)
-    if (body.landDocumentUrl !== undefined) data.landDocumentUrl = body.landDocumentUrl
-    if (body.powerSource !== undefined) data.powerSource = body.powerSource
-    if (body.farmPhotoUrl !== undefined) data.farmPhotoUrl = body.farmPhotoUrl
+    // Second review (G): new fields — neighbouring physical features + access map
+    if (body.neighbouringFeatures !== undefined) data.neighbouringFeatures = toJsonOrString(body.neighbouringFeatures)
+    if (body.accessMapLat !== undefined) data.accessMapLat = body.accessMapLat ? parseFloat(body.accessMapLat) : null
+    if (body.accessMapLng !== undefined) data.accessMapLng = body.accessMapLng ? parseFloat(body.accessMapLng) : null
     if (body.irrigationSource !== undefined) data.irrigationSource = toJsonOrString(body.irrigationSource)
     if (body.irrigationType !== undefined) data.irrigationType = body.irrigationType
     if (body.fullTimeWorkers !== undefined) data.fullTimeWorkers = body.fullTimeWorkers ? parseInt(body.fullTimeWorkers) : null
@@ -115,8 +110,7 @@ export async function PUT(
 
     const farmParsed = {
       ...updated,
-      approachRoad: updated.approachRoad ? JSON.parse(updated.approachRoad) : [],
-      landGradient: updated.landGradient ? JSON.parse(updated.landGradient) : [],
+      neighbouringFeatures: updated.neighbouringFeatures ? JSON.parse(updated.neighbouringFeatures) : [],
       irrigationSource: updated.irrigationSource ? JSON.parse(updated.irrigationSource) : [],
       soilCriteria: updated.soilCriteria ? JSON.parse(updated.soilCriteria) : [],
     }

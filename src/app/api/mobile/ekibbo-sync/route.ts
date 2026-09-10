@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getTenantContext, buildTenantFilter } from '@/lib/tenant'
 import { generateFarmerCode } from '@/lib/farmer-code'
-import { resolveFarmerByNumericId, numericId } from '@/lib/mobile/ekibbo-adapter'
+import { resolveFarmerByNumericId, numericId, resolveFarmerGroupByNumericId } from '@/lib/mobile/ekibbo-adapter'
 import { isMobileStaff } from '@/lib/mobile/ekibbo-mobile-utils'
 
 /**
@@ -127,6 +127,14 @@ export async function POST(req: NextRequest) {
         }
 
         // CREATE flow
+        // Second review (A3): resolve farmer group from the numeric id
+        const groupIdNum = parseInt(String(p['group_id'] || p['cooperative_id'] || '0'), 10) || 0
+        let groupId: string | null = null
+        if (groupIdNum) {
+          const group = await resolveFarmerGroupByNumericId(tf, groupIdNum)
+          groupId = group?.id ?? null
+        }
+
         const farmerCode = await generateFarmerCode(ctx.tenantId, null, {
           district: p['district_name'] || null,
           subCounty: p['commune_name'] || p['sub_county_name'] || null,
@@ -159,9 +167,13 @@ export async function POST(req: NextRequest) {
             photoUrl: p['farmer_photo'] || null,
             enrollmentDate: p['enrollment_date'] ? new Date(p['enrollment_date']) : new Date(),
             enrollmentPlace: p['enrollment_place'] || null,
-            farmerRegistrationUnder: p['farmer_registration_under'] || null,
             memberType: 'General',
             status: 'ACTIVE',
+            // Second review (A3/A4/B): persist group, certification + family
+            groupId,
+            isCertified: p['is_certified'] === 'true' || p['is_certified'] === '1',
+            certificationType: p['certification_type'] || null,
+            icsYear: p['ics_year'] || null,
           },
         })
 

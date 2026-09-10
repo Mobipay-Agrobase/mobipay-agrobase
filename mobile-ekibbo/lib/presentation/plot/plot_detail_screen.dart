@@ -260,8 +260,10 @@ class _PlotDetailScreenState extends State<PlotDetailScreen> {
           const SizedBox(
             height: 16,
           ),
+          // Second review (G): approach road/topology/gradient/land document
+          // removed — show neighbouring features + access map instead.
           Text(
-            AppLang.local.approach_road,
+            'Neighbouring Physical Features',
             style: TextStyleConstant.robotoW700(
               fontSize: 16,
               color: ColorConstant.text79,
@@ -271,7 +273,7 @@ class _PlotDetailScreenState extends State<PlotDetailScreen> {
             height: 8,
           ),
           Text(
-            _farmland!.approachRoad ?? '',
+            _farmland!.neighbouringFeatures ?? '',
             style: TextStyleConstant.robotoW400(
               fontSize: 12,
               color: ColorConstant.text79,
@@ -281,7 +283,7 @@ class _PlotDetailScreenState extends State<PlotDetailScreen> {
             height: 16,
           ),
           Text(
-            AppLang.local.land_topology,
+            'Access Map',
             style: TextStyleConstant.robotoW700(
               fontSize: 16,
               color: ColorConstant.text79,
@@ -291,55 +293,12 @@ class _PlotDetailScreenState extends State<PlotDetailScreen> {
             height: 8,
           ),
           Text(
-            _farmland!.landTopology ?? '',
+            (_farmland!.accessMapLat != null && _farmland!.accessMapLng != null)
+                ? '${_farmland!.accessMapLat}, ${_farmland!.accessMapLng}'
+                : '',
             style: TextStyleConstant.robotoW400(
               fontSize: 12,
               color: ColorConstant.text79,
-            ),
-          ),
-          const SizedBox(
-            height: 16,
-          ),
-          Text(
-            AppLang.local.land_gradient,
-            style: TextStyleConstant.robotoW700(
-              fontSize: 16,
-              color: ColorConstant.text79,
-            ),
-          ),
-          const SizedBox(
-            height: 8,
-          ),
-          Text(
-            _farmland!.landGradient ?? '',
-            style: TextStyleConstant.robotoW400(
-              fontSize: 12,
-              color: ColorConstant.text79,
-            ),
-          ),
-          const SizedBox(
-            height: 16,
-          ),
-          Text(
-            AppLang.local.land_document,
-            style: TextStyleConstant.robotoW700(
-              fontSize: 16,
-              color: ColorConstant.text79,
-            ),
-          ),
-          const SizedBox(
-            height: 8,
-          ),
-          GestureDetector(
-            onTap: () => Navigator.of(context).pushNamed(
-                RouterName.land_document,
-                arguments: _farmland?.landDocument),
-            child: Text(
-              'View land document',
-              style: TextStyleConstant.robotoW400(color: ColorConstant.primary)
-                  .copyWith(
-                decoration: TextDecoration.underline,
-              ),
             ),
           ),
           const SizedBox(
@@ -482,28 +441,8 @@ class _PlotDetailScreenState extends State<PlotDetailScreen> {
                                     color: ColorConstant.text79,
                                   ),
                                 ),
-                                (DUserInfo.instance.user!.roleUser ==
-                                        EnumUserRole.staff)
-                                    ? IconButton(
-                                        icon: const Icon(
-                                          Icons.edit,
-                                          color: ColorConstant.text79,
-                                        ),
-                                        onPressed: () async {
-                                          Navigator.of(context).pushNamed(
-                                              RouterName.add_crop,
-                                              arguments: {
-                                                'crop': item,
-                                                'farmland': _farmland,
-                                                'farmer': widget.farmer
-                                              }).then((value) {
-                                            if (value != null) {
-                                              _getFarmlandDetail();
-                                            }
-                                          });
-                                        },
-                                      )
-                                    : const SizedBox.shrink()
+                                // Second review (I): crop edit removed
+                                const SizedBox.shrink()
                               ],
                             ),
                             const SizedBox(

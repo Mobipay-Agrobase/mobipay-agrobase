@@ -485,7 +485,6 @@ export class FarmPassportGenerator {
           ? farm.polygonPoints.map((p) => ({ lat: p.latitude, lng: p.longitude }))
           : undefined,
       soilType: farm.soilFertility ?? undefined,
-      waterSource: farm.waterSource ?? undefined,
     }))
 
     // Build current crops from all farm cultivations

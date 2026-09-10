@@ -262,7 +262,6 @@ class MFarmerLocal {
       'school_going_children': school_going_children,
       'housing_ownership': housing_ownership,
       'house_type': house_type,
-      'farmer_registration_under': farmer_registration_under,
       'is_certified': is_certified,
       'certification_type': certification_type,
       'ics_year': ics_year,
@@ -322,7 +321,6 @@ class MFarmerLocal {
       'school_going_children': school_going_children,
       'housing_ownership': housing_ownership,
       'house_type': house_type,
-      'farmer_registration_under': farmer_registration_under,
       'is_certified': is_certified,
       'certification_type': certification_type,
       'ics_year': ics_year,
@@ -341,7 +339,9 @@ class MFarmerLocal {
       'lng': lng,
       'srp_certification': srp_certification,
       'farmer_id': id,
-      'cooperative_id': cooperative_id
+      'cooperative_id': cooperative_id,
+      // Second review (A3): numeric farmer-group id (farmer-groups master)
+      'group_id': cooperative_id
     };
   }
 }

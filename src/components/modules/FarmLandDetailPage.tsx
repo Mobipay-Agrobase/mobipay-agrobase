@@ -22,15 +22,12 @@ interface FarmLandDetail {
   latitude: number | null
   longitude: number | null
   landOwnership: string | null
-  landSurveyNo?: string | null
-  waterSource: string | null
   soilFertility: string | null
-  landTopology: string | null
-  powerSource: string | null
+  neighbouringFeatures?: string[] | string | null
+  accessMapLat?: number | null
+  accessMapLng?: number | null
   irrigationType: string | null
   irrigationSource?: string | null
-  landGradient?: string | null
-  approachRoad?: string | null
   certType: string | null
   conversionStatus: string | null
   conversionDate?: string | null
@@ -201,11 +198,9 @@ export function FarmLandDetailPage({ farmLandId, onBack }: Props) {
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <InfoField label="Topology" value={farmLand.landTopology} />
-                    <InfoField label="Gradient" value={farmLand.landGradient} />
-                    <InfoField label="Water Source" value={farmLand.waterSource} />
-                    <InfoField label="Power Source" value={farmLand.powerSource} />
-                    <InfoField label="Approach Road" value={farmLand.approachRoad} />
+                    {/* Second review (G): typology/gradient/water/power/road removed */}
+                    <InfoField label="Neighbouring Features" value={(Array.isArray(farmLand.neighbouringFeatures) ? farmLand.neighbouringFeatures : []).join(', ')} />
+                    <InfoField label="Access Map (GPS)" value={farmLand.accessMapLat != null && farmLand.accessMapLng != null ? `${farmLand.accessMapLat.toFixed(5)}, ${farmLand.accessMapLng.toFixed(5)}` : undefined} />
                     <InfoField label="Soil Fertility" value={farmLand.soilFertility} />
                   </div>
                 </CardContent>

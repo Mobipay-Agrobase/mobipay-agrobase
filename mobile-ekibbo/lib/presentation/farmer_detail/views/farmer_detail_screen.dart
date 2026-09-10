@@ -15,11 +15,9 @@ import 'package:agrobase_ekibbo/models/all_farmer/farmer_model.dart';
 import 'package:agrobase_ekibbo/routes/routes_manager.dart';
 import 'package:agrobase_ekibbo/presentation/farmer_detail/models/menu_farmer_detail.dart';
 import 'package:agrobase_ekibbo/presentation/farmer_detail/widgets/about_tab_view.dart';
-import 'package:agrobase_ekibbo/presentation/farmer_detail/widgets/animal_tab_view.dart';
 import 'package:agrobase_ekibbo/presentation/farmer_detail/widgets/asset_tab_view.dart';
 import 'package:agrobase_ekibbo/presentation/farmer_detail/widgets/bank_tab_view.dart';
 import 'package:agrobase_ekibbo/presentation/farmer_detail/widgets/certificate_tab_view.dart';
-import 'package:agrobase_ekibbo/presentation/farmer_detail/widgets/equipment_tab_view.dart';
 import 'package:agrobase_ekibbo/presentation/farmer_detail/widgets/family_tab_view.dart';
 import 'package:agrobase_ekibbo/presentation/farmer_detail/widgets/finance_tab_view.dart';
 import 'package:agrobase_ekibbo/presentation/farmer_detail/widgets/insurance_tab_view.dart';
@@ -279,10 +277,6 @@ class _FarmerDetailScreenState extends State<FarmerDetailScreen> {
       case 6:
         return InsuranceTabView(farmerId: widget.farmerId);
       case 7:
-        return EquipmentTabView(farmerId: widget.farmerId);
-      case 8:
-        return AnimalTabView(farmerId: widget.farmerId);
-      case 9:
         return CertificateTabView(farmerId: widget.farmerId);
     }
     return Container();

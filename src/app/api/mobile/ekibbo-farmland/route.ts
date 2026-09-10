@@ -3,6 +3,16 @@ import { db } from '@/lib/db'
 import { getTenantContext, buildTenantFilter } from '@/lib/tenant'
 import { numericId, resolveFarmerByNumericId } from '@/lib/mobile/ekibbo-adapter'
 
+// Second review (G): neighbouring physical features — JSON array safe parse
+function safeJsonArr(raw: string | null): string[] {
+  if (!raw) return []
+  try {
+    const p = JSON.parse(raw)
+    return Array.isArray(p) ? p.map(String) : []
+  } catch { return [] }
+}
+
+
 /**
  * /api/mobile/ekibbo-farmland
  *
@@ -80,7 +90,7 @@ export async function GET(req: NextRequest) {
           where: { farmerId: farmer.id },
           select: {
             id: true, name: true, sizeHectares: true, landOwnership: true,
-            landSurveyNo: true, waterSource: true, powerSource: true,
+            neighbouringFeatures: true, accessMapLat: true, accessMapLng: true,
             soilFertility: true, irrigationType: true, estYieldKg: true,
           },
           orderBy: { createdAt: 'desc' },
@@ -93,9 +103,8 @@ export async function GET(req: NextRequest) {
           total_land_holding: Number(l.sizeHectares) || 0,
           actual_area: String(l.sizeHectares ?? 0),
           land_ownership: l.landOwnership,
-          land_survey_no: l.landSurveyNo,
-          water_source: l.waterSource,
-          power_source: l.powerSource,
+          neighbouring_features: safeJsonArr(l.neighbouringFeatures),
+          access_map: { lat: l.accessMapLat, lng: l.accessMapLng },
           soil_fertility: l.soilFertility,
           irrigation_type: l.irrigationType,
           est_yield: l.estYieldKg,
@@ -144,8 +153,6 @@ export async function POST(req: NextRequest) {
 
     // JSON or multipart (photos as data-URIs, ≤2MB)
     let fields: Record<string, any> = {}
-    let farmPhoto: string | null = null
-    let landDoc: string | null = null
     const ct = req.headers.get('content-type') || ''
     if (ct.includes('multipart/form-data')) {
       const form = await req.formData()
@@ -161,12 +168,9 @@ export async function POST(req: NextRequest) {
             const n = Number(v)
             if (!Number.isNaN(n)) plottings[idx][pm[2] as 'lat' | 'lng'] = n
           }
-        } else if (v.size > 0 && v.size <= 2 * 1024 * 1024) {
-          const buf = Buffer.from(await v.arrayBuffer())
-          const uri = `data:${v.type || 'image/jpeg'};base64,${buf.toString('base64')}`
-          if (k.startsWith('farm_photo')) farmPhoto = uri
-          else if (k.startsWith('land_document')) landDoc = uri
         }
+        // Second review (G-vi/G-i): farm photo + land document uploads removed
+        // (farm polygon via FarmPolygon points is the land record now).
       }
       const flat = Object.keys(plottings)
         .sort((a, b) => Number(a) - Number(b))
@@ -229,12 +233,12 @@ export async function POST(req: NextRequest) {
         latitude: lat,
         longitude: lng,
         landOwnership: toJsonOrString(fields.landOwnership),
-        landSurveyNo: fields.landSurveyNo ? String(fields.landSurveyNo) : null,
-        approachRoad: toJsonOrString(fields.approachRoad),
-        landTopology: toJsonOrString(fields.landTopology),
-        landGradient: toJsonOrString(fields.landGradient),
-        waterSource: toJsonOrString(fields.waterSource),
-        powerSource: toJsonOrString(fields.powerSource),
+        // Second review (G): neighbouring features + access map replace
+        // land typology / approach road; survey, water, power, gradient,
+        // photos, land document all removed.
+        neighbouringFeatures: toJsonOrString(fields.neighbouringFeatures ?? fields.neighbouring_features),
+        accessMapLat: toNum(fields.accessMapLat ?? fields.access_map?.lat),
+        accessMapLng: toNum(fields.accessMapLng ?? fields.access_map?.lng),
         soilFertility: toJsonOrString(fields.soilFertility),
         irrigationType: toJsonOrString(fields.irrigationType),
         irrigationSource: toJsonOrString(fields.irrigationSource),
@@ -245,8 +249,6 @@ export async function POST(req: NextRequest) {
         lastChemicalApplicationDate: fields.lastChemicalApplicationDate
           ? new Date(fields.lastChemicalApplicationDate) : null,
         estYieldKg: toNum(fields.estYieldKg ?? fields.est_yield),
-        farmPhotoUrl: farmPhoto,
-        landDocumentUrl: landDoc,
         polygonPoints: polygonPoints.length
           ? { create: polygonPoints.map((p, i) => ({ latitude: Number(p.lat), longitude: Number(p.lng), pointOrder: i })) }
           : undefined,

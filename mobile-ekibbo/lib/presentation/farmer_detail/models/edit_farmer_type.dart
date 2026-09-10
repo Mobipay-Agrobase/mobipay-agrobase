@@ -1,5 +1,6 @@
 import 'package:agrobase_ekibbo/domain/l10n/app_lang.dart';
 
+// Second review (E/F): equipment + animal husbandry REMOVED.
 enum EditFarmerType {
   basic,
   family,
@@ -7,8 +8,6 @@ enum EditFarmerType {
   bank,
   finance,
   insurance,
-  equipment,
-  animal,
   certificate,
 }
 
@@ -27,10 +26,6 @@ extension EditFarmerTypeExt on EditFarmerType {
         return 'ic_dollar';
       case EditFarmerType.insurance:
         return 'ic_insurance';
-      case EditFarmerType.equipment:
-        return 'ic_tractor';
-      case EditFarmerType.animal:
-        return 'ic_chicken';
       case EditFarmerType.certificate:
         return 'ic_certificate';
     }

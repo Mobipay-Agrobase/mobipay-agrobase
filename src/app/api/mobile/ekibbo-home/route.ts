@@ -62,7 +62,10 @@ export async function GET(req: NextRequest) {
     })
     const scopedIds = scopedFarmers.map(f => f.id)
 
-    const [farmerCount, tenantFarmerCount, lands, cultivations, farmers] = await Promise.all([
+    // Second review (H): plants aggregation (CropProduction treeCount +
+    // farmer shadeTreeVarieties) for the Farm Land Registry KPI.
+    const plantScope = scopedIds.length ? { farmerId: { in: scopedIds } } : { farmer: { ...tf } }
+    const [farmerCount, tenantFarmerCount, lands, cultivations, farmers, cropProductions, shadeFarmers] = await Promise.all([
       db.farmerProfile.count({ where: officerWhere }),
       // Tenant-wide count so the dashboard KPI always matches the
       // "View All Farmers" list (which is tenant-scoped, not officer-scoped).
@@ -83,10 +86,40 @@ export async function GET(req: NextRequest) {
         orderBy: { createdAt: 'desc' },
         take: 10,
       }),
+      db.cropProduction.groupBy({
+        by: ['cropName'],
+        where: plantScope as any,
+        _sum: { treeCount: true },
+      }),
+      db.farmerProfile.findMany({
+        where: { ...officerWhere, shadeTreeVarieties: { not: null } },
+        select: { shadeTreeVarieties: true },
+        take: 5000,
+      }),
     ])
 
     const totalHectares = lands.reduce((s, l) => s + (Number(l.sizeHectares) || 0), 0)
     const totalExpectedYield = cultivations.reduce((s, c) => s + (Number(c.estimatedYield) || 0), 0)
+
+    // Second review (H): total plants with per-crop breakdown
+    const plantsByCrop = new Map<string, number>()
+    for (const row of cropProductions) {
+      const crop = (row.cropName || '').trim()
+      plantsByCrop.set(crop, (plantsByCrop.get(crop) || 0) + (row._sum.treeCount || 0))
+    }
+    for (const fp of shadeFarmers) {
+      try {
+        const arr = JSON.parse(fp.shadeTreeVarieties || '[]')
+        for (const v of arr) {
+          if (!v?.variety) continue
+          plantsByCrop.set('Shade Trees', (plantsByCrop.get('Shade Trees') || 0) + (parseInt(String(v.count)) || 0))
+        }
+      } catch { /* ignore */ }
+    }
+    const plantsList = Array.from(plantsByCrop.entries())
+      .map(([crop, count]) => ({ crop, count }))
+      .sort((a, b) => b.count - a.count)
+    const totalPlants = plantsList.reduce((s2, p) => s2 + p.count, 0)
 
     return NextResponse.json({
       result: true,
@@ -95,6 +128,9 @@ export async function GET(req: NextRequest) {
         total_farmers_tenant: tenantFarmerCount,
         total_hectares: Math.round(totalHectares * 100) / 100,
         total_plot: lands.length,
+        // Second review (H): plants KPI + per-crop breakdown
+        total_plants: totalPlants,
+        plants_breakdown: plantsList,
         totalExpectedYield: Math.round(totalExpectedYield * 10) / 10,
         farmer_list: farmers.map(f => mapFarmer(f as any)),
         my_farmers: officerName != null,

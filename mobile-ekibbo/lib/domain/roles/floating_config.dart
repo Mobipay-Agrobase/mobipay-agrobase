@@ -6,8 +6,7 @@ import 'package:agrobase_ekibbo/routes/routes_manager.dart';
 /// Ekibbo FAB quick actions — EXACTLY the Ekibbo team's Field Officer list:
 ///   1. Add Farmer   (register farmer + 7-level location, web datapoints)
 ///   2. Add Plot     (farm land + polygon capture)
-///   3. Add Crop     (cultivation on a plot)
-///   4. Purchase     (record produce purchase)
+///   3. Purchase     (record produce purchase)
 ///   5. Training     (record training)
 ///   6. Inputs       (input distribution)
 ///   7. Loan         (loans management)
@@ -16,6 +15,7 @@ import 'package:agrobase_ekibbo/routes/routes_manager.dart';
 ///
 /// Removed per feedback: Farmer Registry (duplicate of Add Farmer list),
 /// Crop Harvest, Sale Intention, Carbon Footprint.
+/// Second review (I): Add Crop (cultivation) removed.
 /// ─────────────────────────────────────────────────────────────────────────
 final List<MActionButton> floatingConfigs = [
   MActionButton(
@@ -28,12 +28,6 @@ final List<MActionButton> floatingConfigs = [
     routeName: RouterName.add_plot,
     icon: "ic_land_plot",
     title: "Add Plot",
-    roleAccessed: [EnumUserRole.staff],
-  ),
-  MActionButton(
-    routeName: RouterName.add_crop,
-    icon: "ic_agriculture",
-    title: "Add Crop",
     roleAccessed: [EnumUserRole.staff],
   ),
   MActionButton(

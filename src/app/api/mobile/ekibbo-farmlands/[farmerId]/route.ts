@@ -4,6 +4,16 @@ import { getTenantContext, buildTenantFilter } from '@/lib/tenant'
 import { numericId, resolveFarmerByNumericId } from '@/lib/mobile/ekibbo-adapter'
 import { farmerSelfAccess, isFarmerRole } from '@/lib/mobile/ekibbo-mobile-utils'
 
+// Second review (G): neighbouring physical features — JSON array safe parse
+function safeJsonArr(raw: string | null): string[] {
+  if (!raw) return []
+  try {
+    const p = JSON.parse(raw)
+    return Array.isArray(p) ? p.map(String) : []
+  } catch { return [] }
+}
+
+
 /**
  * GET /api/mobile/ekibbo-farmlands/[farmerId]
  * GET /api/mobile/ekibbo-farmlands (staff — all tenant)
@@ -42,7 +52,7 @@ export async function GET(
         : { farmer: { ...tf } },
       select: {
         id: true, name: true, sizeHectares: true, landOwnership: true,
-        landSurveyNo: true, waterSource: true, powerSource: true,
+        neighbouringFeatures: true, accessMapLat: true, accessMapLng: true,
         soilFertility: true, irrigationType: true, estYieldKg: true,
         fullTimeWorkers: true, partTimeWorkers: true,
         seasonalWorkers: true, familyWorkers: true,
@@ -62,9 +72,8 @@ export async function GET(
           total_land_holding: Number(l.sizeHectares) || 0,
           actual_area: String(l.sizeHectares ?? 0),
           land_ownership: l.landOwnership,
-          land_survey_no: l.landSurveyNo,
-          water_source: l.waterSource,
-          power_source: l.powerSource,
+          neighbouring_features: safeJsonArr(l.neighbouringFeatures),
+          access_map: { lat: l.accessMapLat, lng: l.accessMapLng },
           soil_fertility: l.soilFertility,
           irrigation_type: l.irrigationType,
           est_yield: l.estYieldKg,

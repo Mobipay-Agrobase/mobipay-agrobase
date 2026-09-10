@@ -35,7 +35,6 @@ const COMMANDS: CommandItemDef[] = [
   { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, group: 'Overview', keywords: ['home', 'overview', 'stats'] },
   { key: 'farmers', label: 'Farmer Profiling', icon: Users, group: 'Core Operations', keywords: ['farmer', 'registration', 'profile'] },
   { key: 'farm-lands', label: 'Farm Land Registry', icon: MapPin, group: 'Core Operations', keywords: ['land', 'plot', 'farm', 'polygon', 'gps'] },
-  { key: 'cultivations', label: 'Cultivations', icon: Sprout, group: 'Core Operations', keywords: ['crop', 'cultivation', 'seed', 'sowing'] },
   { key: 'vsla', label: 'VSLA Management', icon: PiggyBank, group: 'Core Operations', keywords: ['vsla', 'savings', 'loan', 'meeting'] },
   { key: 'marketplace', label: 'Marketplace', icon: Store, group: 'Core Operations', keywords: ['market', 'buy', 'sell', 'trade'] },
   { key: 'payments', label: 'Payments', icon: CreditCard, group: 'Core Operations', keywords: ['payment', 'mobile money', 'transfer'] },

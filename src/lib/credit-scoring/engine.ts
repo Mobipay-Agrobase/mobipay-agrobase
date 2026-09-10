@@ -75,15 +75,12 @@ export class CreditScoringEngine {
         familyMembers: true,
         housingOwnership: true, houseType: true,
         farmSize: true, farmOwnership: true,
-        farmEquipment: true, livestockTypes: true,
         loanTakenLastYear: true, loanAmount: true, loanRepaymentAmount: true,
         insuranceData: true,
         mainCrops: true,
         // New multi-entry models
         farmerBankAccounts: { select: { id: true, isPrimary: true } },
-        farmerInsurances: { select: { id: true, insuranceType: true, amount: true } },
-        farmerAnimals: { select: { id: true, animalType: true, count: true, revenue: true } },
-        farmerEquipment: { select: { id: true, equipmentName: true, count: true } },
+        farmerInsurances: { select: { id: true, insuranceType: true, payoutAmount: true } },
       },
     })
 

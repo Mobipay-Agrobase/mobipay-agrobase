@@ -41,7 +41,6 @@ const ALL_MODULES: NavItem[] = [
   // Core Operations
   { key: 'farmers', label: 'Farmer Profiling', icon: Users, group: 'Core Operations', permModule: 'farmers' },
   { key: 'farm-lands', label: 'Farm Land Registry', icon: MapPin, group: 'Core Operations', permModule: 'farmers' },
-  { key: 'cultivations', label: 'Cultivations', icon: Sprout, group: 'Core Operations', permModule: 'farmers' },
   { key: 'vsla', label: 'VSLA Management', icon: PiggyBank, group: 'Core Operations', permModule: 'vsla',
     hideFromRoles: ['SACCO_ADMIN', 'SACCO_OFFICER'] },
   { key: 'sacco', label: 'SACCO Management', icon: Landmark, group: 'Core Operations', permModule: 'sacco',
@@ -170,7 +169,7 @@ const EKB_GROUP_ORDER = [
 // Priority order of individual items within their groups (unlisted items keep
 // their original relative order after the listed ones)
 const EKB_ITEM_ORDER: Record<string, string[]> = {
-  'Core Operations': ['farmers', 'farm-lands', 'training', 'farm-visits', 'loans', 'payments', 'cultivations', 'marketplace'],
+  'Core Operations': ['farmers', 'farm-lands', 'training', 'farm-visits', 'loans', 'payments', 'marketplace'],
   'Supply Chain': ['purchases', 'input-distribution', 'input-aggregation', 'approvals', 'processing', 'sales', 'deliveries', 'consignments', 'trace', 'plots'],
   'Master Data': ['farmer-groups', 'location-master', 'field-staff', 'catalog-manager', 'crop-master'],
   'Intelligence': ['reports', 'impact-assessment', 'agritrack'],
@@ -426,7 +425,7 @@ export function Sidebar() {
                   if (role === 'SACCO_ADMIN' || role === 'SACCO_OFFICER') {
                     if (groupLabel === 'Super Admin') return false
                     const allowedKeys = [
-                      'dashboard', 'sacco', 'farmers', 'farm-lands', 'cultivations',
+                      'dashboard', 'sacco', 'farmers', 'farm-lands',
                       'reports', 'training', 'profile',
                     ]
                     return allowedKeys.includes(item.key)

@@ -162,16 +162,6 @@ class _EditFarmerProfileScreenState extends State<EditFarmerProfileScreen> {
         RouterName.insurance_info,
         arguments: farmer.id,
       );
-    } else if (type == EditFarmerType.equipment) {
-      Navigator.of(context).pushNamed(
-        RouterName.farm_equip,
-        arguments: farmer.id,
-      );
-    } else if (type == EditFarmerType.animal) {
-      Navigator.of(context).pushNamed(
-        RouterName.animal_husbandry,
-        arguments: farmer.id,
-      );
     } else if (type == EditFarmerType.certificate) {
       Navigator.of(context).pushNamed(
         RouterName.certificate_info,

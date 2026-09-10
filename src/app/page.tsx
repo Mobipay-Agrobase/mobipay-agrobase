@@ -48,7 +48,6 @@ import {
 const DashboardView = lazy(() => import('@/components/modules/DashboardView'))
 const FarmersView = lazy(() => import('@/components/modules/FarmersView'))
 const FarmLandsView = lazy(() => import('@/components/modules/FarmLandsView'))
-const CultivationsView = lazy(() => import('@/components/modules/CultivationsView'))
 const VslaView = lazy(() => import('@/components/modules/VslaView'))
 const SaccoView = lazy(() => import('@/components/modules/SaccoView'))
 const FarmerDetailFull = lazy(() => import('@/components/modules/FarmerDetailFull'))
@@ -62,8 +61,6 @@ const InputDistDetailPage = lazy(() => import('@/components/modules/InputDistDet
 const E2eTracePage = lazy(() => import('@/components/modules/E2eTracePage'))
 const FarmLandFormPage = lazy(() => import('@/components/modules/FarmLandFormPage'))
 const FarmLandDetailPage = lazy(() => import('@/components/modules/FarmLandDetailPage'))
-const CultivationFormPage = lazy(() => import('@/components/modules/CultivationFormPage'))
-const CultivationDetailPage = lazy(() => import('@/components/modules/CultivationDetailPage'))
 const CatalogManager = lazy(() => import('@/components/modules/CatalogManager'))
 const FarmerGroupsView = lazy(() => import('@/components/modules/FarmerGroupsView'))
 const DataQualityView = lazy(() => import('@/components/admin/DataQualityView'))
@@ -204,15 +201,6 @@ function ModuleRouter() {
       if (!selectedFarmLandId) return <div className='text-center p-8 text-muted-foreground'>No farm land selected</div>
       return <FarmLandDetailPage key={selectedFarmLandId} farmLandId={selectedFarmLandId} onBack={() => useAppStore.getState().setActiveModule('farm-lands')} />
     }
-    case 'cultivation-create': return <CultivationFormPage mode="create" farmId={selectedFarmId || selectedFarmLandId || undefined} />
-    case 'cultivation-edit': {
-      if (!selectedCultivationId) return <div className='text-center p-8 text-muted-foreground'>No cultivation selected</div>
-      return <CultivationFormPage key={selectedCultivationId} mode="edit" cultivationId={selectedCultivationId} />
-    }
-    case 'cultivation-detail': {
-      if (!selectedCultivationId) return <div className='text-center p-8 text-muted-foreground'>No cultivation selected</div>
-      return <CultivationDetailPage key={selectedCultivationId} cultivationId={selectedCultivationId} onBack={() => useAppStore.getState().setActiveModule('cultivations')} />
-    }
     case 'purchase-create': return <PurchaseFormPage mode="create" />
     case 'purchase-edit': {
       const pid = useAppStore.getState().selectedPurchaseId
@@ -266,7 +254,6 @@ function ModuleRouter() {
     case 'cooperatives': return <CooperativeManagement />
     case 'farmer-mapping': return <FarmerMappingView />
     case 'farm-lands': return <FarmLandsView />
-    case 'cultivations': return <CultivationsView />
     case 'vsla': return <VslaView />
     case 'sacco': return <SaccoView />
     case 'marketplace': return <MarketplaceView />
@@ -410,7 +397,7 @@ export default function HomePage() {
       const adminAllowedForSuperAdmin = new Set([
         'profile', 'settings', 'roles-permissions', 'billing',
         'platform-recovery', 'farmer-detail',
-        'farmland-detail', 'cultivation-detail',
+        'farmland-detail',
         ...MASTER_DATA_KEYS,
       ])
       const isAllowedForSuperAdmin =
@@ -444,11 +431,10 @@ export default function HomePage() {
 
       // SACCO_ADMIN / SACCO_OFFICER: redirect to dashboard if on an irrelevant module
       const saccoAllowed = new Set([
-        'dashboard', 'sacco', 'farmers', 'farm-lands', 'cultivations',
+        'dashboard', 'sacco', 'farmers', 'farm-lands',
         'reports', 'training', 'profile',
         'farmer-detail', 'farmer-create', 'farmer-edit',
         'farmland-detail', 'farmland-create', 'farmland-edit',
-        'cultivation-detail', 'cultivation-create', 'cultivation-edit',
         'training-create', 'training-edit', 'training-report',
         ...MASTER_DATA_KEYS,
       ])

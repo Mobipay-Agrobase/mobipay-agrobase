@@ -11,20 +11,21 @@ import { farmerSelfAccess } from '@/lib/mobile/ekibbo-mobile-utils'
  * JSON shapes the mobile tab parsers expect (each parser picks its own keys;
  * extra keys are ignored). Data sourced from the same Agrobase tables the
  * WEB farmer detail page uses:
- *   family_info (+ education/marital catalogs)
+ *   family_info (+ education/marital catalogs) — second review (B):
+ *     spouse_name = next-of-kin contact, no_of_family = household size
  *   asset_info  (+ housing/house/electronics/vehicle catalogs)
  *   bank_info   (+ account types) — from FarmerProfile.bankAccounts JSON
- *   finance_info (+ loan purpose catalog)
- *   insurance_info (+ crop list) — FarmerInsurance rows
- *   farm_equipment (+ catalog) — FarmerFarmEquipment rows
- *   animal_husbandry (+ 4 catalogs) — FarmerAnimalHusbandry rows
+ *   finance_info (+ loan purpose catalog) — second review (C):
+ *     loan_taken_from = crop type sold to EKiBBO
+ *   insurance_info (+ crop list) — FarmerInsurance rows — second review (D):
+ *     payout_amount + season instead of amount + start/end dates
  *   certificate_info — isCertified / certificationType / icsYear
+ *   Second review (E/F): farm_equipment + animal_husbandry tabs REMOVED.
  */
 const CATS = [
   'education_level', 'marital_status', 'housing_ownership', 'house_type',
   'consumer_electronics', 'vehicle_type', 'account_type', 'bank_uganda',
-  'loan_purpose', 'farm_equipment', 'animal_type', 'fodder',
-  'animal_housing', 'animal_for_growth',
+  'loan_purpose',
 ]
 
 function cat(items: Array<{ category: string; value: string; label: string | null }>, category: string) {
@@ -74,7 +75,7 @@ export async function GET(
       return NextResponse.json({ result: false, message: 'Not authorized' }, { status: 403 })
     }
 
-    const [full, catalog, insurances, equipments, animals, crops] = await Promise.all([
+    const [full, catalog, insurances, crops] = await Promise.all([
       db.farmerProfile.findFirst({
         where: { id: farmer.id },
         select: {
@@ -93,8 +94,6 @@ export async function GET(
         take: 1500,
       }),
       db.farmerInsurance.findMany({ where: { farmerId: farmer.id }, take: 50 }),
-      db.farmerFarmEquipment.findMany({ where: { farmerId: farmer.id }, take: 50 }),
-      db.farmerAnimalHusbandry.findMany({ where: { farmerId: farmer.id }, take: 50 }),
       db.cropMaster.findMany({ select: { id: true, name: true }, orderBy: { name: 'asc' }, take: 100 }),
     ])
 
@@ -112,7 +111,8 @@ export async function GET(
     return NextResponse.json({
       result: true,
       data: {
-        // ── Family tab ──
+        // ── Family tab (second review B: spouse_name = next of kin contact;
+        //    no_of_family = household size) ──
         data_education: cat(catalog, 'education_level'),
         data_marial_status: cat(catalog, 'marital_status'),
         family_info: {
@@ -120,6 +120,9 @@ export async function GET(
           farmer_id: numId,
           marial_status: full.maritalStatus,
           parent_name: '',
+          next_of_kin_contact: full.spouseName,
+          household_size: full.familyMembers != null ? String(full.familyMembers) : '',
+          // legacy keys kept for older app builds
           spouse_name: full.spouseName,
           no_of_family: full.familyMembers != null ? String(full.familyMembers) : '',
           total_child_under_18: { male: '', female: '', total: String(childrenTotal) },
@@ -158,42 +161,36 @@ export async function GET(
           loan_amount: full.loanAmount != null ? String(full.loanAmount) : '',
           loan_purpose: full.loanPurpose,
         },
-        // ── Insurance tab ──
-        insurance_info: insurances.map(ins => ({
-          id: numericId(ins.id),
-          life_insurance: ins.insuranceType === 'Life' ? 'Yes' : 'No',
-          health_insurance: ins.insuranceType === 'Health' ? 'Yes' : 'No',
-          crop_insurance: ins.insuranceType === 'Crop' ? 'Yes' : 'No',
-          social_insurance: ins.insuranceType === 'Social' ? 'Yes' : 'No',
-          other_insurance: ins.insuranceType === 'Other' ? (ins.notes || 'Yes') : 'No',
-          crop_insuranced: ins.cropInsured || '',
-          area_insuranced: ins.areaInsured != null ? String(ins.areaInsured) : '',
-        })),
+        // ── Insurance tab (second review D: payout amount + season) ──
+        // Each row emits the flat mobile model keys for ITS type so the app's
+        // edit form loads provider/payout/season without re-shaping.
+        insurance_info: insurances.map(ins => {
+          const t = (ins.insuranceType || '').toLowerCase()
+          return {
+            id: numericId(ins.id),
+            life_insurance: ins.insuranceType === 'Life' ? 'Yes' : 'No',
+            health_insurance: ins.insuranceType === 'Health' ? 'Yes' : 'No',
+            crop_insurance: ins.insuranceType === 'Crop' ? 'Yes' : 'No',
+            social_insurance: ins.insuranceType === 'Social' ? 'Yes' : 'No',
+            other_insurance: ins.insuranceType === 'Other' ? (ins.notes || 'Yes') : 'No',
+            payout_amount: ins.payoutAmount != null ? String(ins.payoutAmount) : '',
+            season: ins.season || '',
+            provider_life_insurance: t === 'life' ? (ins.provider || '') : undefined,
+            life_insurance_amount: t === 'life' ? ins.payoutAmount : undefined,
+            life_insurance_season: t === 'life' ? (ins.season || undefined) : undefined,
+            provider_health_insurance: t === 'health' ? (ins.provider || '') : undefined,
+            health_insurance_amount: t === 'health' ? ins.payoutAmount : undefined,
+            health_insurance_season: t === 'health' ? (ins.season || undefined) : undefined,
+            provider_crop_insurance: t === 'crop' ? (ins.provider || '') : undefined,
+            crop_insurance_season: t === 'crop' ? (ins.season || undefined) : undefined,
+            provider_social_insurance: t === 'social' ? (ins.provider || '') : undefined,
+            social_insurance_season: t === 'social' ? (ins.season || undefined) : undefined,
+            crop_insuranced: ins.cropInsured || '',
+            area_insuranced: ins.areaInsured != null ? String(ins.areaInsured) : '',
+          }
+        }),
         data_crop: crops.map((c, i) => ({ ID: i + 1, name: c.name })),
-        // ── Equipment tab ──
-        data_farm_equipment: cat(catalog, 'farm_equipment'),
-        farm_equipment: equipments.map(eq => ({
-          id: numericId(eq.id),
-          farm_equipment_items: eq.equipmentName,
-          count: eq.count != null ? String(eq.count) : '',
-          year_of_manufacture: eq.yearOfManufacture != null ? String(eq.yearOfManufacture) : '',
-          year_of_purchase: eq.yearOfPurchase != null ? String(eq.yearOfPurchase) : '',
-        })),
-        // ── Animals tab ──
-        data_farm_animal: cat(catalog, 'animal_type'),
-        data_fodder: cat(catalog, 'fodder'),
-        data_animal_housing: cat(catalog, 'animal_housing'),
-        data_animal_for_growth: cat(catalog, 'animal_for_growth'),
-        animal_husbandry: animals.map(a => ({
-          id: numericId(a.id),
-          farm_animal: a.animalType,
-          animal_count: a.count != null ? String(a.count) : '',
-          fodder: a.fodder || '',
-          animal_housing: a.animalHousing || '',
-          revenue: a.revenue != null ? String(a.revenue) : '',
-          breed_name: a.breedName || '',
-          animal_for_growth: a.animalForGrowth || '',
-        })),
+        // Second review (E/F): farm_equipment + animal_husbandry tabs REMOVED.
         // ── Certificate tab ──
         certificate_info: {
           is_certified_farmer: full.isCertified ? '1' : '0',

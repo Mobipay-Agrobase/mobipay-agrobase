@@ -71,11 +71,18 @@ class FarmerItemView extends StatelessWidget {
                     farmer.farmerCode ?? '',
                   ),
                   const SizedBox(
+                    height: 6,
+                  ),
+                  _buildRowInfo(
+                    'ic_family',
+                    farmer.groupName ?? '—',
+                  ),
+                  const SizedBox(
                     height: 14,
                   ),
                   _buildRowInfo(
                     'ic_location',
-                    farmer.location(),
+                    farmer.village ?? '—',
                   ),
                   const SizedBox(
                     height: 14,

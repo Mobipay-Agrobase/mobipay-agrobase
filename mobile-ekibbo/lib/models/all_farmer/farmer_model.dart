@@ -34,6 +34,9 @@ class FarmerModel {
   String? dob;
   @JsonKey(name: 'farmer_code')
   String? farmerCode;
+  // Second review (A): farmer group (name/code)
+  @JsonKey(name: 'group_name')
+  String? groupName;
   @JsonKey(name: 'farmer_photo')
   String? farmerPhoto;
   @JsonKey(name: 'id_proof_photo_url')

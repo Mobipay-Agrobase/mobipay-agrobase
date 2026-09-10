@@ -21,8 +21,6 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
       trainings: { include: { training: true } },
       farmerBankAccounts: { orderBy: { createdAt: 'desc' } },
       farmerInsurances: { orderBy: { createdAt: 'desc' } },
-      farmerAnimals: { orderBy: { createdAt: 'desc' } },
-      farmerEquipment: { orderBy: { createdAt: 'desc' } },
       cropProductions: { orderBy: { createdAt: 'desc' } },
       // Recent produce/input sales for the mobile farmer detail page
       sales: { take: 10, orderBy: { createdAt: 'desc' } },
@@ -44,9 +42,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     vehicle: parseJson(farmer.vehicle, []),
     bankAccounts: parseJson(farmer.bankAccounts, []),
     insuranceData: parseJson(farmer.insuranceData, []),
-    farmEquipment: parseJson(farmer.farmEquipment, []),
     mainCrops: parseJson(farmer.mainCrops, []),
-    livestockTypes: parseJson(farmer.livestockTypes, []),
     // P7: Decrypt PII fields for the response
     phone: farmer.phone && farmer.phone.startsWith('enc:v1:') ? decryptField(farmer.phone) : farmer.phone,
     nationalIdNo: farmer.nationalIdNo ? decryptField(farmer.nationalIdNo) : null,
@@ -207,15 +203,15 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
     // JSON fields stringified for storage
     const jsonData: Record<string, string> = {}
-    for (const key of ['consumerElectronics', 'vehicle', 'bankAccounts', 'insuranceData', 'farmEquipment', 'mainCrops', 'livestockTypes']) {
+    for (const key of ['consumerElectronics', 'vehicle', 'bankAccounts', 'insuranceData', 'mainCrops']) {
       if (body[key] !== undefined) jsonData[key] = JSON.stringify(body[key])
     }
 
     const scalar: Record<string, unknown> = {}
     const textFields = [
       'farmerCode', 'nationalIdType', 'education', 'maritalStatus', 'memberType',
-      'enrollmentPlace', 'icsYear', 'farmerRegistrationUnder', 'cooperativeId', 'extensionOfficer', 'guardianName', 'photoUrl',
-      'country', 'province', 'district', 'commune', 'villageName', 'villageId', 'zipCode',
+      'enrollmentPlace', 'icsYear', 'extensionOfficer', 'guardianName', 'photoUrl',
+      'country', 'district', 'commune', 'villageName', 'villageId', 'zipCode',
       'spouseName', 'housingOwnership', 'houseType', 'bankName', 'bankBranch',
       'loanTakenFrom', 'loanPurpose', 'loanInterestPeriod', 'landOwnershipInfo',
       'nextOfKinName', 'nextOfKinPhone', 'nextOfKinRelation',
@@ -223,6 +219,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       'certificationType', 'primaryIncomeSource', 'secondaryIncomeSource',
       'livingConditions', 'fuelType', 'mealsPerDay', 'farmOwnership',
     ]
+    // Second review: 'farmerRegistrationUnder', 'cooperativeId', 'province' removed
     for (const k of textFields) if (body[k] !== undefined) scalar[k] = body[k]
 
     const numFields = [

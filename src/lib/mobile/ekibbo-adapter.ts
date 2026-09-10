@@ -64,7 +64,6 @@ interface FarmerWithLands {
   villageName?: string | null
   district?: string | null
   commune?: string | null
-  province?: string | null
   gpsLatitude?: number | null
   gpsLongitude?: number | null
   createdAt: Date
@@ -96,7 +95,6 @@ export function mapFarmer(f: FarmerWithLands): Record<string, unknown> {
     identity_proof: f.nationalIdType,
     proof_no: f.nationalIdNo && f.nationalIdNo.startsWith('enc:v1:') ? decryptField(f.nationalIdNo) : f.nationalIdNo,
     country: 0,
-    province: 0,
     district: 0,
     commune: 0,
     village: f.villageName,
@@ -105,6 +103,8 @@ export function mapFarmer(f: FarmerWithLands): Record<string, unknown> {
     gender: f.gender,
     dob: f.dateOfBirth ? f.dateOfBirth.toISOString().split('T')[0] : null,
     farmer_code: f.farmerCode,
+    // Second review (A): farmer group (name/code)
+    group_name: (f as any).group?.name ?? null,
     farmer_photo: f.photoUrl,
     avatar_url: f.photoUrl,
     id_proof_photo_url: [],
@@ -133,9 +133,11 @@ const FARMER_SELECT = {
   id: true, firstName: true, lastName: true, phone: true, gender: true,
   dateOfBirth: true, farmerCode: true, photoUrl: true, nationalIdType: true,
   nationalIdNo: true, enrollmentDate: true, enrollmentPlace: true,
-  villageName: true, district: true, commune: true, province: true,
+  villageName: true, district: true, commune: true,
   gpsLatitude: true, gpsLongitude: true, createdAt: true, updatedAt: true,
   status: true, isCertified: true,
+  // Second review (A): farmer group for list rows
+  group: { select: { name: true } },
   farms: { select: { id: true, name: true, sizeHectares: true } },
 } as const
 
@@ -154,6 +156,25 @@ export async function resolveFarmerByNumericId(
   })
   const matches = farmers.filter(f => numericId(f.id) === numId)
   return matches.length === 1 ? (matches[0] as FarmerWithLands) : null
+}
+
+
+/**
+ * Second review (A3): resolve a numeric farmer-group id (as emitted by the
+ * mobile farmer-groups dropdown) back to the FarmerGroup record — scans the
+ * tenant's active groups and matches numericId(cuid).
+ */
+export async function resolveFarmerGroupByNumericId(
+  where: Record<string, unknown>,
+  numId: number,
+): Promise<{ id: string; name: string } | null> {
+  const groups = await db.farmerGroup.findMany({
+    where: where as any,
+    select: { id: true, name: true },
+    take: 1000,
+  })
+  const matches = groups.filter(g => numericId(g.id) === numId)
+  return matches.length === 1 ? matches[0] : null
 }
 
 /** Standard farmer query select (with farm lands) for list/detail/home. */

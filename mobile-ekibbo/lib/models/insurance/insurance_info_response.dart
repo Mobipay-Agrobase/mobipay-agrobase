@@ -22,6 +22,9 @@ class InsuranceInfoModel {
   String? providerLifeInsurance;
   @JsonKey(name: 'life_insurance_amount')
   double? lifeInsuranceAmount;
+  // Second review (D): season replaces start/end dates (A: Mar–Aug, B: Sep–Feb)
+  @JsonKey(name: 'life_insurance_season')
+  String? lifeSeason;
   @JsonKey(name: 'life_insurance_enrolled_date')
   String? lifeInsuranceEnrolledDate;
   @JsonKey(name: 'life_insurance_end_date')
@@ -32,6 +35,8 @@ class InsuranceInfoModel {
   String? providerHealthInsurance;
   @JsonKey(name: 'health_insurance_amount')
   double? healthInsuranceAmount;
+  @JsonKey(name: 'health_insurance_season')
+  String? healthSeason;
   @JsonKey(name: 'health_insurance_enrolled_date')
   String? healthInsuranceEnrolledDate;
   @JsonKey(name: 'health_insurance_end_date')
@@ -44,6 +49,8 @@ class InsuranceInfoModel {
   String? cropInsured;
   @JsonKey(name: 'no_of_area_insured')
   double? noOfAreaInsured;
+  @JsonKey(name: 'crop_insurance_season')
+  String? cropSeason;
   @JsonKey(name: 'crop_insurance_enrolled_date')
   String? cropInsuranceEnrolledDate;
   @JsonKey(name: 'crop_insurance_end_date')
@@ -52,6 +59,8 @@ class InsuranceInfoModel {
   String? socialInsurance;
   @JsonKey(name: 'provider_social_insurance')
   String? providerSocialInsurance;
+  @JsonKey(name: 'social_insurance_season')
+  String? socialSeason;
   @JsonKey(name: 'social_insurance_enrolled_date')
   String? socialInsuranceEnrolledDate;
   @JsonKey(name: 'social_insurance_end_date')

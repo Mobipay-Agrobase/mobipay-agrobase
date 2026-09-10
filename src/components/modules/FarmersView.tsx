@@ -232,12 +232,12 @@ export default function FarmersView() {
                       onCheckedChange={toggleSelectAll}
                     />
                   </TableHead>
-                  <TableHead>Farmer</TableHead>
-                  <TableHead className="hidden md:table-cell">Phone</TableHead>
-                  <TableHead className="hidden md:table-cell">Field Officer</TableHead>
+                  {/* Second review (A): columns = Code, Farmer Name, Contact, Group, Village */}
+                  <TableHead>Farmer Code</TableHead>
+                  <TableHead>Farmer Name</TableHead>
+                  <TableHead className="hidden md:table-cell">Contact</TableHead>
+                  <TableHead className="hidden lg:table-cell">Group</TableHead>
                   <TableHead className="hidden xl:table-cell">Village</TableHead>
-                  <TableHead className="hidden xl:table-cell">Cooperative</TableHead>
-                  <TableHead className="hidden sm:table-cell">Gender</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="w-[120px]"></TableHead>
                 </TableRow>
@@ -252,29 +252,23 @@ export default function FarmersView() {
                         onCheckedChange={() => toggleSelect(f.id)}
                       />
                     </TableCell>
+                    <TableCell className="text-sm font-mono text-xs">
+                      {f.farmerCode || '—'}
+                    </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">
                           {initials(f.firstName, f.lastName)}
                         </div>
-                        <div>
-                          <p className="font-medium text-sm">{f.firstName} {f.lastName}</p>
-                          {f.farmerCode && <p className="text-[10px] text-muted-foreground font-mono">{f.farmerCode}</p>}
-                        </div>
+                        <p className="font-medium text-sm">{f.firstName} {f.lastName}</p>
                       </div>
                     </TableCell>
                     <TableCell className="hidden md:table-cell text-sm">{f.phone}</TableCell>
-                    <TableCell className="hidden md:table-cell text-sm">
-                      {f.extensionOfficer || '—'}
+                    <TableCell className="hidden lg:table-cell text-sm text-muted-foreground truncate max-w-[150px]">
+                      {f.group?.name || '—'}
                     </TableCell>
                     <TableCell className="hidden xl:table-cell text-sm text-muted-foreground truncate max-w-[150px]">
                       {f.villageName || '—'}
-                    </TableCell>
-                    <TableCell className="hidden xl:table-cell text-sm text-muted-foreground truncate max-w-[150px]">
-                      {f.group?.name || '—'}
-                    </TableCell>
-                    <TableCell className="hidden sm:table-cell">
-                      {f.gender && <Badge className={cn('text-[10px]', genderColor[f.gender] || '')}>{f.gender}</Badge>}
                     </TableCell>
                     <TableCell>
                       <Badge className={cn('text-[10px]', statusColor[f.status] || '')}>{f.status}</Badge>

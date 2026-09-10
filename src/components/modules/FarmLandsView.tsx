@@ -83,7 +83,7 @@ interface FarmLand {
   createdAt: string
   farmer?: { id: string; firstName: string; lastName: string; farmerCode?: string | null }
   polygonPoints?: Array<{ id: string; latitude: number; longitude: number; pointOrder: number; altitude?: number | null }>
-  _count?: { cultivations: number; polygonPoints?: number }
+  _count?: { cultivations: number; polygonPoints?: number; plants?: number }
   cultivations?: Array<{ id: string; cropName: string; status: string; cultivationAreaHa: number | null }>
   soilAnalyses?: Array<SoilAnalysis>
 }
@@ -169,7 +169,7 @@ export default function FarmLandsView() {
       farmerId: string
       farmerCode: string
       farmerName: string
-      plots: Array<{ id: string; name: string; area: number }>
+      plots: Array<{ id: string; name: string; area: number; plantRows: number }>
     }>()
     for (const f of filtered) {
       const key = f.farmer?.id || f.farmerId
@@ -184,7 +184,7 @@ export default function FarmLandsView() {
         }
         map.set(key, g)
       }
-      g.plots.push({ id: f.id, name: f.name, area: f.sizeHectares || 0 })
+      g.plots.push({ id: f.id, name: f.name, area: f.sizeHectares || 0, plantRows: f._count?.plants ?? 0 })
     }
     return Array.from(map.values())
   }, [filtered])
@@ -342,11 +342,16 @@ export default function FarmLandsView() {
                               type="button"
                               className="inline-flex items-center gap-1.5 text-xs px-2 py-1 rounded-md border bg-muted/30 hover:bg-primary/10 transition-colors"
                               onClick={(e) => { e.stopPropagation(); useAppStore.getState().setSelectedFarmLandId(p.id); setActiveModule('farmland-detail') }}
-                              title={`View ${p.name}`}
+                              title={`${p.name} — open to manage plant inventory`}
                             >
                               <span className="text-[10px] font-semibold text-muted-foreground">Plot {i + 1}</span>
                               <span className="font-medium">{p.name}</span>
                               <span className="text-muted-foreground">{p.area ? `${p.area.toFixed(2)} ha` : ''}</span>
+                              {p.plantRows > 0 && (
+                                <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-emerald-700 dark:text-emerald-400">
+                                  <Sprout className="w-3 h-3" /> {p.plantRows}
+                                </span>
+                              )}
                             </button>
                           ))}
                         </div>

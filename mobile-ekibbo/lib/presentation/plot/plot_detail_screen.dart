@@ -3,16 +3,20 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:agrobase_ekibbo/components/app_circular_indicator.dart';
+import 'package:agrobase_ekibbo/components/app_dropdown_button.dart';
+import 'package:agrobase_ekibbo/components/app_toast.dart';
 import 'package:agrobase_ekibbo/components/custom_appbar.dart';
 import 'package:agrobase_ekibbo/components/no_data_view.dart';
 import 'package:agrobase_ekibbo/components/persistent_header.dart';
 import 'package:agrobase_ekibbo/components/constant/color_constant.dart';
 import 'package:agrobase_ekibbo/components/constant/text_style_constant.dart';
+import 'package:agrobase_ekibbo/domain/config/farm_plant_catalog.dart';
 import 'package:agrobase_ekibbo/domain/l10n/app_lang.dart';
 import 'package:agrobase_ekibbo/domain/roles/role_config.dart';
 import 'package:agrobase_ekibbo/infrastructure/store_data/user_info.dart';
 import 'package:agrobase_ekibbo/models/all_farmer/farmer_model.dart';
 import 'package:agrobase_ekibbo/models/farm_land/farm_land_model.dart';
+import 'package:agrobase_ekibbo/models/farm_plant/farm_plant_model.dart';
 import 'package:agrobase_ekibbo/models/information/species_response.dart';
 import 'package:agrobase_ekibbo/presentation/farmer_detail/widgets/menu_tab_view.dart';
 import 'package:agrobase_ekibbo/presentation/information/species/widgets/species_item.dart';
@@ -37,10 +41,16 @@ class _PlotDetailScreenState extends State<PlotDetailScreen> {
 
   final List<SpeciesInfoResponse> _species = [];
 
+  // Second review (H): per-farm plant inventory (Coffee–Robusta, Cocoa
+  // varieties, Vanilla, Shade Trees, Bananas, Jackfruit, Avocado, Cassava)
+  final List<FarmPlantModel> _plants = [];
+  bool _plantsLoading = false;
+
   @override
   void initState() {
     _getFarmlandDetail();
     _getSpecies();
+    _getPlants();
     super.initState();
   }
 
@@ -65,6 +75,23 @@ class _PlotDetailScreenState extends State<PlotDetailScreen> {
         _species.clear();
         _species.addAll(res!.data!);
       });
+    }
+  }
+
+  /// Second review (H): load the plant inventory rows for this farm.
+  Future<void> _getPlants() async {
+    setState(() => _plantsLoading = true);
+    try {
+      final res = await ApiProvider.instance.apiFarmPlant
+          .getFarmPlants(widget.plot.id!);
+      setState(() {
+        _plants.clear();
+        _plants.addAll(res?.data ?? []);
+        _plantsLoading = false;
+      });
+    } catch (e) {
+      debugPrint(e.toString());
+      setState(() => _plantsLoading = false);
     }
   }
 
@@ -167,6 +194,8 @@ class _PlotDetailScreenState extends State<PlotDetailScreen> {
                         datas: [
                           AppLang.local.detail,
                           AppLang.local.crops,
+                          // Second review (H): plant inventory tab
+                          'Plants',
                         ],
                         onChanged: (v) {
                           setState(() {
@@ -179,7 +208,11 @@ class _PlotDetailScreenState extends State<PlotDetailScreen> {
                   SliverList(
                     delegate: SliverChildListDelegate(
                       [
-                        _tabIndex == 0 ? _buildFarmInfo() : _buildSpeciesList(),
+                        _tabIndex == 0
+                            ? _buildFarmInfo()
+                            : _tabIndex == 1
+                                ? _buildSpeciesList()
+                                : _buildPlantsList(),
                       ],
                     ),
                   )
@@ -361,6 +394,304 @@ class _PlotDetailScreenState extends State<PlotDetailScreen> {
                 },
               );
             });
+  }
+
+  // ── Second review (H): plant inventory tab ──────────────────────────────
+  bool get _canManagePlants =>
+      DUserInfo.instance.user?.roleUser == EnumUserRole.staff ||
+      DUserInfo.instance.user?.roleUser == EnumUserRole.super_admin;
+
+  Widget _buildPlantsList() {
+    if (_plantsLoading) {
+      return const Padding(
+        padding: EdgeInsets.all(40),
+        child: Center(child: AppCircularIndicator()),
+      );
+    }
+    final totalPlants =
+        _plants.fold<int>(0, (sum, p) => sum + (p.plantCount ?? 0));
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(15),
+            color: ColorConstant.grayF7F8FA,
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Plant Inventory',
+                      style: TextStyleConstant.robotoW700(
+                        fontSize: 16,
+                        color: ColorConstant.text79,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '$totalPlants plants recorded on this farm',
+                      style: TextStyleConstant.robotoW400(
+                        fontSize: 12,
+                        color: ColorConstant.text79,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (_canManagePlants)
+                IconButton(
+                  icon: const Icon(Icons.add_circle, color: ColorConstant.primary),
+                  tooltip: 'Add plants',
+                  onPressed: _showAddPlantDialog,
+                ),
+            ],
+          ),
+        ),
+        if (_plants.isEmpty)
+          const Padding(
+            padding: EdgeInsets.all(24),
+            child: NoDataView(),
+          )
+        else
+          ListView.builder(
+            itemCount: _plants.length,
+            physics: const NeverScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(16),
+            shrinkWrap: true,
+            itemBuilder: (_, index) {
+              final item = _plants[index];
+              return Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: ColorConstant.grayF7F8FA,
+                  borderRadius: BorderRadius.circular(15),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            item.cropCategory ?? '',
+                            style: TextStyleConstant.robotoW700(
+                              fontSize: 16,
+                              color: ColorConstant.text79,
+                            ),
+                          ),
+                          if ((item.variety ?? '').isNotEmpty) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              item.variety ?? '',
+                              style: TextStyleConstant.robotoW400(
+                                fontSize: 12,
+                                color: ColorConstant.text79,
+                              ),
+                            ),
+                          ],
+                          if ((item.notes ?? '').isNotEmpty) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              item.notes ?? '',
+                              style: TextStyleConstant.robotoW400(
+                                fontSize: 11,
+                                color: ColorConstant.text79,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      '${item.plantCount ?? 0}',
+                      style: TextStyleConstant.robotoW700(
+                        fontSize: 18,
+                        color: ColorConstant.primary,
+                      ),
+                    ),
+                    if (_canManagePlants)
+                      IconButton(
+                        icon: const Icon(Icons.delete_outline,
+                            color: Colors.redAccent),
+                        tooltip: 'Delete',
+                        onPressed: () => _deletePlant(item),
+                      ),
+                  ],
+                ),
+              );
+            },
+          ),
+      ],
+    );
+  }
+
+  Future<void> _showAddPlantDialog() async {
+    final categories = FarmPlantCatalog.categories.keys.toList();
+    String? selectedCategory;
+    String? selectedVariety;
+    final countCtrl = TextEditingController();
+    bool saving = false;
+
+    await showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialog) => AlertDialog(
+          title: const Text('Add Plants'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Crop Type',
+                  style: TextStyleConstant.robotoW700(
+                      fontSize: 14, color: ColorConstant.text79),
+                ),
+                const SizedBox(height: 8),
+                AppDropdownButton(
+                  hintText: 'Select crop type',
+                  items: categories,
+                  itemSelected: selectedCategory,
+                  onChanged: (i) {
+                    setDialog(() {
+                      selectedCategory = categories[i];
+                      selectedVariety = null; // reset dependent variety
+                    });
+                  },
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Variety',
+                  style: TextStyleConstant.robotoW700(
+                      fontSize: 14, color: ColorConstant.text79),
+                ),
+                const SizedBox(height: 8),
+                AppDropdownButton(
+                  hintText: (selectedCategory == null ||
+                          FarmPlantCatalog.varietiesFor(selectedCategory!)
+                              .isEmpty)
+                      ? 'No varieties'
+                      : 'Select variety',
+                  items: selectedCategory == null
+                      ? const []
+                      : FarmPlantCatalog.varietiesFor(selectedCategory!),
+                  itemSelected: selectedVariety,
+                  isDisable: selectedCategory == null ||
+                      FarmPlantCatalog.varietiesFor(selectedCategory!).isEmpty,
+                  onChanged: (i) {
+                    setDialog(() {
+                      selectedVariety = FarmPlantCatalog.varietiesFor(
+                          selectedCategory!)[i];
+                    });
+                  },
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Plant Count',
+                  style: TextStyleConstant.robotoW700(
+                      fontSize: 14, color: ColorConstant.text79),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: countCtrl,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    hintText: 'e.g. 250',
+                    border: OutlineInputBorder(),
+                    isDense: true,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: saving
+                  ? null
+                  : () async {
+                      final count = int.tryParse(countCtrl.text.trim());
+                      if (selectedCategory == null) {
+                        AppToast.showDialog('Select a crop type');
+                        return;
+                      }
+                      if (count == null || count < 0) {
+                        AppToast.showDialog('Enter a valid plant count');
+                        return;
+                      }
+                      setDialog(() => saving = true);
+                      try {
+                        final res = await ApiProvider
+                            .instance.apiFarmPlant.addFarmPlant({
+                          'farm_land_id': widget.plot.id.toString(),
+                          'crop_category': selectedCategory,
+                          'variety': selectedVariety,
+                          'plant_count': count.toString(),
+                        });
+                        if (ctx.mounted) Navigator.of(ctx).pop();
+                        if (res?.result == true) {
+                          AppToast.showDialog('Plants added');
+                          _getPlants();
+                        } else {
+                          AppToast.showDialog(
+                              res?.message ?? 'Failed to save plants');
+                        }
+                      } catch (e) {
+                        debugPrint(e.toString());
+                        if (ctx.mounted) Navigator.of(ctx).pop();
+                        AppToast.showDialog('Failed to save plants');
+                      }
+                    },
+              child: const Text('Save'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _deletePlant(FarmPlantModel plant) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Plant Record'),
+        content: Text(
+            'Remove ${plant.cropCategory}${(plant.variety ?? '').isNotEmpty ? ' — ${plant.variety}' : ''} (${plant.plantCount ?? 0} plants)?'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: const Text('Cancel')),
+          TextButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: const Text('Delete')),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    try {
+      final res = await ApiProvider.instance.apiFarmPlant
+          .deleteFarmPlant(plant.id!);
+      if (res?.result == true) {
+        AppToast.showDialog('Plant record deleted');
+        _getPlants();
+      } else {
+        AppToast.showDialog(res?.message ?? 'Failed to delete plant record');
+      }
+    } catch (e) {
+      debugPrint(e.toString());
+      AppToast.showDialog('Failed to delete plant record');
+    }
   }
 
   Widget _buildListCrops() {

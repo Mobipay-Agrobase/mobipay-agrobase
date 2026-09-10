@@ -575,10 +575,35 @@ model FarmLand {
   cultivations Cultivation[]
   polygonPoints FarmPolygon[]
   soilAnalyses  SoilAnalysis[]
+  // Second review (H): per-farm plant inventory (Coffee/Cocoa/Vanilla/
+  // Shade Trees/Bananas/Jackfruit/Avocado/Cassava + variety + count) —
+  // the data source for the Farm Land Registry "Total Plants" KPI.
+  plants        FarmPlant[]
 
   @@index([farmerId])
   @@index([createdAt])
   @@index([name])
+}
+
+// ─── FARM PLANT INVENTORY (Second review H — per-farm plant rows) ────────
+model FarmPlant {
+  id          String   @id @default(cuid())
+  farmId      String
+  farm        FarmLand @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  // Crop category from the review catalog: Coffee, Cocoa, Vanilla,
+  // Shade Trees, Bananas, Jackfruit, Avocado, Cassava
+  cropCategory String
+  // Variety from the review catalog (Coffee → Robusta; Cocoa →
+  // Trinitario/Forastero/Criollo; Shade Trees → the 10 species; …)
+  variety     String?
+  plantCount  Int      @default(0)
+  notes       String?
+  createdBy   String?  // user id of the staff member who recorded it (audit)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([farmId])
+  @@index([cropCategory])
 }
 
 model SoilAnalysis {

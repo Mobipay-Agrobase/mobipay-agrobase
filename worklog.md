@@ -980,3 +980,32 @@ Stage Summary:
 - OPEN: push + Vercel deploy blocked on a valid PAT (user notified with
   proof). Pre-existing orphan-import warning in mobile/ noted, unfixed
   (out of scope, user asked not to remove/change unrelated code).
+
+---
+Task ID: 15 (review-2 follow-up: plant data entry for H)
+Agent: main (Super Z)
+
+User asked where to enter the per-farm plant details that feed the "Total
+Plants" KPI (section H). Audit result: the KPI read CropProduction +
+shadeTreeVarieties, but NO form in web or mobile wrote those tables —
+data entry was impossible. Built the missing data-entry surface:
+
+- Prisma: new FarmPlant model (farmId, cropCategory, variety, plantCount,
+  notes, createdBy) + FarmLand.plants relation.
+- Web API: /api/farm-plants (GET/POST) + /api/farm-plants/[id] (PUT/DELETE),
+  tenant-scoped via farm→farmer; middleware alias farm-plants→farmers.
+- Mobile API: /api/mobile/ekibbo-farm-plants (numeric-id pattern, GET/POST/
+  DELETE, farmer self-scope enforced).
+- Catalog: src/lib/farm-plants-catalog.ts + FarmPlantCatalog (Dart) — the
+  review's fixed list (Coffee–Robusta, Cocoa–Trinitario/Forastero/Criollo,
+  Vanilla, Shade Trees–10 species, Bananas, Jackfruit, Avocado, Cassava).
+- KPI aggregation now includes FarmPlant rows (registry endpoint + mobile
+  staff dashboard endpoint).
+- Web UI: "Plants" tab on the farm detail page (add/edit/delete with
+  dependent category→variety dropdowns); registry plot chips show plant-row
+  badge; _count.plants added to /api/farm-lands.
+- Mobile UI: third "Plants" tab on plot detail (staff/super-admin add +
+  delete dialogs); FarmPlantApiClient (+.g.dart) registered in ApiProvider.
+
+Verified: prisma validate, tsc 0, eslint clean, jest 61/61,
+dart_sanity 487+85 files clean.

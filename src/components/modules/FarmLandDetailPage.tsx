@@ -5,14 +5,20 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import {
   ArrowLeft, MapPin, Sprout, Droplets, Users, FlaskConical,
   ShieldCheck, Loader2, Pencil, LandPlot, TreePine, Tractor,
-  Cable, Navigation, XCircle,
+  Cable, Navigation, XCircle, Plus, Trash2,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAppStore } from '@/lib/store'
+import { FARM_PLANT_CATEGORIES, varietiesForCategory } from '@/lib/farm-plants-catalog'
 
 interface FarmLandDetail {
   id: string
@@ -60,6 +66,15 @@ interface FarmLandDetail {
   polygonPoints?: Array<{ id: string; latitude: number; longitude: number; pointOrder: number; altitude?: number | null }>
 }
 
+interface FarmPlantRow {
+  id: string
+  cropCategory: string
+  variety: string | null
+  plantCount: number
+  notes: string | null
+  createdAt?: string
+}
+
 interface Props {
   farmLandId: string
   onBack: () => void
@@ -70,6 +85,10 @@ const TAB_CONFIG = [
   { value: 'soil', label: 'Soil & Irrigation', icon: Droplets },
   { value: 'labour', label: 'Labour', icon: Users },
   { value: 'conversion', label: 'Conversion', icon: ShieldCheck },
+  // Second review (H): per-farm plant inventory — data entry for the
+  // "Total Plants" registry KPI (Coffee–Robusta, Cocoa varieties, Vanilla,
+  // Shade Trees, Bananas, Jackfruit, Avocado, Cassava).
+  { value: 'plants', label: 'Plants', icon: TreePine },
   { value: 'cultivations', label: 'Cultivations', icon: Sprout },
 ]
 
@@ -78,6 +97,14 @@ export function FarmLandDetailPage({ farmLandId, onBack }: Props) {
   const [farmLand, setFarmLand] = useState<FarmLandDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('overview')
+
+  // Second review (H): plant inventory state
+  const [plants, setPlants] = useState<FarmPlantRow[]>([])
+  const [plantsLoading, setPlantsLoading] = useState(false)
+  const [plantDialogOpen, setPlantDialogOpen] = useState(false)
+  const [editingPlant, setEditingPlant] = useState<FarmPlantRow | null>(null)
+  const [plantForm, setPlantForm] = useState<{ cropCategory: string; variety: string; plantCount: string; notes: string }>({ cropCategory: '', variety: '', plantCount: '', notes: '' })
+  const [savingPlant, setSavingPlant] = useState(false)
 
   const load = useCallback(() => {
     setLoading(true)
@@ -91,6 +118,68 @@ export function FarmLandDetailPage({ farmLandId, onBack }: Props) {
   }, [farmLandId])
 
   useEffect(() => { load() }, [load])
+
+  const loadPlants = useCallback(() => {
+    setPlantsLoading(true)
+    fetch(`/api/farm-plants?farmId=${farmLandId}`)
+      .then(r => r.json())
+      .then(d => { setPlants(d.plants || []); setPlantsLoading(false) })
+      .catch(() => { setPlantsLoading(false) })
+  }, [farmLandId])
+
+  useEffect(() => { loadPlants() }, [loadPlants])
+
+  const openAddPlant = () => {
+    setEditingPlant(null)
+    setPlantForm({ cropCategory: '', variety: '', plantCount: '', notes: '' })
+    setPlantDialogOpen(true)
+  }
+
+  const openEditPlant = (p: FarmPlantRow) => {
+    setEditingPlant(p)
+    setPlantForm({ cropCategory: p.cropCategory, variety: p.variety || '', plantCount: String(p.plantCount), notes: p.notes || '' })
+    setPlantDialogOpen(true)
+  }
+
+  const savePlant = async () => {
+    const plantCount = parseInt(plantForm.plantCount, 10)
+    if (!plantForm.cropCategory) { toast.error('Select a crop category'); return }
+    if (Number.isNaN(plantCount) || plantCount < 0) { toast.error('Plant count must be a non-negative number'); return }
+    setSavingPlant(true)
+    try {
+      const res = await fetch(editingPlant ? `/api/farm-plants/${editingPlant.id}` : '/api/farm-plants', {
+        method: editingPlant ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          farmId: farmLandId,
+          cropCategory: plantForm.cropCategory,
+          variety: plantForm.variety || null,
+          plantCount,
+          notes: plantForm.notes || null,
+        }),
+      })
+      if (!res.ok) throw new Error(await res.text())
+      toast.success(editingPlant ? 'Plant record updated' : 'Plant record added')
+      setPlantDialogOpen(false)
+      loadPlants()
+    } catch {
+      toast.error('Failed to save plant record')
+    } finally {
+      setSavingPlant(false)
+    }
+  }
+
+  const deletePlant = async (p: FarmPlantRow) => {
+    if (!confirm(`Delete ${p.cropCategory}${p.variety ? ` — ${p.variety}` : ''} (${p.plantCount} plants)?`)) return
+    try {
+      const res = await fetch(`/api/farm-plants/${p.id}`, { method: 'DELETE' })
+      if (!res.ok) throw new Error()
+      toast.success('Plant record deleted')
+      loadPlants()
+    } catch {
+      toast.error('Failed to delete plant record')
+    }
+  }
 
   const handleEdit = () => {
     setSelectedFarmLandId(farmLandId)
@@ -115,6 +204,7 @@ export function FarmLandDetailPage({ farmLandId, onBack }: Props) {
   if (!farmLand) return <div className="text-center p-8 text-muted-foreground">Farm land not found</div>
 
   const cultivationCount = farmLand.cultivations?.length || 0
+  const totalPlantsOnFarm = plants.reduce((s, p) => s + (p.plantCount || 0), 0)
 
   return (
     <div className="flex flex-col h-full">
@@ -312,6 +402,68 @@ export function FarmLandDetailPage({ farmLandId, onBack }: Props) {
               </Card>
             </TabsContent>
 
+            {/* Plants Tab — Second review (H): per-farm plant inventory */}
+            <TabsContent value="plants" className="mt-0 space-y-4">
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm flex items-center justify-between">
+                    <span className="flex items-center gap-2">
+                      <TreePine className="w-4 h-4 text-primary" /> Plant Inventory ({totalPlantsOnFarm.toLocaleString()} plants)
+                    </span>
+                    <Button size="sm" onClick={openAddPlant} className="gap-1.5">
+                      <Plus className="w-3.5 h-3.5" /> Add Plants
+                    </Button>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {plantsLoading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : plants.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-4">
+                      No plants recorded yet. Click "Add Plants" to record the crop inventory for this farm
+                      (Coffee, Cocoa, Vanilla, Shade Trees, Bananas, Jackfruit, Avocado, Cassava).
+                    </p>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Crop Type</TableHead>
+                            <TableHead>Variety</TableHead>
+                            <TableHead className="text-right">Plant Count</TableHead>
+                            <TableHead>Notes</TableHead>
+                            <TableHead className="w-[80px]"></TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {plants.map(p => (
+                            <TableRow key={p.id}>
+                              <TableCell className="text-sm font-medium">{p.cropCategory}</TableCell>
+                              <TableCell className="text-sm">{p.variety || '—'}</TableCell>
+                              <TableCell className="text-sm text-right font-semibold">{p.plantCount.toLocaleString()}</TableCell>
+                              <TableCell className="text-sm text-muted-foreground">{p.notes || '—'}</TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-1">
+                                  <Button variant="ghost" size="icon" className="h-8 w-8" title="Edit" onClick={() => openEditPlant(p)}>
+                                    <Pencil className="w-4 h-4" />
+                                  </Button>
+                                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" title="Delete" onClick={() => deletePlant(p)}>
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
             {/* Cultivations Tab */}
             <TabsContent value="cultivations" className="mt-0">
               <Card>
@@ -347,6 +499,71 @@ export function FarmLandDetailPage({ farmLandId, onBack }: Props) {
           </div>
         </Tabs>
       </div>
+
+      {/* Second review (H): Add / Edit plant inventory record */}
+      <Dialog open={plantDialogOpen} onOpenChange={setPlantDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{editingPlant ? 'Edit Plant Record' : 'Add Plants'}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Crop Type</Label>
+              <Select
+                value={plantForm.cropCategory}
+                onValueChange={(v) => setPlantForm(f => ({ ...f, cropCategory: v, variety: '' }))}
+              >
+                <SelectTrigger><SelectValue placeholder="Select crop type" /></SelectTrigger>
+                <SelectContent>
+                  {FARM_PLANT_CATEGORIES.map(c => (
+                    <SelectItem key={c.category} value={c.category}>{c.category}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Variety {varietiesForCategory(plantForm.cropCategory).length === 0 && <span className="text-muted-foreground font-normal">(none for this crop)</span>}</Label>
+              <Select
+                value={plantForm.variety}
+                onValueChange={(v) => setPlantForm(f => ({ ...f, variety: v }))}
+                disabled={varietiesForCategory(plantForm.cropCategory).length === 0}
+              >
+                <SelectTrigger><SelectValue placeholder={varietiesForCategory(plantForm.cropCategory).length === 0 ? '—' : 'Select variety'} /></SelectTrigger>
+                <SelectContent>
+                  {varietiesForCategory(plantForm.cropCategory).map(v => (
+                    <SelectItem key={v} value={v}>{v}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Plant Count</Label>
+              <Input
+                type="number"
+                min="0"
+                placeholder="e.g. 250"
+                value={plantForm.plantCount}
+                onChange={(e) => setPlantForm(f => ({ ...f, plantCount: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Notes <span className="text-muted-foreground font-normal">(optional)</span></Label>
+              <Input
+                placeholder="e.g. planted 2024 season A"
+                value={plantForm.notes}
+                onChange={(e) => setPlantForm(f => ({ ...f, notes: e.target.value }))}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPlantDialogOpen(false)}>Cancel</Button>
+            <Button onClick={savePlant} disabled={savingPlant}>
+              {savingPlant && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              {editingPlant ? 'Save Changes' : 'Add Plants'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

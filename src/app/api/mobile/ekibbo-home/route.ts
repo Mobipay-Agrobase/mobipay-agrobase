@@ -65,7 +65,7 @@ export async function GET(req: NextRequest) {
     // Second review (H): plants aggregation (CropProduction treeCount +
     // farmer shadeTreeVarieties) for the Farm Land Registry KPI.
     const plantScope = scopedIds.length ? { farmerId: { in: scopedIds } } : { farmer: { ...tf } }
-    const [farmerCount, tenantFarmerCount, lands, cultivations, farmers, cropProductions, shadeFarmers] = await Promise.all([
+    const [farmerCount, tenantFarmerCount, lands, cultivations, farmers, cropProductions, shadeFarmers, farmPlants] = await Promise.all([
       db.farmerProfile.count({ where: officerWhere }),
       // Tenant-wide count so the dashboard KPI always matches the
       // "View All Farmers" list (which is tenant-scoped, not officer-scoped).
@@ -96,6 +96,16 @@ export async function GET(req: NextRequest) {
         select: { shadeTreeVarieties: true },
         take: 5000,
       }),
+      // Second review (H): per-farm plant inventory rows (staff-entered)
+      db.farmPlant.groupBy({
+        by: ['cropCategory'],
+        where: {
+          farm: scopedIds.length
+            ? { farmerId: { in: scopedIds } }
+            : { farmer: { ...tf } },
+        },
+        _sum: { plantCount: true },
+      }),
     ])
 
     const totalHectares = lands.reduce((s, l) => s + (Number(l.sizeHectares) || 0), 0)
@@ -115,6 +125,12 @@ export async function GET(req: NextRequest) {
           plantsByCrop.set('Shade Trees', (plantsByCrop.get('Shade Trees') || 0) + (parseInt(String(v.count)) || 0))
         }
       } catch { /* ignore */ }
+    }
+    // Second review (H): per-farm plant inventory rows
+    for (const row of farmPlants) {
+      const crop = (row.cropCategory || '').trim()
+      if (!crop) continue
+      plantsByCrop.set(crop, (plantsByCrop.get(crop) || 0) + (row._sum.plantCount || 0))
     }
     const plantsList = Array.from(plantsByCrop.entries())
       .map(([crop, count]) => ({ crop, count }))

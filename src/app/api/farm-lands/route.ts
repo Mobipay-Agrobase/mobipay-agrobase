@@ -51,7 +51,8 @@ export async function GET(request: Request) {
           ...(includePolygons
             ? { polygonPoints: { orderBy: { pointOrder: 'asc' } } }
             : {}),
-          _count: { select: { cultivations: true, polygonPoints: true } },
+          // Second review (H): plant counts per farm for the registry plot chips
+          _count: { select: { cultivations: true, polygonPoints: true, plants: true } },
         },
         orderBy: { createdAt: 'desc' },
       }),
@@ -77,7 +78,7 @@ export async function GET(request: Request) {
     // scope (not just the current page).
     let kpis: unknown = null
     if (includeKpis) {
-      const [plotCount, acreageAgg, cropProductions, shadeVarieties] = await Promise.all([
+      const [plotCount, acreageAgg, cropProductions, shadeVarieties, farmPlants] = await Promise.all([
         db.farmLand.count({ where }),
         db.farmLand.aggregate({ where, _sum: { sizeHectares: true } }),
         db.cropProduction.groupBy({
@@ -88,6 +89,13 @@ export async function GET(request: Request) {
         db.farmerProfile.findMany({
           where: { ...buildTenantFilter(ctx, 'tenantId'), shadeTreeVarieties: { not: null } },
           select: { shadeTreeVarieties: true },
+        }),
+        // Second review (H): per-farm plant inventory rows (the review's
+        // data-entry surface — Coffee/Cocoa/Vanilla/Shade Trees/Bananas/…)
+        db.farmPlant.groupBy({
+          by: ['cropCategory', 'variety'],
+          where: { farm: { farmer: { ...buildTenantFilter(ctx, 'tenantId') } } },
+          _sum: { plantCount: true },
         }),
       ])
 
@@ -118,6 +126,17 @@ export async function GET(request: Request) {
             byVariety.set(key, (byVariety.get(key) || 0) + n)
           }
         } catch { /* ignore malformed JSON */ }
+      }
+      // Per-farm plant inventory rows (second review H data entry).
+      for (const row of farmPlants) {
+        const crop = (row.cropCategory || '').trim()
+        if (!crop) continue
+        const count = row._sum.plantCount || 0
+        byCrop.set(crop, (byCrop.get(crop) || 0) + count)
+        if (row.variety) {
+          const key = `${crop} — ${row.variety.trim()}`
+          byVariety.set(key, (byVariety.get(key) || 0) + count)
+        }
       }
 
       const plants = Array.from(byCrop.entries())

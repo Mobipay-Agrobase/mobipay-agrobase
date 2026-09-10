@@ -330,6 +330,7 @@ export async function middleware(request: NextRequest) {
       'companies': 'companies',
       'cultivations': 'farmers',
       'farm-lands': 'farmers',
+      'farm-plants': 'farmers',
       'farm-polygons': 'farmers',
       'trainings': 'training',
       'practices': 'farm_visits',

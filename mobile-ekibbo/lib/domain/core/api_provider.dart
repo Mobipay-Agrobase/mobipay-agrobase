@@ -10,6 +10,7 @@ import 'package:agrobase_ekibbo/infrastructure/remote_data/raw_data/crop_api/cro
 import 'package:agrobase_ekibbo/infrastructure/remote_data/raw_data/dashboard_api/dashboard_api_client.dart';
 import 'package:agrobase_ekibbo/infrastructure/remote_data/raw_data/distribution_api/distribution_api_client.dart';
 import 'package:agrobase_ekibbo/infrastructure/remote_data/raw_data/farm_land/farm_land_api_client.dart';
+import 'package:agrobase_ekibbo/infrastructure/remote_data/raw_data/farm_plant/farm_plant_api_client.dart';
 import 'package:agrobase_ekibbo/infrastructure/remote_data/raw_data/farmer_api/farmer_api_client.dart';
 import 'package:agrobase_ekibbo/infrastructure/remote_data/raw_data/infomation/check_fishing_api_client.dart';
 import 'package:agrobase_ekibbo/infrastructure/remote_data/raw_data/infomation/feeding_api_client.dart';
@@ -54,6 +55,7 @@ class ApiProvider {
   late final FarmerApiClient apiFarmer;
   late final LocationApiClient apiLocation;
   late final FarmLandApiClient apiFarmland;
+  late final FarmPlantApiClient apiFarmPlant;
   late final DashboardApiClient apiDashboard;
   late final ProcurementApiClient apiProcurement;
   late final DistributionApiClient apiDistribution;
@@ -120,6 +122,7 @@ class ApiProvider {
     apiFarmer = FarmerApiClient(_dio.dio);
     apiLocation = LocationApiClient(_dio.dio);
     apiFarmland = FarmLandApiClient(_dio.dio);
+    apiFarmPlant = FarmPlantApiClient(_dio.dio);
     apiDashboard = DashboardApiClient(_dio.dio);
     apiProcurement = ProcurementApiClient(_dio.dio);
     apiDistribution = DistributionApiClient(_dio.dio);

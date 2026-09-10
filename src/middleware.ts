@@ -10,6 +10,7 @@ import {
   logEntitlementDenied,
 } from '@/middleware/edge-logger'
 import { resolveModuleForPath, checkEntitlement, getTenantActiveStatus } from '@/middleware/edge-entitlements'
+import { verifySimulateCookie } from '@/lib/security/simulate-cookie'
 
 // ─── Route Categories ──────────────────────────────────────────────────────
 
@@ -201,27 +202,32 @@ export async function middleware(request: NextRequest) {
   const userTenantId = token.tenantId as string | undefined
 
   // ─── 1a. SIMULATION CONTEXT (SUPER_ADMIN only) ──────────────────────────
-  // Decode the `simulate_tenant` cookie early so we can use the simulated
+  // Verify the `simulate_tenant` cookie early so we can use the simulated
   // tenant ID for kill-switch + entitlement checks. We DO NOT apply the
   // simulation override on /api/admin/* paths (the SUPER_ADMIN needs to call
   // /api/admin/simulate/stop while simulating).
+  //
+  // SECURITY: the cookie is HMAC-SHA256 signed by /api/admin/simulate/start
+  // (see src/lib/security/simulate-cookie.ts). Verification fails closed on
+  // any error — an unsigned (legacy), tampered, or expired cookie is IGNORED,
+  // so a value crafted outside the start route can never scope a request.
+  // The `startedBy` claim additionally binds the cookie to the super-admin
+  // who started the simulation: it is not honoured for any other account.
   let simulatedTenantId: string | undefined
   let simulatedTenantName: string | undefined
   let simulatedTenantType: string | undefined
   if (role === 'SUPER_ADMIN' && !pathname.startsWith('/api/admin/')) {
     const simulateCookie = request.cookies.get('simulate_tenant')?.value
     if (simulateCookie) {
-      try {
-        const decoded = JSON.parse(
-          Buffer.from(simulateCookie, 'base64url').toString('utf-8'),
-        ) as { tenantId: string; tenantName: string; tenantType: string; expiresAt: number }
-        if (Date.now() < decoded.expiresAt && decoded.tenantId) {
-          simulatedTenantId = decoded.tenantId
-          simulatedTenantName = decoded.tenantName
-          simulatedTenantType = decoded.tenantType
-        }
-      } catch {
-        // Malformed cookie — ignore
+      const decoded = await verifySimulateCookie(simulateCookie)
+      if (
+        decoded &&
+        decoded.tenantId &&
+        decoded.startedBy === (token.userId as string | undefined)
+      ) {
+        simulatedTenantId = decoded.tenantId
+        simulatedTenantName = decoded.tenantName
+        simulatedTenantType = decoded.tenantType
       }
     }
   }

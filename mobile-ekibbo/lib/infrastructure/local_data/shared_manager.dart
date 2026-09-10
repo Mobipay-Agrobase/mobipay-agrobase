@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:agrobase_ekibbo/core/security/secure_token_store.dart';
 import 'package:agrobase_ekibbo/domain/core/extension/extention.dart';
 import 'package:agrobase_ekibbo/domain/l10n/model/app_language.dart';
 import 'package:agrobase_ekibbo/infrastructure/store_data/data_orther_info.dart';
@@ -52,15 +53,23 @@ class SharedPreferencesProvider {
     isInstance = true;
     _fetchUserInfo();
     _fetchFarmerLocal();
-    accessToken = _getString(SharedKey.accessToken.name) ?? '';
-    sellerToken = _getString(SharedKey.sellerToken.name) ?? '';
+
+    // SECURITY (security review follow-up): auth tokens now live in OS
+    // secure storage (keychain / keystore), NOT plaintext SharedPreferences.
+    // One-time migration copies any legacy plaintext token over (so
+    // upgrading field officers stay logged in) and wipes the old keys.
+    await SecureTokenStore.instance.migrateFromSharedPreferences(_shared);
+    accessToken = await SecureTokenStore.instance.readAccessToken() ?? '';
+    sellerToken = await SecureTokenStore.instance.readSellerToken() ?? '';
+
     // Ekibbo deployment is English-only; ignore any stale 'vi' value.
     final storedLang = _getString(SharedKey.applang.name);
     appLang = storedLang == EAppLang.vi.name ? EAppLang.en.name : (storedLang ?? EAppLang.en.name);
     appMode = _getString(SharedKey.appMode.name) ?? EAppMode.pro.name;
     isEnvPro = appMode == EAppMode.pro.name ? true : false;
     localLang = await DOrtherInfo.instance.setAppLang(appLang);
-    debugPrint("Access_token => $accessToken");
+    // Never log the token value itself — presence only.
+    debugPrint('Access token loaded: ${accessToken.isNotEmpty}');
     debugPrint("UserInfo ${userInfo?.toJson}");
   }
 
@@ -75,14 +84,19 @@ class SharedPreferencesProvider {
     _setString(SharedKey.appMode.name, value);
   }
 
-  setAccessToken(String value) {
+  /// Persist the auth token to OS secure storage (keystore/keychain).
+  /// The in-memory field updates synchronously so every existing reader
+  /// (interceptors, services) keeps working; callers that ignore the
+  /// returned Future simply persist in the background.
+  Future<void> setAccessToken(String value) {
     accessToken = value;
-    _setString(SharedKey.accessToken.name, value);
+    return SecureTokenStore.instance.writeAccessToken(value);
   }
 
-  setSellerToken(String value) {
+  /// Persist the seller token to OS secure storage.
+  Future<void> setSellerToken(String value) {
     sellerToken = value;
-    _setString(SharedKey.sellerToken.name, value);
+    return SecureTokenStore.instance.writeSellerToken(value);
   }
 
   setUserInfo(UserModel value) {
@@ -189,7 +203,8 @@ class SharedPreferencesProvider {
     userInfo = null;
     setAccessToken('');
     DUserInfo.instance.user = null;
-    clearKey(SharedKey.sellerToken.name);
+    SecureTokenStore.instance.deleteSellerToken();
+    sellerToken = '';
     clearKey(SharedKey.userInfo.name);
     clearKey(SharedKey.userName.name);
   }
@@ -199,7 +214,8 @@ class SharedPreferencesProvider {
     setAccessToken('');
     setAppMode(isEnvPro ? EAppMode.dev.name : EAppMode.pro.name);
     DUserInfo.instance.user = null;
-    clearKey(SharedKey.sellerToken.name);
+    SecureTokenStore.instance.deleteSellerToken();
+    sellerToken = '';
     clearKey(SharedKey.userInfo.name);
     clearKey(SharedKey.userName.name);
   }

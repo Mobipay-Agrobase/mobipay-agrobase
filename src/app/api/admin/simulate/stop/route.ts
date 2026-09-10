@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getTenantContext } from '@/lib/tenant'
+import { verifySimulateCookie } from '@/lib/security/simulate-cookie'
 import { headers } from 'next/headers'
 
 /**
@@ -20,25 +21,14 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Read the existing cookie to record which tenant we were simulating
+    // Read the existing cookie (signature-verified) to record which tenant
+    // we were simulating. A tampered/unsigned cookie still gets cleared —
+    // stopping the simulation must never fail just because the cookie is
+    // bad — but it is not trusted for the audit entry.
     const cookie = request.cookies.get('simulate_tenant')?.value
-    let simulatedTenantId: string | undefined
-    let simulatedTenantName: string | undefined
-    if (cookie) {
-      try {
-        const payload = JSON.parse(
-          Buffer.from(cookie, 'base64url').toString('utf-8'),
-        ) as {
-          tenantId?: string
-          tenantName?: string
-          startedAt?: number
-        }
-        simulatedTenantId = payload.tenantId
-        simulatedTenantName = payload.tenantName
-      } catch {
-        // ignore malformed cookie
-      }
-    }
+    const payload = cookie ? await verifySimulateCookie(cookie) : null
+    const simulatedTenantId = payload?.tenantId
+    const simulatedTenantName = payload?.tenantName
 
     if (simulatedTenantId) {
       const headersList = await headers()

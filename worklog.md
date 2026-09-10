@@ -895,3 +895,88 @@ Stage Summary:
 - Web/NextAuth users completely unaffected.
 - Rotation lever: changing MOBILE_TOKEN_SECRET in Vercel (then redeploy)
     invalidates all mobile sessions without touching web sessions.
+---
+Task ID: 16 (security review follow-up — second review round)
+Agent: Super Z
+Task: Implement the second-review security feedback on BOTH sides: sign the
+SUPER_ADMIN simulate_tenant cookie (web) and close the mobile-app findings
+(plaintext token storage in SharedPreferences, bad-TLS acceptance, sensitive
+data in debug logs). Push to GitHub.
+
+Work Log:
+- AUDIT TRAIL: the prior session claimed this work but NOTHING was committed
+  (repo last commit 320a9a9, Sept 5; no commits/deploys after — verified via
+  git log + Vercel API). This session re-derived scope from the documented
+  "Follow-ups NOT yet done (next P0/P1 candidates)" in Task 14 and
+  implemented it from a fresh clone.
+- WEB — signed simulate_tenant cookie (the "web-side equivalent" of the
+  forgeable mobile token):
+  * New src/lib/security/simulate-cookie.ts: HMAC-SHA256 signed cookie values
+    <base64url(payload)>.<base64url(hmac)>, WebCrypto + atob/btoa so the same
+    code runs in Edge middleware and Node routes; constant-time signature
+    compare; server-side expiry enforcement; fail-closed verify. Secret:
+    SIMULATE_COOKIE_SECRET -> MOBILE_TOKEN_SECRET -> NEXTAUTH_SECRET (prod
+    already has MOBILE_TOKEN_SECRET — no env change needed).
+  * /api/admin/simulate/start now issues the SIGNED cookie (payload adds
+    startedBy binding). Pre-fix, the cookie was plain base64url(JSON) — a
+    crafted value could set ANY tenantId (bypassing the start route's
+    exists/active/not-root checks), ANY expiry (never expires), and replay
+    under a different super-admin account.
+  * middleware.ts: verifySimulateCookie() + startedBy === token.userId
+    binding — invalid/tampered/expired/foreign cookies are ignored (no
+    simulation). status route: verified parse, clears bad cookies. stop
+    route: verified parse for the audit entry; always clears the cookie.
+- MOBILE-EKIBBO — two review findings closed:
+  * Token storage: new lib/core/security/secure_token_store.dart
+    (flutter_secure_storage 9.2.2, AndroidOptions(encryptedSharedPreferences,
+    resetOnError), IOSOptions(first_unlock, no iCloud sync)) — mirrors the
+    main app's SecureStorage pattern. shared_manager.dart: accessToken /
+    sellerToken now load from secure storage at init() and persist there;
+    one-time migration copies any legacy plaintext token over and WIPES the
+    SharedPreferences keys (upgrading officers stay logged in); token value
+    no longer debugPrint'ed. In-memory fields kept synchronous so all ~15
+    existing readers (interceptors, OTA cache, sync engine) work unchanged.
+  * TLS: removed the global MyHttpOverrides that accepted ANY invalid
+    certificate (MITM vector on public Wi-Fi) — default HttpClient now
+    rejects bad certs, same as Dio.
+- MOBILE (main app) — same class of findings, found during the sweep:
+  * ApiClient.init() no longer reads the token from plaintext SharedPreferences
+    ('auth_token'/'tenant_id' keys now wiped at startup; session authority is
+    AuthProvider + SecureStorage which already did this correctly).
+  * api_client.dart debug logging: POST bodies (passwords on mobile-login!)
+    and response bodies (Bearer tokens!) are now redacted — sensitive keys
+    (password/otp/pin/token/...) replaced with ***, previews truncated,
+    non-JSON bodies summarized as <N chars>.
+- VERIFICATION:
+  * Web: npm ci + prisma generate; tsc --noEmit 0 errors (needed
+    --max-old-space-size=3072, known 4GB box limit); jest 61/61 PASS
+    (52 existing + 9 new simulate-cookie tests: roundtrip, OLD unsigned-format
+    forge exploit rejected, tampered payload/signature rejected, expiry
+    rejected, rotated-secret rejected, missing-secret fails closed, malformed
+    inputs never throw); eslint 0 problems on all changed files.
+  * Dart: scripts/dart_sanity.py RECREATED AND COMMITTED (kept getting lost
+    in sandbox resets) — string/comment-aware delimiter balance, import
+    resolution (incl. transitive allowlist), corruption-signature checks,
+    on-disk symbol assertions. 574 files swept: ALL CLEAN (1 pre-existing
+    warning: orphan status_badge.dart import, not touched).
+- PUSH STATUS: local commit ready; push blocked by invalid GitHub PAT
+  (API returns 401 Bad credentials — token likely expired/rotated/revoked;
+  repo is public so clone worked anonymously). Awaiting fresh PAT from user.
+
+Stage Summary:
+- All documented second-review security findings are implemented and
+  verified on web AND both Flutter apps:
+  1. simulate_tenant cookie is now cryptographically signed + expiry +
+     user-bound (regression-tested).
+  2. mobile-ekibbo tokens live in keystore/keychain with one-time plaintext
+     migration; TLS bypass removed.
+  3. main app: legacy plaintext token path wiped, passwords/tokens redacted
+     from debug logs.
+- No functional feature was removed; only the three insecure code paths were
+  closed. Existing sessions survive: officers stay logged in (migration),
+  super-admins re-click Simulate once (old unsigned cookies fail closed).
+- Deployment: no env vars required (MOBILE_TOKEN_SECRET fallback chain);
+  optional SIMULATE_COOKIE_SECRET for independent rotation.
+- OPEN: push + Vercel deploy blocked on a valid PAT (user notified with
+  proof). Pre-existing orphan-import warning in mobile/ noted, unfixed
+  (out of scope, user asked not to remove/change unrelated code).

@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 //import 'package:flutter_easyloading/flutter_easyloading.dart';
@@ -19,7 +18,10 @@ import 'package:agrobase_ekibbo/domain/l10n/generated/app_localizations.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  HttpOverrides.global = MyHttpOverrides();
+  // SECURITY (security review follow-up): the old global HttpOverrides
+  // accepted ANY invalid TLS certificate, opening the app to
+  // man-in-the-middle attacks on public Wi-Fi. Removed — the default
+  // HttpClient now rejects bad certificates, same as Dio/browsers.
   SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
@@ -78,30 +80,5 @@ class _MyAppState extends State<MyApp> {
         ),
       ),
     );
-  }
-}
-
-// void configLoading() {
-//   EasyLoading.instance
-//     ..displayDuration = const Duration(milliseconds: 2000)
-//     ..indicatorType = EasyLoadingIndicatorType.ring
-//     ..loadingStyle = EasyLoadingStyle.custom
-//     ..indicatorSize = 45.0
-//     ..radius = 10.0
-//     ..progressColor = Colors.yellow
-//     ..backgroundColor = Colors.white
-//     ..indicatorColor = ColorConstant.primary
-//     ..textColor = Colors.yellow
-//     ..userInteractions = false
-//     ..maskColor = Colors.blue.withOpacity(0.5)
-//     ..dismissOnTap = false;
-// }
-
-class MyHttpOverrides extends HttpOverrides {
-  @override
-  HttpClient createHttpClient(SecurityContext? context) {
-    return super.createHttpClient(context)
-      ..badCertificateCallback =
-          (X509Certificate cert, String host, int port) => true;
   }
 }

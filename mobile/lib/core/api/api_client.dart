@@ -81,9 +81,18 @@ class ApiClient {
   bool get isAuthenticated => _token != null;
 
   Future<void> init() async {
+    // SECURITY (security review follow-up): the token no longer lives in
+    // plaintext SharedPreferences — AuthProvider restores the session from
+    // OS secure storage (keystore/keychain) and calls setAuth() at startup.
+    // Here we only wipe any legacy plaintext keys left by older app
+    // versions so the stale copy cannot be read by file-system access.
     final prefs = await SharedPreferences.getInstance();
-    _token = prefs.getString('auth_token');
-    _tenantId = prefs.getString('tenant_id');
+    if (prefs.containsKey('auth_token')) {
+      await prefs.remove('auth_token');
+    }
+    if (prefs.containsKey('tenant_id')) {
+      await prefs.remove('tenant_id');
+    }
   }
 
   void setAuth(String token, String tenantId) {
@@ -102,6 +111,76 @@ class ApiClient {
         if (_tenantId != null) 'X-Tenant-ID': _tenantId!,
       };
 
+  /// Keys whose VALUES must never appear in debug logs
+  /// (passwords, OTP/PIN codes, session tokens).
+  static const Set<String> _sensitiveLogKeys = {
+    'password',
+    'newPassword',
+    'currentPassword',
+    'confirmPassword',
+    'oldPassword',
+    'otp',
+    'pin',
+    'token',
+    'accessToken',
+    'refreshToken',
+    'challengeToken',
+    'sessionToken',
+    'secret',
+  };
+
+  /// Returns a log-safe one-line preview of a JSON body: sensitive values
+  /// are replaced with '***' and the output is truncated.
+  String _sanitizeForLog(String? bodyStr) {
+    if (bodyStr == null || bodyStr.isEmpty) return '';
+    try {
+      final decoded = jsonDecode(bodyStr);
+      final safe = _redact(decoded);
+      var out = jsonEncode(safe);
+      if (out.length > 300) out = '${out.substring(0, 300)}...(${bodyStr.length} chars)';
+      return out;
+    } catch (_) {
+      // Not JSON (multipart, raw text) — truncate hard, never dump raw.
+      return '<${bodyStr.length} chars, not logged>';
+    }
+  }
+
+  dynamic _redact(dynamic node) {
+    if (node is Map) {
+      return node.map((k, v) {
+        if (k is String && _sensitiveLogKeys.contains(k)) {
+          return MapEntry(k, '***');
+        }
+        return MapEntry(k, _redact(v));
+      });
+    }
+    if (node is List) return node.map(_redact).toList();
+    return node;
+  }
+
+  /// Log-safe response preview: status + length always; body preview only
+  /// with sensitive values redacted (auth responses contain Bearer tokens).
+  String _sanitizeResponseForLog(http.Response res) {
+    if (res.body.isEmpty) return '';
+    try {
+      final decoded = jsonDecode(res.body);
+      if (decoded is Map) {
+        final redacted = decoded.map((k, v) {
+          if (k is String && _sensitiveLogKeys.contains(k)) {
+            return MapEntry(k, '***');
+          }
+          return MapEntry(k, v);
+        });
+        var out = jsonEncode(redacted);
+        if (out.length > 300) out = '${out.substring(0, 300)}...';
+        return out;
+      }
+      return '<${res.body.length} bytes>';
+    } catch (_) {
+      return '<${res.body.length} bytes>';
+    }
+  }
+
   Future<http.Response> get(String path) async {
     final base = await getBaseUrl();
     final uri = Uri.parse('$base$path');
@@ -115,11 +194,14 @@ class ApiClient {
     final base = await getBaseUrl();
     final uri = Uri.parse('$base$path');
     final bodyStr = body != null ? jsonEncode(body) : null;
-    debugPrint('[API] POST $base$path | token=${_token != null ? "yes" : "no"} | body=$bodyStr');
+    // SECURITY (security review follow-up): never log raw bodies — login
+    // requests contain the password and auth responses contain tokens.
+    debugPrint(
+        '[API] POST $base$path | token=${_token != null ? "yes" : "no"} | body=${_sanitizeForLog(bodyStr)}');
     final res = await http.post(uri,
         headers: _headers,
         body: bodyStr);
-    debugPrint('[API] ← ${res.statusCode} ${res.body}');
+    debugPrint('[API] ← ${res.statusCode} ${_sanitizeResponseForLog(res)}');
     return res;
   }
 

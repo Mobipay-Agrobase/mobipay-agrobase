@@ -70,6 +70,9 @@ dependencies:
   qr_flutter: ^4.1.0
   hive: ^2.0.5
   hive_flutter: ^1.1.0
+  # Security: auth tokens moved from plaintext SharedPreferences to OS
+  # keystore/keychain storage (same pattern as the main agrobase app).
+  flutter_secure_storage: ^9.2.2
 
 dev_dependencies:
   flutter_test:

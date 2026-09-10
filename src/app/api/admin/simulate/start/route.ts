@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getTenantContext } from '@/lib/tenant'
+import { signSimulateCookie } from '@/lib/security/simulate-cookie'
 import { headers } from 'next/headers'
 
 /**
@@ -16,6 +17,9 @@ import { headers } from 'next/headers'
  *   - SUPER_ADMIN only (403 otherwise)
  *   - Target tenant must exist and be active
  *   - Cannot simulate the platform root tenant (type === 'SUPER_ADMIN')
+ *   - Cookie is SIGNED with HMAC-SHA256 (see src/lib/security/simulate-cookie.ts)
+ *     so it cannot be forged client-side, and the middleware additionally
+ *     binds it to the super-admin userId that started the simulation.
  *   - Cookie is httpOnly, SameSite=Lax, Secure in production, maxAge=1800s
  */
 export async function POST(request: NextRequest) {
@@ -60,11 +64,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Build a signed cookie payload. We do NOT encrypt — the middleware
-    // trusts the cookie because it is httpOnly and can only be set by this
-    // server-side route after RBAC verification. Tampering requires server
-    // compromise, in which case the attacker has DB access anyway.
-    // The payload is JSON { tenantId, tenantName, startedAt, expiresAt }.
+    // Build the signed cookie payload. The cookie value is HMAC-SHA256
+    // signed (payload.signature) — the middleware verifies the signature,
+    // enforces expiry server-side, and checks `startedBy` matches the
+    // requesting super-admin. A value crafted outside this route (devtools,
+    // curl, XSS) is rejected. The payload is JSON
+    // { tenantId, tenantName, startedAt, expiresAt, startedBy, ... }.
     const now = Date.now()
     const ttlSeconds = 30 * 60 // 30 minutes
     const payload = {
@@ -77,7 +82,7 @@ export async function POST(request: NextRequest) {
       expiresAt: now + ttlSeconds * 1000,
       startedBy: ctx.userId,
     }
-    const cookieValue = Buffer.from(JSON.stringify(payload)).toString('base64url')
+    const cookieValue = await signSimulateCookie(payload)
 
     // AuditLog entry
     const headersList = await headers()

@@ -5,6 +5,7 @@ import 'package:agrobase_ekibbo/components/custom_appbar.dart';
 import 'package:agrobase_ekibbo/components/g_image.dart';
 import 'package:agrobase_ekibbo/components/no_data_view.dart';
 import 'package:agrobase_ekibbo/components/constant/color_constant.dart';
+import 'package:agrobase_ekibbo/components/constant/text_style_constant.dart';
 import 'package:agrobase_ekibbo/domain/l10n/app_lang.dart';
 import 'package:agrobase_ekibbo/domain/roles/role_config.dart';
 import 'package:agrobase_ekibbo/infrastructure/store_data/data_listings.dart';

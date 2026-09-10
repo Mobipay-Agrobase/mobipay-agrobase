@@ -279,10 +279,10 @@ class _NewInsuranceScreenState extends State<NewInsuranceScreen> {
             hintText: 'Season',
             items: const ['Season A (Mar-Aug)', 'Season B (Sep-Feb)'],
             itemSelected: seasonLife == 'A' ? 'Season A (Mar-Aug)' : (seasonLife == 'B' ? 'Season B (Sep-Feb)' : null),
-            onChanged: (value) {
+            onChanged: (index) {
               setState(() {
-                if (value != null) {
-                  seasonLife = value.startsWith('Season A') ? 'A' : 'B';
+                if (index != null) {
+                  seasonLife = index == 0 ? 'A' : 'B';
                 }
               });
             },
@@ -317,10 +317,10 @@ class _NewInsuranceScreenState extends State<NewInsuranceScreen> {
             hintText: 'Season',
             items: const ['Season A (Mar-Aug)', 'Season B (Sep-Feb)'],
             itemSelected: seasonHealth == 'A' ? 'Season A (Mar-Aug)' : (seasonHealth == 'B' ? 'Season B (Sep-Feb)' : null),
-            onChanged: (value) {
+            onChanged: (index) {
               setState(() {
-                if (value != null) {
-                  seasonHealth = value.startsWith('Season A') ? 'A' : 'B';
+                if (index != null) {
+                  seasonHealth = index == 0 ? 'A' : 'B';
                 }
               });
             },
@@ -347,10 +347,10 @@ class _NewInsuranceScreenState extends State<NewInsuranceScreen> {
             hintText: 'Season',
             items: const ['Season A (Mar-Aug)', 'Season B (Sep-Feb)'],
             itemSelected: seasonSocial == 'A' ? 'Season A (Mar-Aug)' : (seasonSocial == 'B' ? 'Season B (Sep-Feb)' : null),
-            onChanged: (value) {
+            onChanged: (index) {
               setState(() {
-                if (value != null) {
-                  seasonSocial = value.startsWith('Season A') ? 'A' : 'B';
+                if (index != null) {
+                  seasonSocial = index == 0 ? 'A' : 'B';
                 }
               });
             },
@@ -399,10 +399,10 @@ class _NewInsuranceScreenState extends State<NewInsuranceScreen> {
             hintText: 'Season',
             items: const ['Season A (Mar-Aug)', 'Season B (Sep-Feb)'],
             itemSelected: seasonCrop == 'A' ? 'Season A (Mar-Aug)' : (seasonCrop == 'B' ? 'Season B (Sep-Feb)' : null),
-            onChanged: (value) {
+            onChanged: (index) {
               setState(() {
-                if (value != null) {
-                  seasonCrop = value.startsWith('Season A') ? 'A' : 'B';
+                if (index != null) {
+                  seasonCrop = index == 0 ? 'A' : 'B';
                 }
               });
             },

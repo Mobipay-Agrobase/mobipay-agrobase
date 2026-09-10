@@ -45,10 +45,6 @@ extension EditFarmerTypeExt on EditFarmerType {
         return AppLang.local.finance_info;
       case EditFarmerType.insurance:
         return AppLang.local.insurance_info;
-      case EditFarmerType.equipment:
-        return AppLang.local.farm_equipment;
-      case EditFarmerType.animal:
-        return AppLang.local.animal_husbandry;
       case EditFarmerType.certificate:
         return AppLang.local.certificate_info;
     }

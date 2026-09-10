@@ -144,11 +144,6 @@ class RoutesManager {
           farmerId: settings.arguments as int,
         );
         break;
-      case RouterName.farm_equip:
-        screen = FarmEquipmentScreen(
-          farmerId: settings.arguments as int,
-        );
-        break;
       case RouterName.new_insurance:
         Map<String, dynamic> map = {};
         if (settings.arguments != null) {
@@ -396,7 +391,6 @@ class RouterName {
   static const finance_info = '/finance_info';
   static const new_bank = '/new_bank';
   static const insurance_info = '/insurance_info';
-  static const farm_equip = '/farm_equip';
   static const new_insurance = '/new_insurance';
   static const certificate_info = '/certificate_info';
   static const scan_qr = '/scan_qr';

@@ -96,23 +96,9 @@ class _PondLocalItemView extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          data.farmPhoto!.isNotEmpty
-              ? ClipRRect(
-                  borderRadius: BorderRadius.circular(30),
-                  child: data.farmPhoto!.contains('https://')
-                      ? GInternetImage(
-                          url: data.farmPhoto,
-                          width: 60,
-                          height: 60,
-                        )
-                      : GImage.file(
-                          file: File(data.farmPhoto!),
-                          width: 60,
-                          height: 60,
-                        ),
-                )
-              : GImage.asset(
-                  name: 'avt_placeholder'.imgPNG,
+          // Second review (G): farm photo removed from the farm land model
+          GImage.asset(
+            name: 'avt_placeholder'.imgPNG,
                   width: 60,
                   height: 60,
                 ),

@@ -13,7 +13,7 @@ import {
   ArrowLeft, Plus, Trash2, Banknote, Shield, Tractor, Users,
   Loader2, Save, MapPin, QrCode, TrendingUp, ShoppingCart,
   CreditCard, FileText, Landmark, Pencil, User, Wallet,
-  ChevronDown, Sprout, Printer, Share2,
+  ChevronDown, ChevronRight, Sprout, Printer, Share2,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAppStore } from '@/lib/store'
@@ -775,6 +775,7 @@ function LedgerTab({ farmerId }: { farmerId: string }) {
 function FarmLandsTab({ farmerId, onRefresh }: { farmerId: string; onRefresh: () => void }) {
   const [lands, setLands] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const { setActiveModule, setSelectedFarmLandId } = useAppStore()
 
   useEffect(() => {
     fetch(`/api/farm-lands?farmerId=${farmerId}`)
@@ -786,16 +787,26 @@ function FarmLandsTab({ farmerId, onRefresh }: { farmerId: string; onRefresh: ()
   if (loading) return <Skeleton className="h-48" />
   if (lands.length === 0) return <EmptyTabCard icon={MapPin} title="Farm Lands" description="No farm lands registered yet" />
 
+  // Open the farm land detail page — its "Plants" tab is where the per-crop
+  // plant inventory (Coffee, Cocoa, Bamboo seedlings, …) is entered (review H).
+  const openFarmDetail = (id: string) => {
+    setSelectedFarmLandId(id)
+    setActiveModule('farmland-detail')
+  }
+
   return (
     <div className="space-y-3">
       {lands.map((land: any) => (
-        <Card key={land.id} className="card-hover">
+        <Card key={land.id} className="card-hover cursor-pointer transition-colors hover:border-primary/40" onClick={() => openFarmDetail(land.id)}>
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
               <CardTitle className="text-sm flex items-center gap-2">
                 <MapPin className="w-4 h-4 text-primary" /> {land.name || 'Unnamed Farm'}
               </CardTitle>
-              <Badge variant="outline" className="text-[10px]">{land.isActive === false ? 'Inactive' : 'Active'}</Badge>
+              <div className="flex items-center gap-2">
+                {land._count?.plants ? <Badge variant="secondary" className="text-[10px]">{land._count.plants} plant records</Badge> : null}
+                <Badge variant="outline" className="text-[10px]">{land.isActive === false ? 'Inactive' : 'Active'}</Badge>
+              </div>
             </div>
           </CardHeader>
           <CardContent>
@@ -809,6 +820,9 @@ function FarmLandsTab({ farmerId, onRefresh }: { farmerId: string; onRefresh: ()
               <InfoField label="Cultivations" value={land._count?.cultivations ? String(land._count.cultivations) : '0'} />
               <InfoField label="GPS Polygon" value={land._count?.polygonPoints ? 'Mapped' : 'None'} />
             </div>
+            <p className="text-xs text-muted-foreground mt-3 flex items-center gap-1">
+              <ChevronRight className="w-3 h-3" /> Tap to view details — add/edit plants (Plant Inventory) on the &quot;Plants&quot; tab
+            </p>
           </CardContent>
         </Card>
       ))}
@@ -831,10 +845,15 @@ function EmptyTabCard({ icon: Icon, title, description }: { icon: React.ElementT
 /* ─── InfoField ───────────────────────────────────────────────────── */
 
 function InfoField({ label, value }: { label: string; value: string | null | undefined }) {
+  // Defensive: never render raw ciphertext ("enc:v1:…") — it overflows the
+  // grid and leaks the encrypted blob. Mask it if decryption ever fails.
+  const isCipher = typeof value === 'string' && value.startsWith('enc:v1:')
   return (
-    <div>
+    <div className="min-w-0">
       <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="text-sm font-medium mt-0.5">{value || '—'}</p>
+      <p className={`text-sm font-medium mt-0.5 break-words ${isCipher ? 'text-muted-foreground italic' : ''}`}>
+        {isCipher ? '—' : (value || '—')}
+      </p>
     </div>
   )
 }

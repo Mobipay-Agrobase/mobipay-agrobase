@@ -1009,3 +1009,62 @@ data entry was impossible. Built the missing data-entry surface:
 
 Verified: prisma validate, tsc 0, eslint clean, jest 61/61,
 dart_sanity 487+85 files clean.
+
+---
+Task ID: 17 (bugfix round: farmer-detail ciphertext + farm-land farmer dropdown + Bamboo catalog)
+Agent: main (Super Z)
+
+User reported (with screenshots, web app on mobile browser):
+1. Farmer detail page — raw "enc:v1:..." encrypted phone overlapping the grid.
+2. Farm land edit page — farmer dropdown blank; once the farmer loads it must
+   be non-editable.
+3. Plant details still not findable; Bamboo seedlings missing from the crop list.
+
+Work Log:
+- BUG 1 (ciphertext): root-caused to decryptField's key candidates. The Ekibbo
+  import script (33e5add) encrypted phones with the LEGACY dev key (runs had
+  no ENCRYPTION_KEY), but decryptField only tried legacy keys when
+  ENCRYPTION_KEY was unset AND NODE_ENV != production — in production (key
+  set) it returned the raw ciphertext, which FarmerDetailFull rendered raw,
+  overflowing the 2-col grid into Gender/DOB.
+  * field-crypto.ts: decrypt now ALWAYS tries primary ENCRYPTION_KEY, legacy
+    dev v1 key, and legacy dev v2 keys (NEXTAUTH_SECRET-derived + default).
+    Writes still use the primary key only. Added isUndecryptable() helper.
+  * FarmerDetailFull InfoField: min-w-0 + break-words; any residual enc:v1:
+    value renders as masked "—" (never raw ciphertext, never overflow).
+  * NEW src/lib/__tests__/field-crypto.test.ts (5 tests): primary roundtrip,
+    legacy-v1 decrypt under production env, legacy-v2-default decrypt,
+    tampered → raw + isUndecryptable flag, plaintext passthrough.
+- BUG 2 (farmer dropdown): the form fetched only the first 100 farmers
+  (~2000 exist); the farm's owner wasn't among them, so Radix Select rendered
+  BLANK (value without a matching item).
+  * FarmLandFormPage: farm-land load now captures farm.farmer (fresh, current
+    name) and merges it into the dropdown options (ref-guarded against the
+    list-fetch race that would wipe it).
+  * Edit mode: farmer Select is DISABLED once loaded ("fixed — cannot be
+    changed after creation") — matches the API (PUT ignores farmerId).
+- BUG 3 (plant details discoverability + Bamboo):
+  * Bamboo was missing from the farm-plant catalog. Added category Bamboo
+    with varieties Asper, Strictus, Vulgaris Green (per review H/J) to BOTH
+    src/lib/farm-plants-catalog.ts and FarmPlantCatalog (Dart) — web "Plants"
+    tab dropdowns + mobile plot-detail add-plant dialog pick it up
+    automatically; KPI breakdown groups generically so Bamboo shows in the
+    Total Plants breakdown.
+  * The farmer detail page's Farm Lands tab cards were dead-ends (no click
+    handler) — the Plants tab was unreachable from there. Cards are now
+    clickable → farmland-detail (the page that carries the Plants tab), with
+    a plant-records badge (_count.plants) and a "tap to view details" hint.
+  * Updated Plants empty-state hint text to list Bamboo seedlings.
+- VERIFICATION: tsc --noEmit 0 errors; eslint 0 problems on all changed
+  files; jest 66/66 (61 existing + 5 new field-crypto tests);
+  scripts/dart_sanity.py ALL CLEAN (487+85 files; 1 pre-existing unrelated
+  warning in mobile/).
+
+Stage Summary:
+- All three reported bugs fixed at the root: PII decrypt fallback (web +
+  mobile data paths), locked farmer field on farm-land edit, Bamboo
+  seedlings + clickable farm cards. No schema changes; deploy needs no new
+  env vars.
+- To enter plant details (per farm): Farm Land Registry → plot → "Plants"
+  tab → Add Plants (or Farmer detail → Farm Lands tab → tap farm card →
+  Plants tab). Bamboo (Asper/Strictus/Vulgaris Green) now in the list.

@@ -8,6 +8,7 @@
  *   Coffee       – Robusta
  *   Cocoa        – Trinitario, Forastero, Criollo
  *   Vanilla      – (no varieties)
+ *   Bamboo       – Asper, Strictus, Vulgaris Green  (bamboo seedlings)
  *   Shade Trees  – Jackfruit, Avocado, Musizi, Mutuba, Calliandra
  *                  (Kalisambuzi), Albizia (Mugavu), Ficus Natalensis
  *                  (Mutuba), Cordia Africana (Mukebu), Maesopsis emini
@@ -24,6 +25,8 @@ export const FARM_PLANT_CATEGORIES: FarmPlantCategory[] = [
   { category: 'Coffee', varieties: ['Robusta'] },
   { category: 'Cocoa', varieties: ['Trinitario', 'Forastero', 'Criollo'] },
   { category: 'Vanilla', varieties: [] },
+  // Bamboo seedlings (review H/J): Asper, Strictus, Vulgaris Green
+  { category: 'Bamboo', varieties: ['Asper', 'Strictus', 'Vulgaris Green'] },
   {
     category: 'Shade Trees',
     varieties: [

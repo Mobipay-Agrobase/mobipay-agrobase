@@ -87,7 +87,7 @@ const TAB_CONFIG = [
   { value: 'conversion', label: 'Conversion', icon: ShieldCheck },
   // Second review (H): per-farm plant inventory — data entry for the
   // "Total Plants" registry KPI (Coffee–Robusta, Cocoa varieties, Vanilla,
-  // Shade Trees, Bananas, Jackfruit, Avocado, Cassava).
+  // Bamboo seedlings, Shade Trees, Bananas, Jackfruit, Avocado, Cassava).
   { value: 'plants', label: 'Plants', icon: TreePine },
   { value: 'cultivations', label: 'Cultivations', icon: Sprout },
 ]
@@ -423,7 +423,7 @@ export function FarmLandDetailPage({ farmLandId, onBack }: Props) {
                   ) : plants.length === 0 ? (
                     <p className="text-sm text-muted-foreground text-center py-4">
                       No plants recorded yet. Click "Add Plants" to record the crop inventory for this farm
-                      (Coffee, Cocoa, Vanilla, Shade Trees, Bananas, Jackfruit, Avocado, Cassava).
+                      (Coffee, Cocoa, Vanilla, Bamboo seedlings, Shade Trees, Bananas, Jackfruit, Avocado, Cassava).
                     </p>
                   ) : (
                     <div className="overflow-x-auto">

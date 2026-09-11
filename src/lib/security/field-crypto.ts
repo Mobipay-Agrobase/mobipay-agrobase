@@ -50,16 +50,61 @@ const PREFIX = 'enc:v1:' // versioned prefix for migration support
 
 // Cache the derived key so we don't re-derive on every call.
 let cachedKey: Buffer | null = null
-// Legacy dev key (previously used when ENCRYPTION_KEY was unset). We keep it only
-// as a DECRYPT fallback so data encrypted under the old dev key still reads back.
+// Legacy dev key (previously used when ENCRYPTION_KEY was unset). We keep it
+// only as a DECRYPT fallback so data encrypted under the old dev key still
+// reads back — even in production / when ENCRYPTION_KEY is now set. These
+// dev keys are public constants in a public repo, so data encrypted under
+// them was never strongly protected; using them to READ is strictly better
+// than rendering raw ciphertext to end users.
 let cachedLegacyDevKey: Buffer | null = null
+let cachedLegacyDevKeyV2: Buffer | null = null
+let cachedLegacyDevKeyV2Default: Buffer | null = null
 
-function getLegacyDevKey(): Buffer | null {
-  if (process.env.ENCRYPTION_KEY || process.env.NODE_ENV === 'production') return null
+/**
+ * Legacy dev key (v1) — fixed constant, deterministic on every machine.
+ * Data written before the v2 derivation change (e.g. by the Ekibbo import
+ * script run without ENCRYPTION_KEY) sits under this key.
+ */
+function getLegacyDevKey(): Buffer {
   if (!cachedLegacyDevKey) {
     cachedLegacyDevKey = crypto.scryptSync('agrobase-dev-key-insecure', 'agrobase-salt', 32)
   }
   return cachedLegacyDevKey
+}
+
+/**
+ * Legacy dev key (v2) — derived from NEXTAUTH_SECRET exactly as the current
+ * dev fallback does, plus the deterministic variant used when NEXTAUTH_SECRET
+ * was unset. Tried on DECRYPT only.
+ */
+function getLegacyDevKeyV2(): Buffer | null {
+  const authSecret = process.env.NEXTAUTH_SECRET
+  if (!cachedLegacyDevKeyV2 && authSecret) {
+    const salt = crypto.createHash('sha256').update('agrobase-field-encryption-salt:v2').digest('hex')
+    cachedLegacyDevKeyV2 = crypto.scryptSync(Buffer.from(`dev|${authSecret}`, 'utf8'), salt, 32)
+  }
+  if (!cachedLegacyDevKeyV2Default) {
+    const salt = crypto.createHash('sha256').update('agrobase-field-encryption-salt:v2').digest('hex')
+    cachedLegacyDevKeyV2Default = crypto.scryptSync(
+      Buffer.from('dev|dev-only-ephemeral-secret-do-not-use-in-production', 'utf8'),
+      salt,
+      32,
+    )
+  }
+  return cachedLegacyDevKeyV2 ?? cachedLegacyDevKeyV2Default
+}
+
+/**
+ * All keys that may have produced historic ciphertext, in priority order.
+ * The primary ENCRYPTION_KEY is always first; legacy dev keys follow so rows
+ * encrypted outside production (imports / seeds / dev writes) still decrypt.
+ * WRITES only ever use the primary key.
+ */
+function getDecryptKeyCandidates(): Buffer[] {
+  const keys = [getEncryptionKey(), getLegacyDevKey()]
+  const v2 = getLegacyDevKeyV2()
+  if (v2) keys.push(v2)
+  return keys
 }
 
 /**
@@ -148,7 +193,6 @@ export function decryptField(encryptedValue: string | null | undefined): string 
     return encryptedValue
   }
 
-  const key = getEncryptionKey()
   const parts = encryptedValue.slice(PREFIX.length).split(':')
   if (parts.length !== 3) {
     throw new Error('Invalid encrypted field format — expected 3 parts after prefix')
@@ -159,11 +203,9 @@ export function decryptField(encryptedValue: string | null | undefined): string 
   const authTag = Buffer.from(authTagHex, 'hex')
   const ciphertext = Buffer.from(ciphertextHex, 'hex')
 
-  const keys = [getEncryptionKey()]
-  const legacy = getLegacyDevKey()
-  if (legacy) keys.push(legacy)
-
-  for (const key of keys) {
+  // Try every key that may have written this value (primary + legacy dev
+  // fallbacks). AES-GCM auth-tag verification makes wrong keys fail cleanly.
+  for (const key of getDecryptKeyCandidates()) {
     try {
       const decipher = crypto.createDecipheriv(ALGORITHM, key, iv, { authTagLength: AUTH_TAG_LENGTH })
       decipher.setAuthTag(authTag)
@@ -181,6 +223,15 @@ export function decryptField(encryptedValue: string | null | undefined): string 
   // value rather than throwing so a single bad field can't take down the whole list.
   console.warn('[field-crypto] decrypt failed for value (tampered or unknown key)')
   return encryptedValue
+}
+
+/**
+ * True when a value still carries the "enc:v1:" prefix after a decrypt attempt,
+ * i.e. it could NOT be unwrapped. UI layers use this to avoid rendering raw
+ * ciphertext to end users.
+ */
+export function isUndecryptable(value: string | null | undefined): boolean {
+  return isEncrypted(value)
 }
 
 /**

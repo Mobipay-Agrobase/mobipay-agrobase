@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { useAppStore } from '@/lib/store'
 import {
   ArrowLeft, Loader2, Save, MapPin, Sprout, Droplets, Users,
@@ -117,6 +117,13 @@ export default function FarmLandFormPage({ mode, farmLandId, farmerId }: FarmLan
   const { setActiveModule } = useAppStore()
   const [loadingFarm, setLoadingFarm] = useState(mode === 'edit')
   const [farmers, setFarmers] = useState<Array<{ id: string; firstName: string; lastName: string; farmerCode?: string | null }>>([])
+  // Farmer of the farm land being edited — captured from the farm land record
+  // so the dropdown ALWAYS shows the current (possibly renamed) farmer, even
+  // when the paginated farmers list (limit=100 of ~2000) doesn't include them.
+  // Ref mirrors the state so the async farmers-list fetch can preserve the
+  // locked farmer regardless of which request resolves first.
+  const [lockedFarmer, setLockedFarmer] = useState<{ id: string; firstName: string; lastName: string; farmerCode?: string | null } | null>(null)
+  const lockedFarmerRef = useRef<{ id: string; firstName: string; lastName: string; farmerCode?: string | null } | null>(null)
   const [saving, setSaving] = useState(false)
   const [form, setForm] = useState<Record<string, any>>({})
   const [polygonPoints, setPolygonPoints] = useState<Array<{ lat: number; lng: number }>>([])
@@ -132,7 +139,16 @@ export default function FarmLandFormPage({ mode, farmLandId, farmerId }: FarmLan
   useEffect(() => {
     fetch('/api/farmers?limit=100&status=all')
       .then(r => r.json())
-      .then(data => setFarmers(data.farmers || data.data || []))
+      .then(data => {
+        const list: Array<{ id: string; firstName: string; lastName: string; farmerCode?: string | null }> = data.farmers || data.data || []
+        setFarmers(prev => {
+          // Preserve the locked farm owner if the list (limit=100) doesn't
+          // include them — avoids the value-vs-item race that blanks the field.
+          const lf = lockedFarmerRef.current
+          if (lf && !list.some(f => f.id === lf.id)) return [lf, ...list]
+          return list
+        })
+      })
       .catch(() => {})
   }, [])
 
@@ -143,6 +159,14 @@ export default function FarmLandFormPage({ mode, farmLandId, farmerId }: FarmLan
         .then(r => r.json())
         .then((raw: any) => {
           const data: FarmLand = raw.farm || raw.data || raw
+          if (data.farmer?.id) {
+            setLockedFarmer(data.farmer)
+            lockedFarmerRef.current = data.farmer
+            // Merge the farm's current farmer into the dropdown options so the
+            // selected value always has a matching item (Radix renders blank
+            // when the value is missing from the list).
+            setFarmers(prev => prev.some(f => f.id === data.farmer!.id) ? prev : [data.farmer!, ...prev])
+          }
           setForm({
             farmerId: data.farmerId || '',
             name: data.name || '',
@@ -346,9 +370,21 @@ export default function FarmLandFormPage({ mode, farmLandId, farmerId }: FarmLan
                   <CardContent className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-1.5">
-                        <Label>Farmer *</Label>
-                        <Select value={form.farmerId || farmerId || ''} onValueChange={v => update('farmerId', v)}>
-                          <SelectTrigger><SelectValue placeholder="Select farmer" /></SelectTrigger>
+                        <Label>
+                          Farmer *
+                          {isEditing && <span className="ml-1 text-[10px] font-normal text-muted-foreground">(fixed — cannot be changed after creation)</span>}
+                        </Label>
+                        {/* Edit mode: farmer is locked to the farm land's owner.
+                            Reassignment isn't supported by the API (PUT ignores
+                            farmerId), so the field is read-only once loaded. */}
+                        <Select
+                          value={form.farmerId || lockedFarmer?.id || farmerId || ''}
+                          onValueChange={v => update('farmerId', v)}
+                          disabled={isEditing && !!(form.farmerId || lockedFarmer?.id)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder={isEditing && !form.farmerId ? 'Loading farmer…' : 'Select farmer'} />
+                          </SelectTrigger>
                           <SelectContent className="max-h-72">
                             {farmers.map(f => (
                               <SelectItem key={f.id} value={f.id}>

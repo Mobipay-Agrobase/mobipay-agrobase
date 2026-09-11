@@ -486,6 +486,24 @@ class _PlotDetailScreenState extends State<PlotDetailScreen> {
                               color: ColorConstant.text79,
                             ),
                           ),
+                          if ((item.cropMasterName ?? '').isNotEmpty) ...[
+                            const SizedBox(height: 4),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: ColorConstant.primary.withOpacity(0.08),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                'Crop Master: ${item.cropMasterName}',
+                                style: TextStyleConstant.robotoW400(
+                                  fontSize: 10,
+                                  color: ColorConstant.primary,
+                                ),
+                              ),
+                            ),
+                          ],
                           if ((item.variety ?? '').isNotEmpty) ...[
                             const SizedBox(height: 4),
                             Text(
@@ -566,6 +584,14 @@ class _PlotDetailScreenState extends State<PlotDetailScreen> {
                       selectedVariety = null; // reset dependent variety
                     });
                   },
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Crop types are auto-linked to the Crop Master registry when a matching crop exists there.',
+                  style: TextStyleConstant.robotoW400(
+                    fontSize: 10,
+                    color: ColorConstant.text79,
+                  ),
                 ),
                 const SizedBox(height: 16),
                 Text(

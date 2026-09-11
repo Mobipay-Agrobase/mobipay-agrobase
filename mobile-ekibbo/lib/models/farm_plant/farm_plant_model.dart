@@ -6,6 +6,9 @@ part 'farm_plant_model.g.dart';
 /// Crop categories + varieties come from the review catalog
 /// (Coffee–Robusta, Cocoa–Trinitario/Forastero/Criollo, Vanilla,
 /// Shade Trees, Bananas, Jackfruit, Avocado, Cassava).
+/// [cropMasterName] is the optional link to the Crop Master registry —
+/// the server resolves it by name match; null for review-only
+/// categories (Shade Trees, Bamboo seedlings, …).
 @JsonSerializable()
 class FarmPlantModel {
   int? id;
@@ -13,6 +16,8 @@ class FarmPlantModel {
   int? farmLandId;
   @JsonKey(name: 'crop_category')
   String? cropCategory;
+  @JsonKey(name: 'crop_master_name')
+  String? cropMasterName;
   String? variety;
   @JsonKey(name: 'plant_count')
   int? plantCount;
@@ -22,6 +27,7 @@ class FarmPlantModel {
     this.id,
     this.farmLandId,
     this.cropCategory,
+    this.cropMasterName,
     this.variety,
     this.plantCount,
     this.notes,

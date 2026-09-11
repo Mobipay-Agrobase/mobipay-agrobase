@@ -52,7 +52,7 @@ export default function FarmMapReadOnly({ farms, onSelect, height = '500px', cla
     })
 
     L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-      attribution: '&copy; OpenStreetMap',
+      attribution: 'Imagery &copy; Esri, Maxar, Earthstar Geographics',
       maxZoom: 19,
     }).addTo(map)
 

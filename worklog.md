@@ -1068,3 +1068,55 @@ Stage Summary:
 - To enter plant details (per farm): Farm Land Registry → plot → "Plants"
   tab → Add Plants (or Farmer detail → Farm Lands tab → tap farm card →
   Plants tab). Bamboo (Asper/Strictus/Vulgaris Green) now in the list.
+
+---
+Task ID: 18 (bugfix round 2: PII ciphertext masking at API root, satellite maps, FarmPlant↔CropMaster link)
+Agent: main (Super Z)
+Task: User reported (web, mobile browser): enc:v1 ciphertext still visible in
+farmer LIST (Contact column) + DETAIL ("Driving Permit - enc:v1:…"); farm-land
+detail boundary map must be SATELLITE (all maps project-wide); question — is
+plant crop type mapped to Crop Master? Push fixes to GitHub.
+
+Work Log:
+- Timeline finding: user screenshots (21:23 Saigon = 14:23 UTC) predate the
+  Task-17 deploy (dcd30ad, 14:50 UTC), so the phone fix was already live —
+  but two REAL gaps remained: (1) decryptField still returned the raw
+  ciphertext blob on decrypt failure, (2) InfoField masked only values that
+  START with enc:v1: — the detail page composes "Driving Permit - enc:…"
+  which slipped through.
+- PII root fix: field-crypto.decryptField now returns NULL on undecryptable
+  values (never the raw blob) — fixes list Contact, detail National ID /
+  Driving Permit, mobile proof_no/phone, price-broadcast recipients in one
+  place. FarmersView Contact cell falls back to "—". InfoField mask uses
+  includes() to catch composed strings.
+- Farmer PUT round-trip protection: client-sent null/'' no longer wipes a
+  stored encrypted-but-undecryptable PII value; PUT response is decrypted
+  like GET (raw row previously leaked ciphertext).
+- Satellite maps: farm-land DETAIL page used an OpenStreetMap street-map
+  iframe (the one non-satellite map in the project!) — replaced with the
+  shared FarmMapReadOnly (Esri World Imagery satellite) + "Open in Google
+  Maps (satellite)" link. Corrected the wrong "© OpenStreetMap" attribution
+  on all 4 web satellite maps (Esri/Maxar/Earthstar credit). Mobile
+  GoogleMaps switched MapType.hybrid → MapType.satellite (4 screens).
+- Crop Master mapping (user question: "plant crop type is same like crop
+  master?"): it was NOT mapped (farm-plants catalog is review-fixed and
+  separate from CropMaster). Implemented the link: FarmPlant.cropMasterId
+  (nullable FK, SetNull) resolved server-side by case-insensitive name match
+  (+ singular fallback Bananas→Banana) on POST/PUT; review-only categories
+  (Shade Trees, Bamboo seedlings) stay null and remain catalog-managed.
+  GET returns cropMasterName / crop_master_name; web table shows a "Crop
+  Master" badge column; mobile plant card shows "Crop Master: X" chip; entry
+  dialogs explain the auto-link. KPI breakdown still groups by cropCategory
+  (review H unchanged). prisma db push in CI adds the nullable column.
+- VERIFICATION: NODE_OPTIONS=--max-old-space-size=6144 tsc --noEmit 0
+  errors; eslint clean; jest 66/66 (tampered-cipher test now asserts null);
+  dart_sanity ALL CLEAN (487 files, 0 problems).
+
+Stage Summary:
+- Ciphertext can no longer reach ANY UI: decryptField nulls undecryptable
+  values at the API layer; masks + round-trip protection as belt & braces.
+- Farm-land detail boundary map (and every other map) now loads satellite.
+- Plant inventory rows are auto-linked to Crop Master where the crop exists
+  there; Bamboo/Shade Trees remain catalog entries and still feed the KPI.
+- Farmer dropdown (name refresh + lock) and Bamboo from Task 17 verified
+  intact. K (Input Summary) + L (Processing) still deferred.

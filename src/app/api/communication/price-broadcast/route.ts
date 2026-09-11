@@ -64,7 +64,9 @@ export async function POST(req: NextRequest) {
     const recipients: Array<{ id: string; name: string; phone: string }> = []
     const seen = new Set<string>()
     for (const f of farmers) {
-      const phone = decryptField(f.phone) || f.phone
+      // decryptField passes plaintext through and returns null for values we
+      // can no longer decrypt — never the raw ciphertext. Skip those rows.
+      const phone = decryptField(f.phone)
       if (!phone) continue
       const normalized = String(phone).replace(/[\s-]/g, '')
       if (seen.has(normalized)) continue

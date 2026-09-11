@@ -847,7 +847,9 @@ function EmptyTabCard({ icon: Icon, title, description }: { icon: React.ElementT
 function InfoField({ label, value }: { label: string; value: string | null | undefined }) {
   // Defensive: never render raw ciphertext ("enc:v1:…") — it overflows the
   // grid and leaks the encrypted blob. Mask it if decryption ever fails.
-  const isCipher = typeof value === 'string' && value.startsWith('enc:v1:')
+  // NOTE: includes() (not startsWith) — some callers compose the ciphertext
+  // into a larger string, e.g. "Driving Permit - enc:v1:…".
+  const isCipher = typeof value === 'string' && value.includes('enc:v1:')
   return (
     <div className="min-w-0">
       <p className="text-xs text-muted-foreground">{label}</p>

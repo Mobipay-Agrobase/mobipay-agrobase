@@ -78,16 +78,17 @@ describe('field-crypto decrypt fallback keys', () => {
     expect(decryptField(legacyEnc)).toBe('test@example.com')
   })
 
-  test('tampered ciphertext is returned raw and flagged by isUndecryptable', () => {
+  test('tampered ciphertext decrypts to NULL (raw blob never returned)', () => {
     const enc = encryptField('+256700123456')!
     // Flip ciphertext bytes (keep valid hex) → auth tag must fail on every key.
     // enc layout: "enc:v1:<iv>:<authTag>:<ciphertext>" → 5 segments when split on ':'.
     const parts = enc.split(':')
     const flipped = (parseInt(parts[4].slice(0, 2), 16) ^ 0xff).toString(16).padStart(2, '0')
     const tampered = `${parts.slice(0, 4).join(':')}:${flipped + parts[4].slice(2)}`
-    const out = decryptField(tampered)!
-    expect(out.startsWith('enc:v1:')).toBe(true)
-    expect(isUndecryptable(out)).toBe(true)
+    // Hard guarantee: the API layer must NEVER hand back the ciphertext blob.
+    expect(decryptField(tampered)).toBeNull()
+    // The stored raw value is still detectable for masking when read directly.
+    expect(isUndecryptable(tampered)).toBe(true)
   })
 
   test('plaintext passes through unchanged and null stays null', () => {

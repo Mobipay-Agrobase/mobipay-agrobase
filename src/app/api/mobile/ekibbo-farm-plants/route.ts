@@ -3,14 +3,18 @@ import { db } from '@/lib/db'
 import { getTenantContext, buildTenantFilter } from '@/lib/tenant'
 import { numericId } from '@/lib/mobile/ekibbo-adapter'
 import { farmerSelfAccess } from '@/lib/mobile/ekibbo-mobile-utils'
+import { resolveCropMasterId } from '@/lib/farm-plant-crop-link'
 
 /**
  * GET /api/mobile/ekibbo-farm-plants?farm_land_id={numericFarmId}
  *   Plant inventory rows for one farm, in the upstream JSON shape:
- *   { result, data: [{ id, crop_category, variety, plant_count, notes }] }
+ *   { result, data: [{ id, crop_category, variety, plant_count, notes,
+ *                      crop_master_name }] }
  *
  * POST /api/mobile/ekibbo-farm-plants (multipart or JSON)
  *   farm_land_id, crop_category, variety?, plant_count, notes?
+ *   The server resolves the optional CropMaster link (name match) and
+ *   stores cropMasterId alongside cropCategory.
  *
  * DELETE /api/mobile/ekibbo-farm-plants?id={numericPlantId}
  *
@@ -50,6 +54,7 @@ export async function GET(req: NextRequest) {
     const plants = await db.farmPlant.findMany({
       where: { farmId: farm.id },
       orderBy: [{ cropCategory: 'asc' }, { createdAt: 'desc' }],
+      include: { cropMaster: { select: { name: true } } },
     })
 
     return NextResponse.json({
@@ -61,6 +66,9 @@ export async function GET(req: NextRequest) {
         variety: p.variety,
         plant_count: p.plantCount,
         notes: p.notes,
+        // Crop Master link (null when the review category has no
+        // CropMaster counterpart, e.g. Shade Trees / Bamboo seedlings).
+        crop_master_name: p.cropMaster?.name ?? null,
       })),
     })
   } catch (error) {
@@ -111,6 +119,9 @@ export async function POST(req: NextRequest) {
       data: {
         farmId: farm.id,
         cropCategory,
+        // Optional Crop Master link (name match; null when the review
+        // category has no CropMaster counterpart).
+        cropMasterId: await resolveCropMasterId(cropCategory),
         variety: variety || null,
         plantCount,
         notes,

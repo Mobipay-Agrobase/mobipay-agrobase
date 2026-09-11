@@ -71,7 +71,7 @@ class _ScreenPinLocationState extends State<ScreenPinLocation> {
             initialCameraPosition: _initialCameraPosition,
             polygons: Set<Polygon>.of(mapsPolygons.values),
             onTap: tapMap,
-            mapType: MapType.hybrid,
+            mapType: MapType.satellite,
             markers: _markers,
             myLocationEnabled: true,
             onMapCreated: (GoogleMapController controller) {},

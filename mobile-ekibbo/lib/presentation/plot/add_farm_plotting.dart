@@ -145,7 +145,7 @@ class _AddFarmPlottingState extends State<AddFarmPlotting> {
             initialCameraPosition: _initialCameraPosition,
             polygons: Set<Polygon>.of(mapsPolygons.values),
             onTap: widget.isEnable && _isDraw ? tapMap : null,
-            mapType: MapType.hybrid,
+            mapType: MapType.satellite,
             markers: _markers,
             myLocationEnabled: true,
             onMapCreated: (GoogleMapController controller) {

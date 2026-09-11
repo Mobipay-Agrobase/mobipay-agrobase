@@ -1,10 +1,13 @@
 import { db } from '@/lib/db'
 import { NextResponse } from 'next/server'
 import { getTenantContext, buildTenantFilter } from '@/lib/tenant'
+import { resolveCropMasterId } from '@/lib/farm-plant-crop-link'
 
 /**
  * PUT /api/farm-plants/[id]
  *   Edit one plant inventory row (cropCategory / variety / plantCount / notes).
+ *   When the crop category changes, the optional CropMaster link is
+ *   re-resolved by name match.
  *
  * DELETE /api/farm-plants/[id]
  *   Remove one plant inventory row.
@@ -57,7 +60,7 @@ export async function PUT(
     const updated = await db.farmPlant.update({
       where: { id: plant.id },
       data: {
-        ...(cropCategory !== undefined ? { cropCategory } : {}),
+        ...(cropCategory !== undefined ? { cropCategory, cropMasterId: await resolveCropMasterId(cropCategory) } : {}),
         ...(variety !== undefined ? { variety } : {}),
         ...(plantCount !== undefined ? { plantCount } : {}),
         ...(notes !== undefined ? { notes } : {}),

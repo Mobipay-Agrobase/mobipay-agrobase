@@ -593,6 +593,13 @@ model FarmPlant {
   // Crop category from the review catalog: Coffee, Cocoa, Vanilla,
   // Shade Trees, Bananas, Jackfruit, Avocado, Cassava
   cropCategory String
+  // Optional link to the Crop Master registry — resolved server-side by
+  // name match when the category exists in CropMaster (Coffee/Cocoa/…).
+  // Review-fixed agroforestry entries (Shade Trees, Bamboo seedlings, …)
+  // that have no CropMaster row stay null. The KPI breakdown continues to
+  // group by cropCategory, so review-H behavior is unchanged.
+  cropMasterId String?
+  cropMaster  CropMaster? @relation(fields: [cropMasterId], references: [id], onDelete: SetNull)
   // Variety from the review catalog (Coffee → Robusta; Cocoa →
   // Trinitario/Forastero/Criollo; Shade Trees → the 10 species; …)
   variety     String?
@@ -737,6 +744,7 @@ model CropMaster {
 
   varieties       CropVariety[]
   stages          CropStageMaster[]
+  farmPlants      FarmPlant[]
 }
 
 model CropVariety {

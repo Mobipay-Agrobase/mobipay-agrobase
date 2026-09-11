@@ -72,7 +72,7 @@ class _NearByPlotScreenState extends State<NearByPlotScreen> {
       ),
       body: GoogleMap(
         initialCameraPosition: _initialCameraPosition,
-        mapType: MapType.hybrid,
+        mapType: MapType.satellite,
         markers: _markers,
         zoomControlsEnabled: true,
         myLocationButtonEnabled: true,

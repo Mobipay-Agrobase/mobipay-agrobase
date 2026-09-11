@@ -4,6 +4,8 @@ import { getTenantContext, buildTenantFilter } from '@/lib/tenant'
 import { decryptField, encryptField } from '@/lib/security/field-crypto'
 import { isEkibboTenant } from '@/lib/ekibbo'
 
+/* piRoundTripWipe() is declared inline in the PUT handler below. */
+
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const ctx = await getTenantContext(_req)
@@ -237,16 +239,27 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     const dateFields = ['dateOfBirth', 'enrollmentDate', 'loanRepaymentDate']
     for (const k of dateFields) if (body[k] !== undefined) scalar[k] = new Date(body[k])
 
+    // PII round-trip protection: when the client sends null/'' for a PII field
+    // (because the GET masked an undecryptable stored value as null), DON'T
+    // wipe the stored value. Clearing a readable/empty value still works.
+    const piRoundTripWipe = (
+      incoming: unknown,
+      stored: string | null | undefined,
+    ): boolean =>
+      (incoming === null || incoming === '') &&
+      typeof stored === 'string' &&
+      stored.startsWith('enc:v1:')
+
     const updated = await db.farmerProfile.update({
       where: { id },
       data: {
         ...(firstName !== undefined && { firstName }),
         ...(lastName !== undefined && { lastName }),
         ...(gender !== undefined && { gender }),
-        ...(phone !== undefined && { phone: encryptField(phone) || phone }),
-        ...(body.nationalIdNo !== undefined && { nationalIdNo: encryptField(body.nationalIdNo) || body.nationalIdNo }),
-        ...(body.email !== undefined && { email: encryptField(body.email) || body.email }),
-        ...(body.bankAccountNo !== undefined && { bankAccountNo: encryptField(body.bankAccountNo) || body.bankAccountNo }),
+        ...(phone !== undefined && !piRoundTripWipe(phone, existing.phone) && { phone: encryptField(phone) || phone }),
+        ...(body.nationalIdNo !== undefined && !piRoundTripWipe(body.nationalIdNo, existing.nationalIdNo) && { nationalIdNo: encryptField(body.nationalIdNo) || body.nationalIdNo }),
+        ...(body.email !== undefined && !piRoundTripWipe(body.email, existing.email) && { email: encryptField(body.email) || body.email }),
+        ...(body.bankAccountNo !== undefined && !piRoundTripWipe(body.bankAccountNo, existing.bankAccountNo) && { bankAccountNo: encryptField(body.bankAccountNo) || body.bankAccountNo }),
         ...(villageId !== undefined && { villageId }),
         ...(status !== undefined && { status }),
         ...scalar,
@@ -254,7 +267,18 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
         updatedAt: new Date(),
       },
     })
-    return NextResponse.json({ data: updated })
+
+    // Decrypt the response exactly like the GET does — the raw Prisma row
+    // carries ciphertext for phone/nationalIdNo/email/bankAccountNo.
+    return NextResponse.json({
+      data: {
+        ...updated,
+        phone: decryptField(updated.phone),
+        nationalIdNo: decryptField(updated.nationalIdNo),
+        bankAccountNo: decryptField(updated.bankAccountNo),
+        email: decryptField(updated.email),
+      },
+    })
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {

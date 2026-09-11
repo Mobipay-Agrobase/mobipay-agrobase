@@ -11,6 +11,7 @@ FarmPlantModel _$FarmPlantModelFromJson(Map<String, dynamic> json) =>
       ..id = json['id'] as int?
       ..farmLandId = json['farm_land_id'] as int?
       ..cropCategory = json['crop_category'] as String?
+      ..cropMasterName = json['crop_master_name'] as String?
       ..variety = json['variety'] as String?
       ..plantCount = json['plant_count'] as int?
       ..notes = json['notes'] as String?;
@@ -20,6 +21,7 @@ Map<String, dynamic> _$FarmPlantModelToJson(FarmPlantModel instance) =>
       'id': instance.id,
       'farm_land_id': instance.farmLandId,
       'crop_category': instance.cropCategory,
+      'crop_master_name': instance.cropMasterName,
       'variety': instance.variety,
       'plant_count': instance.plantCount,
       'notes': instance.notes,

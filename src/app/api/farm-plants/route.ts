@@ -1,15 +1,19 @@
 import { db } from '@/lib/db'
 import { NextResponse } from 'next/server'
 import { getTenantContext, buildTenantFilter } from '@/lib/tenant'
+import { resolveCropMasterId } from '@/lib/farm-plant-crop-link'
 
 /**
  * GET /api/farm-plants?farmId=xxx
  *   List the plant inventory rows for ONE farm (per-farm breakdown used by
  *   the Farm Land Registry "Plants" tab). Tenant-scoped via farm → farmer.
+ *   Each row carries cropMasterName when it is linked to Crop Master.
  *
  * POST /api/farm-plants
  *   Add a plant row to a farm. Body (JSON or multipart):
  *     { farmId, cropCategory, variety?, plantCount, notes?, createdBy? }
+ *   The server resolves the optional CropMaster link (name match) and
+ *   stores cropMasterId alongside cropCategory.
  *
  * Second review (H): this is the data-entry surface for the "Total Plants"
  * registry KPI — the breakdown per crop type (Coffee–Robusta, Cocoa–
@@ -38,9 +42,16 @@ export async function GET(request: Request) {
     const plants = await db.farmPlant.findMany({
       where: { farmId },
       orderBy: [{ cropCategory: 'asc' }, { createdAt: 'desc' }],
+      include: { cropMaster: { select: { name: true } } },
     })
 
-    return NextResponse.json({ plants })
+    return NextResponse.json({
+      plants: plants.map(p => ({
+        ...p,
+        cropMasterName: p.cropMaster?.name ?? null,
+        cropMaster: undefined,
+      })),
+    })
   } catch (error) {
     console.error('Farm plants list error:', error)
     return NextResponse.json({ error: 'Failed to fetch farm plants' }, { status: 500 })
@@ -89,6 +100,9 @@ export async function POST(request: Request) {
       data: {
         farmId,
         cropCategory,
+        // Optional Crop Master link (name match; null when the review
+        // category has no CropMaster counterpart).
+        cropMasterId: await resolveCropMasterId(cropCategory),
         variety: variety || null,
         plantCount,
         notes,

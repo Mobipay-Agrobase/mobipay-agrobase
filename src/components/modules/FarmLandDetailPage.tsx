@@ -17,8 +17,16 @@ import {
   Cable, Navigation, XCircle, Plus, Trash2,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import dynamic from 'next/dynamic'
 import { useAppStore } from '@/lib/store'
 import { FARM_PLANT_CATEGORIES, varietiesForCategory } from '@/lib/farm-plants-catalog'
+
+// Satellite (Esri World Imagery) Leaflet map — same basemap as every other map
+// in the project. Client-only: Leaflet touches window at import time.
+const FarmMapReadOnly = dynamic(() => import('@/components/farmers/FarmMapReadOnly'), {
+  ssr: false,
+  loading: () => <div className="h-[350px] rounded-lg overflow-hidden border bg-muted/30 animate-pulse" />,
+})
 
 interface FarmLandDetail {
   id: string
@@ -69,6 +77,8 @@ interface FarmLandDetail {
 interface FarmPlantRow {
   id: string
   cropCategory: string
+  // Optional Crop Master link (null = review-catalog-only category)
+  cropMasterName?: string | null
   variety: string | null
   plantCount: number
   notes: string | null
@@ -296,7 +306,8 @@ export function FarmLandDetailPage({ farmLandId, onBack }: Props) {
                 </CardContent>
               </Card>
 
-              {/* Farm Boundary Map */}
+              {/* Farm Boundary Map — SATELLITE view (Esri World Imagery),
+                  consistent with every other map in the project. */}
               {farmLand.polygonPoints && farmLand.polygonPoints.length >= 3 && (
                 <Card>
                   <CardHeader className="pb-3">
@@ -305,7 +316,7 @@ export function FarmLandDetailPage({ farmLandId, onBack }: Props) {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <FarmPolygonOSM polygonPoints={farmLand.polygonPoints} farmName={farmLand.name} />
+                    <FarmBoundarySatellite polygonPoints={farmLand.polygonPoints} farmLand={farmLand} />
                   </CardContent>
                 </Card>
               )}
@@ -432,6 +443,7 @@ export function FarmLandDetailPage({ farmLandId, onBack }: Props) {
                           <TableRow>
                             <TableHead>Crop Type</TableHead>
                             <TableHead>Variety</TableHead>
+                            <TableHead>Crop Master</TableHead>
                             <TableHead className="text-right">Plant Count</TableHead>
                             <TableHead>Notes</TableHead>
                             <TableHead className="w-[80px]"></TableHead>
@@ -440,8 +452,19 @@ export function FarmLandDetailPage({ farmLandId, onBack }: Props) {
                         <TableBody>
                           {plants.map(p => (
                             <TableRow key={p.id}>
-                              <TableCell className="text-sm font-medium">{p.cropCategory}</TableCell>
+                              <TableCell className="text-sm font-medium">
+                                {p.cropCategory}
+                              </TableCell>
                               <TableCell className="text-sm">{p.variety || '—'}</TableCell>
+                              <TableCell className="text-sm">
+                                {p.cropMasterName ? (
+                                  <Badge variant="outline" className="bg-blue-50 dark:bg-blue-900/30 text-[10px] gap-1" title="Linked to the Crop Master registry">
+                                    {p.cropMasterName}
+                                  </Badge>
+                                ) : (
+                                  <span className="text-muted-foreground text-xs" title="Review catalog entry — no Crop Master counterpart">catalog only</span>
+                                )}
+                              </TableCell>
                               <TableCell className="text-sm text-right font-semibold">{p.plantCount.toLocaleString()}</TableCell>
                               <TableCell className="text-sm text-muted-foreground">{p.notes || '—'}</TableCell>
                               <TableCell>
@@ -520,6 +543,9 @@ export function FarmLandDetailPage({ farmLandId, onBack }: Props) {
                   ))}
                 </SelectContent>
               </Select>
+              <p className="text-[11px] text-muted-foreground">
+                Crop types are auto-linked to the Crop Master registry when a matching crop exists there; review-only categories (Shade Trees, Bamboo seedlings…) stay catalog-managed.
+              </p>
             </div>
             <div className="space-y-2">
               <Label>Variety {varietiesForCategory(plantForm.cropCategory).length === 0 && <span className="text-muted-foreground font-normal">(none for this crop)</span>}</Label>
@@ -578,47 +604,45 @@ function InfoField({ label, value }: { label: string; value: string | null | und
 }
 
 /**
- * FarmPolygonOSM — renders a farm's polygon on an embedded OpenStreetMap.
- * Calculates a bounding box from the polygon points and shows all markers.
+ * FarmBoundarySatellite — renders the farm polygon on the project-wide
+ * SATELLITE basemap (Esri World Imagery via FarmMapReadOnly) with a
+ * "Open in Google Maps (satellite)" deep link for full-screen viewing.
+ * Replaces the old OpenStreetMap street-map iframe.
  */
-function FarmPolygonOSM({ polygonPoints, farmName }: { polygonPoints: Array<{ latitude: number; longitude: number; pointOrder: number }>; farmName: string }) {
-  if (!polygonPoints || polygonPoints.length < 3) {
-    return <div className="text-center py-8 text-muted-foreground text-sm">No polygon data</div>
-  }
-
+function FarmBoundarySatellite({
+  polygonPoints,
+  farmLand,
+}: {
+  polygonPoints: Array<{ latitude: number; longitude: number; pointOrder: number; altitude?: number | null }>
+  farmLand: FarmLandDetail
+}) {
   const sorted = [...polygonPoints].sort((a, b) => a.pointOrder - b.pointOrder)
-  const lats = sorted.map(p => p.latitude)
-  const lngs = sorted.map(p => p.longitude)
-  const minLat = Math.min(...lats) - 0.002
-  const maxLat = Math.max(...lats) + 0.002
-  const minLng = Math.min(...lngs) - 0.002
-  const maxLng = Math.max(...lngs) + 0.002
-  const centerLat = (minLat + maxLat) / 2
-  const centerLng = (minLng + maxLng) / 2
-
-  const markerParams = sorted.map(p => `marker=${p.latitude},${p.longitude}`).join('&')
-  const bbox = `${minLng},${minLat},${maxLng},${maxLat}`
-  const osmUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&${markerParams}`
+  const centerLat = sorted.reduce((s, p) => s + p.latitude, 0) / sorted.length
+  const centerLng = sorted.reduce((s, p) => s + p.longitude, 0) / sorted.length
 
   return (
     <div className="space-y-3">
-      <div className="rounded-lg overflow-hidden border border-border/40">
-        <iframe
-          src={osmUrl}
-          className="w-full h-[350px] border-0"
-          loading="lazy"
-          title={`Farm Boundary — ${farmName}`}
-        />
-      </div>
+      <FarmMapReadOnly
+        farms={[{
+          id: farmLand.id,
+          name: farmLand.name,
+          sizeHectares: farmLand.sizeHectares,
+          latitude: farmLand.latitude,
+          longitude: farmLand.longitude,
+          landOwnership: farmLand.landOwnership,
+          polygonPoints: sorted,
+        }]}
+        height="350px"
+      />
       <div className="flex items-center justify-between text-xs text-muted-foreground">
-        <span>{sorted.length} GPS points · auto-calculated boundary</span>
+        <span>{sorted.length} GPS points · satellite view</span>
         <a
-          href={`https://www.openstreetmap.org/?mlat=${centerLat}&mlon=${centerLng}#map=16/${centerLat}/${centerLng}`}
+          href={`https://maps.google.com/maps?q=${centerLat},${centerLng}&t=k&z=17`}
           target="_blank"
           rel="noopener noreferrer"
           className="text-primary hover:underline flex items-center gap-1"
         >
-          <MapPin className="w-3 h-3" /> Open in OpenStreetMap
+          <MapPin className="w-3 h-3" /> Open in Google Maps (satellite)
         </a>
       </div>
     </div>

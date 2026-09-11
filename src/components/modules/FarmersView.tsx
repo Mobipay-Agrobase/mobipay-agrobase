@@ -263,7 +263,7 @@ export default function FarmersView() {
                         <p className="font-medium text-sm">{f.firstName} {f.lastName}</p>
                       </div>
                     </TableCell>
-                    <TableCell className="hidden md:table-cell text-sm">{f.phone}</TableCell>
+                    <TableCell className="hidden md:table-cell text-sm">{f.phone || '—'}</TableCell>
                     <TableCell className="hidden lg:table-cell text-sm text-muted-foreground truncate max-w-[150px]">
                       {f.group?.name || '—'}
                     </TableCell>

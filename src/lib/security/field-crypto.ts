@@ -181,7 +181,10 @@ export function encryptField(plaintext: string | null | undefined): string | nul
  *
  * @param encryptedValue - The encrypted string with format "enc:v1:<iv>:<authTag>:<ciphertext>"
  * @returns The decrypted plaintext, or the original value if it wasn't encrypted.
- *          Returns null if the input was null/undefined.
+ *          Returns null if the input was null/undefined, or if the value could
+ *          not be decrypted (tampered / written under a since-rotated key).
+ *          UNDECRYPTABLE VALUES RETURN NULL — never the raw ciphertext — so no
+ *          API response or UI ever renders an overflowing "enc:v1:…" blob.
  */
 export function decryptField(encryptedValue: string | null | undefined): string | null {
   if (encryptedValue === null || encryptedValue === undefined || encryptedValue === '') {
@@ -219,10 +222,11 @@ export function decryptField(encryptedValue: string | null | undefined): string 
     }
   }
 
-  // Auth tag mismatch — tampered, or no known key matches. We return the raw
-  // value rather than throwing so a single bad field can't take down the whole list.
-  console.warn('[field-crypto] decrypt failed for value (tampered or unknown key)')
-  return encryptedValue
+  // Auth tag mismatch — tampered, or written under a key we no longer have.
+  // We return NULL (never the raw ciphertext) so a single bad field degrades
+  // to "—" in the UI instead of leaking the encrypted blob to end users.
+  console.warn('[field-crypto] decrypt failed (tampered or unknown key) — returning null')
+  return null
 }
 
 /**

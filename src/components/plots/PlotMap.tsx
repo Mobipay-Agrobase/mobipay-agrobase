@@ -85,7 +85,7 @@ export default function PlotMap({
     })
 
     L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+      attribution: 'Imagery &copy; Esri, Maxar, Earthstar Geographics',
       maxZoom: 19,
     }).addTo(map)
 

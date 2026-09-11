@@ -76,8 +76,9 @@ interface FarmerWithLands {
 }
 
 function safePhone(f: FarmerWithLands): string {
-  if (!f.phone) return ''
-  return f.phone.startsWith('enc:v1:') ? (decryptField(f.phone) || '') : f.phone
+  // decryptField: plaintext passes through, null (never ciphertext) when the
+  // value can't be decrypted any more.
+  return decryptField(f.phone) || ''
 }
 
 /** Map an Agrobase farmer to the upstream FarmerModel JSON shape. */
@@ -93,7 +94,7 @@ export function mapFarmer(f: FarmerWithLands): Record<string, unknown> {
     full_name: `${f.firstName} ${f.lastName}`.trim(),
     phone_number: safePhone(f),
     identity_proof: f.nationalIdType,
-    proof_no: f.nationalIdNo && f.nationalIdNo.startsWith('enc:v1:') ? decryptField(f.nationalIdNo) : f.nationalIdNo,
+    proof_no: decryptField(f.nationalIdNo),
     country: 0,
     district: 0,
     commune: 0,

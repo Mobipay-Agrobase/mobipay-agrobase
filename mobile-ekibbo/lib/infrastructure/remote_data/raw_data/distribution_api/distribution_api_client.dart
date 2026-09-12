@@ -3,6 +3,7 @@ import 'package:retrofit/retrofit.dart';
 import 'package:agrobase_ekibbo/models/base/base_response.dart';
 import 'package:agrobase_ekibbo/models/distribution/model_category.dart';
 import 'package:agrobase_ekibbo/models/distribution/model_distribution.dart';
+import 'package:agrobase_ekibbo/models/distribution/model_input_summary.dart';
 import 'package:agrobase_ekibbo/models/distribution/model_product.dart';
 
 part 'distribution_api_client.g.dart';
@@ -27,6 +28,12 @@ abstract class DistributionApiClient {
 
   @GET('/mobile/ekibbo-input-products?type=categories')
   Future<BaseResponse<List<MCategory>>?> getCategories();
+
+  /// Second review (K — Input Summary): stock-ledger summary for the
+  /// Inputs screen header (dealers, products in stock, units, pending
+  /// requests, stock by category).
+  @GET('/mobile/ekibbo-input-products?type=summary')
+  Future<BaseResponse<MInputSummary>?> getInputSummary();
 
   @POST('/mobile/ekibbo-distribution')
   Future<BaseResponse?> createDistribution(@Body() FormData data);

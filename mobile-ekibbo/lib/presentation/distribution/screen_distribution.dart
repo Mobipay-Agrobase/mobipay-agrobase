@@ -8,9 +8,11 @@ import 'package:agrobase_ekibbo/components/constant/color_constant.dart';
 import 'package:agrobase_ekibbo/components/constant/text_style_constant.dart';
 import 'package:agrobase_ekibbo/domain/l10n/app_lang.dart';
 import 'package:agrobase_ekibbo/domain/roles/role_config.dart';
+import 'package:agrobase_ekibbo/infrastructure/remote_data/api_data/api_distribution.dart';
 import 'package:agrobase_ekibbo/infrastructure/store_data/data_listings.dart';
 import 'package:agrobase_ekibbo/infrastructure/store_data/user_info.dart';
 import 'package:agrobase_ekibbo/models/distribution/model_distribution.dart';
+import 'package:agrobase_ekibbo/models/distribution/model_input_summary.dart';
 import 'package:agrobase_ekibbo/presentation/distribution/screen_add_distribution.dart';
 import 'package:agrobase_ekibbo/presentation/distribution/widget/info_destribution.dart';
 
@@ -22,6 +24,22 @@ class ScreenDistribution extends StatefulWidget {
 }
 
 class _ScreenDistributionState extends State<ScreenDistribution> {
+  // Second review (K — Input Summary): stock-ledger header, same numbers
+  // as the web Input Aggregation summary. Null → section hidden.
+  MInputSummary? _inputSummary;
+
+  Future<void> _loadInputSummary() async {
+    final summary = await ApiDistribution.getInputSummary();
+    if (!mounted) return;
+    setState(() => _inputSummary = summary);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadInputSummary();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -54,6 +72,7 @@ class _ScreenDistributionState extends State<ScreenDistribution> {
           color: ColorConstant.primary,
           onRefresh: () async {
             DListingData.instance.distributions = null;
+            _loadInputSummary();
             setState(() {});
           },
           child: Padding(
@@ -97,6 +116,104 @@ class _ScreenDistributionState extends State<ScreenDistribution> {
     );
   }
 
+  String _fmtUnits(double units) {
+    final rounded =
+        units == units.roundToDouble() ? units.toInt() : units;
+    return '$rounded';
+  }
+
+  // Second review (K): Input Summary card — dealers, products in stock,
+  // units on hand and pending requests straight from the stock ledger.
+  Widget _buildInputSummaryCard(MInputSummary s) {
+    final chips = s.byCategory.take(4).map((c) {
+      final label =
+          '${c.name} · ${_fmtUnits(c.units)}';
+      return Container(
+        margin: const EdgeInsets.only(right: 6, bottom: 6),
+        padding:
+            const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        decoration: BoxDecoration(
+          color: ColorConstant.primary.withOpacity(0.08),
+          borderRadius: BorderRadius.circular(4),
+        ),
+        child: Text(
+          label,
+          style: TextStyleConstant.robotoW400(
+            fontSize: 10,
+            color: ColorConstant.primary,
+          ),
+        ),
+      );
+    }).toList();
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: ColorConstant.grayF7F8FA,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Input Summary',
+            style: TextStyleConstant.robotoW700(
+              fontSize: 14,
+              color: ColorConstant.text79,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: _summaryCell('Dealers', '${s.dealers}'),
+              ),
+              Expanded(
+                child: _summaryCell(
+                    'In Stock', '${s.productsInStock}/${s.productsTotal}'),
+              ),
+              Expanded(
+                child: _summaryCell('Units', _fmtUnits(s.unitsInStock)),
+              ),
+              Expanded(
+                child:
+                    _summaryCell('Pending', '${s.pendingRequests}'),
+              ),
+            ],
+          ),
+          if (chips.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Wrap(children: chips),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _summaryCell(String label, String value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyleConstant.robotoW400(
+            fontSize: 10,
+            color: ColorConstant.text79,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          value,
+          style: TextStyleConstant.robotoW700(
+            fontSize: 15,
+            color: ColorConstant.text79,
+          ),
+        ),
+      ],
+    );
+  }
+
   _buildFutureDistribution() {
     return FutureBuilder(
       future: DListingData.instance.fetchDistributions(), // async work
@@ -114,7 +231,24 @@ class _ScreenDistributionState extends State<ScreenDistribution> {
             } else {
               if (snapshot.data == null) return const NoDataView();
               final datas = snapshot.data as List<MDistribution>;
-              if (datas.isEmpty) return const NoDataView();
+              // K: when no distributions exist yet, still show the Input
+              // Summary (stock ledger) above the empty state.
+              if (datas.isEmpty) {
+                if (_inputSummary != null) {
+                  return ListView(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: _buildInputSummaryCard(_inputSummary!),
+                      ),
+                      const SizedBox(
+                          height: 160,
+                          child: NoDataView()),
+                    ],
+                  );
+                }
+                return const NoDataView();
+              }
               // ── Second review (J): 3 KPI cards — Tools / Fertilisers (kg) / Seedlings ──
               final rows = datas
                   .expand((d) => d.distributionDetails)
@@ -138,8 +272,13 @@ class _ScreenDistributionState extends State<ScreenDistribution> {
                   seedlingRows.fold<int>(0, (sum, r) => sum + r.quantity);
               return ListView(
                 children: [
+                  if (_inputSummary != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: _buildInputSummaryCard(_inputSummary!),
+                    ),
                   Padding(
-                    padding: const EdgeInsets.only(top: 8, bottom: 8),
+                    padding: const EdgeInsets.only(bottom: 8),
                     child: Row(
                       children: [
                         Expanded(

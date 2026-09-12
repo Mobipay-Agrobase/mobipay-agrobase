@@ -89,6 +89,8 @@ const ROLE_PERMISSIONS: RolePerms = {
   ],
 
   // EKIBBO Operations Manager: Manage farmers, groups, trainings, purchases
+  // Second review (L): processing workflow access — the OPS manager runs the
+  // cooperative's processing facility (approve batches, start, complete).
   EKB_OPS_MANAGER: [
     'dashboard:read',
     'farmers:*',
@@ -97,6 +99,8 @@ const ROLE_PERMISSIONS: RolePerms = {
     'purchases:*', 'purchases:approve',
     'payments:read',
     'input_aggregation:*',
+    'processing:read', 'processing:create', 'processing:update', 'processing:approve',
+    'approvals:read',
     'surveys:read',
     'reports:read', 'reports:export',
     'trace:read',
@@ -118,12 +122,15 @@ const ROLE_PERMISSIONS: RolePerms = {
   ],
 
   // EKIBBO Finance & Operations Assistant: Enter data, draft only — no approvals
+  // Second review (L): may REGISTER processing batches (PENDING) for the
+  // approvers, but cannot approve/start/complete them.
   EKB_FIN_ASSISTANT: [
     'dashboard:read',
     'farmers:read',
     'purchases:read', 'purchases:create', 'purchases:update',  // draft only
     'sales:read', 'sales:create', 'sales:update',              // draft only
     'input_aggregation:read', 'input_aggregation:create',
+    'processing:read', 'processing:create',
     'payments:read',
     'profile:read', 'profile:update',
   ],

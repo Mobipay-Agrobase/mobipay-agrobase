@@ -23,7 +23,7 @@ import { toast } from 'sonner'
 
 interface ApprovalItem {
   id: string
-  type: 'PURCHASE' | 'LOAN' | 'INPUT_REQUEST'
+  type: 'PURCHASE' | 'LOAN' | 'INPUT_REQUEST' | 'PROCESSING'
   reference: string
   requesterName: string
   description: string
@@ -43,12 +43,14 @@ const typeIcon: Record<string, React.ReactNode> = {
   PURCHASE: <ShoppingCart className="w-4 h-4" />,
   LOAN: <DollarSign className="w-4 h-4" />,
   INPUT_REQUEST: <Package className="w-4 h-4" />,
+  PROCESSING: <Package className="w-4 h-4" />,
 }
 
 const typeColor: Record<string, string> = {
   PURCHASE: 'bg-teal-100 text-teal-700 dark:bg-teal-900/40 dark:text-teal-300',
   LOAN: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
   INPUT_REQUEST: 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300',
+  PROCESSING: 'bg-teal-100 text-teal-700 dark:bg-teal-900/40 dark:text-teal-300',
 }
 
 const statusColor: Record<string, string> = {
@@ -78,8 +80,28 @@ export default function ApprovalsView() {
     setLoading(true)
     try {
       const data = await safeFetch('/api/approvals')
-      const list = extractArray(data, 'data', 'approvals')
-      setApprovals(list)
+      const raw = extractArray(data, 'data', 'approvals')
+      // Map the API payload (title / applicant / date) onto this view's
+      // field names (reference / requesterName / submittedAt). Before this
+      // fix the table rendered BLANK reference/requester/description cells
+      // and the search box crashed on undefined.toLowerCase().
+      setApprovals(raw.map((a: any): ApprovalItem => ({
+        id: a.id,
+        type: a.type,
+        reference: a.reference || a.title || '—',
+        requesterName: a.requesterName || a.applicant || '—',
+        description: a.description || a.title || '',
+        amount: a.amount,
+        currency: a.currency,
+        quantity: a.quantity,
+        unit: a.unit,
+        status: a.status,
+        priority: a.priority || 'MEDIUM',
+        submittedAt: a.submittedAt || a.date || '',
+        reviewedAt: a.reviewedAt,
+        reviewedBy: a.reviewedBy,
+        details: a.details,
+      })))
     } catch {
       setApprovals([])
     } finally {
@@ -95,6 +117,8 @@ export default function ApprovalsView() {
     if (activeTab === 'pending') return a.status === 'PENDING'
     if (activeTab === 'purchases') return a.type === 'PURCHASE'
     if (activeTab === 'loans') return a.type === 'LOAN'
+    // Second review (L): Processing batches pending approval.
+    if (activeTab === 'processing') return a.type === 'PROCESSING'
     return true
   }).filter(a => {
     if (search && !a.description.toLowerCase().includes(search.toLowerCase()) && !a.requesterName.toLowerCase().includes(search.toLowerCase()) && !a.reference.toLowerCase().includes(search.toLowerCase())) return false
@@ -205,7 +229,7 @@ export default function ApprovalsView() {
             <ClipboardCheck className="w-5 h-5 text-emerald-600" />
             Approvals Hub
           </h3>
-          <p className="text-sm text-muted-foreground">Unified approval center for purchases, loans, and input requests</p>
+          <p className="text-sm text-muted-foreground">Unified approval center for purchases, loans, input requests, and processing batches</p>
         </div>
         <Button variant="outline" size="sm" className="gap-1.5" onClick={() => fetchApprovals()}>
           <RefreshCw className="w-3.5 h-3.5" /> Refresh
@@ -273,7 +297,7 @@ export default function ApprovalsView() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={handleTabChange}>
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="pending" className="gap-1.5">
             <Clock className="w-3.5 h-3.5" />
             Pending ({pendingCount})
@@ -286,9 +310,13 @@ export default function ApprovalsView() {
             <DollarSign className="w-3.5 h-3.5" />
             Loans
           </TabsTrigger>
+          <TabsTrigger value="processing" className="gap-1.5">
+            <Package className="w-3.5 h-3.5" />
+            Processing
+          </TabsTrigger>
         </TabsList>
 
-        {['pending', 'purchases', 'loans'].map(tab => (
+        {['pending', 'purchases', 'loans', 'processing'].map(tab => (
           <TabsContent key={tab} value={tab}>
             <Card>
               <CardContent className="p-0">

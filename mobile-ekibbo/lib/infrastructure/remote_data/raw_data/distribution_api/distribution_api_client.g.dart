@@ -61,6 +61,40 @@ class _DistributionApiClient implements DistributionApiClient {
   }
 
   @override
+  Future<BaseResponse<MInputSummary>?> getInputSummary() async {
+    const _extra = <String, dynamic>{};
+    final queryParameters = <String, dynamic>{};
+    final _headers = <String, dynamic>{};
+    final Map<String, dynamic>? _data = null;
+    final _result = await _dio.fetch<Map<String, dynamic>?>(
+        _setStreamType<BaseResponse<MInputSummary>>(Options(
+      method: 'GET',
+      headers: _headers,
+      extra: _extra,
+    )
+            .compose(
+              _dio.options,
+              '/mobile/ekibbo-input-products?type=summary',
+              queryParameters: queryParameters,
+              data: _data,
+            )
+            .copyWith(
+                baseUrl: _combineBaseUrls(
+              _dio.options.baseUrl,
+              baseUrl,
+            ))));
+    final value = _result.data == null
+        ? null
+        : BaseResponse<MInputSummary>.fromJson(
+            _result.data!,
+            (json) => json is Map<String, dynamic>
+                ? MInputSummary.fromJson(json)
+                : MInputSummary.fromJson(const <String, dynamic>{}),
+          );
+    return value;
+  }
+
+  @override
   Future<BaseResponse<List<MCategory>>?> getCategories() async {
     const _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{};

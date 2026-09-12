@@ -66,6 +66,10 @@ export async function POST(request: Request) {
         variety: body.variety || null,
         unit: body.unit || null,
         unitPrice: body.unitPrice ?? null,
+        // Second review (K — Input Summary): on-hand stock at intake time.
+        stockQuantity: Number.isFinite(Number(body.stockQuantity)) && Number(body.stockQuantity) >= 0
+          ? Number(body.stockQuantity)
+          : 0,
         isActive: body.isActive ?? true,
       },
       include: { dealer: true },

@@ -125,9 +125,13 @@ class _ScreenAddProductState extends State<ScreenAddProduct> {
         "${AppLang.local.privious_distribution_quantity} $previousStock";
   }
 
-  bool get isEnough =>
-      int.parse(quantity) <=
-      _types.firstWhere((element) => element.id == typeId).availableStocks;
+  // Second review (K): a quantity is "enough" when the stock is untracked
+  // (0) or the quantity fits within the tracked stock.
+  bool get isEnough {
+    final stock =
+        _types.firstWhere((element) => element.id == typeId).availableStocks;
+    return stock <= 0 || int.parse(quantity) <= stock;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -265,7 +269,14 @@ class _ScreenAddProductState extends State<ScreenAddProduct> {
                     if (int.parse(v) <= 0) {
                       return AppLang.local.quantity_must_be_greater_than_0;
                     }
-                    if (int.parse(v) > arr.availableStocks) {
+                    // Second review (K — real stock ledger): only block when
+                    // the product's stock is actively tracked (> 0) and the
+                    // entered quantity exceeds it. A stock of 0 means
+                    // "not tracked yet / out of stock" — the officer can
+                    // still record what was actually distributed in the
+                    // field (the server floors the ledger at 0).
+                    if (arr.availableStocks > 0 &&
+                        int.parse(v) > arr.availableStocks) {
                       return "${AppLang.local.quantity_must_be_less_than} ${arr.availableStocks}";
                     }
                     return null;

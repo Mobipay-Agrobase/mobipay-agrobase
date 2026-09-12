@@ -24,10 +24,22 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   const existing = await db.inputProduct.findFirst({ where: { id, ...tf } })
   if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-  const updated = await db.inputProduct.update({
-    where: { id },
-    data: { ...body, updatedAt: new Date() },
-  })
+  // Explicit field whitelist (never spread the raw body — it could carry
+  // id/tenantId/dealerId overrides). stockQuantity is the second-review (K)
+  // on-hand stock field, maintained by staff from the product form.
+  const data: Record<string, unknown> = { updatedAt: new Date() }
+  if (body.name !== undefined) data.name = String(body.name)
+  if (body.category !== undefined) data.category = body.category === null ? null : String(body.category)
+  if (body.variety !== undefined) data.variety = body.variety === null ? null : String(body.variety)
+  if (body.unit !== undefined) data.unit = body.unit === null ? null : String(body.unit)
+  if (body.unitPrice !== undefined) data.unitPrice = body.unitPrice === null ? null : Number(body.unitPrice)
+  if (body.stockQuantity !== undefined) {
+    const qty = Number(body.stockQuantity)
+    data.stockQuantity = Number.isFinite(qty) && qty >= 0 ? qty : 0
+  }
+  if (body.isActive !== undefined) data.isActive = Boolean(body.isActive)
+
+  const updated = await db.inputProduct.update({ where: { id }, data })
   return NextResponse.json({ data: updated })
 }
 

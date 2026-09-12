@@ -1,17 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getTenantContext, buildTenantFilter } from '@/lib/tenant'
-
-/**
- * Generates a unique processing batch number of the form `PCH-YYYY-NNNNNN`
- * where NNNNNN is a random base-36 suffix (collision-resistant for practical
- * purposes; uniqueness is enforced at the DB layer via `@unique`).
- */
-function generateBatchNumber(): string {
-  const year = new Date().getFullYear()
-  const suffix = Math.random().toString(36).slice(2, 8).toUpperCase()
-  return `PCH-${year}-${suffix}`
-}
+import { generateBatchNumber } from '@/lib/processing-batch-number'
 
 export async function GET(request: NextRequest) {
   try {

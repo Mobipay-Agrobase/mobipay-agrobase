@@ -96,9 +96,11 @@ export default function InputAggregationView() {
     setLoading(true)
     try {
       const [dData, pData, rData] = await Promise.all([
-        safeFetch('/api/input-dealers'),
-        safeFetch('/api/input-products'),
-        safeFetch('/api/input-requests'),
+        safeFetch('/api/input-dealers?limit=500'),
+        // K (Input Summary): pull the full catalog (up to 500) so the
+        // summary stats cover every product, not just page 1 (limit 20).
+        safeFetch('/api/input-products?limit=500'),
+        safeFetch('/api/input-requests?limit=500'),
       ])
       const rawDealers = extractArray(dData, 'data', 'dealers')
       const rawProducts = extractArray(pData, 'data', 'products')
@@ -120,8 +122,14 @@ export default function InputAggregationView() {
         dealerId: p.dealerId || '',
         price: p.unitPrice || 0,
         unit: p.unit || '',
-        inStock: p.isActive ?? true,
-        stockQuantity: 0,
+        // Second review (K — Input Summary): REAL on-hand stock from the
+        // InputProduct master (stockQuantity, maintained on the product form
+        // and auto-decremented by each distribution). Previously this was
+        // mapped from isActive with stockQuantity hard-coded to 0, which
+        // made "Products In Stock" a relabeled active-count and the stock
+        // value always 0.
+        inStock: Number(p.stockQuantity) > 0,
+        stockQuantity: Number(p.stockQuantity) || 0,
       })))
       setRequests(rawRequests.map((r: any) => ({
         id: r.id,
@@ -145,9 +153,22 @@ export default function InputAggregationView() {
   useEffect(() => { fetchData() }, [fetchData])
 
   const totalValue = products.reduce((sum, p) => sum + (p.price * p.stockQuantity), 0)
-  // Second review (K): "Active Products" label was unclear to reviewers — now "Products In Stock"
-      const activeProducts = products.filter(p => p.inStock).length
+  // Second review (K): real Input Summary metrics — every number comes from
+  // the actual stock ledger (stockQuantity on InputProduct), not flags.
+  const productsInStock = products.filter(p => p.stockQuantity > 0).length
+  const totalUnitsInStock = products.reduce((sum, p) => sum + p.stockQuantity, 0)
   const pendingRequests = requests.filter(r => r.status === 'PENDING').length
+
+  // Stock by category — units + value per category for the summary strip.
+  const stockByCategory = Object.entries(
+    products.reduce((acc, p) => {
+      acc[p.category] = acc[p.category] || { units: 0, value: 0, products: 0 }
+      acc[p.category].units += p.stockQuantity
+      acc[p.category].value += p.price * p.stockQuantity
+      acc[p.category].products += 1
+      return acc
+    }, {} as Record<string, { units: number; value: number; products: number }>)
+  ).map(([name, v]) => ({ name, ...v }))
 
   const categoryData = Object.entries(
     products.reduce((acc, p) => { acc[p.category] = (acc[p.category] || 0) + 1; return acc }, {} as Record<string, number>)
@@ -172,13 +193,41 @@ export default function InputAggregationView() {
         </div>
       </div>
 
-      {/* Stats */}
+      {/* ── Second review (K): Input Summary ─────────────────────────────
+          Replaces the old confusing stats ("Active product" relabeled).
+          Every figure below comes from the real stock ledger. */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <Card><CardContent className="p-4"><div className="flex items-center gap-3"><div className="w-10 h-10 rounded-lg bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center"><Store className="w-5 h-5 text-emerald-600" /></div><div><p className="text-xs text-muted-foreground">Total Dealers</p><p className="text-xl font-bold">{dealers.length}</p></div></div></CardContent></Card>
-        <Card><CardContent className="p-4"><div className="flex items-center gap-3"><div className="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center"><Package className="w-5 h-5 text-blue-600" /></div><div><p className="text-xs text-muted-foreground">Products In Stock</p><p className="text-xl font-bold">{activeProducts}</p></div></div></CardContent></Card>
+        <Card><CardContent className="p-4"><div className="flex items-center gap-3"><div className="w-10 h-10 rounded-lg bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center"><Store className="w-5 h-5 text-emerald-600" /></div><div><p className="text-xs text-muted-foreground">Input Dealers</p><p className="text-xl font-bold">{dealers.length}</p></div></div></CardContent></Card>
+        <Card><CardContent className="p-4"><div className="flex items-center gap-3"><div className="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center"><Package className="w-5 h-5 text-blue-600" /></div><div><p className="text-xs text-muted-foreground">Products In Stock</p><p className="text-xl font-bold">{productsInStock}<span className="text-xs text-muted-foreground font-normal"> / {products.length}</span></p></div></div></CardContent></Card>
         <Card><CardContent className="p-4"><div className="flex items-center gap-3"><div className="w-10 h-10 rounded-lg bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center"><ShoppingBag className="w-5 h-5 text-amber-600" /></div><div><p className="text-xs text-muted-foreground">Pending Requests</p><p className="text-xl font-bold">{pendingRequests}</p></div></div></CardContent></Card>
-        <Card><CardContent className="p-4"><div className="flex items-center gap-3"><div className="w-10 h-10 rounded-lg bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center"><DollarSign className="w-5 h-5 text-emerald-600" /></div><div><p className="text-xs text-muted-foreground">Total Stock Value</p><p className="text-xl font-bold">UGX {(totalValue / 1000000).toFixed(1)}M</p></div></div></CardContent></Card>
+        <Card><CardContent className="p-4"><div className="flex items-center gap-3"><div className="w-10 h-10 rounded-lg bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center"><DollarSign className="w-5 h-5 text-emerald-600" /></div><div><p className="text-xs text-muted-foreground">Stock Value (UGX)</p><p className="text-xl font-bold">{totalValue >= 1000000 ? `${(totalValue / 1000000).toFixed(1)}M` : totalValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p></div></div></CardContent></Card>
       </div>
+
+      {/* K: Stock-by-category summary row — total units on hand per category */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm">Input Summary — Stock by Category</CardTitle>
+          <CardDescription className="text-xs">
+            {Math.round(totalUnitsInStock * 100) / 100} total units on hand across {products.length} products · stock falls as inputs are distributed to farmers
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {stockByCategory.length === 0 ? (
+            <p className="text-sm text-muted-foreground col-span-4">No input products registered yet.</p>
+          ) : stockByCategory.map(cat => (
+            <div key={cat.name} className="rounded-lg border p-3 space-y-1">
+              <div className="flex items-center gap-2">
+                <div className={cn('w-6 h-6 rounded flex items-center justify-center', categoryColors[cat.name] || 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400')}>
+                  <span className="scale-75">{categoryIcons[cat.name] ?? <Package className="w-4 h-4" />}</span>
+                </div>
+                <p className="text-xs font-medium">{cat.name}</p>
+              </div>
+              <p className="text-lg font-bold">{Math.round(cat.units * 100) / 100}<span className="text-[10px] text-muted-foreground font-normal"> units</span></p>
+              <p className="text-[10px] text-muted-foreground">{cat.products} products · UGX {cat.value >= 1000000 ? `${(cat.value / 1000000).toFixed(1)}M` : Math.round(cat.value).toLocaleString()}</p>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
 
       <Tabs defaultValue="dealers" className="space-y-4">
         <TabsList className="grid w-full grid-cols-3">
@@ -466,6 +515,7 @@ function ProductForm({ dealers, onClose }: { dealers: Dealer[]; onClose: () => v
           category: form.category,
           unit: form.unit,
           unitPrice: Number(form.price),
+          stockQuantity: form.stockQuantity === '' ? 0 : Number(form.stockQuantity),
           isActive: true,
         }),
       })

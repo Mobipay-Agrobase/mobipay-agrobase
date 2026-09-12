@@ -5,6 +5,7 @@ import 'package:agrobase_ekibbo/domain/roles/role_config.dart';
 /// Ekibbo side-drawer — EXACTLY the Ekibbo team's Field Officer menu:
 ///   Farmer Registry · Purchases · Inputs · Trainings · Loans ·
 ///   Farmer Visits · Surveys · News & Advisory · Settings · Profile
+///   Processing (second review L — post-harvest batch workflow, staff)
 ///
 /// Removed per feedback: Carbon & Compliance, Sale Intentions, Crop
 /// Harvest, Cultivations (covered by Add Crop), Farm Land Registry
@@ -28,6 +29,14 @@ final List<MDDrawerMenu> drawerConfigs = [
     type: DrawerMenuType.distribution,
     icon: 'ic_distribution',
     title: 'Inputs',
+    roleAccessed: [EnumUserRole.staff],
+  ),
+  MDDrawerMenu(
+    // Second review (L — Processing): post-harvest processing batches
+    // with the approve → start → complete workflow (staff only).
+    type: DrawerMenuType.processing,
+    icon: 'ic_procurement',
+    title: 'Processing',
     roleAccessed: [EnumUserRole.staff],
   ),
   MDDrawerMenu(
@@ -89,6 +98,7 @@ enum DrawerMenuType {
   surveys,
   saleIntention,
   distribution,
+  processing,
   vendorProcurement,
   procurement,
   cropHarvest,

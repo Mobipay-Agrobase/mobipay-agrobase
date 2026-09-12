@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:agrobase_ekibbo/models/base/base_response.dart';
 import 'package:agrobase_ekibbo/models/distribution/model_category.dart';
 import 'package:agrobase_ekibbo/models/distribution/model_distribution.dart';
+import 'package:agrobase_ekibbo/models/distribution/model_input_summary.dart';
 import 'package:agrobase_ekibbo/models/distribution/model_product.dart';
 import 'package:agrobase_ekibbo/domain/core/api_provider.dart';
 
@@ -81,6 +82,27 @@ class ApiDistribution {
     } catch (e) {
       debugPrint("Error getCategoryByCooperId: $e");
       return [];
+    }
+  }
+
+  /// Second review (K — Input Summary): the Inputs screen header summary —
+  /// dealers, products in stock, total units on hand, pending requests and
+  /// stock by category. Returns null when the summary can't be loaded (the
+  /// UI then simply hides the section).
+  static Future<MInputSummary?> getInputSummary() async {
+    try {
+      final res =
+          await ApiProvider.instance.apiDistribution.getInputSummary();
+      if (res == null) {
+        throw const FormatException('getInputSummary response null');
+      }
+      if (res.data == null) {
+        throw const FormatException('getInputSummary data null');
+      }
+      return res.data;
+    } catch (e) {
+      debugPrint("Error getInputSummary: $e");
+      return null;
     }
   }
 

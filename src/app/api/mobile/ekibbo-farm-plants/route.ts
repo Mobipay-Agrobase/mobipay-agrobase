@@ -119,9 +119,9 @@ export async function POST(req: NextRequest) {
       data: {
         farmId: farm.id,
         cropCategory,
-        // Optional Crop Master link (name match; null when the review
-        // category has no CropMaster counterpart).
-        cropMasterId: await resolveCropMasterId(cropCategory),
+        // Optional Crop Master link — variety first (shade-tree species),
+        // then category name match (see farm-plant-crop-link.ts).
+        cropMasterId: await resolveCropMasterId(cropCategory, variety),
         variety: variety || null,
         plantCount,
         notes,

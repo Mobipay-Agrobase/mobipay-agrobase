@@ -110,6 +110,29 @@ export async function POST(request: NextRequest) {
       },
     })
 
+    // ── Second review (K — Input Summary): keep the on-hand stock honest.
+    // Every distribution decrements the matching InputProduct's stockQuantity
+    // (case-insensitive name match, floor 0). No-op when no product matches —
+    // distributions may carry free-text input names from the field.
+    if (inputName) {
+      const product = await db.inputProduct.findFirst({
+        where: {
+          ...buildTenantFilter(ctx, 'tenantId'),
+          isActive: true,
+          name: { equals: String(inputName).trim(), mode: 'insensitive' },
+        },
+        select: { id: true, stockQuantity: true },
+      })
+      if (product && product.stockQuantity > 0) {
+        await db.inputProduct.update({
+          where: { id: product.id },
+          data: {
+            stockQuantity: Math.max(0, product.stockQuantity - parseFloat(quantity)),
+          },
+        })
+      }
+    }
+
     // Create a ledger entry (debit — farmer owes the outstanding balance).
     // The INPUT_DIST entry debits the full cost; an immediate PAYMENT entry
     // credits whatever cash was paid at distribution time.

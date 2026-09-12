@@ -158,7 +158,14 @@ export default function DataQualityView() {
                             <TableRow key={f.id}>
                               <TableCell className="text-xs font-mono">{f.farmerCode || '—'}</TableCell>
                               <TableCell className="text-xs">{f.firstName} {f.lastName}</TableCell>
-                              <TableCell className="text-xs">{f.phone?.startsWith('enc:v1:') ? '(encrypted)' : (f.phone || '—')}</TableCell>
+                              <TableCell className="text-xs">
+                                {f.phone?.startsWith('enc:v1:') ? '(encrypted)' : (f.phone || '—')}
+                                {f.unreadablePiiFields?.length ? (
+                                  <span className="ml-1 text-[10px] text-red-600 dark:text-red-400">
+                                    (unreadable: {f.unreadablePiiFields.join(', ')})
+                                  </span>
+                                ) : null}
+                              </TableCell>
                               <TableCell className="text-xs">{f.district || '—'}</TableCell>
                               <TableCell className="text-xs">{new Date(f.createdAt).toLocaleDateString()}</TableCell>
                             </TableRow>

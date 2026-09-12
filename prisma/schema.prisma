@@ -1291,19 +1291,23 @@ model InputDealer {
 }
 
 model InputProduct {
-  id          String   @id @default(cuid())
-  tenantId    String
-  tenant      Tenant   @relation(fields: [tenantId], references: [id])
-  dealerId    String
-  dealer      InputDealer @relation(fields: [dealerId], references: [id])
-  name        String
-  category    String?  // Seeds, Fertilizer, Pesticide, Equipment
-  variety     String?
-  unit        String?  // Kg, Bags, Litres
-  unitPrice   Float?
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id            String   @id @default(cuid())
+  tenantId      String
+  tenant        Tenant   @relation(fields: [tenantId], references: [id])
+  dealerId      String
+  dealer        InputDealer @relation(fields: [dealerId], references: [id])
+  name          String
+  category      String?  // Seeds, Fertilizer, Pesticide, Equipment
+  variety       String?
+  unit          String?  // Kg, Bags, Litres
+  unitPrice     Float?
+  // On-hand stock (second review K — Input Summary). 0 = not in stock /
+  // not tracked yet. Maintained by staff on the product forms; every input
+  // distribution with a matching product name decrements it (floor 0).
+  stockQuantity Float    @default(0)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }
 
 model InputRequest {

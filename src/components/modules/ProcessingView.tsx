@@ -1,14 +1,15 @@
 'use client'
 
 import React, { useState, useEffect, useCallback } from 'react'
-import { useAppStore } from '@/lib/store'
 import { cn } from '@/lib/utils'
 import {
   Search, Plus, X, Loader2, Filter, Layers, Droplets, Wind,
   Package, Star, TrendingUp, Clock, CheckCircle, AlertCircle, BarChart3,
-  Trash2
+  Trash2, Play, XCircle, CheckCheck
 } from 'lucide-react'
 import { safeFetch, extractArray } from '@/lib/safe-fetch'
+import { hasPermission } from '@/lib/permissions'
+import { useAppStore } from '@/lib/store'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -34,7 +35,10 @@ interface ProcessingBatch {
   outputUnit: string
   qualityGrade: string
   qualityScore: number
-  status: 'IN_PROGRESS' | 'COMPLETED' | 'FAILED' | 'PENDING'
+  // Second review (L): workflow statuses. New batches enter as PENDING,
+  // are approved/rejected (Approval Hub or here), then started and
+  // completed. FAILED is a legacy value kept for display only.
+  status: 'PENDING' | 'APPROVED' | 'IN_PROGRESS' | 'COMPLETED' | 'REJECTED' | 'FAILED'
   batchNumber: string
   facility: string
   startDate: string
@@ -66,8 +70,10 @@ const processColor: Record<string, string> = {
 
 const statusColor: Record<string, string> = {
   PENDING: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
+  APPROVED: 'bg-teal-100 text-teal-700 dark:bg-teal-900/40 dark:text-teal-300',
   IN_PROGRESS: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
   COMPLETED: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
+  REJECTED: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300',
   FAILED: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300',
 }
 
@@ -81,22 +87,11 @@ const gradeColor: Record<string, string> = {
 
 const BAR_COLORS = ['#3b82f6', '#f59e0b', '#8b5cf6', '#14b8a6', '#f97316', '#10b981']
 
-const DEMO_BATCHES: ProcessingBatch[] = [
-  { id: '1', batchNumber: 'PCH-2024-001', inputCommodity: 'Arabica Coffee', processType: 'Washing', outputProduct: 'Washed Arabica Parchment', inputQuantity: 5000, inputUnit: 'kg', outputQuantity: 4200, outputUnit: 'kg', qualityGrade: 'Grade 1', qualityScore: 92, status: 'COMPLETED', facility: 'Mt. Elgon Processing Center', startDate: '2024-04-10T06:00:00Z', endDate: '2024-04-10T18:00:00Z', notes: 'Excellent quality cherries. 84% recovery rate.' },
-  { id: '2', batchNumber: 'PCH-2024-002', inputCommodity: 'Arabica Coffee', processType: 'Drying', outputProduct: 'Dried Arabica Parchment', inputQuantity: 4200, inputUnit: 'kg', outputQuantity: 3500, outputUnit: 'kg', qualityGrade: 'Grade 1', qualityScore: 88, status: 'IN_PROGRESS', facility: 'Mt. Elgon Processing Center', startDate: '2024-04-11T06:00:00Z', notes: 'Drying on raised beds. Estimated completion April 14.' },
-  { id: '3', batchNumber: 'PCH-2024-003', inputCommodity: 'Robusta Coffee', processType: 'Hulling', outputProduct: 'Robusta Green Beans', inputQuantity: 3000, inputUnit: 'kg', outputQuantity: 1800, outputUnit: 'kg', qualityGrade: 'Grade 2', qualityScore: 76, status: 'COMPLETED', facility: 'Kampala Processing Hub', startDate: '2024-04-09T08:00:00Z', endDate: '2024-04-09T16:00:00Z' },
-  { id: '4', batchNumber: 'PCH-2024-004', inputCommodity: 'Arabica Coffee', processType: 'Grading', outputProduct: 'Graded Arabica Green Beans', inputQuantity: 3500, inputUnit: 'kg', outputQuantity: 3200, outputUnit: 'kg', qualityGrade: 'Premium', qualityScore: 96, status: 'COMPLETED', facility: 'Mt. Elgon Processing Center', startDate: '2024-04-12T08:00:00Z', endDate: '2024-04-12T14:00:00Z', notes: 'Premium grade - screen size 17+. Export ready.' },
-  { id: '5', batchNumber: 'PCH-2024-005', inputCommodity: 'Sunflower Seeds', processType: 'Packaging', outputProduct: 'Packaged Sunflower Oil', inputQuantity: 2000, inputUnit: 'kg', outputQuantity: 1800, outputUnit: 'L', qualityGrade: 'Grade 1', qualityScore: 90, status: 'IN_PROGRESS', facility: 'Jinja Processing Facility', startDate: '2024-04-13T07:00:00Z', notes: 'Bottling in progress. 750ml and 1L containers.' },
-  { id: '6', batchNumber: 'PCH-2024-006', inputCommodity: 'Arabica Coffee', processType: 'Roasting', outputProduct: 'Roasted Arabica Coffee', inputQuantity: 500, inputUnit: 'kg', outputQuantity: 420, outputUnit: 'kg', qualityGrade: 'Premium', qualityScore: 94, status: 'COMPLETED', facility: 'Kampala Processing Hub', startDate: '2024-04-11T10:00:00Z', endDate: '2024-04-11T14:00:00Z', notes: 'Medium-dark roast. Local market grade.' },
-  { id: '7', batchNumber: 'PCH-2024-007', inputCommodity: 'Sesame', processType: 'Grading', outputProduct: 'Graded Sesame Seeds', inputQuantity: 1500, inputUnit: 'kg', outputQuantity: 1350, outputUnit: 'kg', qualityGrade: 'Grade 2', qualityScore: 72, status: 'COMPLETED', facility: 'Gulu Processing Center', startDate: '2024-04-08T09:00:00Z', endDate: '2024-04-08T15:00:00Z', notes: 'Some moisture content issues. Re-drying recommended.' },
-  { id: '8', batchNumber: 'PCH-2024-008', inputCommodity: 'Robusta Coffee', processType: 'Washing', outputProduct: 'Washed Robusta Parchment', inputQuantity: 4000, inputUnit: 'kg', outputQuantity: 0, outputUnit: 'kg', qualityGrade: 'Below Standard', qualityScore: 45, status: 'FAILED', facility: 'Kampala Processing Hub', startDate: '2024-04-14T06:00:00Z', notes: 'Equipment malfunction. Batch to be re-processed.' },
-  { id: '9', batchNumber: 'PCH-2024-009', inputCommodity: 'Arabica Coffee', processType: 'Packaging', outputProduct: 'Export-Ready Coffee Bags', inputQuantity: 3200, inputUnit: 'kg', outputQuantity: 0, outputUnit: 'kg', qualityGrade: 'Grade 1', qualityScore: 0, status: 'PENDING', facility: 'Mt. Elgon Processing Center', startDate: '2024-04-16T06:00:00Z', notes: 'Awaiting EUDR compliance documentation before packaging.' },
-  { id: '10', batchNumber: 'PCH-2024-010', inputCommodity: 'Maize', processType: 'Drying', outputProduct: 'Dried Maize Kernels', inputQuantity: 8000, inputUnit: 'kg', outputQuantity: 6800, outputUnit: 'kg', qualityGrade: 'Grade 2', qualityScore: 78, status: 'IN_PROGRESS', facility: 'Northern Region Facility', startDate: '2024-04-12T06:00:00Z', notes: 'Mechanical drying at 45°C. Target moisture 13%.' },
-  { id: '11', batchNumber: 'PCH-2024-011', inputCommodity: 'Arabica Coffee', processType: 'Hulling', outputProduct: 'Arabica Green Beans', inputQuantity: 3500, inputUnit: 'kg', outputQuantity: 2100, outputUnit: 'kg', qualityGrade: 'Grade 1', qualityScore: 85, status: 'COMPLETED', facility: 'Mt. Elgon Processing Center', startDate: '2024-04-13T07:00:00Z', endDate: '2024-04-13T12:00:00Z' },
-  { id: '12', batchNumber: 'PCH-2024-012', inputCommodity: 'Vanilla', processType: 'Grading', outputProduct: 'Graded Vanilla Beans', inputQuantity: 200, inputUnit: 'kg', outputQuantity: 180, outputUnit: 'kg', qualityGrade: 'Premium', qualityScore: 98, status: 'PENDING', facility: 'Western Region Facility', startDate: '2024-04-17T08:00:00Z', notes: 'High-value batch. Requires senior QC officer oversight.' },
-]
+// NOTE: demo/mock data fallbacks removed (second review L) — the module
+// shows the REAL batches from /api/processing and a real empty state.
 
 export default function ProcessingView() {
+  const { user } = useAppStore()
   const [batches, setBatches] = useState<ProcessingBatch[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -104,6 +99,13 @@ export default function ProcessingView() {
   const [statusFilter, setStatusFilter] = useState('')
   const [commodityFilter, setCommodityFilter] = useState('')
   const [showAdd, setShowAdd] = useState(false)
+  // Second review (L): workflow action state.
+  const [busyId, setBusyId] = useState<string | null>(null)
+  const [completeTarget, setCompleteTarget] = useState<ProcessingBatch | null>(null)
+  const [rejectTarget, setRejectTarget] = useState<ProcessingBatch | null>(null)
+  const [rejectReason, setRejectReason] = useState('')
+  const canApprove = hasPermission(user?.role || '', 'processing:approve')
+  const canOperate = hasPermission(user?.role || '', 'processing:update')
 
   const fetchBatches = useCallback(async () => {
     setLoading(true)
@@ -116,31 +118,29 @@ export default function ProcessingView() {
       const url = `/api/processing${params.toString() ? `?${params}` : ''}`
       const data = await safeFetch(url)
       const raw = extractArray(data, 'batches', 'data')
-      if (raw.length > 0) {
-        const mapped: ProcessingBatch[] = raw.map((b: any) => ({
-          id: b.id,
-          batchNumber: b.batchNumber || '',
-          inputCommodity: b.inputCommodity || '',
-          processType: b.processType || '',
-          outputProduct: b.outputProduct || '',
-          inputQuantity: Number(b.inputQuantity) || 0,
-          inputUnit: b.inputUnit || 'kg',
-          outputQuantity: Number(b.outputQuantity) || 0,
-          outputUnit: b.outputUnit || 'kg',
-          qualityGrade: b.qualityGrade || 'Grade 2',
-          qualityScore: Number(b.qualityScore) || 0,
-          status: b.status || 'PENDING',
-          facility: b.facility || '',
-          startDate: b.startDate || new Date().toISOString(),
-          endDate: b.endDate || undefined,
-          notes: b.notes || undefined,
-        }))
-        setBatches(mapped)
-      } else {
-        setBatches(DEMO_BATCHES)
-      }
+      // Second review (L): real data only — no demo fallback. Empty list = real
+      // empty state (the reviewer explicitly called out fabricated content).
+      const mapped: ProcessingBatch[] = raw.map((b: any) => ({
+        id: b.id,
+        batchNumber: b.batchNumber || '',
+        inputCommodity: b.inputCommodity || '',
+        processType: b.processType || '',
+        outputProduct: b.outputProduct || '',
+        inputQuantity: Number(b.inputQuantity) || 0,
+        inputUnit: b.inputUnit || 'kg',
+        outputQuantity: Number(b.outputQuantity) || 0,
+        outputUnit: b.outputUnit || 'kg',
+        qualityGrade: b.qualityGrade || '',
+        qualityScore: Number(b.qualityScore) || 0,
+        status: b.status || 'PENDING',
+        facility: b.facility || '',
+        startDate: b.startDate || new Date().toISOString(),
+        endDate: b.endDate || undefined,
+        notes: b.notes || undefined,
+      }))
+      setBatches(mapped)
     } catch {
-      setBatches(DEMO_BATCHES)
+      setBatches([])
     } finally {
       setLoading(false)
     }
@@ -163,6 +163,36 @@ export default function ProcessingView() {
     }
   }
 
+  // ── Second review (L): the workflow state machine, one button per legal
+  // transition. The server re-validates permissions + status anyway.
+  const runWorkflowAction = async (
+    batch: ProcessingBatch,
+    action: 'approve' | 'reject' | 'start' | 'complete',
+    extra?: Record<string, unknown>
+  ) => {
+    setBusyId(batch.id)
+    try {
+      const res = await fetch(`/api/processing/${batch.id}/approve`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, ...extra }),
+      })
+      const body = await res.json().catch(() => ({}))
+      if (res.ok) {
+        toast.success(`Batch ${batch.batchNumber} ${action === 'complete' ? 'completed' : `${action}d`}`)
+        fetchBatches()
+        return true
+      }
+      toast.error(body.error || `Failed to ${action} batch`)
+      return false
+    } catch {
+      toast.error(`Failed to ${action} batch`)
+      return false
+    } finally {
+      setBusyId(null)
+    }
+  }
+
   const filtered = batches.filter(b => {
     if (search && !b.batchNumber.toLowerCase().includes(search.toLowerCase()) && !b.inputCommodity.toLowerCase().includes(search.toLowerCase()) && !b.outputProduct.toLowerCase().includes(search.toLowerCase())) return false
     if (processFilter && b.processType !== processFilter) return false
@@ -172,6 +202,8 @@ export default function ProcessingView() {
   })
 
   const totalBatches = batches.length
+  const pendingApproval = batches.filter(b => b.status === 'PENDING').length
+  const approved = batches.filter(b => b.status === 'APPROVED').length
   const inProgress = batches.filter(b => b.status === 'IN_PROGRESS').length
   const completed = batches.filter(b => b.status === 'COMPLETED').length
   const avgQuality = batches.filter(b => b.qualityScore > 0).length > 0
@@ -209,8 +241,8 @@ export default function ProcessingView() {
         </Button>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      {/* Stats — second review (L): workflow pipeline statuses */}
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center">
@@ -224,8 +256,30 @@ export default function ProcessingView() {
         </Card>
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center">
+              <Clock className="w-5 h-5 text-amber-600" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Pending Approval</p>
+              <p className="text-xl font-bold text-amber-600">{pendingApproval}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-teal-50 dark:bg-teal-900/30 flex items-center justify-center">
+              <CheckCircle className="w-5 h-5 text-teal-600" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Approved (ready to start)</p>
+              <p className="text-xl font-bold text-teal-600">{approved}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center">
-              <Clock className="w-5 h-5 text-blue-600" />
+              <TrendingUp className="w-5 h-5 text-blue-600" />
             </div>
             <div>
               <p className="text-xs text-muted-foreground">In Progress</p>
@@ -236,22 +290,11 @@ export default function ProcessingView() {
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-green-50 dark:bg-green-900/30 flex items-center justify-center">
-              <CheckCircle className="w-5 h-5 text-green-600" />
+              <CheckCheck className="w-5 h-5 text-green-600" />
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">Completed</p>
+              <p className="text-xs text-muted-foreground">Completed · Avg {avgQuality !== '—' ? `${avgQuality}/100` : '—'}</p>
               <p className="text-xl font-bold">{completed}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center">
-              <Star className="w-5 h-5 text-amber-600" />
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Avg Quality Score</p>
-              <p className="text-xl font-bold">{avgQuality}{avgQuality !== '—' ? '/100' : ''}</p>
             </div>
           </CardContent>
         </Card>
@@ -329,10 +372,11 @@ export default function ProcessingView() {
           <SelectTrigger className="w-full sm:w-[140px]"><SelectValue placeholder="Status" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All</SelectItem>
-            <SelectItem value="PENDING">Pending</SelectItem>
+            <SelectItem value="PENDING">Pending Approval</SelectItem>
+            <SelectItem value="APPROVED">Approved</SelectItem>
             <SelectItem value="IN_PROGRESS">In Progress</SelectItem>
             <SelectItem value="COMPLETED">Completed</SelectItem>
-            <SelectItem value="FAILED">Failed</SelectItem>
+            <SelectItem value="REJECTED">Rejected</SelectItem>
           </SelectContent>
         </Select>
         {(processFilter || statusFilter || search || commodityFilter) && (
@@ -365,7 +409,7 @@ export default function ProcessingView() {
                     <TableHead>Grade</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="hidden md:table-cell">Date</TableHead>
-                    <TableHead className="w-[60px]">Actions</TableHead>
+                    <TableHead className="w-[150px]">Workflow</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -418,9 +462,34 @@ export default function ProcessingView() {
                           {new Date(b.startDate).toLocaleDateString()}
                         </TableCell>
                         <TableCell>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20" onClick={() => handleDelete(b.id, b.batchNumber)} title="Delete batch">
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
+                          {/* Second review (L): workflow buttons — one per legal
+                              transition, permission-gated (server re-checks). */}
+                          <div className="flex items-center gap-1">
+                            {busyId === b.id && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
+                            {busyId !== b.id && b.status === 'PENDING' && canApprove && (
+                              <>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20" onClick={() => runWorkflowAction(b, 'approve')} title="Approve batch">
+                                  <CheckCircle className="w-4 h-4" />
+                                </Button>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20" onClick={() => { setRejectTarget(b); setRejectReason('') }} title="Reject batch">
+                                  <XCircle className="w-4 h-4" />
+                                </Button>
+                              </>
+                            )}
+                            {busyId !== b.id && b.status === 'APPROVED' && canOperate && (
+                              <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20" onClick={() => runWorkflowAction(b, 'start')} title="Start processing">
+                                <Play className="w-4 h-4" />
+                              </Button>
+                            )}
+                            {busyId !== b.id && b.status === 'IN_PROGRESS' && canOperate && (
+                              <Button variant="ghost" size="icon" className="h-8 w-8 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20" onClick={() => setCompleteTarget(b)} title="Complete batch">
+                                <CheckCheck className="w-4 h-4" />
+                              </Button>
+                            )}
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20" onClick={() => handleDelete(b.id, b.batchNumber)} title="Delete batch">
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     )
@@ -449,7 +518,155 @@ export default function ProcessingView() {
           <AddBatchForm onClose={() => { setShowAdd(false); fetchBatches() }} />
         </DialogContent>
       </Dialog>
+
+      {/* ── Second review (L): Reject dialog (reason required) ── */}
+      <Dialog open={!!rejectTarget} onOpenChange={open => { if (!open) setRejectTarget(null) }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <XCircle className="w-5 h-5 text-red-600" />
+              Reject Batch {rejectTarget?.batchNumber}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              {rejectTarget?.inputCommodity} · {rejectTarget?.processType} · {rejectTarget?.inputQuantity} {rejectTarget?.inputUnit} · {rejectTarget?.facility}
+            </p>
+            <div className="space-y-1.5">
+              <Label>Reason *</Label>
+              <Input
+                value={rejectReason}
+                onChange={e => setRejectReason(e.target.value)}
+                placeholder="Why is this batch rejected?"
+              />
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
+            <Button
+              variant="destructive"
+              disabled={!rejectReason.trim() || busyId !== null}
+              onClick={async () => {
+                if (!rejectTarget) return
+                const ok = await runWorkflowAction(rejectTarget, 'reject', { reason: rejectReason.trim() })
+                if (ok) setRejectTarget(null)
+              }}
+            >
+              Reject Batch
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Second review (L): Complete dialog (output quantity + grade) ── */}
+      <CompleteBatchDialog
+        batch={completeTarget}
+        busy={busyId !== null}
+        onClose={() => setCompleteTarget(null)}
+        onSubmit={async extra => {
+          if (!completeTarget) return false
+          return runWorkflowAction(completeTarget, 'complete', extra)
+        }}
+      />
     </div>
+  )
+}
+
+/**
+ * Second review (L): completing a batch records the output quantity, unit,
+ * quality grade and score — the numbers that feed recovery-rate + quality
+ * analytics. Submitted through the workflow route (IN_PROGRESS → COMPLETED).
+ */
+function CompleteBatchDialog({
+  batch,
+  busy,
+  onClose,
+  onSubmit,
+}: {
+  batch: ProcessingBatch | null
+  busy: boolean
+  onClose: () => void
+  onSubmit: (extra: Record<string, unknown>) => Promise<boolean>
+}) {
+  const [form, setForm] = useState({ outputQuantity: '', outputUnit: 'kg', qualityGrade: 'Grade 1', qualityScore: '', notes: '' })
+  const update = (k: string, v: string) => setForm(p => ({ ...p, [k]: v }))
+
+  useEffect(() => {
+    if (batch) {
+      setForm({
+        outputQuantity: '',
+        outputUnit: batch.outputUnit || 'kg',
+        qualityGrade: batch.qualityGrade || 'Grade 1',
+        qualityScore: '',
+        notes: '',
+      })
+    }
+  }, [batch])
+
+  return (
+    <Dialog open={!!batch} onOpenChange={open => { if (!open) onClose() }}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <CheckCheck className="w-5 h-5 text-green-600" />
+            Complete Batch {batch?.batchNumber}
+          </DialogTitle>
+        </DialogHeader>
+        <form
+          onSubmit={async e => {
+            e.preventDefault()
+            const qty = parseFloat(form.outputQuantity)
+            if (!Number.isFinite(qty) || qty <= 0) { toast.error('Output quantity must be a positive number'); return }
+            const ok = await onSubmit({
+              outputQuantity: qty,
+              outputUnit: form.outputUnit,
+              qualityGrade: form.qualityGrade,
+              qualityScore: form.qualityScore ? parseFloat(form.qualityScore) : undefined,
+              notes: form.notes || undefined,
+            })
+            if (ok) onClose()
+          }}
+          className="space-y-4"
+        >
+          <p className="text-sm text-muted-foreground">
+            {batch?.inputCommodity} · {batch?.processType} · input {batch?.inputQuantity} {batch?.inputUnit}
+          </p>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label>Output Quantity *</Label>
+              <Input type="number" step="any" min="0" value={form.outputQuantity} onChange={e => update('outputQuantity', e.target.value)} required />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Output Unit</Label>
+              <Input value={form.outputUnit} onChange={e => update('outputUnit', e.target.value)} placeholder="kg / L / bags" />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label>Quality Grade</Label>
+              <Select value={form.qualityGrade} onValueChange={v => update('qualityGrade', v)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>{QUALITY_GRADES.map(g => <SelectItem key={g} value={g}>{g}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Quality Score (0-100)</Label>
+              <Input type="number" min="0" max="100" value={form.qualityScore} onChange={e => update('qualityScore', e.target.value)} />
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Notes</Label>
+            <Input value={form.notes} onChange={e => update('notes', e.target.value)} placeholder="Completion notes..." />
+          </div>
+          <DialogFooter className="gap-2">
+            <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
+            <Button type="submit" disabled={busy} className="gap-2">
+              {busy && <Loader2 className="w-4 h-4 animate-spin" />} Complete Batch
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   )
 }
 

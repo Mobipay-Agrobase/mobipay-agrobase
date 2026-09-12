@@ -60,7 +60,14 @@ export async function PUT(
     const updated = await db.farmPlant.update({
       where: { id: plant.id },
       data: {
-        ...(cropCategory !== undefined ? { cropCategory, cropMasterId: await resolveCropMasterId(cropCategory) } : {}),
+        // Re-resolve the Crop Master link whenever category or variety
+        // changes (variety first — carries the species for shade trees).
+        ...((cropCategory !== undefined || variety !== undefined)
+          ? { cropMasterId: await resolveCropMasterId(
+              cropCategory ?? plant.cropCategory,
+              variety ?? plant.variety) }
+          : {}),
+        ...(cropCategory !== undefined ? { cropCategory } : {}),
         ...(variety !== undefined ? { variety } : {}),
         ...(plantCount !== undefined ? { plantCount } : {}),
         ...(notes !== undefined ? { notes } : {}),

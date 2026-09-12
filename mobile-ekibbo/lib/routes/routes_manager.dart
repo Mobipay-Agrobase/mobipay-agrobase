@@ -61,6 +61,7 @@ import 'package:agrobase_ekibbo/presentation/srp/views/transaction_calendar_scre
 import 'package:agrobase_ekibbo/presentation/srp/views/transaction_detail_screen.dart';
 import 'package:agrobase_ekibbo/presentation/farmer_registration/farmer_registration_screen.dart';
 import 'package:agrobase_ekibbo/presentation/modules/ekibbo_module_list_screen.dart';
+import 'package:agrobase_ekibbo/presentation/processing/screen_processing.dart';
 
 class RoutesManager {
   static Route<dynamic>? onGenerateRoute(RouteSettings settings) {
@@ -88,6 +89,10 @@ class RoutesManager {
         break;
       case RouterName.ekbLoans:
         screen = const EkibboModuleListScreen(type: 'loans', title: 'Loans');
+        break;
+      case RouterName.processing:
+        // Second review (L): Processing workflow screen (staff).
+        screen = const ScreenProcessing();
         break;
       case RouterName.login:
         screen = const LoginScreen();
@@ -375,6 +380,7 @@ class RouterName {
   static const ekbFarmerVisits = '/ekb-farmer-visits';
   static const ekbSurveys = '/ekb-surveys';
   static const ekbLoans = '/ekb-loans';
+  static const processing = '/processing';
   static const farmer_list = '/farmer_list';
   static const add_plot = '/add_plot';
   static const farm_land_plotting = '/farm_land_plotting';

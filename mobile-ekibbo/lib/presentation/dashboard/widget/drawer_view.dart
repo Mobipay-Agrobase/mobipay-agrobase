@@ -331,6 +331,10 @@ class _DrawerViewState extends State<DrawerView> {
               : null,
         );
         break;
+      case DrawerMenuType.processing:
+        // Second review (L): Processing workflow screen.
+        Navigator.of(context).pushNamed(RouterName.processing);
+        break;
       case DrawerMenuType.crops:
         Navigator.of(context).pushNamed(RouterName.crop_harvest);
         break;

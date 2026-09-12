@@ -30,6 +30,14 @@ export async function GET(request: NextRequest) {
       orderBy: { createdAt: 'desc' },
     })
 
+    // Second review (L): pending processing batches join the Approval Hub —
+    // "Processing + Approval Hub" now form one workflow (approve/reject here,
+    // then start/complete from the Processing page).
+    const pendingProcessingBatches = await db.processingBatch.findMany({
+      where: { status: 'PENDING', tenantId: ctx.tenantId },
+      orderBy: { createdAt: 'desc' },
+    })
+
     // Combine into unified approvals list
     const approvals = [
       ...pendingPurchases.map((p) => ({
@@ -82,6 +90,25 @@ export async function GET(request: NextRequest) {
         date: r.createdAt,
         status: r.status,
       })),
+      ...pendingProcessingBatches.map((b) => ({
+        id: b.id,
+        type: 'PROCESSING' as const,
+        title: `Processing: ${b.processType} — ${b.inputCommodity}`,
+        applicant: b.facility || 'Processing facility',
+        quantity: b.inputQuantity,
+        unit: b.inputUnit,
+        date: b.createdAt,
+        status: b.status,
+        details: {
+          batchNumber: b.batchNumber,
+          processType: b.processType,
+          inputCommodity: b.inputCommodity,
+          outputProduct: b.outputProduct,
+          inputQuantity: b.inputQuantity,
+          inputUnit: b.inputUnit,
+          facility: b.facility,
+        },
+      })),
     ]
 
     // Sort by date descending
@@ -94,6 +121,7 @@ export async function GET(request: NextRequest) {
         purchases: pendingPurchases.length,
         loans: pendingLoans.length,
         inputRequests: pendingInputRequests.length,
+        processing: pendingProcessingBatches.length,
       },
     })
   } catch (error) {
@@ -138,6 +166,22 @@ export async function POST(request: NextRequest) {
       await db.loanApplication.update({ where: { id }, data: { status: newStatus } })
     } else if (type === 'INPUT_REQUEST') {
       await db.inputRequest.update({ where: { id }, data: { status: newStatus } })
+    } else if (type === 'PROCESSING') {
+      // Second review (L): delegate to the processing workflow route — it
+      // validates permissions, tenant scope and the PENDING→… transitions.
+      const action = body.action === 'APPROVE' ? 'approve' : 'reject'
+      const res = await fetch(`${request.nextUrl.origin}/api/processing/${id}/approve`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...Object.fromEntries(request.headers) },
+        body: JSON.stringify(action === 'reject' ? { action, reason } : { action }),
+      })
+      if (!res.ok) {
+        const errBody = await res.json().catch(() => ({}))
+        return NextResponse.json(
+          { error: errBody.error || 'Failed to update processing batch' },
+          { status: res.status }
+        )
+      }
     } else {
       return NextResponse.json({ error: 'Unknown type' }, { status: 400 })
     }

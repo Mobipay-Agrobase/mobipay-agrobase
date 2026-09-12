@@ -124,6 +124,15 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           DIRECT_URL: ${{ secrets.DIRECT_URL }}
 
+      # Second review follow-up (Crop Master mapping): seed Bamboo +
+      # shade-tree species into Crop Master and back-link existing FarmPlant
+      # rows. Idempotent upserts — safe to run on every deploy.
+      - name: Seed EKiBBO Crop Master (idempotent)
+        run: npx tsx scripts/seed-ekibbo-crop-master.ts
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+
   # ─── Stage 5: Docker Build & Push to GHCR (main only) ───────────
   docker:
     name: Docker Image → GHCR

@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
       where: { ...tf, isActive: true },
       select: {
         id: true, name: true, category: true, variety: true,
-        unit: true, unitPrice: true,
+        unit: true, unitPrice: true, stockQuantity: true,
       },
       orderBy: [{ category: 'asc' }, { name: 'asc' }],
       take: 500,
@@ -54,6 +54,38 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({
         result: true,
         data: catNames.map(c => ({ id: catId(c), name: c })),
+      })
+    }
+
+    // ── Second review (K — Input Summary): summary stats for the mobile
+    // Inputs screen header. Same numbers the web Input Summary shows.
+    if (searchParams.get('type') === 'summary') {
+      const pendingRequests = await db.inputRequest.count({
+        where: { ...tf, status: 'PENDING', dealer: { ...tf } },
+      })
+      const inStock = products.filter(p => (p.stockQuantity || 0) > 0)
+      const unitsInStock = inStock.reduce((sum, p) => sum + (p.stockQuantity || 0), 0)
+      const byCategory: Record<string, { products: number; units: number }> = {}
+      for (const p of products) {
+        const cat = p.category || 'Other'
+        byCategory[cat] ??= { products: 0, units: 0 }
+        byCategory[cat].products += 1
+        byCategory[cat].units += p.stockQuantity || 0
+      }
+      return NextResponse.json({
+        result: true,
+        data: {
+          dealers: await db.inputDealer.count({ where: { ...tf, isActive: true } }),
+          products_total: products.length,
+          products_in_stock: inStock.length,
+          units_in_stock: Math.round(unitsInStock * 100) / 100,
+          pending_requests: pendingRequests,
+          by_category: Object.entries(byCategory).map(([name, v]) => ({
+            name,
+            products: v.products,
+            units: Math.round(v.units * 100) / 100,
+          })),
+        },
       })
     }
 
@@ -91,18 +123,23 @@ export async function GET(req: NextRequest) {
 
     let rows = products.map(p => {
       const catName = p.category || 'Other'
+      // Second review (K — Input Summary): the REAL on-hand stock from the
+      // InputProduct master (replaces the old 999999 "unlimited" placeholder
+      // that made every quantity look available). Rounded to a whole number
+      // because the mobile product picker and quantity validation are
+      // integer-based; 0 = out of stock / not tracked yet — the distribution
+      // form treats it as untracked and lets the officer record the field
+      // reality.
+      const stock = Math.round(Math.max(0, Number(p.stockQuantity) || 0))
       return {
         id: numericId(p.id),
         name: p.name,
         category_id: catId(catName),
         category_name: catName,
         tags: '',
-        // The web InputProduct master has no stock ledger yet — expose a
-        // large "unlimited" stock so the mobile quantity validation passes
-        // while the platform grows a real stock model.
-        quantity: 999999,
+        quantity: stock,
         unit_price: Number(p.unitPrice) || 0,
-        available_stocks: 999999,
+        available_stocks: stock,
         m_qty: 1,
         unit: p.unit || 'pcs',
         stocks: [
@@ -111,7 +148,7 @@ export async function GET(req: NextRequest) {
             variant: p.variety || p.name,
             sku: '',
             price_per_unit: Number(p.unitPrice) || 0,
-            available_stocks: 999999,
+            available_stocks: stock,
           },
         ],
         previous_stock: previous[p.name] || 0,

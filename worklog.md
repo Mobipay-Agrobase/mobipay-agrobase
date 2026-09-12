@@ -1215,3 +1215,30 @@ Stage Summary:
 - Unreadable PII now has a re-capture worklist; APKs have a permanent
   download Release. A–J were already done; K + L were the last review
   items — the second review is now FULLY implemented (nothing deferred).
+
+---
+Task ID: 20 (cont. — Mobile CI fix + final verification)
+Agent: main (Super Z)
+Task: Close out the K/L + limitations push with a fully green pipeline.
+
+Work Log:
+- Mobile CI run 12 (9fd67ab) FAILED at flutter analyze: my hand-written
+  retrofit processing_api_client.g.dart used _setStreamType/_combineBaseUrls
+  without defining them (the generator emits them as private class methods
+  in every .g.dart). dart_sanity.py does not catch instance-method
+  resolution — CI's analyzer did. Fix: copied the exact helper methods
+  from distribution_api_client.g.dart (21f6286). Lesson: any new
+  hand-written .g.dart must include the two retrofit helpers.
+- Final state: CI/CD run 251 ✅ (quality → build → Neon db push incl.
+  InputProduct.stockQuantity + Crop-Master seed + FarmPlant backfill →
+  Docker → Vercel prod — https://mobipay-agrobase.vercel.app HTTP 200).
+  Mobile CI run 13 ✅ (analyze + both APKs + GitHub Release).
+- Verified the rolling release exists with real assets:
+  mobile-apk-latest → agrobase-ekibbo.apk (87 MB) + agrobase-mobile.apk
+  (65 MB) at github.com/Mobipay-Agrobase/mobipay-agrobase/releases.
+
+Stage Summary:
+- Second review fully closed: A–J (previous commits) + K + L + all three
+  follow-up limitations (Crop-Master link incl. Bamboo/shade trees, PII
+  re-capture worklist, permanent APK Release). HEAD = 21f6286, both CI
+  workflows green, production live. No deferred items remain.

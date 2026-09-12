@@ -7,18 +7,27 @@ import 'package:dio/dio.dart';
 ///
 /// Bridges the app's login flow to the Agrobase web platform:
 ///   POST /api/auth/mobile-login  { email | phone, password }
-///   → { token, user: { id, email, phone, name, role, tenantId } }
+///   → { token, expiresAt, user: { id, email, phone, name, role, tenantId } }
 ///
-/// The returned `token` is `base64(userId:role:tenantId:timestamp)`. Every
-/// subsequent API call sends it as `Authorization: Bearer <token>`; the
-/// backend middleware decodes it, injects `x-tenant-id` / `x-tenant-scope`
+/// The returned `token` is an HMAC-SHA256 SIGNED token:
+///   `<base64url({userId, role, tenantId, issuedAt, expiresAt})>.<signature>`
+/// (opaque to this client — role/tenantId come from the `user` object, and
+/// only the server can verify the signature). `expiresAt` (epoch ms) is
+/// stored so the app can detect a lapsed session at startup and route to
+/// Login without firing doomed requests. Every subsequent API call sends
+/// the token as `Authorization: Bearer <token>`; the backend middleware
+/// verifies signature + expiry, injects `x-tenant-id` / `x-tenant-scope`
 /// and enforces tenant isolation on ALL /api routes. Tenants therefore can
 /// never read each other's data regardless of what the client does.
 /// ─────────────────────────────────────────────────────────────────────────
 class AgrobaseAuthResult {
   final String token;
   final UserModel user;
-  AgrobaseAuthResult({required this.token, required this.user});
+  /// Epoch-ms expiry reported by the login endpoint (matches the token's
+  /// own 30-day TTL). 0 when the server omits it (older deployments).
+  final int tokenExpiresAt;
+  AgrobaseAuthResult(
+      {required this.token, required this.user, this.tokenExpiresAt = 0});
 }
 
 class AgrobaseAuthService {
@@ -70,6 +79,7 @@ class AgrobaseAuthService {
 
       final data = res.data as Map<String, dynamic>;
       final token = data['token'] as String? ?? '';
+      final tokenExpiresAt = (data['expiresAt'] as num?)?.toInt() ?? 0;
       final userJson = data['user'] as Map<String, dynamic>? ?? {};
 
       if (token.isEmpty || userJson.isEmpty) {
@@ -82,7 +92,8 @@ class AgrobaseAuthService {
             'Your account role (${user.type}) has no mobile access yet. Contact your administrator.');
       }
 
-      return AgrobaseAuthResult(token: token, user: user);
+      return AgrobaseAuthResult(
+          token: token, user: user, tokenExpiresAt: tokenExpiresAt);
     } on DioException catch (e) {
       if (e.type == DioExceptionType.connectionTimeout ||
           e.type == DioExceptionType.receiveTimeout ||

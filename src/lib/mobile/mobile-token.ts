@@ -94,7 +94,18 @@ function timingSafeEqual(a: string, b: string): boolean {
   return diff === 0
 }
 
-// ─── Public API ─────────────────────────────────────────────────────────────
+// ─── Public API ───────────────────────────────────────────────────────────
+
+/**
+ * Effective token lifetime in ms (MOBILE_TOKEN_TTL_DAYS override or the
+ * 30-day default) — the SAME value createMobileToken bakes into its
+ * payload. Lets /api/auth/mobile-login report `expiresAt` so the mobile
+ * app can pre-check session expiry locally at startup (advisory only —
+ * the server-side verifyMobileToken stays authoritative).
+ */
+export function mobileTokenTtlMs(): number {
+  return getTtlMs()
+}
 
 /**
  * Issue a signed mobile session token.

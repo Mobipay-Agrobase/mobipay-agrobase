@@ -56,6 +56,12 @@ class _LoginScreenState extends State<LoginScreen> {
 
       SharedPreferencesProvider.instance.setAccessToken(result.token);
       SharedPreferencesProvider.instance.setUserInfo(result.user);
+      // Remember the session's expiry (epoch ms) so SplashScreen can detect
+      // a lapsed session at startup and go straight to Login.
+      if (result.tokenExpiresAt > 0) {
+        SharedPreferencesProvider.instance
+            .setTokenExpiresAt(result.tokenExpiresAt);
+      }
       ApiProvider.instance.login();
 
       if (!mounted) return;

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { verifyPassword } from '@/lib/password'
-import { createMobileToken } from '@/lib/mobile/mobile-token'
+import { createMobileToken, mobileTokenTtlMs } from '@/lib/mobile/mobile-token'
 
 /**
  * POST /api/auth/mobile-login
@@ -9,7 +9,7 @@ import { createMobileToken } from '@/lib/mobile/mobile-token'
  *   Returns a signed token + user info as JSON (not cookie-based).
  *
  *   Body: { email: string, password: string }
- *   Returns: { token, user: { id, email, name, role, tenantId } }
+ *   Returns: { token, expiresAt, user: { id, email, phone, name, role, tenantId } }
  *
  *   This bypasses NextAuth's CSRF/cookie flow which doesn't work
  *   with a Flutter HTTP client.
@@ -86,10 +86,16 @@ export async function POST(request: NextRequest) {
     // The middleware verifies the signature + expiry WITHOUT a DB call
     // (Edge Runtime can't use Prisma). Old unsigned tokens are rejected.
     // Signing key: MOBILE_TOKEN_SECRET, falling back to NEXTAUTH_SECRET.
+    const ttlMs = mobileTokenTtlMs()
     const token = await createMobileToken(user.id, user.role, user.tenantId)
 
     return NextResponse.json({
       token,
+      // Same TTL the token itself carries (epoch ms). The mobile app
+      // stores this and pre-checks it at startup so a lapsed session goes
+      // straight to Login instead of firing doomed 401 requests. Advisory
+      // only — verifyMobileToken on the server remains authoritative.
+      expiresAt: Date.now() + ttlMs,
       user: {
         id: user.id,
         email: user.email,

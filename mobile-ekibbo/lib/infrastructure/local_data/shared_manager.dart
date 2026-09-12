@@ -20,6 +20,7 @@ enum SharedKey {
   otaCatalogSyncedAt,
   otaGeoSyncedAt,
   deviceId,
+  tokenExpiresAt,
 }
 
 enum EAppLang {
@@ -42,6 +43,11 @@ class SharedPreferencesProvider {
   late String sellerToken;
   late String appLang;
   late String appMode;
+  /// Epoch-ms expiry of the CURRENT token, as returned by the login
+  /// endpoint (`expiresAt`). 0 = unknown (login pre-dates this field) —
+  /// then only the server can judge validity, and the SessionInterceptor
+  /// handles the 401 if it is dead.
+  int tokenExpiresAt = 0;
   bool isEnvPro = true;
   bool isInstance = false;
   UserModel? userInfo;
@@ -61,6 +67,8 @@ class SharedPreferencesProvider {
     await SecureTokenStore.instance.migrateFromSharedPreferences(_shared);
     accessToken = await SecureTokenStore.instance.readAccessToken() ?? '';
     sellerToken = await SecureTokenStore.instance.readSellerToken() ?? '';
+    tokenExpiresAt =
+        int.tryParse(_getString(SharedKey.tokenExpiresAt.name) ?? '') ?? 0;
 
     // Ekibbo deployment is English-only; ignore any stale 'vi' value.
     final storedLang = _getString(SharedKey.applang.name);
@@ -97,6 +105,34 @@ class SharedPreferencesProvider {
   Future<void> setSellerToken(String value) {
     sellerToken = value;
     return SecureTokenStore.instance.writeSellerToken(value);
+  }
+
+  /// Persist the token expiry (epoch ms) returned at login so the app can
+  /// pre-check it locally at startup instead of firing doomed requests.
+  void setTokenExpiresAt(int value) {
+    tokenExpiresAt = value;
+    _setString(SharedKey.tokenExpiresAt.name, value.toString());
+  }
+
+  /// Token format is `<base64url payload>.<HMAC signature>`. A token with
+  /// NO dot is the legacy unsigned format — the backend now REJECTS those
+  /// (signed-token security fix), so it is dead by definition.
+  bool get isTokenLegacyFormat =>
+      accessToken.isNotEmpty && !accessToken.contains('.');
+
+  /// True when the stored session is KNOWN to be dead locally: empty token,
+  /// legacy unsigned format, or past the `expiresAt` recorded at login.
+  /// A false result does NOT prove the token is valid (only the server's
+  /// HMAC check can) — it only means 'not known-dead'. Any surprise 401 is
+  /// still caught globally by SessionInterceptor.
+  bool get isTokenKnownDead {
+    if (accessToken.isEmpty) return true;
+    if (isTokenLegacyFormat) return true;
+    if (tokenExpiresAt > 0 &&
+        DateTime.now().millisecondsSinceEpoch >= tokenExpiresAt) {
+      return true;
+    }
+    return false;
   }
 
   setUserInfo(UserModel value) {
@@ -202,6 +238,8 @@ class SharedPreferencesProvider {
   clear() {
     userInfo = null;
     setAccessToken('');
+    tokenExpiresAt = 0;
+    clearKey(SharedKey.tokenExpiresAt.name);
     DUserInfo.instance.user = null;
     SecureTokenStore.instance.deleteSellerToken();
     sellerToken = '';
@@ -212,6 +250,8 @@ class SharedPreferencesProvider {
   switchMode() {
     userInfo = null;
     setAccessToken('');
+    tokenExpiresAt = 0;
+    clearKey(SharedKey.tokenExpiresAt.name);
     setAppMode(isEnvPro ? EAppMode.dev.name : EAppMode.pro.name);
     DUserInfo.instance.user = null;
     SecureTokenStore.instance.deleteSellerToken();

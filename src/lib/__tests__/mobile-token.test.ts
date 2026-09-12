@@ -13,16 +13,22 @@
  *   5. Tokens signed with the wrong (rotated) secret are rejected.
  *   6. With no secret configured, verification fails closed.
  */
-import { createMobileToken, verifyMobileToken } from '../mobile/mobile-token'
+import {
+  createMobileToken,
+  mobileTokenTtlMs,
+  verifyMobileToken,
+} from '../mobile/mobile-token'
 
 describe('Signed mobile tokens', () => {
   const ORIGINAL_SECRET = process.env.MOBILE_TOKEN_SECRET
   const ORIGINAL_NEXTAUTH = process.env.NEXTAUTH_SECRET
+  const ORIGINAL_TTL_DAYS = process.env.MOBILE_TOKEN_TTL_DAYS
 
   beforeEach(() => {
     // Isolate secret config per test.
     delete process.env.MOBILE_TOKEN_SECRET
     delete process.env.NEXTAUTH_SECRET
+    delete process.env.MOBILE_TOKEN_TTL_DAYS
     process.env.MOBILE_TOKEN_SECRET = 'test-secret-for-unit-tests'
   })
 
@@ -32,6 +38,8 @@ describe('Signed mobile tokens', () => {
     else delete process.env.MOBILE_TOKEN_SECRET
     if (ORIGINAL_NEXTAUTH !== undefined) process.env.NEXTAUTH_SECRET = ORIGINAL_NEXTAUTH
     else delete process.env.NEXTAUTH_SECRET
+    if (ORIGINAL_TTL_DAYS !== undefined) process.env.MOBILE_TOKEN_TTL_DAYS = ORIGINAL_TTL_DAYS
+    else delete process.env.MOBILE_TOKEN_TTL_DAYS
   })
 
   it('round-trips: an issued token verifies and carries the right identity', async () => {
@@ -146,5 +154,23 @@ describe('Signed mobile tokens', () => {
     const t1 = await createMobileToken('user_1', 'EKB_EXTENSION', 'tenant_9')
     const t2 = await createMobileToken('user_2', 'EKB_EXTENSION', 'tenant_9')
     expect(t1.split('.')[1]).not.toBe(t2.split('.')[1])
+  })
+
+  it('mobileTokenTtlMs defaults to 30 days and honors MOBILE_TOKEN_TTL_DAYS (login expiresAt source)', async () => {
+    // Default: 30 days — what /api/auth/mobile-login reports as expiresAt.
+    expect(mobileTokenTtlMs()).toBe(30 * 24 * 60 * 60 * 1000)
+
+    // Env override: 7 days, and the issued token really lives that long.
+    process.env.MOBILE_TOKEN_TTL_DAYS = '7'
+    expect(mobileTokenTtlMs()).toBe(7 * 24 * 60 * 60 * 1000)
+    const token = await createMobileToken('user_1', 'EKB_EXTENSION', 'tenant_9')
+    const payload = await verifyMobileToken(token)
+    expect(payload!.expiresAt - payload!.issuedAt).toBe(7 * 24 * 60 * 60 * 1000)
+
+    // Garbage / non-positive values fall back to the 30-day default.
+    process.env.MOBILE_TOKEN_TTL_DAYS = 'not-a-number'
+    expect(mobileTokenTtlMs()).toBe(30 * 24 * 60 * 60 * 1000)
+    process.env.MOBILE_TOKEN_TTL_DAYS = '0'
+    expect(mobileTokenTtlMs()).toBe(30 * 24 * 60 * 60 * 1000)
   })
 })

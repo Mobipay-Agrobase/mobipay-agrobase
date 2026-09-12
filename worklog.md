@@ -1242,3 +1242,61 @@ Stage Summary:
   follow-up limitations (Crop-Master link incl. Bamboo/shade trees, PII
   re-capture worklist, permanent APK Release). HEAD = 21f6286, both CI
   workflows green, production live. No deferred items remain.
+
+---
+Task ID: 21
+Agent: main (Super Z)
+Task: User reported a live 401 on GET /mobile/ekibbo-home while running the
+ekibbo app against Vercel prod (log: 401 + 'getDashboardData FormatException:
+data null' — broken dashboard, NO re-login prompt). Diagnose and fix for real.
+
+Work Log:
+- Decoded the device's Bearer token: legacy UNSIGNED format
+  (base64 userId:role:tenantId:timestamp, no '.' signature) with timestamp
+  2026-08-25 — dead twice over: pre-signature-fix format that
+  verifyMobileToken rejects, and past its TTL anyway. Server 401 CORRECT.
+- Root cause in the app: DioClient sets validateStatus:true, so a 401 is
+  delivered through onResponse, NEVER as a DioException; retrofit parses
+  the 401 body → data null → FormatException → the old per-caller
+  'if (e is DioException)' 401 branch was provably dead code.
+  getDashboardFarmer had the reverse bug: unchecked '(e as DioException)'
+  cast → TypeError escapes the catch block.
+- Fix (mobile-ekibbo):
+  * NEW SessionInterceptor (onResponse + onError): 401 on non-auth paths
+    wipes the session ONCE (parallel dashboard 401s → ONE dialog) and
+    shows 'Your session has expired. Please log in again.' → Login.
+    Navigator-less fallback (background request during startup) just
+    wipes. Guard re-armed by ApiProvider.login() on every fresh login.
+  * SplashScreen session gate: empty token / no user / isTokenKnownDead
+    (legacy unsigned format OR past the expiresAt recorded at login) →
+    wipe + Login BEFORE any doomed request fires — fixes the user's
+    exact reported state.
+  * shared_manager: tokenExpiresAt persisted (SharedKey.tokenExpiresAt,
+    cleared with the session); isTokenLegacyFormat / isTokenKnownDead.
+  * agrobase_auth_service: parses the new 'expiresAt' from the login
+    response (AgrobaseAuthResult.tokenExpiresAt); login_screen stores it;
+    doc comment corrected (token is signed payload.signature now, not a
+    base64 tuple).
+  * api_dashboard: removed the dead DioException-401 branch in
+    getDashboardData (SessionInterceptor owns 401s globally);
+    getDashboardFarmer cast made crash-safe; 'Exprired' typo fixed.
+- Fix (web/server): /api/auth/mobile-login now returns expiresAt (epoch
+  ms, same TTL the token itself carries — exported mobileTokenTtlMs()).
+  Advisory for the client pre-check; verifyMobileToken stays
+  authoritative. The web app uses NextAuth cookie sessions (expiry is
+  handled by getServerSession on protected pages) — verified in code, no
+  equivalent dead-session bug on web.
+- VERIFICATION: dart_sanity 495 files (mobile-ekibbo) + 85 (mobile) ALL
+  CLEAN, new symbols checked on disk; tsc --noEmit 0 errors; eslint 0
+  problems on changed files; jest 67/67 (new test pins mobileTokenTtlMs:
+  30-day default, MOBILE_TOKEN_TTL_DAYS override, garbage fallback).
+- SECURITY: origin remote URL was found with the PAT embedded (leaks into
+  .git/config) — reset to the clean URL; push uses a one-shot credential
+  helper only.
+
+Stage Summary:
+- A dead/expired Bearer token can no longer wedge the app: the splash
+  pre-check routes straight to Login, and any surprise 401 wipes the
+  session and prompts once, globally, instead of a broken dashboard.
+- New logins record expiresAt, so the next 30-day lapse is caught at
+  startup rather than surfacing as request failures.

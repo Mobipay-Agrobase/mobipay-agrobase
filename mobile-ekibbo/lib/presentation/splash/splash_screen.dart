@@ -21,11 +21,15 @@ class _SplashScreenState extends State<SplashScreen> {
     Future.delayed(
       const Duration(seconds: 1),
       () {
-        if (SharedPreferencesProvider.instance.accessToken.isEmpty) {
-          return Navigator.of(context)
-              .pushNamedAndRemoveUntil(RouterName.login, (route) => false);
-        }
-        if (SharedPreferencesProvider.instance.userInfo == null) {
+        final prefs = SharedPreferencesProvider.instance;
+        // Session gate: no token, no user info, or a session KNOWN to be
+        // dead locally (legacy unsigned token rejected by the backend, or
+        // past the expiresAt recorded at login) → wipe and show Login,
+        // instead of navigating to a dashboard whose every request 401s.
+        if (prefs.accessToken.isEmpty ||
+            prefs.userInfo == null ||
+            prefs.isTokenKnownDead) {
+          prefs.clear();
           return Navigator.of(context)
               .pushNamedAndRemoveUntil(RouterName.login, (route) => false);
         }

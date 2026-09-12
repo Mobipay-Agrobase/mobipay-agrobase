@@ -1,6 +1,7 @@
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:agrobase_ekibbo/domain/config/env_config.dart';
 import 'package:agrobase_ekibbo/domain/core/network/dio_client.dart';
+import 'package:agrobase_ekibbo/domain/core/network/interceptor/session_interceptor.dart';
 import 'package:agrobase_ekibbo/domain/core/network/interceptor/tenant_interceptor.dart';
 import 'package:agrobase_ekibbo/infrastructure/local_data/shared_manager.dart';
 import 'package:agrobase_ekibbo/infrastructure/remote_data/auth/agrobase_auth_service.dart';
@@ -102,6 +103,13 @@ class ApiProvider {
     _dio.dio.interceptors.add(TenantInterceptor());
     _dioSeller.dio.interceptors.add(TenantInterceptor());
 
+    // GLOBAL 401 handling: DioClient's validateStatus accepts every status
+    // code, so an expired/invalid Bearer token surfaces as a 401 RESPONSE,
+    // not a DioException. This interceptor detects it once, wipes the dead
+    // session and routes the user back to Login (dialog → OK → login).
+    // Auth/login endpoints are exempt (401 there = wrong credentials).
+    _dio.dio.interceptors.add(SessionInterceptor());
+
     login();
 
     
@@ -155,6 +163,9 @@ class ApiProvider {
   }
 
   login() {
+    // Fresh login: re-arm the global session-expiry handler so the NEXT
+    // token expiry (30-day TTL) shows the re-login dialog again.
+    SessionInterceptor.reset();
     if (SharedPreferencesProvider.instance.accessToken.isNotEmpty) {
       setToken(SharedPreferencesProvider.instance.accessToken);
     }

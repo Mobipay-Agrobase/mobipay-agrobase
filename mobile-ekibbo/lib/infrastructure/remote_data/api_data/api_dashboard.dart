@@ -35,17 +35,11 @@ class ApiDashboard {
     } catch (e) {
       // Defensive: never let a parse/API error escape — the old code blindly
       // cast to DioException and crashed, leaving an EMPTY dashboard.
-      if (e is DioException) {
-        final code = e.response?.statusCode;
-        if (code == 401 || code == 403) {
-          DialogHelper.showOkDialog(
-              NavigatorManager.contextRoot, "Login Session Expired",
-              okAction: () {
-            SharedPreferencesProvider.instance.clear();
-            NavigatorManager.replacementAndRemoveUntil(RouterName.login);
-          });
-        }
-      }
+      // NOTE: 401s never arrive here as DioException (DioClient's
+      // validateStatus accepts every status, so a 401 is a normal response
+      // whose body parses to null data → FormatException above). Session
+      // expiry is handled GLOBALLY by SessionInterceptor (wipe + re-login
+      // dialog); this method just degrades to an empty dashboard.
       debugPrint("getDashboardData $e");
       return null;
     }
@@ -71,9 +65,13 @@ class ApiDashboard {
           NavigatorManager.contextRoot, 'No connect internet!');
       return null;
     } catch (e) {
-      if ((e as DioException).response!.statusCode == 200) {
+      // Crash-safe: a FormatException (data null) used to hit the old
+      // unchecked `(e as DioException)` cast and throw a TypeError out of
+      // the catch block. Only DioException has a response; other errors
+      // just degrade to an empty dashboard.
+      if (e is DioException && e.response?.statusCode == 200) {
         DialogHelper.showOkDialog(
-            NavigatorManager.contextRoot, "Login Session Exprired",
+            NavigatorManager.contextRoot, "Login Session Expired",
             okAction: () {
           SharedPreferencesProvider.instance.clear();
           NavigatorManager.replacementAndRemoveUntil(RouterName.login);

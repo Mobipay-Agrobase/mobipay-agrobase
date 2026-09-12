@@ -1120,3 +1120,98 @@ Stage Summary:
   there; Bamboo/Shade Trees remain catalog entries and still feed the KPI.
 - Farmer dropdown (name refresh + lock) and Bamboo from Task 17 verified
   intact. K (Input Summary) + L (Processing) still deferred.
+
+---
+Task ID: 20 (review-2 K + L + limitation fixes — real implementations)
+Agent: main (Super Z)
+Task: User green-lit K (Input Summary) + L (Processing) and asked to adjust
+all previously-listed limitations — "no fake commitments and fake fixes, no
+bug should reproduce, implement in both web and mobile".
+
+Work Log:
+- K (Input Summary) root cause: the web summary was fake — products were
+  mapped with inStock=p.isActive and stockQuantity HARD-CODED to 0, so
+  "Products In Stock" was a relabeled active-count and stock value was
+  always 0. The mobile product picker returned available_stocks=999999
+  ("unlimited" placeholder) for every product.
+  * Prisma: InputProduct.stockQuantity Float @default(0) (db push).
+  * /api/input-products POST + PUT/[id] maintain stock (PUT also hardened
+    from raw body-spread to an explicit field whitelist); every
+    /api/input-distribution create decrements the matching product
+    (case-insensitive name match, floor 0, no-op on free-text names).
+  * Web InputAggregationView: real Input Summary — Products In Stock
+    (stock>0), Units In Stock, Stock Value, Pending Requests + a
+    stock-by-category panel; product form now sends stockQuantity; fetches
+    the full catalog (limit=500 — previously the summary only covered
+    page 1's 20 rows).
+  * Mobile: ?type=summary on /api/mobile/ekibbo-input-products (dealers,
+    products in stock, units, pending, per-category) + Input Summary card
+    on the Inputs screen (shown above the J KPI cards and above the empty
+    state); real stockQuantity replaces 999999; the distribution form
+    blocks only when stock is tracked (>0) and insufficient — 0 means
+    untracked so field officers can still record reality.
+- L (Processing) — the reviewer's "Processing + Approval Hub" question is
+  now a real workflow instead of a free-form status string:
+  * POST /api/processing/[id]/approve: PENDING→APPROVED/REJECTED (perm
+    processing:approve) →IN_PROGRESS (start, sets startDate) →COMPLETED
+    (complete — outputQuantity required + unit/grade/score/notes) — all
+    tenant-scoped with server-side transition validation (409 on illegal
+    moves). generateBatchNumber extracted to src/lib/processing-batch-number.ts.
+  * Web ProcessingView: workflow buttons per status + reject-reason dialog
+    + complete dialog (output qty/unit/grade/score); KPI strip now shows
+    the pipeline (Total/Pending Approval/Approved/In Progress/Completed);
+    DEMO_BATCHES fallback REMOVED — real data + real empty state only.
+  * Approval Hub (/api/approvals + ApprovalsView): pending processing
+    batches join the queue (PROCESSING type + Processing tab); POST
+    delegates to the workflow route. Fixed a REAL pre-existing bug: the
+    API returns title/applicant/date but the view read
+    reference/requesterName/description — blank table columns and a search
+    crash on undefined.toLowerCase(); fetchApprovals now maps the fields.
+  * Mobile: /api/mobile/ekibbo-processing (GET list+summary, POST action
+    or create, same RBAC via hasPermission) + ProcessingApiClient (+.g)
+    + MProcessingBatch/MProcessingSummary/MProcessingListPayload (+.g) +
+    ScreenProcessing (KPI row, batch cards, approve/reject/start/complete
+    dialogs, create-batch dialog, staff-only) + route + drawer item.
+  * Permissions: EKB_OPS_MANAGER gains processing:read/create/update/
+    approve + approvals:read (runs the facility); EKB_FIN_ASSISTANT gains
+    processing:read/create (draft only, no approvals).
+- Limitation #4 (Bamboo/shade trees not Crop-Master-linked):
+  * scripts/seed-ekibbo-crop-master.ts — idempotent upserts (never touch
+    existing rows): Bamboo + Musizi/Mutuba/Calliandra/Albizia/Ficus
+    Natalensis/Cordia Africana/Maesopsis Emini/Ficus Ovata + plantation
+    crops + Coffee/Cocoa/Bamboo varieties; BACKFILLS FarmPlant rows whose
+    cropMasterId is null.
+  * farm-plant-crop-link.ts: variety-aware resolver — variety first
+    (carries the species for shade trees, parenthesized local names
+    stripped: 'Calliandra (Kalisambuzi)'→Calliandra), then category, then
+    singular fallback; all farm-plants routes (web POST/PUT + mobile POST)
+    pass the variety.
+  * CI migrate job runs the seed after prisma db push.
+- Limitation #5 (undecryptable PII shows '—'): every historical key
+  derivation was already in the decrypt candidates (verified via git
+  sweep) — AES-GCM values under a rotated/lost key are cryptographically
+  unrecoverable, so the honest fix is a worklist: data-quality API gains
+  'unreadablePii' (phone/nationalIdNo that fail ALL known keys) with
+  unreadablePiiFields per farmer; the admin Data Quality view flags the
+  rows. Re-entry works (PUT accepts new values; only null/'' wipes are
+  blocked).
+- Limitation #3 (APK only a CI artifact): mobile-ci.yml gains a release
+  job (main only) that downloads both APK artifacts, renames them
+  (agrobase-ekibbo.apk / agrobase-mobile.apk) and publishes/updates a
+  rolling GitHub Release 'mobile-apk-latest' — permanent download URL,
+  no 30-day expiry, install-by-download on the phone.
+- VERIFICATION: prisma validate OK (placeholder env); tsc --noEmit 0
+  errors; eslint 0 problems on ALL changed files; jest 66/66 (permissions
+  tests still green after the EKB role changes); dart_sanity 494+85 files
+  ALL CLEAN (new processing/input-summary files swept); both workflow
+  YAMLs parsed valid. Pushed 9fd67ab (c63dd6b..9fd67ab main).
+
+Stage Summary:
+- K and L are real end-to-end (schema → API → web + mobile UI), with two
+  fake-data paths removed (hard-coded 0 stock, 999999 unlimited stock,
+  Processing demo batches) and one real Approval-Hub bug fixed.
+- Bamboo + shade trees are now first-class Crop Master crops (seeded in
+  CI) and plant rows auto-link by variety; existing rows backfilled.
+- Unreadable PII now has a re-capture worklist; APKs have a permanent
+  download Release. A–J were already done; K + L were the last review
+  items — the second review is now FULLY implemented (nothing deferred).

@@ -1331,8 +1331,14 @@ Work Log:
   cannot be verified from this Linux sandbox (no Xcode), and `location`
   may lack SPM support at any version — blind bumps would be untested
   promises. Offered as an explicit follow-up for the user's Mac.
-- Verification: Mobile CI run for this commit must build BOTH APKs (real
-  Gradle builds) — watched to completion before closing.
+- Verification (honest status): Mobile CI #15 + CI/CD #254 for ee8ded7 sat
+  QUEUED for 35+ min on GitHub's runner backlog (server-side delay, NOT a
+  failure) and could not be watched to completion in-session. Evidence the
+  change is safe: mobile/ uses the IDENTICAL no-kotlin-android layout and
+  built both APKs GREEN in Mobile CI runs #13/#14 (same workflow, same
+  runners); ekibbo's Dart code was already validated green in run #14 at
+  30449f5 and this commit touches only gradle config. Runs will finish on
+  GitHub's schedule — check #15/#254 at the repo Actions page.
 
 Stage Summary:
 - Local failure = local SDK, not the repo; recovery steps delivered.

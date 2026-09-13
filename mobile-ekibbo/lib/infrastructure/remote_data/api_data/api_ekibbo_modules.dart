@@ -90,6 +90,21 @@ class ApiEkibboModules {
     throw Exception(_moduleError(res));
   }
 
+  /// ── Ekibbo purchase (Sheet-2 feedback) ─────────────────────────────────
+  /// Record a produce purchase from a farmer. Coffee only in Fresh / Kiboko /
+  /// FAQ (validated server-side too). Returns the computed totals
+  /// { net_weight, total_amount, net_payment, moisture_deduction } on success.
+  static Future<Map<String, dynamic>> createPurchase(
+      Map<String, dynamic> body) async {
+    final res = await _dio().post('/mobile/ekibbo-purchases', data: body);
+    if (res.statusCode == 200 &&
+        res.data is Map &&
+        res.data['result'] == true) {
+      return (res.data['data'] as Map).cast<String, dynamic>();
+    }
+    throw Exception(_moduleError(res));
+  }
+
   /// Update a row (numeric id). Throws with the server message on failure.
   static Future<bool> update(String type, int id, Map<String, dynamic> body) async {
     final res = await _dio().put(

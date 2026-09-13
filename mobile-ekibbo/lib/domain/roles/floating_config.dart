@@ -31,7 +31,10 @@ final List<MActionButton> floatingConfigs = [
     roleAccessed: [EnumUserRole.staff],
   ),
   MActionButton(
-    routeName: RouterName.procurement,
+    // Sheet-2 feedback (Purchase Module): Ekibbo new-purchase form —
+    // coffee purchases only in Fresh / Kiboko / FAQ. Replaces the legacy
+    // generic procurement screen (vehicle/driver/warehouse) at this entry.
+    routeName: RouterName.ekbPurchase,
     icon: "ic_procurement",
     title: "Purchase",
     roleAccessed: [EnumUserRole.staff],

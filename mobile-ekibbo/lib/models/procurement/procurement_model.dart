@@ -41,6 +41,14 @@ class MProcurement {
   final List<MDetails> details;
   final List<MOtherCost> otherCosts;
 
+  // Ekibbo purchase context (GET /mobile/ekibbo-purchases extra fields —
+  // Sheet-2 feedback: the list card shows commodity, form, farmer, status).
+  final String? commodity;
+  final String? variety;
+  final String? farmerName;
+  final String? farmerCode;
+  final String? status;
+
   MProcurement({
     required this.id,
     required this.transactionDate,
@@ -55,6 +63,11 @@ class MProcurement {
     required this.booking,
     required this.details,
     required this.otherCosts,
+    this.commodity,
+    this.variety,
+    this.farmerName,
+    this.farmerCode,
+    this.status,
   });
 
   factory MProcurement.fromJson(Map<String, dynamic> json) {
@@ -82,8 +95,17 @@ class MProcurement {
           : (json['other_costs'] as List<dynamic>)
               .map((e) => MOtherCost.fromJson(e as Map<String, dynamic>))
               .toList(),
+      commodity: json['commodity'],
+      variety: json['variety'],
+      farmerName: json['farmer_name'],
+      farmerCode: json['farmer_code'],
+      status: json['status'],
     );
   }
+
+  /// True when this row comes from the Ekibbo purchase workflow (has a
+  /// commodity) — drives which card layout the list renders.
+  bool get isEkibbo => (commodity ?? '').isNotEmpty;
 }
 
 class MWarehouse {

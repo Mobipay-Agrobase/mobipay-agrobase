@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { getTenantContext } from '@/lib/tenant'
-import { numericId } from '@/lib/mobile/ekibbo-adapter'
+import { getTenantContext, buildTenantFilter } from '@/lib/tenant'
+import { numericId, resolveFarmerByNumericId } from '@/lib/mobile/ekibbo-adapter'
 import { isMobileStaff } from '@/lib/mobile/ekibbo-mobile-utils'
 
 /**
@@ -18,6 +18,146 @@ import { isMobileStaff } from '@/lib/mobile/ekibbo-mobile-utils'
  *               other_costs: [] } ],
  *     total, current_page, last_page } }
  */
+
+// ─── POST (create) — Ekibbo feedback (Sheet 2, Purchase Module) ────────────
+// "Under new purchase, forms of coffee only include the following
+//  (Fresh, Kiboko, FAQ)."
+// Commodity→form catalog mirrors the web PurchaseFormPage COMMODITY_FORMS.
+const COMMODITY_FORMS: Record<string, string[]> = {
+  coffee: ['Fresh', 'Kiboko', 'FAQ'],
+  cocoa: ['Wet Beans', 'Dry Beans', 'Pods'],
+  vanilla: ['Green Vanilla', 'Cured Vanilla'],
+  cassava: ['Fresh Tubers', 'Dry Chips', 'Flour'],
+  avocado: ['Fresh Fruit'],
+  jackfruit: ['Fresh Fruit', 'Slices'],
+}
+const VALID_COMMODITIES = Object.keys(COMMODITY_FORMS)
+
+export async function POST(req: NextRequest) {
+  try {
+    const ctx = await getTenantContext(req)
+    if (!isMobileStaff(ctx.role)) {
+      return NextResponse.json({ result: false, message: 'Not authorized' }, { status: 403 })
+    }
+
+    const body = await req.json().catch(() => ({}))
+    const commodity = String(body.commodity ?? '').toLowerCase().trim()
+    const form = String(body.form ?? '').trim()
+
+    if (!VALID_COMMODITIES.includes(commodity)) {
+      return NextResponse.json(
+        { result: false, message: `Commodity must be one of: ${VALID_COMMODITIES.join(', ')}` },
+        { status: 400 },
+      )
+    }
+    // Sheet-2 rule: coffee purchases only in Fresh / Kiboko / FAQ (same for
+    // other commodities with their fixed form lists).
+    const allowedForms = COMMODITY_FORMS[commodity]
+    if (!allowedForms.includes(form)) {
+      return NextResponse.json(
+        { result: false, message: `${commodity} form must be one of: ${allowedForms.join(', ')}` },
+        { status: 400 },
+      )
+    }
+
+    const farmerIdNum = Number(body.farmerId)
+    if (!Number.isFinite(farmerIdNum) || farmerIdNum <= 0) {
+      return NextResponse.json({ result: false, message: 'Farmer is required' }, { status: 400 })
+    }
+    const farmer = await resolveFarmerByNumericId(
+      buildTenantFilter(ctx) as Record<string, unknown>,
+      farmerIdNum,
+    )
+    if (!farmer) {
+      return NextResponse.json({ result: false, message: 'Farmer not found in your tenant' }, { status: 404 })
+    }
+
+    const totalWeight = parseFloat(body.totalWeight) || 0
+    const dailyPrice = parseFloat(body.dailyPrice) || 0
+    if (totalWeight <= 0) {
+      return NextResponse.json({ result: false, message: 'Total weight must be greater than zero' }, { status: 400 })
+    }
+    if (dailyPrice <= 0) {
+      return NextResponse.json({ result: false, message: 'Daily price must be greater than zero' }, { status: 400 })
+    }
+
+    // Ekibbo moisture logic (web PurchaseFormPage parity):
+    //   moisture deduction = excess% × (weight/100), capped at total weight
+    //   net weight         = total − quality deduction − moisture deduction
+    //   total               = net weight × daily price
+    //   net payment         = total − loan − input − MoMo charges − MoMo tax
+    const moisture = parseFloat(body.moistureReading) || 0
+    const threshold = parseFloat(body.moistureThreshold) || 13
+    const qualityDeduction = parseFloat(body.qualityDeduction) || 0
+    const loanDeduction = parseFloat(body.loanDeduction) || 0
+    const inputDeduction = parseFloat(body.inputDeduction) || 0
+    const momoCharges = parseFloat(body.momoCharges) || 0
+    const momoTax = parseFloat(body.momoTax) || 0
+    const defectCount = parseInt(body.defectCount) || null
+
+    const moistureExcess = Math.max(0, moisture - threshold)
+    const moistureDeduction = Math.min(totalWeight, moistureExcess * (totalWeight / 100))
+    const netWeight = Math.max(0, totalWeight - qualityDeduction - moistureDeduction)
+    const totalAmount = netWeight * dailyPrice
+    const netPayment = totalAmount - loanDeduction - inputDeduction - momoCharges - momoTax
+
+    const purchase = await db.purchase.create({
+      data: {
+        farmerId: farmer.id,
+        commodity,
+        variety: form,
+        quantity: String(body.totalWeight),
+        unitPrice: dailyPrice,
+        totalAmount,
+        status: 'PENDING',
+        initiatedBy: ctx.userId,
+        tenantId: ctx.tenantId,
+        moistureReading: body.moistureReading ? moisture : null,
+        moistureThreshold: body.moistureThreshold ? threshold : null,
+        moistureDeduction,
+        defectCount,
+        qualityDeduction: body.qualityDeduction ? qualityDeduction : null,
+        netWeight,
+        dailyPrice,
+        loanDeduction: body.loanDeduction ? loanDeduction : null,
+        inputDeduction: body.inputDeduction ? inputDeduction : null,
+        momoCharges: body.momoCharges ? momoCharges : null,
+        momoTax: body.momoTax ? momoTax : null,
+        netPayment,
+        approvalStatus: 'SUBMITTED',
+      },
+    })
+
+    // Vendor-financing fee hook (same as the web POST — non-critical).
+    try {
+      const { recordTransactionFee } = await import('@/lib/vendor-financing/engine')
+      await recordTransactionFee({
+        tenantId: ctx.tenantId,
+        transactionType: 'PURCHASE',
+        transactionId: purchase.id,
+        transactionAmount: Number(totalAmount || 0),
+        transactionQuantity: totalWeight,
+        momoGatewayFee: momoCharges + momoTax,
+      })
+    } catch (feeError) {
+      console.error('[ekibbo-purchases POST] fee hook error:', feeError)
+    }
+
+    return NextResponse.json({
+      result: true,
+      data: {
+        id: numericId(purchase.id),
+        net_weight: netWeight,
+        total_amount: totalAmount,
+        net_payment: netPayment,
+        moisture_deduction: moistureDeduction,
+      },
+    })
+  } catch (error) {
+    console.error('[ekibbo-purchases POST]', error)
+    return NextResponse.json({ result: false, message: 'Failed to create purchase' }, { status: 500 })
+  }
+}
 export async function GET(req: NextRequest) {
   try {
     const ctx = await getTenantContext(req)

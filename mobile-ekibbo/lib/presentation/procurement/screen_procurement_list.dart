@@ -3,9 +3,9 @@ import 'package:agrobase_ekibbo/components/app_circular_indicator.dart';
 import 'package:agrobase_ekibbo/components/custom_appbar.dart';
 import 'package:agrobase_ekibbo/components/no_data_view.dart';
 import 'package:agrobase_ekibbo/components/constant/color_constant.dart';
-import 'package:agrobase_ekibbo/domain/l10n/app_lang.dart';
 import 'package:agrobase_ekibbo/infrastructure/store_data/data_listings.dart';
 import 'package:agrobase_ekibbo/models/procurement/procurement_model.dart';
+import 'package:agrobase_ekibbo/presentation/modules/ekibbo_purchase_form_screen.dart';
 import 'package:agrobase_ekibbo/presentation/procurement/widget/procurement_item.dart';
 
 class ScreenProcurementList extends StatefulWidget {
@@ -21,7 +21,24 @@ class _ScreenProcurementListState extends State<ScreenProcurementList> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: CustomAppBar(
-        title: AppLang.local.procurement,
+        title: 'Purchases',
+      ),
+      // Sheet-2 feedback (Purchase Module): record a new purchase —
+      // coffee only Fresh / Kiboko / FAQ.
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: ColorConstant.primary,
+        child: const Icon(Icons.add, color: Colors.white),
+        onPressed: () async {
+          final changed = await Navigator.of(context).push<bool>(
+            MaterialPageRoute(
+              builder: (context) => const EkibboPurchaseFormScreen(),
+            ),
+          );
+          if (changed == true) {
+            DListingData.instance.procurements = null;
+            setState(() {});
+          }
+        },
       ),
       body: SafeArea(
         child: RefreshIndicator(

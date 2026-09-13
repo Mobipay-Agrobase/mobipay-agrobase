@@ -61,6 +61,7 @@ import 'package:agrobase_ekibbo/presentation/srp/views/transaction_calendar_scre
 import 'package:agrobase_ekibbo/presentation/srp/views/transaction_detail_screen.dart';
 import 'package:agrobase_ekibbo/presentation/farmer_registration/farmer_registration_screen.dart';
 import 'package:agrobase_ekibbo/presentation/modules/ekibbo_module_list_screen.dart';
+import 'package:agrobase_ekibbo/presentation/modules/ekibbo_purchase_form_screen.dart';
 import 'package:agrobase_ekibbo/presentation/processing/screen_processing.dart';
 
 class RoutesManager {
@@ -93,6 +94,11 @@ class RoutesManager {
       case RouterName.processing:
         // Second review (L): Processing workflow screen (staff).
         screen = const ScreenProcessing();
+        break;
+      case RouterName.ekbPurchase:
+        // Sheet-2 feedback (Purchase Module): Ekibbo new-purchase form —
+        // coffee only Fresh / Kiboko / FAQ.
+        screen = const EkibboPurchaseFormScreen();
         break;
       case RouterName.login:
         screen = const LoginScreen();
@@ -381,6 +387,7 @@ class RouterName {
   static const ekbSurveys = '/ekb-surveys';
   static const ekbLoans = '/ekb-loans';
   static const processing = '/processing';
+  static const ekbPurchase = '/ekb-purchase';
   static const farmer_list = '/farmer_list';
   static const add_plot = '/add_plot';
   static const farm_land_plotting = '/farm_land_plotting';

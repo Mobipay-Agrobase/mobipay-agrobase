@@ -25,52 +25,135 @@ class ProcurementItem extends StatelessWidget {
         ),
         child: Padding(
           padding: const EdgeInsets.all(20),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildItemInfo(
-                      AppLang.local.date,
-                      mProcurement.transactionDate.split(" ")[0],
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.only(top: 15),
-                      child: _buildItemInfo(
-                        AppLang.local.total_cost,
-                        mProcurement.totalAmount.toString(),
-                      ),
-                    ),
-                  ],
+          child:
+              mProcurement.isEkibbo ? _buildEkibboBody() : _buildLegacyBody(),
+        ),
+      ),
+    );
+  }
+
+  /// Ekibbo purchase row (Sheet-2): commodity + form, farmer, total, status.
+  Widget _buildEkibboBody() {
+    final raw = (mProcurement.commodity ?? '').toLowerCase();
+    final commodity =
+        raw.isEmpty ? '' : '${raw[0].toUpperCase()}${raw.substring(1)}';
+    final form = mProcurement.variety ?? '';
+    final status = mProcurement.status ?? '';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                form.isEmpty ? commodity : '$commodity — $form',
+                style: TextStyleConstant.quicksandW600(
+                  fontSize: 16,
+                  color: ColorConstant.text79,
                 ),
               ),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.only(top: 0),
-                      child: _buildItemInfo(
-                        'Code',
-                        mProcurement.procurementCode,
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.only(top: 15),
-                      child: _buildItemInfo(
-                        "Driver",
-                        mProcurement.booking.vehicle.driverName,
-                      ),
-                    ),
-                  ],
+            ),
+            _statusChip(status),
+          ],
+        ),
+        const SizedBox(height: 10),
+        _buildItemInfo('Farmer',
+            mProcurement.farmerName ?? mProcurement.farmerCode ?? '—'),
+        const SizedBox(height: 10),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: _buildItemInfo('Date',
+                  mProcurement.transactionDate.split(" ")[0]),
+            ),
+            Expanded(
+              child: _buildItemInfo('Total (UGX)',
+                  _fmtAmount(mProcurement.totalAmount)),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _statusChip(String status) {
+    Color color;
+    switch (status.toUpperCase()) {
+      case 'APPROVED':
+      case 'PAID':
+        color = Colors.green;
+        break;
+      case 'REJECTED':
+        color = Colors.redAccent;
+        break;
+      default:
+        color = ColorConstant.primary;
+    }
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        status.isEmpty ? 'PENDING' : status.toUpperCase(),
+        style: TextStyleConstant.robotoW600(
+          fontSize: 10,
+          color: color,
+        ),
+      ),
+    );
+  }
+
+  String _fmtAmount(int n) =>
+      n.toString().replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => ',');
+
+  /// Legacy generic procurement row (pre-Ekibbo data).
+  Widget _buildLegacyBody() {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildItemInfo(
+                AppLang.local.date,
+                mProcurement.transactionDate.split(" ")[0],
+              ),
+              Padding(
+                padding: const EdgeInsets.only(top: 15),
+                child: _buildItemInfo(
+                  AppLang.local.total_cost,
+                  mProcurement.totalAmount.toString(),
                 ),
               ),
             ],
           ),
         ),
-      ),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(top: 0),
+                child: _buildItemInfo(
+                  'Code',
+                  mProcurement.procurementCode,
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(top: 15),
+                child: _buildItemInfo(
+                  "Driver",
+                  mProcurement.booking.vehicle.driverName,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 

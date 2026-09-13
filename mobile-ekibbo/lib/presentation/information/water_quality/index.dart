@@ -127,9 +127,16 @@ class _WaterQualityInformationState extends State<WaterQualityInformation> {
     _photo = null;
     _ponds.clear();
     _pondIndex = null;
-    NavigatorManager.contextRoot
-        .read<AppProvider>()
-        .updateState(AppEvent.appSearchResetData);
+    // Do NOT call provider.updateState() directly in dispose(): it fires
+    // notifyListeners() while this screen is being unmounted with the widget
+    // tree locked ("setState() or markNeedsBuild() called when widget tree
+    // was locked"). A microtask runs right after the tree unlocks — same
+    // event-loop turn, no crash.
+    Future.microtask(() {
+      NavigatorManager.contextRoot
+          .read<AppProvider>()
+          .updateState(AppEvent.appSearchResetData);
+    });
     super.dispose();
   }
 

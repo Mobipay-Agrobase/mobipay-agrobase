@@ -48,6 +48,12 @@ Weather widget: `AGROBASE_WEATHER_KEY` / `AGROBASE_WEATHER_Q` dart-defines
 | Field Officer | `+256700111222` | `Ekibbo2026!` |
 | Farmer | `+256700333444` | `Ekibbo2026!` |
 
+> **Tip:** you don't need to type the country code — the app normalizes
+> `700111222` → `+256700111222` automatically before login (any 9-digit
+> local number gets `+256` prepended, leading `0` stripped).
+> Passwords were reset to the documented value on 2026-09-13; if login
+> still fails, make sure your APK includes commit c6fc8ad or later.
+
 ## Run
 
 ```bash

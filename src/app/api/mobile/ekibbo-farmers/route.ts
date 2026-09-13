@@ -12,7 +12,8 @@ import { mapFarmer, farmerSelect } from '@/lib/mobile/ekibbo-adapter'
  * shape is decided by the `page` query param (both mobile callers hit this
  * endpoint with different models):
  *   page present → upstream paginated envelope:
- *     { result, data: { farmer_data: { data: [...], current_page, last_page } } }
+ *     { result, data: { farmer_data: { data: [...], current_page, last_page,
+ *                                     total } } }
  *   page absent  → upstream flat search envelope:
  *     { result, data: { farmer_data: [...] } }
  *
@@ -67,6 +68,10 @@ export async function GET(req: NextRequest) {
           data: mapped,
           current_page: page,
           last_page: Math.max(1, Math.ceil(total / limit)),
+          // Registry total for this search — the mobile list screen shows
+          // "All Farmers (N)" so its number matches the dashboard tenant
+          // KPI exactly (consistency fix).
+          total,
         },
       },
     })

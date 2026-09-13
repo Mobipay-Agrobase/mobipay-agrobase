@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getTenantContext, buildTenantFilter } from '@/lib/tenant'
 import { numericId, resolveFarmerByNumericId } from '@/lib/mobile/ekibbo-adapter'
+import { resolveCropMasterId } from '@/lib/farm-plant-crop-link'
 
 // Second review (G): neighbouring physical features — JSON array safe parse
 function safeJsonArr(raw: string | null): string[] {
@@ -31,7 +32,16 @@ function safeJsonArr(raw: string | null): string[] {
  *        approachRoad[], landTopology, landGradient[], waterSource,
  *        powerSource, soilFertility, irrigationType, irrigationSource[],
  *        fullTimeWorkers/partTimeWorkers/seasonalWorkers/familyWorkers,
- *        lastChemicalApplicationDate, estYieldKg, lat, lng, polygonPoints[]
+ *        lastChemicalApplicationDate, estYieldKg, lat, lng, polygonPoints[],
+ *        conventionalCrops, conventionalLands, fallowPastureLand, certType,
+ *        conversionStatus, conversionDate, inspectorName,
+ *        conversionQualified, conversionRemarks
+ *      Optional plant inventory rows (UAT feedback — "add plant type details"
+ *      directly at plot registration instead of a second visit to the
+ *      detail screen's Plants tab):
+ *        plants[0][crop_category]=Coffee, plants[0][variety]=Robusta,
+ *        plants[0][plant_count]=120, plants[0][notes]=…
+ *      or JSON `plants: [{ cropCategory, variety, plantCount, notes }]`.
  */
 
 const LAND_CATS = [
@@ -153,10 +163,14 @@ export async function POST(req: NextRequest) {
 
     // JSON or multipart (photos as data-URIs, ≤2MB)
     let fields: Record<string, any> = {}
+    // Plant inventory rows reassembled from Dio's multipart flattening
+    // (plants[0][crop_category], …) — same pattern as farm_plottings.
+    const plantRows: Array<{ cropCategory: string; variety: string | null; plantCount: number; notes: string | null }> = []
     const ct = req.headers.get('content-type') || ''
     if (ct.includes('multipart/form-data')) {
       const form = await req.formData()
       const plottings: Record<number, { lat?: number; lng?: number }> = {}
+      const plantMap: Record<number, Record<string, string>> = {}
       for (const [k, v] of form.entries()) {
         if (typeof v === 'string') {
           fields[k] = v
@@ -168,6 +182,13 @@ export async function POST(req: NextRequest) {
             const n = Number(v)
             if (!Number.isNaN(n)) plottings[idx][pm[2] as 'lat' | 'lng'] = n
           }
+          // Plant inventory rows: `plants[0][crop_category|variety|plant_count|notes]`
+          const em = k.match(/^plants\[(\d+)\]\[(crop_category|variety|plant_count|notes)\]$/)
+          if (em) {
+            const idx = Number(em[1])
+            plantMap[idx] = plantMap[idx] || {}
+            plantMap[idx][em[2]] = v
+          }
         }
         // Second review (G-vi/G-i): farm photo + land document uploads removed
         // (farm polygon via FarmPolygon points is the land record now).
@@ -177,8 +198,34 @@ export async function POST(req: NextRequest) {
         .map(k => plottings[Number(k)])
         .filter(p => p.lat != null && p.lng != null) as Array<{ lat: number; lng: number }>
       if (flat.length) fields.farm_plottings = flat
+      for (const k of Object.keys(plantMap).sort((a, b) => Number(a) - Number(b))) {
+        const p = plantMap[Number(k)]
+        const count = parseInt(String(p.plant_count ?? '0'), 10)
+        if (!p.crop_category || Number.isNaN(count)) continue
+        plantRows.push({
+          cropCategory: p.crop_category,
+          variety: p.variety?.trim() || null,
+          plantCount: Math.max(0, count),
+          notes: p.notes?.trim() || null,
+        })
+      }
     } else {
       fields = await req.json().catch(() => ({}))
+    }
+    // JSON body: `plants: [{ cropCategory | crop_category, variety,
+    // plantCount | plant_count, notes }]`
+    if (Array.isArray(fields.plants)) {
+      for (const p of fields.plants as Array<Record<string, any>>) {
+        const category = String(p.cropCategory ?? p.crop_category ?? '').trim()
+        const count = parseInt(String(p.plantCount ?? p.plant_count ?? '0'), 10)
+        if (!category || Number.isNaN(count) || count < 0) continue
+        plantRows.push({
+          cropCategory: category,
+          variety: p.variety != null ? String(p.variety).trim() : null,
+          plantCount: count,
+          notes: p.notes != null ? String(p.notes).trim() : null,
+        })
+      }
     }
 
     // The mobile app posts the upstream FarmLandModel.toMap() shape which
@@ -249,16 +296,49 @@ export async function POST(req: NextRequest) {
         lastChemicalApplicationDate: fields.lastChemicalApplicationDate
           ? new Date(fields.lastChemicalApplicationDate) : null,
         estYieldKg: toNum(fields.estYieldKg ?? fields.est_yield),
+        // Organic/conversion info (web-form parity — UAT feedback: these were
+        // silently dropped by the mobile endpoint before).
+        conventionalLands: toJsonOrString(fields.conventionalLands ?? fields.conventional_lands),
+        fallowPastureLand: toJsonOrString(fields.fallowPastureLand ?? fields.fallow_pasture_land),
+        conventionalCrops: toJsonOrString(fields.conventionalCrops ?? fields.conventional_crops),
+        certType: toJsonOrString(fields.certType ?? fields.cert_type),
+        conversionStatus: toJsonOrString(fields.conversionStatus ?? fields.conversion_status),
+        conversionDate: fields.conversionDate
+          ? new Date(fields.conversionDate) : null,
+        inspectorName: toJsonOrString(fields.inspectorName),
+        conversionQualified: fields.conversionQualified != null
+          ? ['true', '1', true].includes(fields.conversionQualified as any) : null,
+        conversionRemarks: toJsonOrString(fields.conversionRemarks ?? fields.conversion_remarks),
         polygonPoints: polygonPoints.length
           ? { create: polygonPoints.map((p, i) => ({ latitude: Number(p.lat), longitude: Number(p.lng), pointOrder: i })) }
           : undefined,
       },
     })
 
+    // Optional plant inventory rows (UAT: "add plant type details" at plot
+    // registration). CropMaster link resolved per row, same as the
+    // /ekibbo-farm-plants endpoint.
+    let plantsCreated = 0
+    for (const p of plantRows) {
+      if (!p.cropCategory || p.plantCount <= 0) continue
+      await db.farmPlant.create({
+        data: {
+          farmId: created.id,
+          cropCategory: p.cropCategory,
+          cropMasterId: await resolveCropMasterId(p.cropCategory, p.variety),
+          variety: p.variety,
+          plantCount: p.plantCount,
+          notes: p.notes,
+          createdBy: ctx.userId || null,
+        },
+      })
+      plantsCreated++
+    }
+
     return NextResponse.json({
       result: true,
       message: 'Farm land registered',
-      data: { farm_id: numericId(created.id) },
+      data: { farm_id: numericId(created.id), plants_created: plantsCreated },
     })
   } catch (error: any) {
     console.error('[ekibbo-farmland POST]', error)

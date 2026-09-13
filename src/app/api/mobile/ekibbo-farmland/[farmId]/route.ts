@@ -171,6 +171,14 @@ export async function PUT(
         seasonalWorkers: toNum(body.seasonalWorkers ?? body.seasonal_workers),
         familyWorkers: toNum(body.familyWorkers ?? body.family_workers),
         estYieldKg: toNum(body.estYieldKg ?? body.est_yield),
+        // Organic/conversion info (web-form parity — was dropped by the
+        // mobile update endpoint before; null clears, undefined = untouched)
+        conventionalCrops: body.conventionalCrops !== undefined || body.conventional_crops !== undefined
+          ? toJsonOrString(body.conventionalCrops ?? body.conventional_crops) : undefined,
+        conventionalLands: body.conventionalLands !== undefined || body.conventional_lands !== undefined
+          ? toJsonOrString(body.conventionalLands ?? body.conventional_lands) : undefined,
+        fallowPastureLand: body.fallowPastureLand !== undefined || body.fallow_pasture_land !== undefined
+          ? toJsonOrString(body.fallowPastureLand ?? body.fallow_pasture_land) : undefined,
         latitude: toNum(body.lat) ?? undefined,
         longitude: toNum(body.lng) ?? undefined,
       },

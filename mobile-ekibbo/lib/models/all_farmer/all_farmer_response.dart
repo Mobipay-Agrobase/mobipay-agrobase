@@ -18,6 +18,11 @@ class AllFarmerDataModel {
   int? currentPage;
   @JsonKey(name: 'last_page')
   int? lastPage;
+  /// Registry total for the current search (consistency fix — the list
+  /// screen header shows "All Farmers (N)" and this N matches the
+  /// dashboard tenant KPI).
+  @JsonKey(name: 'total')
+  int? total;
   AllFarmerDataModel();
   factory AllFarmerDataModel.fromJson(Map<String, dynamic> json) =>
       _$AllFarmerDataModelFromJson(json);

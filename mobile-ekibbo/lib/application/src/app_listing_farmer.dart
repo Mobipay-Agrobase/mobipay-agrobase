@@ -5,6 +5,7 @@ class AppListingFarmer {
   bool isInit = false;
   int currentPage = 1;
   int totalPage = 1;
+  int totalCount = 0;
   String searchParam = '';
 
   final List<FarmerModel> farmers = [];
@@ -12,6 +13,7 @@ class AppListingFarmer {
   searchFarmer(String param) async {
     currentPage = 1;
     totalPage = 1;
+    totalCount = 0;
     searchParam = param;
     farmers.clear();
     await fetchNextPage();
@@ -44,6 +46,7 @@ class AppListingFarmer {
       }
       final farmerData = res.data!.farmerData!;
       totalPage = farmerData.lastPage ?? totalPage;
+      totalCount = farmerData.total ?? totalCount;
       currentPage++;
       farmers.addAll(farmerData.data ?? []);
     } catch (e) {

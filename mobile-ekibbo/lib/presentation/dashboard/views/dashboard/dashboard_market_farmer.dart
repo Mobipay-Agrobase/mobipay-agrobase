@@ -25,6 +25,10 @@ class DashboardMarketFarmer extends StatefulWidget {
 }
 
 class _DashboardMarketFarmerState extends State<DashboardMarketFarmer> {
+  /// 1250 → "1,250" (readable tenant-wide count on the KPI subtitle).
+  String _fmtCount(int n) => n.toString().replaceAllMapped(
+      RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (m) => '${m[1]},');
+
   @override
   Widget build(BuildContext context) {
     return SafeArea(
@@ -76,6 +80,8 @@ class _DashboardMarketFarmerState extends State<DashboardMarketFarmer> {
                   ),
                   HeaderListFarmer(
                     isOfficerScoped: data.myFarmers == true,
+                    officerCount: data.totalFarmer,
+                    totalCount: data.totalFarmersTenant,
                   ),
                   SliverToBoxAdapter(
                     child: Padding(
@@ -295,12 +301,21 @@ class _DashboardMarketFarmerState extends State<DashboardMarketFarmer> {
     // assigned count ("My Farmers"). Roles without farmer assignments
     // (admins / ops managers) see the tenant-wide "Total Farmers".
     // Backend contract: my_farmers == true → total_farmmer is officer-scoped.
+    //
+    // Consistency fix (UAT): the officer-scoped card also carries the
+    // tenant-wide registry total as a subtitle ("of 1,979 in registry") so
+    // the dashboard number, the "View All (n)" link and the All Farmers
+    // list screen all agree and the 3 vs 1,979 difference is explicit.
     final isOfficerScoped = data.myFarmers == true;
     final cardTitle =
         isOfficerScoped ? 'My Farmers' : AppLang.local.total_farmers;
     final cardValue = isOfficerScoped
         ? (data.totalFarmer ?? data.farmerList?.length ?? 0)
         : (data.totalFarmersTenant ?? data.totalFarmer ?? data.farmerList?.length ?? 0);
+    final tenantTotal = data.totalFarmersTenant ?? 0;
+    final subtitle = isOfficerScoped && tenantTotal > 0
+        ? 'of ${_fmtCount(tenantTotal)} in registry'
+        : null;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       margin: const EdgeInsets.only(top: 16),
@@ -310,6 +325,7 @@ class _DashboardMarketFarmerState extends State<DashboardMarketFarmer> {
             child: SummaryItemVertical(
               title: cardTitle,
               value: cardValue.toString(),
+              subtitle: subtitle,
               icon: SvgPicture.asset(
                 'ic_farmer'.iconSvg,
                 color: ColorConstant.primary,

@@ -1363,3 +1363,22 @@ Stage Summary:
 - Field Officer mobile login now works with EXACTLY the documented credentials: 700111222 (or +256700111222) / Ekibbo2026!
 - Farmer account likewise reset & verified: 700333444 / Ekibbo2026!
 - Diagnostic scripts preserved under /home/z/my-project/scripts/ (check-fo-login, verify-fo-password, find-real-password, reset-ekibbo-demo-passwords, e2e-fo-login); recovered .env kept OUTSIDE the public repo at /home/z/my-project/scripts/.env-recovered (chmod 600)
+
+---
+Task ID: 24
+Agent: Super Z
+Task: UAT round — (1) plant type details missing in Add Plot, (2) farmer-count inconsistency dashboard vs All Farmers list
+
+Work Log:
+- Root-caused issue 2: dashboard KPI is officer-scoped ("My Farmers" = 3, farmers with extensionOfficer = Moses Ekibbo) while the All Farmers list is tenant-scoped (1,979) — numbers were correct but UNLABELED, so 3 → 1,979 looked broken
+- Fix (backend ekibbo-farmers): paged envelope now carries `total` (1,979) so the list screen header count matches the dashboard tenant KPI exactly
+- Fix (mobile): FarmerListScreen AppBar shows "All Farmers (1,979)" + "Showing 30 of 1,979 farmers" progress row; dashboard KPI card got a subtitle "of 1,979 in registry" (SummaryItemVertical optional subtitle); section header shows "My Farmers (3)" and "View All Farmers (1,979)" (HeaderListFarmer officerCount/totalCount params); AppListingFarmer tracks totalCount; AllFarmerDataModel + .g.dart hand-patched with total
+- Root-caused issue 1: plant inventory existed ONLY in Plot Detail → Plants tab (same as web); the Add Plot screen had no plant/conventional-crop fields, and the mobile POST endpoint silently DROPPED conventionalCrops/conventionalLands/fallowPastureLand even though the route doc claimed "FarmLandFormPage parity"
+- Fix (backend ekibbo-farmland POST): accepts optional plant inventory rows — multipart `plants[i][crop_category|variety|plant_count|notes]` (Dio flattening, same pattern as farm_plottings) or JSON `plants: [...]` — creates FarmPlant rows with resolveCropMasterId links in the same request; also persists conventionalCrops/Lands/fallowPastureLand + cert/conversion fields; PUT route persists the 3 conventional fields too
+- Fix (mobile Add Plot): "Conventional Crops" field (web parity) + full "Plant Type Details" section — dynamic rows with category dropdown (FarmPlantCatalog: Coffee/Cocoa/Vanilla/Bamboo/Shade Trees/...), DEPENDENT variety dropdown, plant count, notes, delete icon; rows appended to the Dio FormData as plants[i][...] on CREATE only (edits keep using the Plants tab to avoid duplicates); FarmLandModel + .g.dart extended with the 3 conventional fields; _PlantRowEntry row model
+- E2E verified against live Neon DB via local next dev: login FO → farmers envelope returns total=1979 (== dashboard tenant count) → POST farmland JSON with 2 plants (plants_created=2, CropMaster links Coffee→Coffee, Musizi→Musizi) → POST multipart Dio-style with 1 plant (plants_created=1) → GET farm-plants confirms rows → test farms deleted (3 FarmPlant rows cascaded); tsc 0 errors; dart_sanity sweep 495 files 0 problems
+
+Stage Summary:
+- Numbers now agree everywhere: KPI "My Farmers 3 / of 1,979 in registry", header "My Farmers (3) · View All Farmers (1,979)", list "All Farmers (1,979) · Showing X of 1,979"
+- Plant type details are now enterable AT plot registration (Add Plot screen) and still editable later in Plot Details → Plants
+- NOTE: user's APK needs a rebuild to get the mobile UI changes; backend changes deploy with the next Vercel push (committed locally, push blocked — no GitHub credentials in sandbox)

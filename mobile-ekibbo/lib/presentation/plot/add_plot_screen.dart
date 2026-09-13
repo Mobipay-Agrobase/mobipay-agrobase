@@ -31,6 +31,7 @@ import 'package:agrobase_ekibbo/routes/argument_model.dart';
 import 'package:agrobase_ekibbo/routes/navigator_manager.dart';
 import 'package:agrobase_ekibbo/routes/routes_manager.dart';
 import 'package:agrobase_ekibbo/domain/core/api_provider.dart';
+import 'package:agrobase_ekibbo/domain/config/farm_plant_catalog.dart';
 import 'package:agrobase_ekibbo/infrastructure/local_data/shared_manager.dart';
 
 class AddPlotScreen extends StatefulWidget {
@@ -53,6 +54,9 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
   final _farmNameTxtController = TextEditingController();
   final _totalLandTxtController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+  // UAT (plant type details): conventional crops grown on the plot — web
+  // FarmLandFormPage parity (free text, e.g. "Maize, Beans").
+  final _conventionalCropsController = TextEditingController();
   // Second review (G-vii): ownership options hardcoded
   static const List<String> _ownershipOptions = [
     'Rented/leased',
@@ -84,6 +88,22 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
   int? _ownerIndex;
   String? _errorLandOwner;
 
+  // ── UAT: plant inventory rows ("add plant type details" at plot
+  // registration). Categories/varieties come from FarmPlantCatalog — the
+  // same fixed review-H list the web Plants tab uses (Coffee–Robusta,
+  // Cocoa–Trinitario/…, Shade Trees species, …). Rows are optional; the
+  // backend creates FarmPlant records together with the farm land.
+  final List<_PlantRowEntry> _plantRows = [];
+
+  void _addPlantRow() => setState(() => _plantRows.add(_PlantRowEntry()));
+
+  void _removePlantRow(int index) {
+    setState(() {
+      _plantRows[index].dispose();
+      _plantRows.removeAt(index);
+    });
+  }
+
   @override
   void initState() {
     _getDropdDown();
@@ -92,6 +112,10 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
 
   @override
   void dispose() {
+    for (final row in _plantRows) {
+      row.dispose();
+    }
+    _conventionalCropsController.dispose();
     _estYieldTxtController.dispose();
     _fullTimeTxtController.dispose();
     _partTimeTxtController.dispose();
@@ -141,6 +165,8 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
     _areaTxtController.text = '${farmland.actualArea ?? 0}';
     _ownerIndex = _ownershipOptions.indexOf(farmland.landOwnership ?? '');
     if (_ownerIndex == -1) _ownerIndex = null;
+    // UAT (plant type details): restore conventional crops in edit mode.
+    _conventionalCropsController.text = farmland.conventionalCrops ?? '';
     // Second review (G): neighbouring features + access map
     if (farmland.neighbouringFeatures != null) {
       try {
@@ -167,6 +193,174 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
         _areaTxtController.text = (areaMeters / 10000).toStringAsFixed(2);
       }
     });
+  }
+
+  // ── UAT (plant type details): Plant Inventory section ─────────────────
+  /// Optional rows of plant types on this plot (Coffee–Robusta, Cocoa–
+  /// Trinitario, Shade Trees, …). Same catalog as the Plot Detail Plants
+  /// tab; rows submitted with the plot are created server-side in one shot.
+  /// On EDIT the section is hidden — existing plant rows are managed from
+  /// the Plot Detail → Plants tab (add/delete) to avoid duplicates.
+  Widget _buildPlantInventorySection() {
+    final isCreate =
+        widget.farmland == null || widget.farmland!.tag.startsWith('insert_');
+    if (!isCreate) return const SizedBox.shrink();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                'Plant Type Details',
+                style: TextStyleConstant.quicksandW600(
+                  color: ColorConstant.text79,
+                ),
+              ),
+            ),
+            InkWell(
+              onTap: _addPlantRow,
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(8),
+                  color: ColorConstant.primary.withOpacity(0.1),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SvgPicture.asset('ic_plus_bold'.iconSvg,
+                        height: 14, width: 14),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Add Plant Type',
+                      style: TextStyleConstant.robotoW600(
+                        fontSize: 12,
+                        color: ColorConstant.primary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Optional — crops/trees planted on this plot (feeds the Total Plants registry). You can add or edit them later from Plot Details → Plants.',
+          style: TextStyleConstant.robotoW400(
+            fontSize: 11,
+            color: ColorConstant.text79.withOpacity(0.7),
+          ),
+        ),
+        const SizedBox(height: 12),
+        if (_plantRows.isEmpty)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(8),
+              color: ColorConstant.grayF6F7F9,
+            ),
+            child: Text(
+              'No plant types added yet.',
+              style: TextStyleConstant.robotoW400(
+                fontSize: 12,
+                color: ColorConstant.text79.withOpacity(0.7),
+              ),
+            ),
+          )
+        else
+          for (var i = 0; i < _plantRows.length; i++) _buildPlantRow(i),
+      ],
+    );
+  }
+
+  Widget _buildPlantRow(int index) {
+    final row = _plantRows[index];
+    final categories = FarmPlantCatalog.categories.keys.toList();
+    final varieties =
+        row.category == null ? <String>[] : FarmPlantCatalog.varietiesFor(row.category!);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: ColorConstant.grayDBDBDB),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Plant Type ${index + 1}',
+                  style: TextStyleConstant.quicksandW600(
+                    fontSize: 12,
+                    color: ColorConstant.text79,
+                  ),
+                ),
+              ),
+              InkWell(
+                onTap: () => _removePlantRow(index),
+                child: const Icon(Icons.delete_outline,
+                    size: 20, color: Colors.redAccent),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          AppDropdownButton(
+            hintText: 'Crop / Tree Category *',
+            items: categories,
+            itemSelected: row.category ?? '',
+            onChanged: (v) => setState(() {
+              // AppDropdownButton returns the item INDEX — map back to value.
+              row.category = categories.isNotEmpty && v < categories.length
+                  ? categories[v]
+                  : null;
+              // Reset variety when the category changes (dependent list).
+              row.variety = null;
+            }),
+          ),
+          if (varieties.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            AppDropdownButton(
+              hintText: 'Variety',
+              items: varieties,
+              itemSelected: row.variety ?? '',
+              onChanged: (v) => setState(() {
+                row.variety =
+                    varieties.isNotEmpty && v < varieties.length
+                        ? varieties[v]
+                        : null;
+              }),
+            ),
+          ],
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                flex: 2,
+                child: AppFormField(
+                  labelText: 'Plant Count *',
+                  controller: row.countController,
+                  keyboardType: TextInputType.number,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                flex: 3,
+                child: AppFormField(
+                  labelText: 'Notes (optional)',
+                  controller: row.notesController,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
   }
 
   _onSubmit() async {
@@ -219,6 +413,8 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
       farmLandModel.partTimeWorkers = _partTimeTxtController.text;
       farmLandModel.seasonalWorkers = _seasonalTxtController.text;
       farmLandModel.familyWorkers = _familyTxtController.text;
+      // UAT (plant type details): conventional crops grown on this plot.
+      farmLandModel.conventionalCrops = _conventionalCropsController.text;
       farmLandModel.lat = DataConstant.lat.toString();
       farmLandModel.lng = DataConstant.lng.toString();
       farmLandModel.tag = widget.farmland?.tag ?? '';
@@ -227,6 +423,33 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
       // Second review (G): farm photo + land document uploads removed —
       // the polygon (farm land plotting) is the land record.
       final form = FormData.fromMap(farmLandModel.toMap());
+
+      // UAT (plant type details): plant inventory rows ride along with the
+      // same multipart flattening pattern Dio uses for farm_plottings
+      // (`plants[i][crop_category]`, `plants[i][variety]`, …) — the backend
+      // reassembles them and creates the FarmPlant records in one shot.
+      // Only on CREATE: updates manage plants via the Plot Detail Plants tab.
+      final isCreate = widget.farmland == null ||
+          widget.farmland!.tag.startsWith('insert_');
+      if (isCreate) {
+        var plantIdx = 0;
+        for (final row in _plantRows) {
+          final category = row.category;
+          if (category == null || category.isEmpty) continue;
+          final count = int.tryParse(row.countController.text.trim()) ?? 0;
+          if (count <= 0) continue;
+          form.fields.add(MapEntry('plants[$plantIdx][crop_category]', category));
+          if (row.variety != null && row.variety!.isNotEmpty) {
+            form.fields.add(MapEntry('plants[$plantIdx][variety]', row.variety!));
+          }
+          form.fields.add(MapEntry('plants[$plantIdx][plant_count]', '$count'));
+          final notes = row.notesController.text.trim();
+          if (notes.isNotEmpty) {
+            form.fields.add(MapEntry('plants[$plantIdx][notes]', notes));
+          }
+          plantIdx++;
+        }
+      }
       if (widget.farmland == null) {
         await _insert(form);
         return;
@@ -581,6 +804,17 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
                             )),
                           ],
                         ),
+                        const SizedBox(height: 24),
+                        // ── UAT (plant type details): conventional crops + plant
+                        // inventory at plot registration (web FarmLandFormPage
+                        // parity; rows feed the Farm Plant Registry KPI).
+                        AppFormField(
+                          labelText: 'Conventional Crops',
+                          controller: _conventionalCropsController,
+                          hint: 'e.g. Maize, Beans',
+                        ),
+                        const SizedBox(height: 24),
+                        _buildPlantInventorySection(),
                       ],
                     ),
                   ),
@@ -633,6 +867,23 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
         ),
       ),
     );
+  }
+}
+
+/// UAT (plant type details): one editable plant-inventory row in the Add
+/// Plot screen. Category/variety come from FarmPlantCatalog; the row is
+/// appended to the multipart submit as `plants[i][crop_category]` etc. and
+/// the backend creates the FarmPlant records with the farm land in one
+/// transaction-style flow.
+class _PlantRowEntry {
+  String? category;
+  String? variety;
+  final countController = TextEditingController();
+  final notesController = TextEditingController();
+
+  void dispose() {
+    countController.dispose();
+    notesController.dispose();
   }
 }
 

@@ -37,7 +37,10 @@ FarmLandModel _$FarmLandModelFromJson(Map<String, dynamic> json) =>
       ..fullTimeWorkers = json['full_time_workers'] as String?
       ..partTimeWorkers = json['part_time_workers'] as String?
       ..seasonalWorkers = json['seasonal_workers'] as String?
-      ..familyWorkers = json['family_workers'] as String?;
+      ..familyWorkers = json['family_workers'] as String?
+      ..conventionalCrops = json['conventional_crops'] as String?
+      ..conventionalLands = json['conventional_lands'] as String?
+      ..fallowPastureLand = json['fallow_pasture_land'] as String?;
 
 Map<String, dynamic> _$FarmLandModelToJson(FarmLandModel instance) =>
     <String, dynamic>{
@@ -65,6 +68,9 @@ Map<String, dynamic> _$FarmLandModelToJson(FarmLandModel instance) =>
       'part_time_workers': instance.partTimeWorkers,
       'seasonal_workers': instance.seasonalWorkers,
       'family_workers': instance.familyWorkers,
+      'conventional_crops': instance.conventionalCrops,
+      'conventional_lands': instance.conventionalLands,
+      'fallow_pasture_land': instance.fallowPastureLand,
     };
 
 FarmPlottingModel _$FarmPlottingModelFromJson(Map<String, dynamic> json) =>

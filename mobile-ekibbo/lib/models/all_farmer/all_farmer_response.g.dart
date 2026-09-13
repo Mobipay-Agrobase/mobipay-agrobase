@@ -23,12 +23,14 @@ AllFarmerDataModel _$AllFarmerDataModelFromJson(Map<String, dynamic> json) =>
       ..data = (json['data'] as List<dynamic>?)
           ?.map((e) => FarmerModel.fromJson(e as Map<String, dynamic>))
           .toList()
-      ..currentPage = json['current_page'] as int?
-      ..lastPage = json['last_page'] as int?;
+      ..currentPage = (json['current_page'] as num?)?.toInt()
+      ..lastPage = (json['last_page'] as num?)?.toInt()
+      ..total = (json['total'] as num?)?.toInt();
 
 Map<String, dynamic> _$AllFarmerDataModelToJson(AllFarmerDataModel instance) =>
     <String, dynamic>{
       'data': instance.data,
       'current_page': instance.currentPage,
       'last_page': instance.lastPage,
+      'total': instance.total,
     };

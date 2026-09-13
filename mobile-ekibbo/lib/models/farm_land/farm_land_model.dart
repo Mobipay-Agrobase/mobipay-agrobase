@@ -53,6 +53,14 @@ class FarmLandModel {
   String? seasonalWorkers;
   @JsonKey(name: 'family_workers')
   String? familyWorkers;
+  // ── Organic/conversion info (web FarmLandFormPage parity — UAT: plant
+  // type details were missing from the mobile Add Plot screen) ──
+  @JsonKey(name: 'conventional_crops')
+  String? conventionalCrops;
+  @JsonKey(name: 'conventional_lands')
+  String? conventionalLands;
+  @JsonKey(name: 'fallow_pasture_land')
+  String? fallowPastureLand;
 
   FarmLandModel();
   factory FarmLandModel.fromJson(Map<String, dynamic> json) =>

@@ -9,6 +9,8 @@ import 'package:agrobase_ekibbo/components/app_form_field.dart';
 import 'package:agrobase_ekibbo/components/custom_appbar.dart';
 import 'package:agrobase_ekibbo/components/g_image.dart';
 import 'package:agrobase_ekibbo/components/no_data_view.dart';
+import 'package:agrobase_ekibbo/components/constant/color_constant.dart';
+import 'package:agrobase_ekibbo/components/constant/text_style_constant.dart';
 import 'package:agrobase_ekibbo/domain/l10n/app_lang.dart';
 import 'package:agrobase_ekibbo/models/all_farmer/farmer_model.dart';
 import 'package:agrobase_ekibbo/presentation/farmer_list/widgets/farmer_item_view.dart';
@@ -25,6 +27,10 @@ class _FarmerListScreenState extends State<FarmerListScreen> {
   final ctrlSearchFarmer = TextEditingController();
   final ctrlScroll = ScrollController();
   Timer? _debounce;
+
+  /// 1250 → "1,250" (readable counts in the header/progress line).
+  String _fmt(int n) => n.toString().replaceAllMapped(
+      RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (m) => '${m[1]},');
 
   @override
   void initState() {
@@ -59,10 +65,15 @@ class _FarmerListScreenState extends State<FarmerListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final listing = context.watch<AppProvider>().appListingFarmer;
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: CustomAppBar(
-        title: AppLang.local.all_farmer,
+        // Consistency fix — the count matches the "View All" number shown on
+        // the dashboard, so "My Farmers (3)" vs this list is never ambiguous.
+        title: listing.totalCount > 0
+            ? '${AppLang.local.all_farmer} (${_fmt(listing.totalCount)})'
+            : AppLang.local.all_farmer,
       ),
       body: SafeArea(
         child: Padding(
@@ -97,6 +108,31 @@ class _FarmerListScreenState extends State<FarmerListScreen> {
                 ),
                 hint: '${AppLang.local.search_farmer}...',
               ),
+              // Consistency fix — progress indicator tied to the same total
+              // the header shows ("Showing 30 of 1,979 farmers").
+              if (listing.totalCount > 0)
+                Padding(
+                  padding: const EdgeInsets.only(top: 10, left: 4, right: 4),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Showing ${_fmt(listing.farmers.length)} of ${_fmt(listing.totalCount)} farmers',
+                          style: TextStyleConstant.robotoW400(
+                            fontSize: 12,
+                            color: ColorConstant.text79,
+                          ),
+                        ),
+                      ),
+                      if (listing.isFetching)
+                        const SizedBox(
+                          width: 12,
+                          height: 12,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                    ],
+                  ),
+                ),
               const SizedBox(
                 height: 16,
               ),

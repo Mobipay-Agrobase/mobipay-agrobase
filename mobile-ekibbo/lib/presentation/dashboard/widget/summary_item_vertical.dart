@@ -7,11 +7,17 @@ class SummaryItemVertical extends StatelessWidget {
   final String value;
   final Widget icon;
 
+  /// Optional small line under the value — e.g. "of 1,979 in registry" on
+  /// the My Farmers card so the officer-scoped count and the tenant-wide
+  /// registry count are shown together (data-consistency fix).
+  final String? subtitle;
+
   const SummaryItemVertical(
       {super.key,
       required this.title,
       required this.value,
-      required this.icon});
+      required this.icon,
+      this.subtitle});
 
   @override
   Widget build(BuildContext context) {
@@ -63,6 +69,17 @@ class SummaryItemVertical extends StatelessWidget {
                 color: ColorConstant.primary,
               ),
             ),
+            if (subtitle != null && subtitle!.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(
+                subtitle!,
+                textAlign: TextAlign.center,
+                style: TextStyleConstant.robotoW400(
+                  fontSize: 11,
+                  color: ColorConstant.text79.withOpacity(0.7),
+                ),
+              ),
+            ],
             //const SizedBox(height: 20),
           ],
         ),

@@ -1,7 +1,10 @@
 plugins {
     id "com.android.application"
-    id "kotlin-android"
-    // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
+    // Built-in Kotlin (Flutter 3.35+): the Flutter Gradle Plugin applies Kotlin
+    // automatically — do NOT re-add `kotlin-android` (deprecated; future
+    // Flutter versions fail the build when the app applies KGP itself).
+    // Mirrors mobile/android/app/build.gradle.kts, which already builds green
+    // in CI with this exact layout.
     id "dev.flutter.flutter-gradle-plugin"
 }
 

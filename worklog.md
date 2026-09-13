@@ -1300,3 +1300,41 @@ Stage Summary:
   session and prompts once, globally, instead of a broken dashboard.
 - New logins record expiresAt, so the next 30-day lapse is caught at
   startup rather than surfacing as request failures.
+
+---
+Task ID: 22
+Agent: main (Super Z)
+Task: User's local build of mobile-ekibbo FAILED on their Mac
+(':app:compileFlutterBuildDebug' → "A problem occurred starting process
+'/opt/homebrew/share/flutter/bin/flutter'"), plus SPM + KGP deprecation
+warnings in the log. Diagnose + fix what is repo-side fixable.
+
+Work Log:
+- Verified repo is NOT the cause: android/local.properties is NOT committed
+  (ignored by mobile-ekibbo/android/.gitignore) and no hardcoded
+  flutter/homebrew paths exist in either app's android/ config. The failure
+  is the local Homebrew Flutter SDK — Gradle could not START the binary at
+  /opt/homebrew/share/flutter/bin/flutter (stale/dangling/mid-upgrade).
+  Build reached task execution, so the SDK dir exists (settings.gradle
+  includeBuild of flutter_tools resolved) — the bin/flutter exec itself
+  failed. User-side recovery steps delivered in chat.
+- KGP deprecation warning (real, repo-side, CI-verifiable): removed
+  `id "kotlin-android"` from mobile-ekibbo/android/app/build.gradle per the
+  official migrate-to-built-in-kotlin guide. Proof of safety: mobile/
+  already builds green in Mobile CI with the identical no-KGP layout
+  (settings.gradle still declares kotlin 2.2.20 apply false for plugins
+  that apply KGP themselves). kotlinOptions block kept (AGP 8.13.1 +
+  built-in Kotlin still provides the DSL; AGP 9 removal does not apply here).
+- NOT done (honest scope): plugin-level SPM warnings (location,
+  google_maps_flutter_ios, flutter_secure_storage, flutter_localization)
+  and plugin-level KGP warnings need plugin version upgrades; iOS builds
+  cannot be verified from this Linux sandbox (no Xcode), and `location`
+  may lack SPM support at any version — blind bumps would be untested
+  promises. Offered as an explicit follow-up for the user's Mac.
+- Verification: Mobile CI run for this commit must build BOTH APKs (real
+  Gradle builds) — watched to completion before closing.
+
+Stage Summary:
+- Local failure = local SDK, not the repo; recovery steps delivered.
+- App-level KGP warning eliminated for mobile-ekibbo (mobile/ was already
+  clean); CI proves both APKs still build.

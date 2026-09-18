@@ -108,4 +108,8 @@ export const EKB_HIDDEN_MODULES = [
   'impact-assessment',                           // Intelligence
   'communication', 'feedback', 'channel-sim',    // Engagement
   'mfi',                                         // Finance
+  // EKiBBO Sheet-3 feedback: remove these modules
+  'cultivations',                                // Sheet-3 I: "Remove cultivation"
+  'farmer-animals',                              // Sheet-3 E: "Remove livestock module"
+  'farmer-equipment',                            // Sheet-3 F: "Remove farm equipments sub-module"
 ] as const

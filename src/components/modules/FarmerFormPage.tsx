@@ -508,13 +508,10 @@ function AddFarmerForm({ onClose, initialData, farmerId }: { onClose: () => void
                 <Select value={form.certificationType} onValueChange={v => update('certificationType', v)}>
                   <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Individual">Individual</SelectItem>
-                    <SelectItem value="Group">Group</SelectItem>
-                    <SelectItem value="RFA">RFA (Rainforest Alliance)</SelectItem>
-                    <SelectItem value="Rainforest Alliance">Rainforest Alliance</SelectItem>
+                    <SelectItem value="RA">RA (Rainforest Alliance)</SelectItem>
                     <SelectItem value="Organic">Organic</SelectItem>
-                    <SelectItem value="UTZ">UTZ</SelectItem>
                     <SelectItem value="Fairtrade">Fairtrade</SelectItem>
+                    <SelectItem value="4C">4C</SelectItem>
                   </SelectContent>
                 </Select>
               </FormField>
@@ -664,11 +661,11 @@ function AddFarmerForm({ onClose, initialData, farmerId }: { onClose: () => void
 
         {/* ── Tab 4: Family Information ── */}
         <TabsContent value="family" className="mt-4 space-y-4 form-tab-content">
-          <FormField label="Spouse Name">
-            <Input value={form.spouseName} onChange={e => update('spouseName', e.target.value)} />
+          <FormField label="Next of Kin Contact">
+            <Input value={form.spouseName} onChange={e => update('spouseName', e.target.value)} placeholder="Name + phone" />
           </FormField>
           <div className="grid grid-cols-2 gap-3">
-            <FormField label="No of Family Members">
+            <FormField label="Household Size">
               <Input type="number" value={form.familyMembers} onChange={e => update('familyMembers', e.target.value)} />
             </FormField>
             <FormField label="Total Children below 18">

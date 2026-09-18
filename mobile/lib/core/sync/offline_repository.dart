@@ -210,8 +210,16 @@ class OfflineRepository {
       soilFertility: Value(_toStr(f['soilFertility'])),
       boundaryGeoJson: Value(f['boundaryGeoJson'] != null ? jsonEncode(f['boundaryGeoJson']) : null),
       landSurveyNo: Value(_toStr(f['landSurveyNo'])),
-      approachRoad: Value(_joinList(f['approachRoad'])),
-      landTopology: Value(_toStr(f['landTopology'])),
+      // EKiBBO Sheet-3: approachRoad repurposed as Access Map (text/URL).
+      // For backward compat, accept both String and List (legacy JSON array).
+      approachRoad: Value(f['approachRoad'] is String
+          ? (f['approachRoad'] as String).isEmpty ? null : f['approachRoad'] as String
+          : (f['approachRoad'] is List ? _joinList(f['approachRoad']) : null)),
+      // EKiBBO Sheet-3: landTopology repurposed as Physical Features (JSON array of strings).
+      // Stored as JSON-encoded string so it round-trips through the cache.
+      landTopology: Value(f['landTopology'] is List
+          ? jsonEncode(f['landTopology'])
+          : _toStr(f['landTopology'])),
       landGradient: Value(_joinList(f['landGradient'])),
       landDocumentUrl: Value(_toStr(f['landDocumentUrl'])),
       powerSource: Value(_toStr(f['powerSource'])),

@@ -61,6 +61,7 @@ export async function GET(request: Request) {
     const farmsParsed = farms.map(f => ({
       ...f,
       approachRoad: safeParse(f.approachRoad),
+      landTopology: safeParse(f.landTopology),
       landGradient: safeParse(f.landGradient),
       irrigationSource: safeParse(f.irrigationSource),
       soilCriteria: safeParse(f.soilCriteria),
@@ -125,7 +126,8 @@ export async function POST(request: Request) {
         soilFertility,
         landSurveyNo,
         approachRoad: toJsonOrString(approachRoad),
-        landTopology,
+        // landTopology now stores physical features (JSON array when multi-select)
+        landTopology: toJsonOrString(landTopology),
         landGradient: toJsonOrString(landGradient),
         landDocumentUrl,
         powerSource,

@@ -107,16 +107,22 @@ function normalizeMulti(v: unknown): string[] {
   return []
 }
 
-const LAND_OWNERSHIP = ['Owned', 'Rent', 'Lease']
-const TOPOLOGY = ['Valley', 'Plains', 'Plateaus']
-const WATER_SOURCES = ['Well', 'Bore Well', 'Pump']
-const POWER_SOURCES = ['Solar', 'Electricity', 'Fuel']
+// ─── EKiBBO Sheet-3 — Farm Land field changes ───
+// Land ownership options per Sheet-3 spec (replaces Owned/Rent/Lease).
+const LAND_OWNERSHIP = ['Rented/leased', 'Sales agreement', 'Inherited', 'Family owned', 'Communal owned']
+// Physical features (Sheet-3) — multi-select, stored as JSON in `landTopology` column (repurposed).
+const PHYSICAL_FEATURES = [
+  'Rivers', 'Lakes', 'Swamp', 'Forest',
+  'Natural forest', 'Planted forest',
+  'Valley', 'Hill/mountain',
+  'Game park/Game reserve',
+]
+// Removed (hidden from UI but DB columns kept for other tenants):
+//   waterSource, powerSource, landSurveyNo, farmPhotoUrl, landDocumentUrl, landGradient
 const FERTILITY = ['Good', 'Normal', 'Poor']
 const IRRIGATION_TYPES = ['Drip', 'Canal', 'Others']
 const CONV_STATUS = ['IC-1', 'IC-2', 'IC-3', 'Organic', 'SRP']
 const CERT_TYPES = ['NPOP', 'NOP']
-const APPROACH_ROAD = ['close main road', 'inner field', 'close main canal']
-const LAND_GRADIENT = ['Up Land', 'Low Land']
 const IRRIGATION_SOURCE = ['Rainfed', 'Irrigated']
 
 export default function FarmLandFormPage({ mode, farmLandId, farmerId }: FarmLandFormPageProps) {
@@ -130,8 +136,10 @@ export default function FarmLandFormPage({ mode, farmLandId, farmerId }: FarmLan
   const [soilAnalyses, setSoilAnalyses] = useState<Array<SoilAnalysis>>([
     { criteria: '', criteriaValue: '', uom: '' }
   ])
-  const [approachRoadValues, setApproachRoadValues] = useState<string[]>([])
-  const [landGradientValues, setLandGradientValues] = useState<string[]>([])
+  // Repurposed per EKiBBO Sheet-3:
+  //   landTopology column stores physical features (JSON array of strings)
+  //   approachRoad column stores access map (text — URL or description)
+  const [physicalFeaturesValues, setPhysicalFeaturesValues] = useState<string[]>([])
   const [irrigationSourceValues, setIrrigationSourceValues] = useState<string[]>([])
   const isEditing = mode === 'edit'
 
@@ -159,7 +167,12 @@ export default function FarmLandFormPage({ mode, farmLandId, farmerId }: FarmLan
             landSurveyNo: data.landSurveyNo || '',
             waterSource: data.waterSource || '',
             soilFertility: data.soilFertility || '',
-            landTopology: data.landTopology || '',
+            // landTopology is now repurposed as physical features (JSON array).
+            // The form state stores the raw value; the multi-select chips use
+            // `physicalFeaturesValues` state derived via normalizeMulti().
+            landTopology: typeof data.landTopology === 'string'
+              ? data.landTopology
+              : (Array.isArray(data.landTopology as any) ? (data.landTopology as any) : ''),
             powerSource: data.powerSource || '',
             farmPhotoUrl: data.farmPhotoUrl || '',
             landDocumentUrl: data.landDocumentUrl || '',
@@ -184,8 +197,9 @@ export default function FarmLandFormPage({ mode, farmLandId, farmerId }: FarmLan
             soilResultDate: data.soilResultDate || '',
             soilReportUrl: data.soilReportUrl || '',
             soilSamplesInfo: data.soilSamplesInfo || '',
-            approachRoad: data.approachRoad || '',
-            landGradient: data.landGradient || '',
+            approachRoad: typeof data.approachRoad === 'string'
+              ? data.approachRoad
+              : (Array.isArray(data.approachRoad as any) ? (data.approachRoad as any).join(', ') : ''),
             irrigationSource: data.irrigationSource || '',
           })
           if (data.polygonPoints && data.polygonPoints.length > 0) {
@@ -199,11 +213,10 @@ export default function FarmLandFormPage({ mode, farmLandId, farmerId }: FarmLan
               uom: a.uom || '',
             })))
           }
-          if (data.approachRoad) {
-            setApproachRoadValues(normalizeMulti(data.approachRoad))
-          }
-          if (data.landGradient) {
-            setLandGradientValues(normalizeMulti(data.landGradient))
+          if (data.landTopology) {
+            // Backward-compat: older rows stored a single string ("Valley");
+            // newer rows store a JSON array of physical features.
+            setPhysicalFeaturesValues(normalizeMulti(data.landTopology))
           }
           if (data.irrigationSource) {
             setIrrigationSourceValues(normalizeMulti(data.irrigationSource))
@@ -224,7 +237,9 @@ export default function FarmLandFormPage({ mode, farmLandId, farmerId }: FarmLan
   const toggleMultiSelect = (field: string, value: string, current: string[], setter: React.Dispatch<React.SetStateAction<string[]>>) => {
     const next = current.includes(value) ? current.filter(v => v !== value) : [...current, value]
     setter(next)
-    update(field, next.join(', '))
+    // Store as JSON-array string in form state so the API serializes it correctly
+    // (API uses toJsonOrString() to JSON.stringify arrays before saving to DB).
+    update(field, next)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -233,8 +248,9 @@ export default function FarmLandFormPage({ mode, farmLandId, farmerId }: FarmLan
     if (!form.name) { toast.error('Farm/Plot name is required'); return }
     setSaving(true)
     try {
-      // Build a clean payload with ONLY known fields — avoid spreading ...form
-      // which can include UI-only state (approachRoadValues etc.) that Prisma rejects.
+      // EKiBBO Sheet-3: removed fields (landSurveyNo, waterSource, powerSource,
+      // farmPhotoUrl, landDocumentUrl, landGradient) — DB columns retained for
+      // other tenants but no longer sent from this form.
       const payload: Record<string, any> = {
         farmerId: form.farmerId,
         name: form.name,
@@ -242,17 +258,16 @@ export default function FarmLandFormPage({ mode, farmLandId, farmerId }: FarmLan
         latitude: form.latitude || undefined,
         longitude: form.longitude || undefined,
         landOwnership: form.landOwnership || undefined,
-        landSurveyNo: form.landSurveyNo || undefined,
-        waterSource: form.waterSource || undefined,
         soilFertility: form.soilFertility || undefined,
-        landTopology: form.landTopology || undefined,
-        powerSource: form.powerSource || undefined,
-        farmPhotoUrl: form.farmPhotoUrl || undefined,
-        landDocumentUrl: form.landDocumentUrl || undefined,
+        // Repurposed per Sheet-3:
+        //   landTopology column now stores physical features (JSON array)
+        //   approachRoad column now stores access map (text/URL — single string)
+        landTopology: Array.isArray(form.landTopology) && form.landTopology.length > 0
+          ? form.landTopology
+          : (form.landTopology || undefined),
+        approachRoad: form.approachRoad || undefined,
         irrigationType: form.irrigationType || undefined,
         irrigationSource: form.irrigationSource || undefined,
-        approachRoad: form.approachRoad || undefined,
-        landGradient: form.landGradient || undefined,
         certType: form.certType || undefined,
         conversionStatus: form.conversionStatus || undefined,
         conversionDate: form.conversionDate || undefined,
@@ -354,7 +369,7 @@ export default function FarmLandFormPage({ mode, farmLandId, farmerId }: FarmLan
                 <TabsTrigger value="polygon" className="text-xs gap-1.5"><MapPin className="w-3.5 h-3.5" /> GPS Polygon</TabsTrigger>
               </TabsList>
 
-              {/* Section 1: Field/Farm Information */}
+              {/* Section 1: Field/Farm Information (EKiBBO Sheet-3 spec) */}
               <TabsContent value="field" className="mt-4 space-y-4 form-tab-content">
                 <Card>
                   <CardHeader className="pb-3">
@@ -383,14 +398,10 @@ export default function FarmLandFormPage({ mode, farmLandId, farmerId }: FarmLan
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-1.5">
                         <Label>Total Land Holding (ha) *</Label>
                         <Input type="number" step="0.01" value={form.sizeHectares ?? ''} onChange={e => update('sizeHectares', e.target.value)} placeholder={polygonArea ? `Auto: ${polygonArea}` : 'Enter area'} />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label>Land Survey No</Label>
-                        <Input value={form.landSurveyNo || ''} onChange={e => update('landSurveyNo', e.target.value)} placeholder="Survey number" />
                       </div>
                       <div className="space-y-1.5">
                         <Label>Land Ownership *</Label>
@@ -410,67 +421,28 @@ export default function FarmLandFormPage({ mode, farmLandId, farmerId }: FarmLan
                         </div>
                       </div>
                       <div className="space-y-1.5">
-                        <Label>Land Topology</Label>
-                        <CatalogSelect category="land_topology" value={form.landTopology || ''} onValueChange={v => update('landTopology', v)} placeholder="Select" fallbackOptions={TOPOLOGY} />
+                        <Label>Access Map</Label>
+                        <Input value={form.approachRoad || ''} onChange={e => update('approachRoad', e.target.value)} placeholder="Map URL or directions to the farm" />
                       </div>
                     </div>
 
                     <div className="space-y-1.5">
-                      <Label>Approach Road (Multi-select)</Label>
+                      <Label>Physical Features (Multi-select)</Label>
                       <div className="flex flex-wrap gap-2">
-                        {APPROACH_ROAD.map(opt => (
+                        {PHYSICAL_FEATURES.map(opt => (
                           <Button
                             key={opt}
                             type="button"
-                            variant={approachRoadValues.includes(opt) ? 'default' : 'outline'}
+                            variant={physicalFeaturesValues.includes(opt) ? 'default' : 'outline'}
                             size="sm"
                             className="text-xs"
-                            onClick={() => toggleMultiSelect('approachRoad', opt, approachRoadValues, setApproachRoadValues)}
+                            onClick={() => toggleMultiSelect('landTopology', opt, physicalFeaturesValues, setPhysicalFeaturesValues)}
                           >
                             {opt}
                           </Button>
                         ))}
                       </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-1.5">
-                        <Label>Land Gradient (Multi-select)</Label>
-                        <div className="flex flex-wrap gap-2">
-                          {LAND_GRADIENT.map(opt => (
-                            <Button
-                              key={opt}
-                              type="button"
-                              variant={landGradientValues.includes(opt) ? 'default' : 'outline'}
-                              size="sm"
-                              className="text-xs"
-                              onClick={() => toggleMultiSelect('landGradient', opt, landGradientValues, setLandGradientValues)}
-                            >
-                              {opt}
-                            </Button>
-                          ))}
-                        </div>
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label>Farm Photo</Label>
-                        <Input value={form.farmPhotoUrl || ''} onChange={e => update('farmPhotoUrl', e.target.value)} placeholder="Photo URL" />
-                      </div>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <Label>Land Document</Label>
-                      <Input value={form.landDocumentUrl || ''} onChange={e => update('landDocumentUrl', e.target.value)} placeholder="Document URL" />
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-1.5">
-                        <Label>Water Source</Label>
-                        <CatalogSelect category="water_source" value={form.waterSource || ''} onValueChange={v => update('waterSource', v)} placeholder="Select" fallbackOptions={WATER_SOURCES} />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label>Power Source</Label>
-                        <CatalogSelect category="power_source" value={form.powerSource || ''} onValueChange={v => update('powerSource', v)} placeholder="Select" fallbackOptions={POWER_SOURCES} />
-                      </div>
+                      <p className="text-xs text-muted-foreground">Selected: {physicalFeaturesValues.length === 0 ? 'None' : physicalFeaturesValues.join(', ')}</p>
                     </div>
                   </CardContent>
                 </Card>

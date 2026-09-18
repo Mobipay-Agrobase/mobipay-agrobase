@@ -200,12 +200,11 @@ export function FarmLandDetailPage({ farmLandId, onBack }: Props) {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <InfoField label="Topology" value={farmLand.landTopology} />
-                    <InfoField label="Gradient" value={farmLand.landGradient} />
-                    <InfoField label="Water Source" value={farmLand.waterSource} />
-                    <InfoField label="Power Source" value={farmLand.powerSource} />
-                    <InfoField label="Approach Road" value={farmLand.approachRoad} />
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    {/* landTopology now stores physical features (JSON array) */}
+                    <InfoField label="Physical Features" value={Array.isArray(farmLand.landTopology) ? (farmLand.landTopology as any).join(', ') : farmLand.landTopology} />
+                    {/* approachRoad now stores access map (text/URL) */}
+                    <InfoField label="Access Map" value={farmLand.approachRoad} />
                     <InfoField label="Soil Fertility" value={farmLand.soilFertility} />
                   </div>
                 </CardContent>

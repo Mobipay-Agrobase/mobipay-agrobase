@@ -31,6 +31,7 @@ export async function GET(
   const farmParsed = {
     ...farm,
     approachRoad: safeParse(farm.approachRoad),
+    landTopology: safeParse(farm.landTopology),
     landGradient: safeParse(farm.landGradient),
     irrigationSource: safeParse(farm.irrigationSource),
     soilCriteria: safeParse(farm.soilCriteria),
@@ -62,6 +63,10 @@ export async function PUT(
       if (Array.isArray(v)) return JSON.stringify(v)
       return String(v)
     }
+    const safeParse = (v: string | null): any => {
+      if (!v) return []
+      try { return JSON.parse(v) } catch { return v }
+    }
 
     const data: Record<string, any> = { updatedAt: new Date() }
 
@@ -74,7 +79,8 @@ export async function PUT(
     if (body.soilFertility !== undefined) data.soilFertility = body.soilFertility
     if (body.landSurveyNo !== undefined) data.landSurveyNo = body.landSurveyNo
     if (body.approachRoad !== undefined) data.approachRoad = toJsonOrString(body.approachRoad)
-    if (body.landTopology !== undefined) data.landTopology = body.landTopology
+    // landTopology now stores physical features (JSON array when multi-select)
+    if (body.landTopology !== undefined) data.landTopology = toJsonOrString(body.landTopology)
     if (body.landGradient !== undefined) data.landGradient = toJsonOrString(body.landGradient)
     if (body.landDocumentUrl !== undefined) data.landDocumentUrl = body.landDocumentUrl
     if (body.powerSource !== undefined) data.powerSource = body.powerSource
@@ -115,10 +121,11 @@ export async function PUT(
 
     const farmParsed = {
       ...updated,
-      approachRoad: updated.approachRoad ? JSON.parse(updated.approachRoad) : [],
-      landGradient: updated.landGradient ? JSON.parse(updated.landGradient) : [],
-      irrigationSource: updated.irrigationSource ? JSON.parse(updated.irrigationSource) : [],
-      soilCriteria: updated.soilCriteria ? JSON.parse(updated.soilCriteria) : [],
+      approachRoad: updated.approachRoad ? safeParse(updated.approachRoad) : [],
+      landTopology: updated.landTopology ? safeParse(updated.landTopology) : [],
+      landGradient: updated.landGradient ? safeParse(updated.landGradient) : [],
+      irrigationSource: updated.irrigationSource ? safeParse(updated.irrigationSource) : [],
+      soilCriteria: updated.soilCriteria ? safeParse(updated.soilCriteria) : [],
     }
 
     return NextResponse.json({ farm: farmParsed })

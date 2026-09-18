@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:geolocator/geolocator.dart';
@@ -19,7 +20,7 @@ class FarmLandFormPage extends StatefulWidget {
 class _FarmLandFormPageState extends State<FarmLandFormPage> {
   final _nameCtrl = TextEditingController();
   final _sizeCtrl = TextEditingController();
-  final _surveyNoCtrl = TextEditingController();
+  final _accessMapCtrl = TextEditingController(); // EKiBBO Sheet-3: replaces survey no / approach road
   final _latCtrl = TextEditingController();
   final _lngCtrl = TextEditingController();
   final _workersFT = TextEditingController();
@@ -35,10 +36,10 @@ class _FarmLandFormPageState extends State<FarmLandFormPage> {
   final _estYieldCtrl = TextEditingController();
 
   String? _farmerId;
-  String _landOwnership = 'Owned';
-  String? _landTopology;
-  String _waterSource = 'Well';
-  String? _powerSource;
+  // EKiBBO Sheet-3: new ownership options
+  String _landOwnership = 'Rented/leased';
+  // EKiBBO Sheet-3: physical features (multi-select) — stored as JSON in landTopology column
+  final Set<String> _physicalFeatures = {};
   String _soilFertility = 'Good';
   String? _irrigationType;
   String? _conversionStatus;
@@ -67,7 +68,13 @@ class _FarmLandFormPageState extends State<FarmLandFormPage> {
       if (f != null) {
         _nameCtrl.text = f['name'] ?? '';
         _sizeCtrl.text = _fmtNum(f['sizeHectares']);
-        _surveyNoCtrl.text = f['landSurveyNo'] ?? '';
+        // EKiBBO Sheet-3: approachRoad column repurposed as Access Map (text)
+        final ar = f['approachRoad'];
+        if (ar is String) {
+          _accessMapCtrl.text = ar;
+        } else if (ar is List) {
+          _accessMapCtrl.text = ar.join(', ');
+        }
         _latCtrl.text = _fmtNum(f['latitude']);
         _lngCtrl.text = _fmtNum(f['longitude']);
         _workersFT.text = _fmtNum(f['fullTimeWorkers']);
@@ -82,10 +89,29 @@ class _FarmLandFormPageState extends State<FarmLandFormPage> {
         _soilReportUrl.text = f['soilReportUrl'] ?? '';
         _estYieldCtrl.text = _fmtNum(f['estYieldKg']);
         _farmerId = f['farmerId'] ?? _farmerId;
-        _landOwnership = f['landOwnership'] ?? 'Owned';
-        _landTopology = f['landTopology'];
-        _waterSource = f['waterSource'] ?? 'Well';
-        _powerSource = f['powerSource'];
+        _landOwnership = f['landOwnership'] ?? 'Rented/leased';
+        // EKiBBO Sheet-3: landTopology column repurposed as Physical Features (JSON array)
+        final lt = f['landTopology'];
+        if (lt is List) {
+          _physicalFeatures.addAll(lt.map((s) => s.toString().trim()).where((s) => s.isNotEmpty));
+        } else if (lt is String && lt.isNotEmpty) {
+          if (lt.startsWith('[')) {
+            try {
+              final decoded = jsonDecode(lt);
+              if (decoded is List) {
+                _physicalFeatures.addAll(decoded.map((s) => s.toString().trim()).where((s) => s.isNotEmpty));
+              }
+            } catch (_) {
+              // Fall back to comma-separated parsing
+              _physicalFeatures.addAll(
+                lt.replaceAll('[', '').replaceAll(']', '').replaceAll('"', '').split(',')
+                  .map((s) => s.trim()).where((s) => s.isNotEmpty),
+              );
+            }
+          } else {
+            _physicalFeatures.addAll(lt.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty));
+          }
+        }
         _soilFertility = f['soilFertility'] ?? 'Good';
         _irrigationType = f['irrigationType'];
         _conversionStatus = f['conversionStatus'];
@@ -113,13 +139,13 @@ class _FarmLandFormPageState extends State<FarmLandFormPage> {
       'farmerId': _farmerId,
       'name': _nameCtrl.text.trim(),
       'sizeHectares': _num(_sizeCtrl.text),
-      'landSurveyNo': _emptyToNull(_surveyNoCtrl.text.trim()),
+      // EKiBBO Sheet-3: landSurveyNo removed from UI; approachRoad repurposed as Access Map
+      'approachRoad': _emptyToNull(_accessMapCtrl.text.trim()),
       'latitude': _num(_latCtrl.text),
       'longitude': _num(_lngCtrl.text),
       'landOwnership': _landOwnership,
-      'landTopology': _emptyToNull(_landTopology),
-      'waterSource': _waterSource,
-      'powerSource': _emptyToNull(_powerSource),
+      // EKiBBO Sheet-3: landTopology column stores physical features (JSON array)
+      'landTopology': _physicalFeatures.isEmpty ? null : _physicalFeatures.toList(),
       'soilFertility': _soilFertility,
       'irrigationType': _emptyToNull(_irrigationType),
       'fullTimeWorkers': _num(_workersFT.text),
@@ -235,11 +261,8 @@ class _FarmLandFormPageState extends State<FarmLandFormPage> {
       const SizedBox(height: 12),
       _pick(_sizeCtrl, 'Total Land Holding (ha)', keyboard: TextInputType.number),
       const SizedBox(height: 12),
-      _pick(_surveyNoCtrl, 'Land Survey No.'),
-      const SizedBox(height: 12),
-      _dropdown('Land Ownership', const ['Owned', 'Rent', 'Lease'], _landOwnership, (v) => _landOwnership = v),
-      const SizedBox(height: 12),
-      _optionalDropdown('Land Topology', const ['Valley', 'Plains', 'Plateaus'], _landTopology, (v) => _landTopology = v),
+      // EKiBBO Sheet-3: new ownership options
+      _dropdown('Land Ownership', const ['Rented/leased', 'Sales agreement', 'Inherited', 'Family owned', 'Communal owned'], _landOwnership, (v) => setState(() => _landOwnership = v)),
       const SizedBox(height: 12),
       Row(children: [
         Expanded(child: _pick(_latCtrl, 'Latitude', keyboard: TextInputType.number)),
@@ -247,12 +270,45 @@ class _FarmLandFormPageState extends State<FarmLandFormPage> {
         Expanded(child: _pick(_lngCtrl, 'Longitude', keyboard: TextInputType.number)),
       ]),
       const SizedBox(height: 12),
-      _dropdown('Water Source', const ['Well', 'Bore Well', 'Pump', 'Rainfed', 'Canal'], _waterSource, (v) => _waterSource = v),
-      const SizedBox(height: 12),
-      _optionalDropdown('Power Source', const ['Solar', 'Electricity', 'Fuel'], _powerSource, (v) => _powerSource = v),
+      // EKiBBO Sheet-3: Access Map (replaces Approach Road / Survey No.)
+      _pick(_accessMapCtrl, 'Access Map (URL or directions)'),
+      const SizedBox(height: 16),
+      // EKiBBO Sheet-3: Physical Features (multi-select, replaces Land Topology)
+      _sectionTitle('Physical Features'),
+      _physicalFeaturesChips(),
       const SizedBox(height: 12),
       _dropdown('Soil Fertility', const ['Good', 'Normal', 'Poor'], _soilFertility, (v) => _soilFertility = v),
     ]);
+  }
+
+  /// EKiBBO Sheet-3: Physical Features multi-select chips
+  Widget _physicalFeaturesChips() {
+    const features = [
+      'Rivers', 'Lakes', 'Swamp', 'Forest',
+      'Natural forest', 'Planted forest',
+      'Valley', 'Hill/mountain',
+      'Game park/Game reserve',
+    ];
+    return Wrap(
+      spacing: 6,
+      runSpacing: 6,
+      children: features.map((f) {
+        final selected = _physicalFeatures.contains(f);
+        return FilterChip(
+          label: Text(f, style: TextStyle(fontSize: 11, color: selected ? Colors.white : AppTheme.textPrimary)),
+          selected: selected,
+          onSelected: (sel) => setState(() {
+            if (sel) {
+              _physicalFeatures.add(f);
+            } else {
+              _physicalFeatures.remove(f);
+            }
+          }),
+          selectedColor: AppTheme.primaryGreen,
+          backgroundColor: AppTheme.lightGreen,
+        );
+      }).toList(),
+    );
   }
 
   Widget _boundaryTab() {

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -125,6 +126,33 @@ class _FarmLandDetailPageState extends State<FarmLandDetailPage> {
   }
 
   Widget _overviewTab() {
+    // EKiBBO Sheet-3: landTopology now stores physical features (JSON array);
+    // approachRoad now stores access map (text/URL)
+    String physicalFeaturesDisplay = _formatListField(_f!['landTopology']);
+    final ar = _f!['approachRoad'];
+    String accessMapDisplay;
+    if (ar is String && ar.isNotEmpty) {
+      // Could be legacy JSON array string or a plain text URL/description
+      if (ar.startsWith('[')) {
+        try {
+          final decoded = jsonDecode(ar);
+          if (decoded is List && decoded.isNotEmpty) {
+            accessMapDisplay = decoded.join(', ');
+          } else {
+            accessMapDisplay = '—';
+          }
+        } catch (_) {
+          accessMapDisplay = ar;
+        }
+      } else {
+        accessMapDisplay = ar;
+      }
+    } else if (ar is List && ar.isNotEmpty) {
+      accessMapDisplay = ar.join(', ');
+    } else {
+      accessMapDisplay = '—';
+    }
+
     return ListView(padding: const EdgeInsets.all(16), children: [
       _card('Farm Information', [
         _row('Farm Name', _f!['name'] ?? '—'),
@@ -132,17 +160,30 @@ class _FarmLandDetailPageState extends State<FarmLandDetailPage> {
         _row('Area', _f!['sizeHectares'] != null ? '${_f!['sizeHectares']} ha' : '—'),
         _row('Ownership', _f!['landOwnership'] ?? '—'),
         _row('GPS', _coords()),
-        _row('Survey No', _f!['landSurveyNo'] ?? '—'),
       ]),
       const SizedBox(height: 16),
       _card('Location Details', [
-        _row('Topology', _f!['landTopology'] ?? '—'),
-        _row('Gradient', _f!['landGradient'] ?? '—'),
-        _row('Water Source', _f!['waterSource'] ?? '—'),
-        _row('Power Source', _f!['powerSource'] ?? '—'),
+        _row('Physical Features', physicalFeaturesDisplay),
+        _row('Access Map', accessMapDisplay),
         _row('Soil Fertility', _f!['soilFertility'] ?? '—'),
       ]),
     ]);
+  }
+
+  /// EKiBBO Sheet-3: helper that formats a field that can be either a List,
+  /// a JSON-encoded string array, or a plain comma-separated string.
+  String _formatListField(dynamic v) {
+    if (v is List) return v.isEmpty ? '—' : v.join(', ');
+    if (v is String && v.isNotEmpty) {
+      if (v.startsWith('[')) {
+        try {
+          final decoded = jsonDecode(v);
+          if (decoded is List && decoded.isNotEmpty) return decoded.join(', ');
+        } catch (_) {}
+      }
+      return v;
+    }
+    return '—';
   }
 
   String _coords() {

@@ -323,13 +323,9 @@ function AddFarmerForm({ onClose, initialData, farmerId }: { onClose: () => void
       setActiveTab('personal')
       return
     }
-    if (!form.farmerRegistrationUnder) {
-      toast.error('Farmer Registration Under (Agri/Aqua) is required')
-      setActiveTab('enrollment')
-      return
-    }
+    // EKiBBO Sheet-3: removed farmerRegistrationUnder validation (field no longer in form)
     if (!form.cooperativeId) {
-      toast.error('Please select a Cooperative')
+      toast.error('Please select a Group')
       setActiveTab('enrollment')
       return
     }
@@ -351,7 +347,7 @@ function AddFarmerForm({ onClose, initialData, farmerId }: { onClose: () => void
         isCertified: bool(form.isCertified),
         certificationType: str(form.certificationType),
         icsYear: str(form.icsYear),
-        farmerRegistrationUnder: str(form.farmerRegistrationUnder),
+        // EKiBBO Sheet-3: removed "Farmer Registration Under" — no longer submitted
         cooperative: str(form.cooperative),
         cooperativeId: str(form.cooperativeId),
         fieldOfficer: str(form.fieldOfficer),
@@ -373,7 +369,7 @@ function AddFarmerForm({ onClose, initialData, farmerId }: { onClose: () => void
 
         // Tab 3: Contact Information
         country: str(form.country),
-        province: str(form.province),
+        // EKiBBO Sheet-3: province field removed (Uganda has no provinces)
         district: str(form.district),
         commune: str(form.commune),
         villageName: str(form.villageName),
@@ -527,29 +523,18 @@ function AddFarmerForm({ onClose, initialData, farmerId }: { onClose: () => void
               </FormField>
             </div>
           )}
-          <FormField label="Farmer Registration Under *" required>
-            <div className="flex gap-4 pt-2">
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input type="radio" name="regUnder" checked={form.farmerRegistrationUnder === 'Agri'} onChange={() => update('farmerRegistrationUnder', 'Agri')} className="accent-primary" />
-                Agri
-              </label>
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input type="radio" name="regUnder" checked={form.farmerRegistrationUnder === 'Aqua'} onChange={() => update('farmerRegistrationUnder', 'Aqua')} className="accent-primary" />
-                Aqua
-              </label>
-            </div>
-          </FormField>
+          {/* EKiBBO Sheet-3: removed "Farmer Registration Under" (Agri/Aqua) field — not applicable to Ugandan coffee farmers */}
           <div className="grid grid-cols-2 gap-3">
-            <FormField label="Cooperative *" required>
+            <FormField label="Group Name/Code *" required>
               <Select value={form.cooperativeId || undefined}
                 onValueChange={v => {
                   const c = coopOptions.find(o => o.id === v)
                   update('cooperativeId', v)
                   update('cooperative', c?.name ?? '')
                 }}>
-                <SelectTrigger><SelectValue placeholder={form.cooperative || "Select cooperative"} /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder={form.cooperative || "Select group"} /></SelectTrigger>
                 <SelectContent>
-                  {coopOptions.length === 0 && <div className="px-3 py-2 text-xs text-muted-foreground">No cooperatives yet — add one under Master Data.</div>}
+                  {coopOptions.length === 0 && <div className="px-3 py-2 text-xs text-muted-foreground">No groups yet — add one under Master Data.</div>}
                   {coopOptions.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                 </SelectContent>
               </Select>
@@ -634,7 +619,9 @@ function AddFarmerForm({ onClose, initialData, farmerId }: { onClose: () => void
             }}
             onChange={sel => {
               update('country', sel.country || 'Uganda')
-              update('province', sel.region || '')
+              // EKiBBO Sheet-3: removed "Province" field — Uganda has no provinces.
+              // The LocationPicker's region value is no longer mapped to province.
+              update('province', undefined)
               update('district', sel.district || '')
               update('commune', sel.subCounty || '')
               update('villageName', sel.village || '')
@@ -802,14 +789,14 @@ function AddFarmerForm({ onClose, initialData, farmerId }: { onClose: () => void
             </FormField>
             {form.loanTakenLastYear && (
               <div className="space-y-3">
-                <FormField label="Loan Taken From">
+                {/* EKiBBO Sheet-3: Loan source = crop type sold to EKiBBO (coffee forms) */}
+                <FormField label="Loan Source (Crop Sold to EKiBBO)">
                   <Select value={form.loanTakenFrom} onValueChange={v => update('loanTakenFrom', v)}>
-                    <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder="Select crop type sold to EKiBBO" /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Bank">Bank</SelectItem>
-                      <SelectItem value="Relative">Relative</SelectItem>
-                      <SelectItem value="Friend">Friend</SelectItem>
-                      <SelectItem value="Farming Contract">Farming Contract</SelectItem>
+                      <SelectItem value="Fresh (cherry)">Fresh (cherry)</SelectItem>
+                      <SelectItem value="Kiboko (unwashed)">Kiboko (unwashed)</SelectItem>
+                      <SelectItem value="FAQ (washed)">FAQ (washed)</SelectItem>
                       <SelectItem value="Other">Other</SelectItem>
                     </SelectContent>
                   </Select>

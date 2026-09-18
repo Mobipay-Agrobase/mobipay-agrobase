@@ -139,6 +139,44 @@ class ApiClient {
         body: body != null ? jsonEncode(body) : null);
   }
 
+  /// Upload files via multipart/form-data.
+  /// Phase C2 — used for training attachment uploads (photos + attendance form).
+  ///
+  /// [files] is a list of maps: { 'bytes': Uint8List, 'name': String, 'contentType': String }
+  /// [fieldName] is the form field name (default 'files' — matches web endpoint)
+  Future<http.Response> uploadFiles(
+    String path, {
+    required List<Map<String, dynamic>> files,
+    Map<String, String>? fields,
+  }) async {
+    final base = await getBaseUrl();
+    final uri = Uri.parse('$base$path');
+    final request = http.MultipartRequest('POST', uri);
+    // Headers — but skip Content-Type so MultipartRequest sets the boundary
+    request.headers.addAll({
+      if (_token != null) 'Authorization': 'Bearer $_token',
+      if (_tenantId != null) 'X-Tenant-ID': _tenantId!,
+    });
+    if (fields != null) {
+      fields.forEach((k, v) => request.fields[k] = v);
+    }
+    for (final f in files) {
+      final bytes = f['bytes'] as List<int>;
+      final name = f['name'] as String;
+      final contentType = f['contentType'] as String? ?? 'application/octet-stream';
+      request.files.add(http.MultipartFile.fromBytes(
+        'files',
+        bytes,
+        filename: name,
+      ));
+      debugPrint('[API] uploadFiles: $name ($contentType, ${bytes.length} bytes)');
+    }
+    final streamed = await request.send();
+    final res = await http.Response.fromStream(streamed);
+    debugPrint('[API] ← ${res.statusCode} ${res.body.length} bytes (upload)');
+    return res;
+  }
+
   Future<http.Response> delete(String path) async {
     final base = await getBaseUrl();
     final uri = Uri.parse('$base$path');

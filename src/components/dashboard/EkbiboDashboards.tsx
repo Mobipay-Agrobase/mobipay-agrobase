@@ -44,6 +44,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip, Cell } from 'recharts'
 import { formatDistanceToNow } from 'date-fns'
+import { EkbBreakdownSections } from './EkbBreakdownSections'
 
 const COLORS = ['#059669', '#10b981', '#34d399', '#6ee7b7', '#a7f3d0', '#06b6d4', '#0ea5e9', '#3b82f6', '#8b5cf6', '#a855f7']
 
@@ -846,6 +847,18 @@ export function EkbMdDashboard() {
           </div>
         </EkbDashboardSection>
       )}
+
+      {/* ─── Section 3.7 · Phase B — Breakdowns Dashboard ─── */}
+      <EkbDashboardSection
+        icon={BarChart3}
+        title="Disaggregated Analytics"
+        description="Farmer demographics, trainings by funder, purchase/sales breakdowns, loans & inputs disaggregation, farm land KPIs"
+        accent="bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600"
+        collapsible
+        defaultCollapsed
+      >
+        <EkbBreakdownSections />
+      </EkbDashboardSection>
 
       {/* ─── Section 4 · Farmer Network & Loan Portfolio ─── */}
       <EkbDashboardSection

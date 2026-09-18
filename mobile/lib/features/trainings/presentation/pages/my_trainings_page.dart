@@ -55,7 +55,7 @@ class _MyTrainingsPageState extends State<MyTrainingsPage>
         if (res.statusCode == 200) {
           final data = jsonDecode(res.body);
           setState(() {
-            _trainings = data['trainings'] ?? data ?? [];
+            _trainings = data['data'] ?? data['trainings'] ?? [];
             _loadingTrainings = false;
           });
           return;
@@ -102,7 +102,16 @@ class _MyTrainingsPageState extends State<MyTrainingsPage>
         title: const Text('My Trainings'),
         backgroundColor: AppTheme.primaryGreen,
         foregroundColor: Colors.white,
-        actions: const [SyncStatusWidget(), SizedBox(width: 12)],
+        actions: [
+          // Phase C mirror — link to admin breakdowns dashboard (MD role)
+          IconButton(
+            icon: const Icon(Icons.bar_chart),
+            tooltip: 'Breakdowns Dashboard',
+            onPressed: () => context.push('/breakdowns'),
+          ),
+          const SyncStatusWidget(),
+          const SizedBox(width: 12),
+        ],
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: Colors.white,
@@ -113,6 +122,13 @@ class _MyTrainingsPageState extends State<MyTrainingsPage>
             Tab(icon: Icon(Icons.visibility, size: 18), text: 'Farm Visits'),
           ],
         ),
+      ),
+      // Phase C — FAB to create a new training (officer/admin)
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => context.push('/training/new'),
+        backgroundColor: AppTheme.primaryGreen,
+        foregroundColor: Colors.white,
+        child: const Icon(Icons.add),
       ),
       body: TabBarView(
         controller: _tabController,
@@ -174,8 +190,25 @@ class _MyTrainingsPageState extends State<MyTrainingsPage>
                       _buildDetailRow('Date', date),
                       _buildDetailRow('Location', location),
                       _buildDetailRow('Attendance', attended ? 'Attended' : 'Absent'),
+                      if (t['funder'] != null)
+                        _buildDetailRow('Funder', t['funder']),
+                      if (t['mainTopic'] != null)
+                        _buildDetailRow('Main Topic', t['mainTopic']),
                       if (t['description'] != null)
                         _buildDetailRow('Notes', t['description']),
+                      const SizedBox(height: 8),
+                      // Phase C mirror — Edit button (officer/admin)
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          onPressed: () {
+                            final id = t['id'];
+                            if (id != null) context.push('/training/$id/edit');
+                          },
+                          icon: const Icon(Icons.edit, size: 16),
+                          label: const Text('Edit / Manage Attendees / Upload'),
+                        ),
+                      ),
                     ],
                   ),
                 ),

@@ -32,6 +32,8 @@ import '../../features/plots/presentation/pages/plot_detail_page.dart';
 import '../../features/profile/presentation/pages/profile_page.dart';
 import '../../features/profile/presentation/pages/farmer_id_card_page.dart';
 import '../../features/trainings/presentation/pages/my_trainings_page.dart';
+import '../../features/trainings/presentation/pages/training_form_page.dart';
+import '../../features/dashboard/presentation/pages/ekb_breakdowns_page.dart';
 import '../../features/auth/presentation/pages/splash_page.dart';
 import '../../features/billing/presentation/pages/recovery_page.dart';
 import '../../features/impact/presentation/pages/impact_dashboard_page.dart';
@@ -124,6 +126,20 @@ class AppRouter {
           GoRoute(
             path: '/profile/trainings',
             builder: (_, __) => const MyTrainingsPage(),
+          ),
+          // ─── Phase C1 + C2: Training form (create/edit) with attendees + attachments ───
+          GoRoute(
+            path: '/training/new',
+            builder: (_, __) => const TrainingFormPage(),
+          ),
+          GoRoute(
+            path: '/training/:id/edit',
+            builder: (_, state) => TrainingFormPage(trainingId: state.pathParameters['id']!),
+          ),
+          // ─── Phase B mirror: Breakdowns dashboard ───
+          GoRoute(
+            path: '/breakdowns',
+            builder: (_, __) => const EkbBreakdownsPage(),
           ),
           // ─── EKIBBO Phase 3: Purchase, Input Distribution, Farmer Ledger ───
           GoRoute(

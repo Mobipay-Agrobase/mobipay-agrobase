@@ -31,6 +31,13 @@ const COMMODITIES = [
   { value: 'jackfruit', label: 'Jackfruit' },
 ]
 
+// EKiBBO Sheet-2 feedback: Coffee forms are limited to Fresh, Kiboko, FAQ only
+const COFFEE_FORMS = [
+  { value: 'Fresh', label: 'Fresh (cherry)' },
+  { value: 'Kiboko', label: 'Kiboko (unwashed/dry)' },
+  { value: 'FAQ', label: 'FAQ (Frequently Asked Quality — washed)' },
+]
+
 const fmtUGX = (n: number) => `UGX ${(Number(n) || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}`
 const fmtKg = (n: number) => `${(Number(n) || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })} kg`
 
@@ -43,6 +50,7 @@ export function EnhancedPurchaseForm({ farmers: initialFarmers, onClose, onSaved
   const [form, setForm] = useState<Record<string, string>>({
     farmerId: '',
     commodity: 'coffee',
+    coffeeForm: '',  // EKiBBO: Fresh | Kiboko | FAQ
     variety: '',
     totalWeight: '',
     moistureReading: '',
@@ -123,6 +131,7 @@ export function EnhancedPurchaseForm({ farmers: initialFarmers, onClose, onSaved
       const payload: Record<string, any> = {
         farmerId: form.farmerId,
         commodity: form.commodity,
+        coffeeForm: form.coffeeForm || null, // EKiBBO: Fresh/Kiboko/FAQ
         variety: form.variety || null,
         quantity: String(form.totalWeight),
         unit: 'kg',
@@ -192,6 +201,19 @@ export function EnhancedPurchaseForm({ farmers: initialFarmers, onClose, onSaved
           </Select>
         </div>
       </div>
+
+      {/* EKiBBO Sheet-2: Coffee form type (Fresh/Kiboko/FAQ) — only shown when commodity is coffee */}
+      {form.commodity === 'coffee' && (
+        <div className="space-y-1.5">
+          <Label>Coffee Form *</Label>
+          <Select value={form.coffeeForm} onValueChange={v => update('coffeeForm', v)}>
+            <SelectTrigger><SelectValue placeholder="Select coffee form" /></SelectTrigger>
+            <SelectContent>
+              {COFFEE_FORMS.map(f => <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
 
       <div className="space-y-1.5">
         <Label>Variety <span className="text-muted-foreground font-normal">(optional)</span></Label>

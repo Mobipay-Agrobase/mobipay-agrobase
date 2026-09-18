@@ -55,9 +55,19 @@ export async function POST(request: Request) {
         status: body.status || 'SCHEDULED',
         startTime: body.startTime ? new Date(body.startTime) : null,
         endTime: body.endTime ? new Date(body.endTime) : null,
+        durationMinutes: body.durationMinutes ? parseInt(body.durationMinutes) : null,
         expectedAttendees: body.expectedAttendees ? parseInt(body.expectedAttendees) : null,
         materialsUsed: body.materialsUsed || null,
         notes: body.notes || null,
+        groupId: body.groupId || null,
+        // EKiBBO Training Feedback fields (Sheet-2)
+        mainTopic: body.mainTopic || null,
+        specificTopic: body.specificTopic || null,
+        funder: body.funder || null,
+        findings: body.findings || null,
+        challenges: body.challenges || null,
+        recommendations: body.recommendations || null,
+        attachmentUrls: body.attachmentUrls || null,
       },
     })
     return NextResponse.json({ data: training }, { status: 201 })

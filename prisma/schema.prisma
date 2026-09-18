@@ -1588,6 +1588,15 @@ model Training {
   groupId         String?   // optional: link to a FarmerGroup (group-based training)
   cohortId        String?   // optional: link to a program cohort (CCRP, SMILE, etc.)
 
+  // ─── EKiBBO Training Feedback (Sheet-2) ───
+  mainTopic       String?   // Bamboo | Regenerative agriculture | Financial literacy
+  specificTopic   String?   // e.g. "Coffee pruning techniques under bamboo shade"
+  funder          String?   // EKiBBO | ETG | Enabel | Doen
+  findings        String?   // JSON or text — what was observed during training
+  challenges      String?   // text — challenges encountered
+  recommendations String?   // text — recommendations for improvement
+  attachmentUrls  String?   // JSON array of attachment URLs (photos + attendance form)
+
   attendance  TrainingAttendance[]
 }
 

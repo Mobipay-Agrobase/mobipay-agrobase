@@ -33,7 +33,10 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   // Pick only the allowed fields (avoid malicious updates)
   const {
     topic, description, date, location, trainerName,
-    type, status, startTime, endTime, expectedAttendees, materialsUsed, notes,
+    type, status, startTime, endTime, durationMinutes, expectedAttendees, materialsUsed, notes,
+    groupId,
+    // EKiBBO Training Feedback fields
+    mainTopic, specificTopic, funder, findings, challenges, recommendations, attachmentUrls,
   } = body
 
   const updated = await db.training.update({
@@ -48,9 +51,19 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       ...(status !== undefined && { status }),
       ...(startTime !== undefined && { startTime: startTime ? new Date(startTime) : null }),
       ...(endTime !== undefined && { endTime: endTime ? new Date(endTime) : null }),
+      ...(durationMinutes !== undefined && { durationMinutes: durationMinutes ? parseInt(durationMinutes) : null }),
       ...(expectedAttendees !== undefined && { expectedAttendees: expectedAttendees ? parseInt(expectedAttendees) : null }),
       ...(materialsUsed !== undefined && { materialsUsed }),
       ...(notes !== undefined && { notes }),
+      ...(groupId !== undefined && { groupId }),
+      // EKiBBO Training Feedback fields
+      ...(mainTopic !== undefined && { mainTopic }),
+      ...(specificTopic !== undefined && { specificTopic }),
+      ...(funder !== undefined && { funder }),
+      ...(findings !== undefined && { findings }),
+      ...(challenges !== undefined && { challenges }),
+      ...(recommendations !== undefined && { recommendations }),
+      ...(attachmentUrls !== undefined && { attachmentUrls }),
     },
   })
   return NextResponse.json({ data: updated })

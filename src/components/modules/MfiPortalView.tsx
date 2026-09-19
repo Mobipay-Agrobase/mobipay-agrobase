@@ -660,10 +660,11 @@ function ProductManager({ products, partners, onRefresh }: { products: any[]; pa
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label className="text-sm">Partner</Label>
-                <Select value={form.partnerId} onValueChange={(v) => setForm({ ...form, partnerId: v })}>
+                <Select value={form.partnerId || '__in_house__'} onValueChange={(v) => setForm({ ...form, partnerId: v === '__in_house__' ? '' : v })}>
                   <SelectTrigger className="mt-1"><SelectValue placeholder="In-house" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">In-house</SelectItem>
+                    {/* Radix Select forbids value="" — use sentinel, translate on change */}
+                    <SelectItem value="__in_house__">In-house</SelectItem>
                     {partners.filter((p) => p.isActive).map((p) => (
                       <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                     ))}

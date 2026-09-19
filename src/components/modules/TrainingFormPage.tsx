@@ -396,10 +396,11 @@ export default function TrainingFormPage({ mode, trainingId }: Props) {
                 </div>
                 <div className="space-y-1.5">
                   <Label>Farmer Group (for bulk enrollment)</Label>
-                  <Select value={form.groupId} onValueChange={v => update('groupId', v)}>
+                  <Select value={form.groupId || '__all__'} onValueChange={v => update('groupId', v === '__all__' ? '' : v)}>
                     <SelectTrigger><SelectValue placeholder="Select farmer group" /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">All groups</SelectItem>
+                      {/* Radix Select forbids value="" — use sentinel, translate on change */}
+                      <SelectItem value="__all__">All groups</SelectItem>
                       {farmerGroups.map((g: any) => <SelectItem key={g.id} value={g.id}>{g.name} {g.groupCode ? `(${g.groupCode})` : ''}</SelectItem>)}
                     </SelectContent>
                   </Select>

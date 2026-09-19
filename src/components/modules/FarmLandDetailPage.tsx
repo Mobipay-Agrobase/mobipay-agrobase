@@ -474,12 +474,14 @@ export function FarmLandDetailPage({ farmLandId, onBack }: Props) {
                         <div className="space-y-1.5">
                           <Label className="text-xs">Season</Label>
                           <Select
-                            value={cropForm.season}
-                            onValueChange={v => setCropForm(p => ({ ...p, season: v }))}
+                            value={cropForm.season || '__none__'}
+                            onValueChange={v => setCropForm(p => ({ ...p, season: v === '__none__' ? '' : v }))}
                           >
                             <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="—" /></SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="">—</SelectItem>
+                              {/* Radix Select forbids value="" (reserved for "clear selection").
+                                  Use a sentinel value that we translate back to '' on change. */}
+                              <SelectItem value="__none__">—</SelectItem>
                               <SelectItem value="Season A">Season A</SelectItem>
                               <SelectItem value="Season B">Season B</SelectItem>
                               <SelectItem value="Annual">Annual</SelectItem>

@@ -1,4 +1,5 @@
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart' show MediaType;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/foundation.dart' show debugPrint;
@@ -163,13 +164,24 @@ class ApiClient {
     for (final f in files) {
       final bytes = f['bytes'] as List<int>;
       final name = f['name'] as String;
-      final contentType = f['contentType'] as String? ?? 'application/octet-stream';
+      final contentTypeStr = f['contentType'] as String? ?? 'application/octet-stream';
+      // Parse contentType into a MediaType so the server's multipart parser
+      // can distinguish images from PDFs/Excel. Without this, every file
+      // arrives as application/octet-stream and the server may reject
+      // extension-based validation.
+      MediaType? mediaType;
+      try {
+        mediaType = MediaType.parse(contentTypeStr);
+      } catch (_) {
+        // Unparseable contentType — let MultipartFile default to octet-stream.
+      }
       request.files.add(http.MultipartFile.fromBytes(
         'files',
         bytes,
         filename: name,
+        contentType: mediaType,
       ));
-      debugPrint('[API] uploadFiles: $name ($contentType, ${bytes.length} bytes)');
+      debugPrint('[API] uploadFiles: $name ($contentTypeStr, ${bytes.length} bytes)');
     }
     final streamed = await request.send();
     final res = await http.Response.fromStream(streamed);

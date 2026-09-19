@@ -129,29 +129,9 @@ class _FarmLandDetailPageState extends State<FarmLandDetailPage> {
     // EKiBBO Sheet-3: landTopology now stores physical features (JSON array);
     // approachRoad now stores access map (text/URL)
     String physicalFeaturesDisplay = _formatListField(_f!['landTopology']);
-    final ar = _f!['approachRoad'];
-    String accessMapDisplay;
-    if (ar is String && ar.isNotEmpty) {
-      // Could be legacy JSON array string or a plain text URL/description
-      if (ar.startsWith('[')) {
-        try {
-          final decoded = jsonDecode(ar);
-          if (decoded is List && decoded.isNotEmpty) {
-            accessMapDisplay = decoded.join(', ');
-          } else {
-            accessMapDisplay = '—';
-          }
-        } catch (_) {
-          accessMapDisplay = ar;
-        }
-      } else {
-        accessMapDisplay = ar;
-      }
-    } else if (ar is List && ar.isNotEmpty) {
-      accessMapDisplay = ar.join(', ');
-    } else {
-      accessMapDisplay = '—';
-    }
+    // Access Map is usually plain text (URL or directions), but legacy
+    // records may have stored it as a JSON array — use the same helper.
+    final accessMapDisplay = _formatListField(_f!['approachRoad']);
 
     return ListView(padding: const EdgeInsets.all(16), children: [
       _card('Farm Information', [
@@ -175,10 +155,15 @@ class _FarmLandDetailPageState extends State<FarmLandDetailPage> {
   String _formatListField(dynamic v) {
     if (v is List) return v.isEmpty ? '—' : v.join(', ');
     if (v is String && v.isNotEmpty) {
+      // Could be a JSON-encoded array like '["Rivers","Lakes"]' OR
+      // a plain comma-separated string like 'Rivers, Lakes'. Detect JSON first.
       if (v.startsWith('[')) {
         try {
           final decoded = jsonDecode(v);
-          if (decoded is List && decoded.isNotEmpty) return decoded.join(', ');
+          if (decoded is List) {
+            // Empty array '[]' should show '—', not literal '[]'
+            return decoded.isEmpty ? '—' : decoded.join(', ');
+          }
         } catch (_) {}
       }
       return v;

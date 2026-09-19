@@ -45,6 +45,7 @@ class _EkbBreakdownsPageState extends State<EkbBreakdownsPage> {
     try {
       final connectivity = context.read<ConnectivityManager>();
       if (!connectivity.isOnline) {
+        if (!mounted) return;
         setState(() {
           _error = 'Breakdowns require an internet connection. Please connect and try again.';
           _loading = false;
@@ -52,6 +53,7 @@ class _EkbBreakdownsPageState extends State<EkbBreakdownsPage> {
         return;
       }
       final res = await ApiClient().get('/api/dashboard/ekibbo-breakdowns');
+      if (!mounted) return;
       if (res.statusCode == 200) {
         setState(() {
           _data = jsonDecode(res.body);
@@ -64,6 +66,7 @@ class _EkbBreakdownsPageState extends State<EkbBreakdownsPage> {
         });
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _error = 'Error: $e';
         _loading = false;
@@ -252,8 +255,8 @@ class _EkbBreakdownsPageState extends State<EkbBreakdownsPage> {
       Colors.cyan,
       [
         _kpiRow([
-          (label: 'Trainings', value: '${tbf.fold(0, (s, f) => s + (f['count'] ?? 0) as int)}', icon: Icons.school, color: Colors.cyan),
-          (label: 'Attendees', value: '${tbf.fold(0, (s, f) => s + (f['attendees'] ?? 0) as int)}', icon: Icons.people, color: Colors.green),
+          (label: 'Trainings', value: '${tbf.fold<int>(0, (s, f) => s + (f['count'] as num? ?? 0).toInt())}', icon: Icons.school, color: Colors.cyan),
+          (label: 'Attendees', value: '${tbf.fold<int>(0, (s, f) => s + (f['attendees'] as num? ?? 0).toInt())}', icon: Icons.people, color: Colors.green),
           (label: 'Funders', value: '${tbf.length}', icon: Icons.business, color: Colors.purple),
         ]),
         const SizedBox(height: 8),
@@ -287,7 +290,7 @@ class _EkbBreakdownsPageState extends State<EkbBreakdownsPage> {
         _table(
           byCommodity.take(10).map((c) => {
             'Commodity': c['label'],
-            'Volume': c['volume']?.toStringAsFixed(1),
+            'Volume': (c['volume'] as num?)?.toStringAsFixed(1),
             'Value': 'UGX ${(c['value'] ?? 0)}',
             'Count': c['count'],
           }).toList(),
@@ -319,7 +322,7 @@ class _EkbBreakdownsPageState extends State<EkbBreakdownsPage> {
         _table(
           byCommodity.take(10).map((c) => {
             'Commodity': c['label'],
-            'Volume': c['volume']?.toStringAsFixed(1),
+            'Volume': (c['volume'] as num?)?.toStringAsFixed(1),
             'Value': 'UGX ${(c['value'] ?? 0)}',
             'Count': c['count'],
           }).toList(),
@@ -332,7 +335,7 @@ class _EkbBreakdownsPageState extends State<EkbBreakdownsPage> {
   // ─── 5. Sales by buyer ───
   Widget _salesByBuyerCard() {
     final sbb = (_data?['salesByBuyer'] as List?) ?? [];
-    final totalValue = sbb.fold<int>(0, (s, b) => s + ((b['value'] ?? 0) as int));
+    final totalValue = sbb.fold<int>(0, (s, b) => s + (b['value'] as num? ?? 0).toInt());
     return _card(
       'Sales by Buyer Company',
       'Top buyers + revenue per buyer',
@@ -349,7 +352,7 @@ class _EkbBreakdownsPageState extends State<EkbBreakdownsPage> {
           sbb.take(15).map((b) => {
             'Buyer': b['buyerName'],
             'Sales': b['count'],
-            'Volume': b['volume']?.toStringAsFixed(1),
+            'Volume': (b['volume'] as num?)?.toStringAsFixed(1),
             'Value': 'UGX ${(b['value'] ?? 0)}',
           }).toList(),
           ['Buyer', 'Sales', 'Volume', 'Value'],
@@ -361,7 +364,7 @@ class _EkbBreakdownsPageState extends State<EkbBreakdownsPage> {
   // ─── 6. Revenue per produce ───
   Widget _revenueByProduceCard() {
     final rbp = (_data?['revenueByProduce'] as List?) ?? [];
-    final totalRevenue = rbp.fold<int>(0, (s, p) => s + ((p['value'] ?? 0) as int));
+    final totalRevenue = rbp.fold<int>(0, (s, p) => s + (p['value'] as num? ?? 0).toInt());
     return _card(
       'Revenue per Produce',
       'Top crops by revenue',
@@ -377,7 +380,7 @@ class _EkbBreakdownsPageState extends State<EkbBreakdownsPage> {
         _table(
           rbp.take(10).map((p) => {
             'Produce': p['produce'],
-            'Volume': p['volume']?.toStringAsFixed(1),
+            'Volume': (p['volume'] as num?)?.toStringAsFixed(1),
             'Revenue': 'UGX ${(p['value'] ?? 0)}',
             'Avg/kg': p['avgPricePerUnit'] != null ? 'UGX ${p['avgPricePerUnit']}' : '—',
           }).toList(),
@@ -393,6 +396,10 @@ class _EkbBreakdownsPageState extends State<EkbBreakdownsPage> {
     if (ld == null) return _card('Loans Disaggregation', 'Unavailable', Icons.account_balance, Colors.grey, []);
     final byGender = (ld['byGender'] as List?) ?? [];
     final byType = (ld['byType'] as List?) ?? [];
+    // Cast to num first — JSON values come as num (could be int or double).
+    final totalLoans = (ld['totalLoans'] as num?)?.toInt() ?? 0;
+    final totalAmount = (ld['totalAmount'] as num?)?.toInt() ?? 0;
+    final avgLoan = totalLoans > 0 ? (totalAmount ~/ totalLoans) : null;
     return _card(
       'Loans Disaggregation',
       'By gender, age, district, type',
@@ -400,9 +407,9 @@ class _EkbBreakdownsPageState extends State<EkbBreakdownsPage> {
       Colors.red,
       [
         _kpiRow([
-          (label: 'Total Loans', value: '${ld['totalLoans'] ?? 0}', icon: Icons.account_balance, color: Colors.red),
-          (label: 'Total Amount', value: 'UGX ${ld['totalAmount'] ?? 0}', icon: Icons.receipt, color: Colors.purple),
-          (label: 'Avg Loan', value: ld['totalLoans'] != null && ld['totalLoans'] > 0 ? 'UGX ${((ld['totalAmount'] ?? 0) ~/ ld['totalLoans'])}' : '—', icon: Icons.trending_up, color: Colors.green),
+          (label: 'Total Loans', value: '$totalLoans', icon: Icons.account_balance, color: Colors.red),
+          (label: 'Total Amount', value: 'UGX $totalAmount', icon: Icons.receipt, color: Colors.purple),
+          (label: 'Avg Loan', value: avgLoan != null ? 'UGX $avgLoan' : '—', icon: Icons.trending_up, color: Colors.green),
         ]),
         const SizedBox(height: 8),
         const Text('By Gender', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
@@ -422,6 +429,10 @@ class _EkbBreakdownsPageState extends State<EkbBreakdownsPage> {
     if (id == null) return _card('Inputs Disaggregation', 'Unavailable', Icons.inventory, Colors.grey, []);
     final byGender = (id['byGender'] as List?) ?? [];
     final byType = (id['byType'] as List?) ?? [];
+    // Cast to num first — JSON values come as num (could be int or double).
+    final totalDist = (id['totalDistributions'] as num?)?.toInt() ?? 0;
+    final totalAmount = (id['totalAmount'] as num?)?.toInt() ?? 0;
+    final avgDist = totalDist > 0 ? (totalAmount ~/ totalDist) : null;
     return _card(
       'Inputs Disaggregation',
       'By gender, age, district, type',
@@ -429,9 +440,9 @@ class _EkbBreakdownsPageState extends State<EkbBreakdownsPage> {
       Colors.amber,
       [
         _kpiRow([
-          (label: 'Distributions', value: '${id['totalDistributions'] ?? 0}', icon: Icons.inventory, color: Colors.amber),
-          (label: 'Total Cost', value: 'UGX ${id['totalAmount'] ?? 0}', icon: Icons.receipt, color: Colors.purple),
-          (label: 'Avg', value: id['totalDistributions'] != null && id['totalDistributions'] > 0 ? 'UGX ${((id['totalAmount'] ?? 0) ~/ id['totalDistributions'])}' : '—', icon: Icons.trending_up, color: Colors.green),
+          (label: 'Distributions', value: '$totalDist', icon: Icons.inventory, color: Colors.amber),
+          (label: 'Total Cost', value: 'UGX $totalAmount', icon: Icons.receipt, color: Colors.purple),
+          (label: 'Avg', value: avgDist != null ? 'UGX $avgDist' : '—', icon: Icons.trending_up, color: Colors.green),
         ]),
         const SizedBox(height: 8),
         const Text('By Gender', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
@@ -502,7 +513,7 @@ class _EkbBreakdownsPageState extends State<EkbBreakdownsPage> {
           categories.map((c) => {
             'Category': c['category'],
             'Count': c['count'],
-            'Quantity': c['quantity']?.toStringAsFixed(1),
+            'Quantity': (c['quantity'] as num?)?.toStringAsFixed(1),
             'Amount': 'UGX ${c['amount']}',
             '%': '${c['pct']}%',
           }).toList(),

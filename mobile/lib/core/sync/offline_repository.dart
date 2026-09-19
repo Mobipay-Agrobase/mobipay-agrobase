@@ -672,7 +672,16 @@ class OfflineRepository {
         final res = await _api.get('/api/trainings');
         if (res.statusCode == 200) {
           final data = jsonDecode(res.body);
-          final trainings = data['trainings'] as List<dynamic>? ?? data as List? ?? [];
+          // The API returns { data: [...] } (not { trainings: [...] }). Handle both shapes.
+          // CRITICAL: don't do `data as List?` — that throws TypeError on a Map.
+          List<dynamic> trainings;
+          if (data is List) {
+            trainings = data;
+          } else if (data is Map) {
+            trainings = (data['data'] ?? data['trainings']) as List? ?? [];
+          } else {
+            trainings = [];
+          }
           for (final t in trainings) {
             await _db.upsertTrainings([
               TrainingCacheCompanion.insert(
@@ -716,7 +725,16 @@ class OfflineRepository {
         final res = await _api.get('/api/farm-visits${farmerId != null ? '?farmerId=$farmerId' : ''}');
         if (res.statusCode == 200) {
           final data = jsonDecode(res.body);
-          final visits = data['visits'] as List<dynamic>? ?? data as List? ?? [];
+          // The API may return { visits: [...] } or { data: [...] } or a bare List.
+          // CRITICAL: don't do `data as List?` — that throws TypeError on a Map.
+          List<dynamic> visits;
+          if (data is List) {
+            visits = data;
+          } else if (data is Map) {
+            visits = (data['visits'] ?? data['data']) as List? ?? [];
+          } else {
+            visits = [];
+          }
           return visits.cast<Map<String, dynamic>>();
         }
       } catch (e) {

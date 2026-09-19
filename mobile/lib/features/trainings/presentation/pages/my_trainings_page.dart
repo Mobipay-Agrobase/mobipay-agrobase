@@ -54,8 +54,19 @@ class _MyTrainingsPageState extends State<MyTrainingsPage>
         final res = await ApiClient().get('/api/trainings');
         if (res.statusCode == 200) {
           final data = jsonDecode(res.body);
+          // The API returns { data: [...] } (not { trainings: [...] }).
+          // Be defensive — don't do `data as List?` on a Map (throws TypeError).
+          List<dynamic> trainings;
+          if (data is List) {
+            trainings = data;
+          } else if (data is Map) {
+            trainings = (data['data'] ?? data['trainings']) as List? ?? [];
+          } else {
+            trainings = [];
+          }
+          if (!mounted) return;
           setState(() {
-            _trainings = data['data'] ?? data['trainings'] ?? [];
+            _trainings = trainings;
             _loadingTrainings = false;
           });
           return;
@@ -64,14 +75,17 @@ class _MyTrainingsPageState extends State<MyTrainingsPage>
       // Offline: read from local cache
       final repo = context.read<OfflineRepository>();
       final trainings = await repo.getTrainings();
+      if (!mounted) return;
       setState(() { _trainings = trainings; _loadingTrainings = false; });
     } catch (_) {
       // Fallback to cache
       try {
         final repo = context.read<OfflineRepository>();
         final trainings = await repo.getTrainings();
+        if (!mounted) return;
         setState(() { _trainings = trainings; _loadingTrainings = false; });
       } catch (_) {
+        if (!mounted) return;
         setState(() => _loadingTrainings = false);
       }
     }
@@ -82,14 +96,26 @@ class _MyTrainingsPageState extends State<MyTrainingsPage>
       final res = await ApiClient().get('/api/farm-visits');
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
+        // Be defensive — same pattern as _loadTrainings above.
+        List<dynamic> visits;
+        if (data is List) {
+          visits = data;
+        } else if (data is Map) {
+          visits = (data['visits'] ?? data['data']) as List? ?? [];
+        } else {
+          visits = [];
+        }
+        if (!mounted) return;
         setState(() {
-          _visits = data['visits'] ?? data ?? [];
+          _visits = visits;
           _loadingVisits = false;
         });
       } else {
+        if (!mounted) return;
         setState(() => _loadingVisits = false);
       }
     } catch (_) {
+      if (!mounted) return;
       setState(() => _loadingVisits = false);
     }
   }

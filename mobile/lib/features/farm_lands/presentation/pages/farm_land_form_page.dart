@@ -61,6 +61,30 @@ class _FarmLandFormPageState extends State<FarmLandFormPage> {
     _load();
   }
 
+  // CRITICAL: dispose all 13 TextEditingControllers to prevent memory leaks
+  // when the page is popped. Pre-existing oversight that became worse when
+  // _accessMapCtrl was added in the Sheet-3 refactor.
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    _sizeCtrl.dispose();
+    _accessMapCtrl.dispose();
+    _latCtrl.dispose();
+    _lngCtrl.dispose();
+    _workersFT.dispose();
+    _workersPT.dispose();
+    _workersSeasonal.dispose();
+    _workersFamily.dispose();
+    _conventionalLands.dispose();
+    _fallowPastureLand.dispose();
+    _conventionalCrops.dispose();
+    _inspectorName.dispose();
+    _soilSamplesInfo.dispose();
+    _soilReportUrl.dispose();
+    _estYieldCtrl.dispose();
+    super.dispose();
+  }
+
   Future<void> _load() async {
     if (widget.farmLandId != null) {
       final repo = context.read<OfflineRepository>();

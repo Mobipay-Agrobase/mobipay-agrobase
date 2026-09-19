@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/api/api_client.dart';
@@ -98,6 +99,7 @@ class _TrainingFormPageState extends State<TrainingFormPage>
       final res = await ApiClient().get('/api/farmer-groups?limit=200');
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
+        if (!mounted) return;
         setState(() {
           _farmerGroups = data['data'] ?? data['groups'] ?? [];
         });
@@ -111,20 +113,22 @@ class _TrainingFormPageState extends State<TrainingFormPage>
       if (res.statusCode == 200) {
         final d = jsonDecode(res.body);
         final t = d['data'] ?? d;
+        if (!mounted) return;
         setState(() {
           _topicCtrl.text = t['topic'] ?? '';
           _specificTopicCtrl.text = t['specificTopic'] ?? t['description'] ?? '';
+          // Use tryParse — older records may have startTime/endTime in non-ISO formats.
           _dateCtrl.text = t['date'] != null
-              ? DateTime.parse(t['date']).toIso8601String().split('T')[0]
+              ? (DateTime.tryParse(t['date'])?.toIso8601String().split('T')[0] ?? '')
               : '';
           _trainerCtrl.text = t['trainerName'] ?? '';
           _locationCtrl.text = t['location'] ?? '';
           _expectedAttendeesCtrl.text = t['expectedAttendees']?.toString() ?? '';
           _startTimeCtrl.text = t['startTime'] != null
-              ? DateTime.parse(t['startTime']).toIso8601String().split('T')[1].substring(0, 5)
+              ? (DateTime.tryParse(t['startTime'])?.toIso8601String().split('T')[1].substring(0, 5) ?? '')
               : '';
           _endTimeCtrl.text = t['endTime'] != null
-              ? DateTime.parse(t['endTime']).toIso8601String().split('T')[1].substring(0, 5)
+              ? (DateTime.tryParse(t['endTime'])?.toIso8601String().split('T')[1].substring(0, 5) ?? '')
               : '';
           _durationCtrl.text = t['durationMinutes']?.toString() ?? '';
           _materialsCtrl.text = t['materialsUsed'] ?? '';
@@ -145,6 +149,7 @@ class _TrainingFormPageState extends State<TrainingFormPage>
                 ? jsonDecode(t['attachmentUrls'])
                 : t['attachmentUrls'];
             if (parsed is List) {
+              if (!mounted) return;
               setState(() => _attachments = parsed);
             }
           } catch (_) {}
@@ -153,7 +158,8 @@ class _TrainingFormPageState extends State<TrainingFormPage>
         await _loadAttendees();
       }
     } catch (_) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to load training')));
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to load training')));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -165,7 +171,8 @@ class _TrainingFormPageState extends State<TrainingFormPage>
       final res = await ApiClient().get('/api/trainings/${widget.trainingId}/attendance');
       if (res.statusCode == 200) {
         final d = jsonDecode(res.body);
-        setState(() => _attendees = d['data'] ?? []);
+        if (!mounted) return;
+        setState(() => _attendees = (d['data'] as List?) ?? []);
       }
     } catch (_) {}
   }
@@ -203,17 +210,19 @@ class _TrainingFormPageState extends State<TrainingFormPage>
         'challenges': _challengesCtrl.text.isNotEmpty ? _challengesCtrl.text : null,
         'recommendations': _recommendationsCtrl.text.isNotEmpty ? _recommendationsCtrl.text : null,
       };
-      final url = _isEdit ? '/api/trainings/${widget.trainingId}' : '/api/trainings';
-      final res = await ApiClient().put(url, body: payload); // PUT works for both create (acts as upsert) and edit
-      if (res.statusCode != 200) {
-        // Try POST for create
-        if (!_isEdit) {
-          final res2 = await ApiClient().post('/api/trainings', body: payload);
-          if (res2.statusCode != 201) {
-            throw Exception('Failed to create: ${res2.body}');
-          }
-        } else {
+      // Use POST for create, PUT for edit. The /api/trainings route only
+      // defines GET + POST — calling PUT on a collection URL returns 405,
+      // which previously caused a wasted round-trip and a confusing flow.
+      final http.Response res;
+      if (_isEdit) {
+        res = await ApiClient().put('/api/trainings/${widget.trainingId}', body: payload);
+        if (res.statusCode != 200) {
           throw Exception('Failed to save: ${res.body}');
+        }
+      } else {
+        res = await ApiClient().post('/api/trainings', body: payload);
+        if (res.statusCode != 201) {
+          throw Exception('Failed to create: ${res.body}');
         }
       }
       if (mounted) {
@@ -275,17 +284,21 @@ class _TrainingFormPageState extends State<TrainingFormPage>
 
   Future<void> _toggleAttended(int idx) async {
     final att = _attendees[idx];
-    final newAttended = !(att['attended'] ?? false);
+    // Cast to a typed map so the spread operator works safely — without
+    // this, the runtime throws "TypeError: ... is not a subtype of Map"
+    // if att is null or not a Map.
+    final attMap = Map<String, dynamic>.from(att as Map);
+    final newAttended = !(attMap['attended'] ?? false);
     setState(() {
       _attendees[idx] = {
-        ...att,
+        ...attMap,
         'attended': newAttended,
         'enrollmentStatus': newAttended ? 'ATTENDED' : 'ENROLLED',
       };
     });
     try {
       final res = await ApiClient().put(
-        '/api/trainings/${widget.trainingId}/attendance/${att['id']}',
+        '/api/trainings/${widget.trainingId}/attendance/${attMap['id']}',
         body: {
           'attended': newAttended,
           'enrollmentStatus': newAttended ? 'ATTENDED' : 'ENROLLED',
@@ -293,9 +306,10 @@ class _TrainingFormPageState extends State<TrainingFormPage>
       );
       if (res.statusCode != 200) {
         // Revert
+        if (!mounted) return;
         setState(() {
           _attendees[idx] = {
-            ...att,
+            ...attMap,
             'attended': !newAttended,
             'enrollmentStatus': !newAttended ? 'ATTENDED' : 'ENROLLED',
           };
@@ -303,9 +317,8 @@ class _TrainingFormPageState extends State<TrainingFormPage>
         throw Exception('Failed to update');
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
-      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
     }
   }
 
@@ -347,8 +360,18 @@ class _TrainingFormPageState extends State<TrainingFormPage>
       if (res.statusCode != 201) {
         throw Exception(d['error'] ?? 'Upload failed');
       }
+      // The API responds with { data: { attachments: [...] } }. Be defensive —
+      // if the server ever returns the attachments array at the root, fall back.
+      final dataMap = d is Map ? (d['data'] as Map?) ?? d : null;
+      final List attachmentsList;
+      if (dataMap != null) {
+        attachmentsList = (dataMap['attachments'] as List?) ?? [];
+      } else {
+        attachmentsList = [];
+      }
+      if (!mounted) return;
       setState(() {
-        _attachments = (d['data']['attachments'] as List?) ?? [];
+        _attachments = attachmentsList;
       });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -453,6 +476,9 @@ class _TrainingFormPageState extends State<TrainingFormPage>
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         _dropdownField('Type of Training', ['GROUP_TRAINING', 'FARM_VISIT'], _type, (v) => setState(() => _type = v)),
         const SizedBox(height: 12),
+        // Pass through the actual _mainTopic value — if empty, the DropdownButtonFormField
+        // initialValue will be null and the placeholder shows. Don't substitute a default
+        // because that would silently persist "Bamboo" when the user never picked anything.
         _dropdownField('Main Topic', ['Bamboo', 'Regenerative Agriculture', 'Financial Literacy'], _mainTopic.isEmpty ? 'Bamboo' : _mainTopic, (v) => setState(() => _mainTopic = v)),
         const SizedBox(height: 12),
         _textField(_specificTopicCtrl, 'Specific Topic'),

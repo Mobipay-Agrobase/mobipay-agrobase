@@ -74,34 +74,49 @@ class _ProfilePageState extends State<ProfilePage> {
     if (selected == '__custom__') {
       // Custom URL — show a text input dialog
       final controller = TextEditingController(text: current);
-      final custom = await showDialog<String>(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: const Text('Custom API URL', style: TextStyle(fontSize: 16)),
-          content: TextField(
-            controller: controller,
-            decoration: const InputDecoration(
-              hintText: 'http://10.0.2.2:3000',
-              border: OutlineInputBorder(),
+      try {
+        final custom = await showDialog<String>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Custom API URL', style: TextStyle(fontSize: 16)),
+            content: TextField(
+              controller: controller,
+              decoration: const InputDecoration(
+                hintText: 'http://10.0.2.2:3000',
+                border: OutlineInputBorder(),
+              ),
+              keyboardType: TextInputType.url,
+              autocorrect: false,
             ),
-            keyboardType: TextInputType.url,
-            autocorrect: false,
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, controller.text.trim()),
+                child: const Text('Save'),
+              ),
+            ],
           ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, controller.text.trim()),
-              child: const Text('Save'),
-            ),
-          ],
-        ),
-      );
-      if (custom == null || custom.isEmpty) return;
-      await ApiClient.setBaseUrl(custom);
-      _showSnackBar('API server set to: $custom\nPlease log out + log back in.');
-      return;
+        );
+        if (custom == null || custom.isEmpty) return;
+        // Validate URL — reject obviously malformed input.
+        final uri = Uri.tryParse(custom);
+        if (uri == null || !uri.hasAbsolutePath || !(uri.scheme == 'http' || uri.scheme == 'https')) {
+          _showSnackBar('Invalid URL. Must start with http:// or https://');
+          return;
+        }
+        await ApiClient.setBaseUrl(custom);
+        // Clear the previous server's auth token — otherwise the next API call
+        // would send a JWT signed for the old server to the new one, causing 401s.
+        ApiClient().clearAuth();
+        _showSnackBar('API server set to: $custom\nPlease log out + log back in.');
+        return;
+      } finally {
+        controller.dispose();
+      }
     }
     await ApiClient.setBaseUrl(selected);
+    // Clear the previous server's auth token — see note above.
+    ApiClient().clearAuth();
     _showSnackBar('API server set to: $selected\nPlease log out + log back in.');
   }
 

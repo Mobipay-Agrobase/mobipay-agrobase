@@ -47,7 +47,14 @@ const INPUT_TYPES = [
   { value: 'tarpaulin', label: 'Tarpaulin' },
   { value: 'fertilizer', label: 'Fertilizer' },
   { value: 'pruning_saw', label: 'Pruning Saw' },
-  { value: 'seedling', label: 'Seedling' },
+  { value: 'secateurs', label: 'Secateurs' }, // EKiBBO Sheet-3 Q5 — added per Issac's clarification
+  // EKiBBO Sheet-3 Q5 — seedlings broken down per type (cocoa, coffee, shade trees)
+  { value: 'seedling_cocoa', label: 'Seedling — Cocoa' },
+  { value: 'seedling_coffee', label: 'Seedling — Coffee' },
+  { value: 'seedling_shade_tree', label: 'Seedling — Shade Tree' },
+  { value: 'seedling_other', label: 'Seedling — Other' },
+  // Legacy generic value kept for backward compatibility with existing distributions
+  { value: 'seedling', label: 'Seedling (generic)' },
 ]
 
 const INPUT_UNITS = ['pcs', 'kg', 'liters', 'bags', 'meters']

@@ -1,7 +1,7 @@
 import { db } from '@/lib/db'
 import { NextRequest, NextResponse } from 'next/server'
 import { getTenantContext, buildTenantFilter } from '@/lib/tenant'
-import { decryptField, encryptField } from '@/lib/security/field-crypto'
+import { safeDecryptField, encryptField } from '@/lib/security/field-crypto'
 import { isEkibboTenant } from '@/lib/ekibbo'
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -45,11 +45,11 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     farmEquipment: parseJson(farmer.farmEquipment, []),
     mainCrops: parseJson(farmer.mainCrops, []),
     livestockTypes: parseJson(farmer.livestockTypes, []),
-    // P7: Decrypt PII fields for the response
-    phone: farmer.phone && farmer.phone.startsWith('enc:v1:') ? decryptField(farmer.phone) : farmer.phone,
-    nationalIdNo: farmer.nationalIdNo ? decryptField(farmer.nationalIdNo) : null,
-    bankAccountNo: farmer.bankAccountNo ? decryptField(farmer.bankAccountNo) : null,
-    email: farmer.email ? decryptField(farmer.email) : null,
+    // P7: Decrypt PII fields for the response — safe decrypt (never leaks ciphertext)
+    phone: safeDecryptField(farmer.phone),
+    nationalIdNo: safeDecryptField(farmer.nationalIdNo),
+    bankAccountNo: safeDecryptField(farmer.bankAccountNo),
+    email: safeDecryptField(farmer.email),
   }
 
   // ─── Inline loyalty summary (year-to-date) ─────────────────────────────

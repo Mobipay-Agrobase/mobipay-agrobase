@@ -648,8 +648,17 @@ function AddFarmerForm({ onClose, initialData, farmerId }: { onClose: () => void
 
         {/* ── Tab 4: Family Information ── */}
         <TabsContent value="family" className="mt-4 space-y-4 form-tab-content">
-          <FormField label="Next of Kin Contact">
-            <Input value={form.spouseName} onChange={e => update('spouseName', e.target.value)} placeholder="Name + phone" />
+          {/* EKiBBO Sheet-3 (Issac clarification Q4): Next of Kin = alternative
+              phone number — "add option for alternative number, any other family
+              member or relative, no need for the name". So we relabel the field
+              and use tel input + placeholder that matches the new spec. */}
+          <FormField label="Next of Kin — Alternative Phone">
+            <Input
+              type="tel"
+              value={form.spouseName}
+              onChange={e => update('spouseName', e.target.value)}
+              placeholder="+256 7XX XXX XXX (alternative contact)"
+            />
           </FormField>
           <div className="grid grid-cols-2 gap-3">
             <FormField label="Household Size">

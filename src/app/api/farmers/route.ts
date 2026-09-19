@@ -4,20 +4,7 @@ import { getTenantContext, buildTenantFilter } from '@/lib/tenant'
 import { hashPassword } from '@/lib/password'
 import { appendImpactEvent } from '@/lib/impact/hash-chain'
 import { UsageTracker } from '@/lib/billing/usage'
-import { encryptField, decryptField } from '@/lib/security/field-crypto'
-
-// Safe decrypt — wraps decryptField in try/catch so one bad encrypted value
-// doesn't crash the entire API response. Returns null on failure.
-function safeDecrypt(value: string | null | undefined): string | null {
-  if (!value) return null
-  if (!value.startsWith('enc:v1:')) return value // plaintext, return as-is
-  try {
-    return decryptField(value)
-  } catch (e) {
-    console.error('[safeDecrypt] Failed to decrypt field:', e)
-    return null // return null instead of leaking the encrypted value
-  }
-}
+import { encryptField, safeDecryptField } from '@/lib/security/field-crypto'
 import { generateFarmerCode } from '@/lib/farmer-code'
 
 /**
@@ -80,10 +67,10 @@ export async function GET(request: Request) {
       mainCrops: f.mainCrops ? JSON.parse(f.mainCrops) : [],
       livestockTypes: f.livestockTypes ? JSON.parse(f.livestockTypes) : [],
       // P7: Decrypt PII fields — safe decrypt (falls back to null on failure)
-      phone: safeDecrypt(f.phone),
-      nationalIdNo: safeDecrypt(f.nationalIdNo),
-      bankAccountNo: safeDecrypt(f.bankAccountNo),
-      email: safeDecrypt(f.email),
+      phone: safeDecryptField(f.phone),
+      nationalIdNo: safeDecryptField(f.nationalIdNo),
+      bankAccountNo: safeDecryptField(f.bankAccountNo),
+      email: safeDecryptField(f.email),
     }))
 
     return NextResponse.json({ farmers: farmersParsed, total, page, totalPages: Math.ceil(total / limit) })

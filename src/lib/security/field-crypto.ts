@@ -177,10 +177,13 @@ export function decryptField(encryptedValue: string | null | undefined): string 
     }
   }
 
-  // Auth tag mismatch — tampered, or no known key matches. We return the raw
-  // value rather than throwing so a single bad field can't take down the whole list.
-  console.warn('[field-crypto] decrypt failed for value (tampered or unknown key)')
-  return encryptedValue
+  // All keys failed — tampered, key rotated, or unknown key.
+  // THROW instead of returning the raw ciphertext. Returning the raw
+  // ciphertext would leak the encrypted blob to the API response (which
+  // was the cause of the "random lengthy number" bug on the farmers list
+  // page when the production ENCRYPTION_KEY didn't match the stored data).
+  // Callers must wrap decryptField in a try/catch (safeDecrypt pattern).
+  throw new Error('decrypt failed: no known key matches (tampered or rotated)')
 }
 
 /**
@@ -237,6 +240,36 @@ export function decryptFields<T extends Record<string, unknown>>(
     }
   }
   return result as T
+}
+
+/**
+ * safeDecryptField — CRITICAL helper that NEVER returns the encrypted ciphertext.
+ *
+ * Use this in API routes when responding with PII fields. If decryption fails
+ * (key mismatch, tampered data, key rotation), this returns null instead of
+ * leaking the raw "enc:v1:..." ciphertext to the client.
+ *
+ * @example
+ *   phone: safeDecryptField(farmer.phone),
+ *   nationalIdNo: safeDecryptField(farmer.nationalIdNo),
+ */
+export function safeDecryptField(value: string | null | undefined): string | null {
+  if (!value) return null
+  // Non-encrypted plaintext — return as-is (legacy or test data)
+  if (!isEncrypted(value)) return value
+  try {
+    const decrypted = decryptField(value)
+    // Defense-in-depth: if decryptField somehow returned the raw ciphertext
+    // (shouldn't happen anymore — it throws now), strip it.
+    if (decrypted && isEncrypted(decrypted)) {
+      console.error('[safeDecryptField] decryptField returned ciphertext — suppressing')
+      return null
+    }
+    return decrypted
+  } catch (e) {
+    console.error('[safeDecryptField] Failed to decrypt field:', e)
+    return null
+  }
 }
 
 /**

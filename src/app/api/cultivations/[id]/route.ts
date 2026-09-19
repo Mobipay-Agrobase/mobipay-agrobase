@@ -45,6 +45,8 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       cropCategory, cultivationAreaHa, cropCalendarId, cultivationGeoJson, photoUrl,
       seedSource, isSeedTreated, seedType, seedQuantity, seedPrice,
       sowingType, sowingChargesBy, sowingCharges,
+      // EKiBBO Sheet-3 — plant count per crop type
+      seedlingCount, bambooVariety,
     } = body as Record<string, any>
 
     // Resolve effective values for auto-calc (use incoming or fall back to existing)
@@ -91,6 +93,9 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
         ...(sowingChargesBy !== undefined && { sowingChargesBy: sowingChargesBy || null }),
         ...(sowingCharges !== undefined && { sowingCharges: sowingCharges !== null ? parseFloat(sowingCharges) : null }),
         ...(sowingCost !== existing.sowingCost && { sowingCost }),
+        // EKiBBO Sheet-3 — plant count + variety
+        ...(seedlingCount !== undefined && { seedlingCount: seedlingCount !== null && seedlingCount !== '' ? parseInt(seedlingCount) : null }),
+        ...(bambooVariety !== undefined && { bambooVariety: bambooVariety || null }),
         updatedAt: new Date(),
       },
     })

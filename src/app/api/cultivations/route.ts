@@ -95,6 +95,10 @@ export async function POST(request: Request) {
       cropCategory, cultivationAreaHa, cropCalendarId, cultivationGeoJson, photoUrl,
       seedSource, isSeedTreated, seedType, seedQuantity, seedPrice,
       sowingType, sowingChargesBy, sowingCharges, sowingHours,
+      // EKiBBO Sheet-3 — plant count per crop type (per Issac's clarification:
+      // simplify the cultivation module into "crops per plot" so plant counts
+      // can still be captured for the Farm Land KPI breakdown).
+      seedlingCount, bambooVariety,
     } = body as Record<string, any>
 
     if (!farmId || !cropName) {
@@ -149,6 +153,9 @@ export async function POST(request: Request) {
         sowingChargesBy: sowingChargesBy || null,
         sowingCharges: sowingCharges ? parseFloat(sowingCharges) : null,
         sowingCost: calcSowingCost,
+        // EKiBBO Sheet-3 — plant count + variety (for "Total Plants" KPI breakdown)
+        seedlingCount: seedlingCount != null && seedlingCount !== '' ? parseInt(seedlingCount) : null,
+        bambooVariety: bambooVariety || null,
       },
     })
 

@@ -4,12 +4,15 @@ import { useState, useEffect, useCallback } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   ArrowLeft, MapPin, Sprout, Droplets, Users, FlaskConical,
   ShieldCheck, Loader2, Pencil, LandPlot, TreePine, Tractor,
-  Cable, Navigation, XCircle,
+  Cable, Navigation, XCircle, Plus, Trash2, Save,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAppStore } from '@/lib/store'
@@ -53,12 +56,17 @@ interface FarmLandDetail {
     uom?: string | null
   }>
   farmer?: { id: string; firstName: string; lastName: string }
+  // EKiBBO Sheet-3: simplified into "Crops per Plot" — captures plant count per crop type
+  // (per Issac's clarification — keeps the Farm Land KPI breakdown working without the
+  // full Cultivation module).
   cultivations?: Array<{
     id: string
     cropName: string
-    variety: string
-    season: string
+    variety: string | null
+    season: string | null
     cultivationAreaHa: number | null
+    seedlingCount?: number | null
+    bambooVariety?: string | null
   }>
   polygonPoints?: Array<{ id: string; latitude: number; longitude: number; pointOrder: number; altitude?: number | null }>
 }
@@ -73,7 +81,10 @@ const TAB_CONFIG = [
   { value: 'soil', label: 'Soil & Irrigation', icon: Droplets },
   { value: 'labour', label: 'Labour', icon: Users },
   { value: 'conversion', label: 'Conversion', icon: ShieldCheck },
-  { value: 'cultivations', label: 'Cultivations', icon: Sprout },
+  // EKiBBO Sheet-3: renamed from 'Cultivations' to 'Crops per Plot' (per Issac's
+  // clarification — the standalone Cultivation module is hidden for EKiBBO,
+  // but plant counts per crop type are still captured inline here).
+  { value: 'crops', label: 'Crops per Plot', icon: Sprout },
 ]
 
 export function FarmLandDetailPage({ farmLandId, onBack }: Props) {
@@ -81,6 +92,21 @@ export function FarmLandDetailPage({ farmLandId, onBack }: Props) {
   const [farmLand, setFarmLand] = useState<FarmLandDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('overview')
+
+  // EKiBBO Sheet-3 — inline "Crops per Plot" add form state.
+  // Replaces the broken "Add Cultivation" button that redirected to dashboard
+  // (because the Cultivation module is hidden for EKiBBO).
+  const [showCropForm, setShowCropForm] = useState(false)
+  const [cropForm, setCropForm] = useState({
+    cropName: '',
+    variety: '',
+    season: '',
+    cultivationAreaHa: '',
+    seedlingCount: '',
+    bambooVariety: '',
+  })
+  const [savingCrop, setSavingCrop] = useState(false)
+  const [deletingCropId, setDeletingCropId] = useState<string | null>(null)
 
   const load = useCallback(() => {
     setLoading(true)
@@ -98,6 +124,65 @@ export function FarmLandDetailPage({ farmLandId, onBack }: Props) {
   const handleEdit = () => {
     setSelectedFarmLandId(farmLandId)
     setActiveModule('farmland-edit')
+  }
+
+  // EKiBBO Sheet-3 — inline "Add Crop" handler (creates a Cultivation row
+  // linked to this farm land, with cropName + seedlingCount + area + variety).
+  // This replaces the old "Add Cultivation" button that navigated to a
+  // hidden module and bounced the user to the dashboard.
+  const handleAddCrop = async () => {
+    if (!cropForm.cropName.trim()) {
+      toast.error('Crop name is required')
+      return
+    }
+    setSavingCrop(true)
+    try {
+      const payload: Record<string, any> = {
+        farmId: farmLandId,
+        cropName: cropForm.cropName.trim(),
+        variety: cropForm.variety.trim() || null,
+        season: cropForm.season || null,
+        cultivationAreaHa: cropForm.cultivationAreaHa ? parseFloat(cropForm.cultivationAreaHa) : null,
+        cropCategory: 'Main Crop', // default — full categorization moved off this form
+        seedlingCount: cropForm.seedlingCount ? parseInt(cropForm.seedlingCount) : null,
+        bambooVariety: cropForm.bambooVariety || null,
+      }
+      const res = await fetch('/api/cultivations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}))
+        throw new Error(d.error || `Failed (HTTP ${res.status})`)
+      }
+      toast.success(`Added "${cropForm.cropName}" to this plot`)
+      setCropForm({ cropName: '', variety: '', season: '', cultivationAreaHa: '', seedlingCount: '', bambooVariety: '' })
+      setShowCropForm(false)
+      load() // refresh
+    } catch (e: any) {
+      toast.error(e.message || 'Failed to add crop')
+    } finally {
+      setSavingCrop(false)
+    }
+  }
+
+  const handleDeleteCrop = async (cultivationId: string, cropName: string) => {
+    if (!confirm(`Remove "${cropName}" from this plot?`)) return
+    setDeletingCropId(cultivationId)
+    try {
+      const res = await fetch(`/api/cultivations/${cultivationId}`, { method: 'DELETE' })
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}))
+        throw new Error(d.error || `Failed (HTTP ${res.status})`)
+      }
+      toast.success(`Removed "${cropName}"`)
+      load() // refresh
+    } catch (e: any) {
+      toast.error(e.message || 'Failed to delete crop')
+    } finally {
+      setDeletingCropId(null)
+    }
   }
 
   if (loading) {
@@ -155,7 +240,7 @@ export function FarmLandDetailPage({ farmLandId, onBack }: Props) {
               {TAB_CONFIG.map(tab => {
                 const Icon = tab.icon
                 let count: number | undefined
-                if (tab.value === 'cultivations') count = cultivationCount
+                if (tab.value === 'crops') count = cultivationCount
                 return (
                   <TabsTrigger
                     key={tab.value}
@@ -316,34 +401,169 @@ export function FarmLandDetailPage({ farmLandId, onBack }: Props) {
               </Card>
             </TabsContent>
 
-            {/* Cultivations Tab */}
-            <TabsContent value="cultivations" className="mt-0">
+            {/* EKiBBO Sheet-3 — Crops per Plot Tab (replaces old Cultivations tab)
+                The standalone Cultivation module is hidden for EKiBBO, but plant
+                counts per crop type are still captured here so the Farm Land KPI
+                breakdown (total plants, plant count by crop) on the dashboard keeps
+                working. Per Issac's clarification on Q1. */}
+            <TabsContent value="crops" className="mt-0">
               <Card>
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-sm flex items-center gap-2">
-                    <Sprout className="w-4 h-4 text-primary" /> Cultivations ({cultivationCount})
-                  </CardTitle>
+                  <div className="flex items-center justify-between gap-2">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <Sprout className="w-4 h-4 text-primary" /> Crops per Plot ({cultivationCount})
+                    </CardTitle>
+                    {!showCropForm && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={() => setShowCropForm(true)}
+                        className="gap-1.5 h-7"
+                      >
+                        <Plus className="w-3.5 h-3.5" /> Add Crop
+                      </Button>
+                    )}
+                  </div>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-3">
+                  {/* Inline Add Crop Form */}
+                  {showCropForm && (
+                    <div className="border rounded-lg p-3 bg-muted/20 space-y-3">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div className="space-y-1.5">
+                          <Label className="text-xs">Crop Name *</Label>
+                          <Input
+                            value={cropForm.cropName}
+                            onChange={e => setCropForm(p => ({ ...p, cropName: e.target.value }))}
+                            placeholder="e.g. Coffee, Cocoa, Shade tree"
+                            className="h-8 text-sm"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label className="text-xs">Variety</Label>
+                          <Input
+                            value={cropForm.variety}
+                            onChange={e => setCropForm(p => ({ ...p, variety: e.target.value }))}
+                            placeholder="e.g. Robusta, Arabica, Bamboo"
+                            className="h-8 text-sm"
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <div className="space-y-1.5">
+                          <Label className="text-xs">Plant Count</Label>
+                          <Input
+                            type="number"
+                            value={cropForm.seedlingCount}
+                            onChange={e => setCropForm(p => ({ ...p, seedlingCount: e.target.value }))}
+                            placeholder="e.g. 250"
+                            className="h-8 text-sm"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label className="text-xs">Area (ha)</Label>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            value={cropForm.cultivationAreaHa}
+                            onChange={e => setCropForm(p => ({ ...p, cultivationAreaHa: e.target.value }))}
+                            placeholder="e.g. 0.5"
+                            className="h-8 text-sm"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label className="text-xs">Season</Label>
+                          <Select
+                            value={cropForm.season}
+                            onValueChange={v => setCropForm(p => ({ ...p, season: v }))}
+                          >
+                            <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="—" /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="">—</SelectItem>
+                              <SelectItem value="Season A">Season A</SelectItem>
+                              <SelectItem value="Season B">Season B</SelectItem>
+                              <SelectItem value="Annual">Annual</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-end gap-2 pt-1">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setShowCropForm(false)
+                            setCropForm({ cropName: '', variety: '', season: '', cultivationAreaHa: '', seedlingCount: '', bambooVariety: '' })
+                          }}
+                          className="h-8"
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={handleAddCrop}
+                          disabled={savingCrop || !cropForm.cropName.trim()}
+                          className="gap-1.5 h-8"
+                        >
+                          {savingCrop ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                          {savingCrop ? 'Saving...' : 'Save'}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Existing crops list */}
                   {farmLand.cultivations && farmLand.cultivations.length > 0 ? (
-                    <div className="space-y-3">
+                    <div className="space-y-2">
                       {farmLand.cultivations.map(c => (
-                        <div key={c.id} className="p-3 rounded-lg border bg-muted/20">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <p className="text-sm font-medium">{c.cropName}</p>
-                              <p className="text-xs text-muted-foreground">{c.variety}</p>
+                        <div key={c.id} className="p-3 rounded-lg border bg-card flex items-start justify-between gap-2">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <p className="text-sm font-medium truncate">{c.cropName}</p>
+                              {c.variety && <Badge variant="outline" className="text-[10px]">{c.variety}</Badge>}
+                              {c.season && <Badge variant="secondary" className="text-[10px]">{c.season}</Badge>}
                             </div>
-                            <div className="flex items-center gap-2">
-                              <Badge variant="secondary" className="text-[10px]">{c.season}</Badge>
-                              {c.cultivationAreaHa && <Badge variant="outline" className="text-[10px]">{c.cultivationAreaHa} ha</Badge>}
+                            <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                              {c.seedlingCount != null && (
+                                <span className="flex items-center gap-1">
+                                  <TreePine className="w-3 h-3" /> {c.seedlingCount.toLocaleString()} plants
+                                </span>
+                              )}
+                              {c.cultivationAreaHa != null && (
+                                <span>{c.cultivationAreaHa} ha</span>
+                              )}
                             </div>
                           </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-destructive hover:bg-destructive/10 shrink-0"
+                            disabled={deletingCropId === c.id}
+                            onClick={() => handleDeleteCrop(c.id, c.cropName)}
+                            title="Remove crop"
+                          >
+                            {deletingCropId === c.id ? (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            ) : (
+                              <Trash2 className="w-3.5 h-3.5" />
+                            )}
+                          </Button>
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <p className="text-sm text-muted-foreground text-center py-4">No cultivations on this farm land</p>
+                    !showCropForm && (
+                      <div className="text-center py-8 border-2 border-dashed border-muted-foreground/20 rounded-lg">
+                        <Sprout className="w-8 h-8 mx-auto mb-2 opacity-40" />
+                        <p className="text-sm text-muted-foreground">No crops added to this plot yet.</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Click "Add Crop" above to capture crop type + plant count (used for the Farm Land KPI breakdown).
+                        </p>
+                      </div>
+                    )
                   )}
                 </CardContent>
               </Card>

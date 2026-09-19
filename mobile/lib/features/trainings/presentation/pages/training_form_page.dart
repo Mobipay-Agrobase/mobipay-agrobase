@@ -336,7 +336,9 @@ class _TrainingFormPageState extends State<TrainingFormPage>
         final p = await picker.pickImage(source: source, imageQuality: 85);
         picked = p != null ? [p] : [];
       } else {
-        picked = await picker.pickMultipleImage(imageQuality: 85);
+        // image_picker's API method is pickMultiImage (no "ple").
+        // The previous name pickMultipleImage was wrong and failed to compile.
+        picked = await picker.pickMultiImage(imageQuality: 85);
       }
       if (picked.isEmpty) {
         setState(() => _uploading = false);

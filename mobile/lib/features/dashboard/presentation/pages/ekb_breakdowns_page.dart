@@ -209,7 +209,11 @@ class _EkbBreakdownsPageState extends State<EkbBreakdownsPage> {
         columnSpacing: 12,
         columns: columns.map((c) => DataColumn(label: Text(c, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600)))).toList(),
         rows: rows.take(15).map((r) => DataRow(
-          cells: columns.map((c) => DataCell(Text('${r[c] ?? '—}', style: const TextStyle(fontSize: 11)))),
+          cells: columns.map((c) {
+            final v = r[c];
+            final display = v == null ? '—' : v.toString();
+            return DataCell(Text(display, style: const TextStyle(fontSize: 11)));
+          }).toList(),
         )).toList(),
       ),
     );
@@ -506,7 +510,11 @@ class _EkbBreakdownsPageState extends State<EkbBreakdownsPage> {
           if (c['category'] == 'Tools') { color = Colors.amber; icon = Icons.build; }
           else if (c['category'] == 'Fertilizers') { color = Colors.green; icon = Icons.science; }
           else if (c['category'] == 'Seedlings') { color = Colors.red; icon = Icons.forest; }
-          return (label: c['category'], value: '${c['count']}', icon: icon, color: color);
+          // Cast label to String to match the record type the KPI row expects.
+          // value uses num cast because count may come as int or double from JSON.
+          final labelStr = (c['category'] as String?) ?? 'Other';
+          final countVal = (c['count'] as num?)?.toInt() ?? 0;
+          return (label: labelStr, value: '$countVal', icon: icon, color: color);
         }).toList()),
         const SizedBox(height: 8),
         _table(

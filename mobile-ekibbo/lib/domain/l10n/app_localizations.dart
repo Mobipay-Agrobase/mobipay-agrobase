@@ -6,7 +6,11 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/intl.dart' as intl;
 
 import 'app_localizations_en.dart';
-import 'app_localizations_vi.dart';
+
+// Vietnamese localization (app_localizations_vi.dart) was removed on
+// 2026-09-19 per user request — EKiBBO is a Uganda-only deployment and
+// doesn't need Vietnamese. To re-enable, regenerate via `flutter gen-l10n`
+// with a vi.arb file in lib/domain/l10n/.
 
 // ignore_for_file: type=lint
 
@@ -95,7 +99,6 @@ abstract class AppLocalizations {
   /// A list of this localizations delegate's supported locales.
   static const List<Locale> supportedLocales = <Locale>[
     Locale('en'),
-    Locale('vi')
   ];
 
   /// No description provided for @basic_information.
@@ -1904,7 +1907,7 @@ class _AppLocalizationsDelegate
 
   @override
   bool isSupported(Locale locale) =>
-      <String>['en', 'vi'].contains(locale.languageCode);
+      <String>['en'].contains(locale.languageCode);
 
   @override
   bool shouldReload(_AppLocalizationsDelegate old) => false;
@@ -1915,8 +1918,6 @@ AppLocalizations lookupAppLocalizations(Locale locale) {
   switch (locale.languageCode) {
     case 'en':
       return AppLocalizationsEn();
-    case 'vi':
-      return AppLocalizationsVi();
   }
 
   throw FlutterError(

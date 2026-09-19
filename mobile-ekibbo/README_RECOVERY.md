@@ -12,11 +12,17 @@ in the zip — likely because the zip was created by selecting only the
 
 ## What we have
 
-- `lib/domain/l10n/app_localizations.dart` — base i18n class
+- `lib/domain/l10n/app_localizations.dart` — base i18n class (Vietnamese removed on 2026-09-19)
 - `lib/domain/l10n/app_localizations_en.dart` — 299 English translation keys
-- `lib/domain/l10n/app_localizations_vi.dart` — Vietnamese translations
 - `android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java` — tells us which Flutter plugins were used
 - `ios/Runner/GeneratedPluginRegistrant.{h,m}` — iOS plugin registrars
+
+> Vietnamese localization (`app_localizations_vi.dart`) was deleted on
+> 2026-09-19 per user request — EKiBBO is a Uganda-only deployment and
+> doesn't need Vietnamese. The base class `supportedLocales` list + the
+> `lookupAppLocalizations` switch + the `isSupported` check were all
+> updated to only include `en`. To re-enable, regenerate via
+> `flutter gen-l10n` with a `vi.arb` file in `lib/domain/l10n/`.
 
 ## What the original app looked like (based on i18n keys)
 
@@ -76,7 +82,7 @@ The 299 translation keys give us a clear picture of the app's feature set:
 - Driver name, driver phone, vehicle type, vehicle license, vehicle capacity
 
 ### Settings
-- App language (English / Vietnamese)
+- App language (English only — Vietnamese removed on 2026-09-19)
 - Version, Sign Out
 - Sync data, Sync all
 
@@ -103,7 +109,7 @@ using `drift`, `go_router`, `provider`, etc.). The original ekibbo app:
 - Uses simpler navigation (no go_router)
 - Has a role-based login flow (Field Officer / Farmer) — the current mobile
   app has a single login flow
-- Has a Vietnamese localization (the current app is English-only)
+- Has a Vietnamese localization (the current app is English-only). [REMOVED on 2026-09-19 — only English now]
 - Uses `google_maps_flutter` for maps (the current app uses OpenStreetMap iframes)
 - Uses `sqflite` directly (the current app uses `drift` ORM)
 - Has procurement + distribution + transaction modules (not in current app)

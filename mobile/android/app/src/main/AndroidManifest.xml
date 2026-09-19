@@ -5,9 +5,15 @@
     <!-- Location for farm polygon boundary capture (EKIBBO Phase 3) -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+    <!-- Camera + media access for training attachment uploads (Phase C2) -->
+    <uses-permission android:name="android.permission.CAMERA"/>
+    <!-- Android 13+ (API 33): granular media permissions -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>
+    <!-- Android 12 and below: legacy storage permission -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32"/>
     <application
         android:allowBackup="false"
-        android:usesCleartextTraffic="false"
+        android:usesCleartextTraffic="true"
         android:label="Agrobase V3"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">

@@ -30,6 +30,86 @@ class ProfilePage extends StatefulWidget {
 class _ProfilePageState extends State<ProfilePage> {
   bool _notificationsEnabled = true;
 
+  /// Developer helper — switch the API server without recompiling.
+  /// Useful for local testing against a dev server.
+  Future<void> _showApiServerPicker() async {
+    final current = await ApiClient.getBaseUrl();
+    final presets = [
+      {'label': 'Production (Vercel)', 'url': 'https://mobipay-agrobase.vercel.app'},
+      {'label': 'Local dev (Android emulator → host)', 'url': 'http://10.0.2.2:3000'},
+      {'label': 'Local dev (iOS simulator → host)', 'url': 'http://127.0.0.1:3000'},
+      {'label': 'Local dev (physical device → LAN)', 'url': 'http://192.168.1.50:3000'},
+      {'label': 'Custom URL…', 'url': '__custom__'},
+    ];
+    final selected = await showDialog<String>(
+      context: context,
+      builder: (ctx) => SimpleDialog(
+        title: const Text('API Server', style: TextStyle(fontSize: 16)),
+        children: presets.map((p) {
+          final isCurrent = current == p['url'];
+          return SimpleDialogOption(
+            onPressed: () => Navigator.pop(ctx, p['url']),
+            child: Row(children: [
+              Icon(
+                isCurrent ? Icons.radio_button_checked : Icons.radio_button_off,
+                size: 18,
+                color: isCurrent ? AppTheme.primaryGreen : AppTheme.textSecondary,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(p['label']!, style: const TextStyle(fontSize: 13)),
+                    Text(p['url']!, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                  ],
+                ),
+              ),
+            ]),
+          );
+        }).toList(),
+      ),
+    );
+    if (selected == null) return;
+    if (selected == '__custom__') {
+      // Custom URL — show a text input dialog
+      final controller = TextEditingController(text: current);
+      final custom = await showDialog<String>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Custom API URL', style: TextStyle(fontSize: 16)),
+          content: TextField(
+            controller: controller,
+            decoration: const InputDecoration(
+              hintText: 'http://10.0.2.2:3000',
+              border: OutlineInputBorder(),
+            ),
+            keyboardType: TextInputType.url,
+            autocorrect: false,
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, controller.text.trim()),
+              child: const Text('Save'),
+            ),
+          ],
+        ),
+      );
+      if (custom == null || custom.isEmpty) return;
+      await ApiClient.setBaseUrl(custom);
+      _showSnackBar('API server set to: $custom\nPlease log out + log back in.');
+      return;
+    }
+    await ApiClient.setBaseUrl(selected);
+    _showSnackBar('API server set to: $selected\nPlease log out + log back in.');
+  }
+
+  void _showSnackBar(String msg) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+  }
+
   Future<void> _logout() async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -196,6 +276,16 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                 ),
                 onTap: () {},
+              ),
+              const _SettingsDivider(),
+              // ─── Developer: API Base URL switcher ───────────────────────
+              // Useful for local testing — switch between production, staging,
+              // and a local dev server without recompiling.
+              _SettingsItem(
+                icon: Icons.dns_outlined,
+                label: 'API Server (Dev)',
+                trailing: const Icon(Icons.chevron_right, color: AppTheme.textSecondary, size: 20),
+                onTap: _showApiServerPicker,
               ),
               const _SettingsDivider(),
               _SettingsItem(

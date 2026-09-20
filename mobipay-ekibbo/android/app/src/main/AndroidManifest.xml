@@ -2,10 +2,16 @@
     <!-- EKiBBO mobile app — needs network for API + cleartext for local dev -->
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
-    <!-- Camera + photo access for farmer photos + training attachments -->
+    <!-- Camera + photo access for farmer photos, training attachments, QR scan -->
     <uses-permission android:name="android.permission.CAMERA"/>
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32"/>
+    <!-- Location for farm polygon boundary capture + GPS pin -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+    <!-- Declare camera as optional so the app installs on devices without a camera -->
+    <uses-feature android:name="android.hardware.camera" android:required="false"/>
+    <uses-feature android:name="android.hardware.location.gps" android:required="false"/>
     <application
         android:label="EKiBBO Agrobase"
         android:name="${applicationName}"

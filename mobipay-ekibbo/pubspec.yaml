@@ -19,11 +19,18 @@ dependencies:
   flutter_svg: ^2.0.7
   cached_network_image: ^3.1.0
 
-  # ─── EKiBBO additions (Phase A/B/C requirements) ───
+  # ─── EKiBBO additions ───
   http: ^1.2.2                              # API client to Next.js backend
+  http_parser: ^4.0.2                       # MediaType parsing for file uploads
   shared_preferences: ^2.1.0                # local session/token storage
-  image_picker: ^1.0.4                     # training attachment + farmer photo uploads
+  image_picker: ^1.0.4                     # farmer photos, ID proofs, training attachments
   url_launcher: ^6.1.0                     # call farmer / open external links
+  geolocator: ^13.0.2                      # GPS for plot pin + farm boundary
+  mobile_scanner: ^5.2.3                   # QR code scanning
+  sqflite: ^2.4.0                          # offline cache (farmer list, trainings)
+  path_provider: ^2.1.0                    # file paths for sqflite
+  fl_chart: ^0.69.0                        # breakdown dashboard charts
+  intl: ^0.20.2
 
 dev_dependencies:
   flutter_test:
@@ -32,7 +39,7 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-  generate: true                            # ARB → app_localizations.dart via flutter gen-l10n
+  generate: true
 
   assets:
     - assets/

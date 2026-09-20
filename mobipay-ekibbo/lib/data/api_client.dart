@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// EKiBBO API client — talks to the Next.js backend at mobipay-agrobase.vercel.app
@@ -118,5 +119,55 @@ class ApiClient {
     final base = await getBaseUrl();
     final uri = Uri.parse('$base$path');
     return http.delete(uri, headers: _headers);
+  }
+
+  /// Upload files via multipart/form-data.
+  ///
+  /// Used for training attachment uploads (photos) and could be reused for
+  /// farmer photos, ID proofs, etc. [files] is a list of maps shaped like:
+  ///   { 'bytes': Uint8List, 'name': String, 'contentType': String }
+  ///
+  /// [fields] is an optional map of extra form fields sent alongside the
+  /// files (e.g. metadata). Returns the final HTTP response once the server
+  /// finishes processing the upload.
+  Future<http.Response> uploadFiles(
+    String path, {
+    required List<Map<String, dynamic>> files,
+    Map<String, String>? fields,
+  }) async {
+    final base = await getBaseUrl();
+    final uri = Uri.parse('$base$path');
+    final request = http.MultipartRequest('POST', uri)
+      ..headers.addAll({
+        if (_token != null) 'Authorization': 'Bearer $_token',
+        if (_tenantId != null) 'X-Tenant-ID': _tenantId!,
+      });
+    if (fields != null) {
+      fields.forEach((k, v) => request.fields[k] = v);
+    }
+    for (final f in files) {
+      final bytes = f['bytes'] as List<int>;
+      final name = (f['name'] as String?) ?? 'file';
+      final contentTypeStr =
+          (f['contentType'] as String?) ?? 'application/octet-stream';
+      MediaType? mediaType;
+      try {
+        mediaType = MediaType.parse(contentTypeStr);
+      } catch (_) {
+        // Unparseable contentType — fall back to octet-stream.
+      }
+      request.files.add(http.MultipartFile.fromBytes(
+        'files',
+        bytes,
+        filename: name,
+        contentType: mediaType,
+      ));
+      debugPrint(
+          '[API] uploadFiles: $name ($contentTypeStr, ${bytes.length} bytes)');
+    }
+    final streamed = await request.send();
+    final res = await http.Response.fromStream(streamed);
+    debugPrint('[API] ← ${res.statusCode} ${res.body.length} bytes (upload)');
+    return res;
   }
 }

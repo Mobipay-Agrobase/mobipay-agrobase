@@ -239,28 +239,76 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget _buildQuickActions() {
     final actions = <Map<String, dynamic>>[
       {
+        'label': AppLang.local.farmers,
+        'icon': Icons.people_outline,
+        'color': ColorConstant.secondary,
+        'route': RouterName.farmersList,
+      },
+      {
         'label': AppLang.local.add_farmer,
         'icon': Icons.person_add_outlined,
         'color': ColorConstant.secondary,
         'route': RouterName.farmerRegistration,
       },
       {
+        'label': 'Farm Lands',
+        'icon': Icons.landscape_outlined,
+        'color': ColorConstant.primaryLight,
+        'route': RouterName.farmLandsList,
+      },
+      {
+        'label': AppLang.local.trainings,
+        'icon': Icons.school_outlined,
+        'color': ColorConstant.gold,
+        'route': RouterName.trainingsList,
+      },
+      {
+        'label': AppLang.local.crops,
+        'icon': Icons.grass_outlined,
+        'color': ColorConstant.secondaryLight,
+        'route': RouterName.cropsList,
+      },
+      {
+        'label': 'Procurement',
+        'icon': Icons.shopping_cart_outlined,
+        'color': ColorConstant.gold,
+        'route': RouterName.procurementList,
+      },
+      {
+        'label': 'Transactions',
+        'icon': Icons.receipt_long_outlined,
+        'color': ColorConstant.info,
+        'route': RouterName.transactionsList,
+      },
+      {
+        'label': AppLang.local.breakdowns_dashboard,
+        'icon': Icons.bar_chart,
+        'color': ColorConstant.info,
+        'route': RouterName.breakdownsDashboard,
+      },
+      {
         'label': AppLang.local.qr_scan,
         'icon': Icons.qr_code_scanner,
         'color': ColorConstant.gold,
-        'route': null,
+        'route': RouterName.qrScan,
       },
       {
-        'label': AppLang.local.activity_history,
-        'icon': Icons.history,
-        'color': ColorConstant.info,
-        'route': null,
+        'label': 'Vehicles',
+        'icon': Icons.local_shipping_outlined,
+        'color': ColorConstant.textSecondary,
+        'route': RouterName.vehiclesList,
+      },
+      {
+        'label': AppLang.local.profile,
+        'icon': Icons.person_outline,
+        'color': ColorConstant.primaryLight,
+        'route': RouterName.profile,
       },
       {
         'label': AppLang.local.settings,
         'icon': Icons.settings_outlined,
         'color': ColorConstant.textSecondary,
-        'route': null,
+        'route': RouterName.settings,
       },
     ];
     return Column(

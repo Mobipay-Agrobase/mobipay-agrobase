@@ -99,9 +99,21 @@ flutter run
 # For local dev: flutter run --dart-define=API_BASE_URL=http://10.0.2.2:3000
 ```
 
-Test credentials (EKiBBO tenant):
-- Email: `eric@ekibbo.com` (or any EKB_* role user)
-- Password: `password123`
+Test credentials (EKiBBO tenant — verified against production DB):
+
+| Role | Email | Password | Purpose |
+|------|-------|----------|---------|
+| Field Officer (EKB_EXTENSION) | `fieldofficer@ekibbo.test` | `password123` | Moses Ekibbo — primary field officer test account |
+| Field Officer (EKB_EXTENSION) | `eo1@ekibbo.co` | `password123` | Extension Officer 1 |
+| Field Officer (EKB_EXTENSION) | `eo2@ekibbo.co` | `password123` | Extension Officer 2 |
+| Field Officer (EKB_EXTENSION) | `exporter.agent@ekibbo.co` | `password123` | Betty Nabukenya |
+| Field Officer (EXTENSION_OFFICER) | `eric@ekibbo.co` | `password123` | JOHN DOE |
+| Farmer (EKB_FARMER) | `farmer@ekibbo.test` | `password123` | Sarah Nakato — farmer test account |
+| Managing Director (EKB_MD) | `sophie@ekibbo.com` | `password123` | Sophie Ekibbo — full admin dashboard |
+| Ops Manager (EKB_OPS_MANAGER) | `ops@ekibbo.co` | `password123` | Operations Manager |
+| Finance (EKB_FINANCE) | `finance@ekibbo.co` | `password123` | Finance Officer |
+| MEC (EKB_MEC) | `mec@ekibbo.co` | `password123` | MEC Officer |
+| Super Admin (SUPER_ADMIN) | `admin@agrobase.co` | `password123` | Platform-wide admin (any tenant) |
 
 ## What's still pending (not yet implemented)
 

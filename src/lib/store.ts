@@ -25,6 +25,8 @@ export type ModuleKey =
   'season-master' | 'crop-master' | 'seed-master' | 'fertilizer-master' | 'master-data' |
   'equipment-master' | 'pesticide-master' | 'weed-master' | 'disease-master' | 'pest-master' | 'soiltype-master' |
   'location-master' | 'field-staff' | 'cooperatives' | 'farmer-groups' | 'farmer-mapping' |
+  // ZIWA360 Dairy Farm Management
+  'dairy' |
   'farmer-detail' | 'farmer-create' | 'farmer-edit' |
   'farmland-detail' | 'farmland-create' | 'farmland-edit' |
   'cultivation-detail' | 'cultivation-create' | 'cultivation-edit' |

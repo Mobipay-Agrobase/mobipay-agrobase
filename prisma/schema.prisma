@@ -154,6 +154,27 @@ model Tenant {
   saccoLoans             SaccoLoan[]
   saccoLoanRepayments    SaccoLoanRepayment[]
   saccoMeetings          SaccoMeeting[]
+  // ─── ZIWA360: Dairy Farm Management ───
+  dairyCows              DairyCow[]              @relation("TenantDairyCows")
+  dairySheds              DairyShade[]              @relation("TenantDairyShades")
+  dairyStaff              DairyStaff[]            @relation("TenantDairyStaff")
+  dairySuppliers          DairySupplier[]          @relation("TenantDairySuppliers")
+  dairyFeedItems         DairyFeedItem[]          @relation("TenantDairyFeedItems")
+  dairyFeedSchedules     DairyFeedSchedule[]     @relation("TenantDairyFeedSchedules")
+  dairyTaskAssignments   DairyTaskAssignment[]   @relation("TenantDairyTasks")
+  dairyVaccinations      DairyVaccination[]      @relation("TenantDairyVaccinations")
+  dairyMilkingRecords    DairyMilkingRecord[]    @relation("TenantDairyMilking")
+  dairyHealthChecks      DairyHealthCheck[]      @relation("TenantDairyHealthChecks")
+  dairyBreedingEvents    DairyBreedingEvent[]    @relation("TenantDairyBreeding")
+  dairyAnimalWeights     DairyAnimalWeight[]     @relation("TenantDairyWeights")
+  dairyMilkQualityTests  DairyMilkQualityTest[]  @relation("TenantDairyQualityTests")
+  dairyWasteRecords      DairyWasteRecord[]      @relation("TenantDairyWaste")
+  dairyEmissionRecords   DairyEmissionRecord[]   @relation("TenantDairyEmissions")
+  dairyCertifications    DairyCertification[]    @relation("TenantDairyCerts")
+  dairyInspections       DairyInspection[]       @relation("TenantDairyInspections")
+  dairyFeedLogs          DairyFeedLog[]          @relation("TenantDairyFeedLogs")
+  dairyProcessingRecords DairyProcessingRecord[] @relation("TenantDairyProcessing")
+  dairyFarms             DairyFarm[]             @relation("TenantDairyFarms")
 }
 
 // --- USERS & AUTH ---
@@ -474,6 +495,8 @@ model FarmerProfile {
   ledgerEntries       FarmerLedgerEntry[]
   inputDistributions  InputDistribution[]
   cropInsurances      CropInsurance[]
+  // ─── ZIWA360: Dairy cows owned by this farmer ───
+  dairyCows           DairyCow[]              @relation("DairyCowFarmer")
   // ─── Next of Kin (required for NSSF) ───
   nextOfKinName     String?
   nextOfKinPhone    String?
@@ -572,6 +595,8 @@ model FarmLand {
   cultivations Cultivation[]
   polygonPoints FarmPolygon[]
   soilAnalyses  SoilAnalysis[]
+  // ZIWA360: dairy cows assigned to this farm land
+  dairyCows     DairyCow[]              @relation("DairyCowFarm")
 
   @@index([farmerId])
   @@index([createdAt])
@@ -5351,3 +5376,449 @@ model ResetVslaLinkage {
   linkedBy        String?
   status          String   @default("LINKED")
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ZIWA360 — Dairy Farm Management System
+// Multi-tenant dairy module built on top of AgroBase v3
+// Per the ZIWA360 Master Document + dairy-mgmt.xlsx spec
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ─── 1. Cow Master & Classification (Excel §12) ───
+model DairyCow {
+  id            String   @id @default(cuid())
+  tenantId      String
+  tenant        Tenant   @relation("TenantDairyCows", fields: [tenantId], references: [id])
+  farmId        String?  // links to FarmLand if applicable
+  farm          FarmLand? @relation("DairyCowFarm", fields: [farmId], references: [id])
+  farmerId      String?  // links to FarmerProfile if owned by a farmer
+  farmer        FarmerProfile? @relation("DairyCowFarmer", fields: [farmerId], references: [id])
+  cowCode       String?  // system-generated: UG-KIK-000123
+  tagNumber     String?  // unique ear tag
+  rfidUid       String?  // RFID/NFC UID
+  name          String?
+  breed         String?  // Holstein, Jersey, Ankole, Crossbreed, etc.
+  coatColor     String?  // from coat_colors master
+  type          String   @default("Cow") // Cow / Bull / Calf
+  gender        String   @default("Female") // Female / Male
+  dateOfBirth   DateTime?
+  approximateAgeMonths Int? // if DOB unknown
+  purchaseDate  DateTime?
+  purchasePrice Float?
+  photoUrl      String?
+  lifecycleState String  @default("Calf") // Born → Calf → Weaned → Heifer → In-Calf → Lactating → Dry → Culled/Sold/Dead
+  sireId        String?  // father cow ID
+  damId         String?  // mother cow ID
+  shedId        String?  // assigned shed
+  shed          DairyShade? @relation("DairyCowShed", fields: [shedId], references: [id])
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  milkingRecords    DairyMilkingRecord[]  @relation("DairyCowMilking")
+  vaccinationRecords DairyVaccination[]  @relation("DairyCowVaccinations")
+  healthChecks      DairyHealthCheck[]  @relation("DairyCowHealthChecks")
+  feedSchedules    DairyFeedSchedule[]  @relation("DairyCowFeedSchedules")
+  taskAssignments  DairyTaskAssignment[]  @relation("DairyCowTasks")
+  weights           DairyAnimalWeight[]  @relation("DairyCowWeights")
+  breedingEvents    DairyBreedingEvent[]  @relation("DairyBreedingDam")  // as dam
+  aiRecords         DairyBreedingEvent[]  @relation("DairyBreedingSire")  // as sire
+
+  @@index([tenantId])
+  @@index([farmerId])
+  @@index([farmId])
+  @@index([tagNumber])
+  @@unique([tenantId, tagNumber])
+}
+
+// ─── 2. Cow Shade & Housing (Excel §13) ───
+model DairyShade {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation("TenantDairyShades", fields: [tenantId], references: [id])
+  farmId          String?
+  shadeNumber     String   // shed/kraal identifier
+  dimensionsSqm   Float?   // size in m²
+  ventilationType String?  // Natural / Mechanical
+  beddingType     String?  // Straw / Sand / Rubber Mat
+  capacity        Int?     // max cows
+  notes           String?
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  cows            DairyCow[]  @relation("DairyCowShed")
+
+  @@index([tenantId])
+  @@unique([tenantId, shadeNumber])
+}
+
+// ─── 3. Staff Management (Excel §11) ───
+model DairyStaff {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation("TenantDairyStaff", fields: [tenantId], references: [id])
+  staffCode       String?  // system-generated
+  name            String
+  role            String   @default("Milker") // Milker / Feeder / Veterinarian / Manager / Cleaner
+  contactNumber   String?
+  email           String?
+  schedule        String?  // weekly rota (JSON or text)
+  employmentDate  DateTime?
+  salary          Float?
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  taskAssignments DairyTaskAssignment[]  @relation("DairyStaffTasks")
+  feedSchedules   DairyFeedSchedule[]  @relation("DairyStaffFeedSchedules")
+
+  @@index([tenantId])
+}
+
+// ─── 4. Supplier Management (Excel §14) ───
+model DairySupplier {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation("TenantDairySuppliers", fields: [tenantId], references: [id])
+  name            String
+  supplierType    String   @default("feed") // feed / drugs / semen / equipment / other
+  contactNumber   String?
+  email           String?
+  productsSupplied String? // JSON array: ["Feed", "Chemical", "Drugs"]
+  rating          String?  // Good / Average / Poor
+  location        String?
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  feedItems       DairyFeedItem[]  @relation("DairyFeedItemSupplier")
+
+  @@index([tenantId])
+}
+
+// ─── 5. Feed Item Management (Excel §15) ───
+model DairyFeedItem {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation("TenantDairyFeedItems", fields: [tenantId], references: [id])
+  name            String
+  feedType        String?  // Forage / Concentrate / Mix / Formulated
+  quantityInStock Float    @default(0) // kg
+  unitPrice       Float    // currency per kg
+  nutritionalValue String? // text: protein/fat/carb content
+  supplierId      String?
+  supplier        DairySupplier? @relation("DairyFeedItemSupplier", fields: [supplierId], references: [id])
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  feedSchedules   DairyFeedSchedule[]  @relation("DairyFeedItemSchedules")
+
+  @@index([tenantId])
+}
+
+// ─── 6. Feed Schedule (Excel §16) ───
+model DairyFeedSchedule {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation("TenantDairyFeedSchedules", fields: [tenantId], references: [id])
+  cowId           String
+  cow             DairyCow @relation("DairyCowFeedSchedules", fields: [cowId], references: [id], onDelete: Cascade)
+  feedItemId     String
+  feedItem        DairyFeedItem @relation("DairyFeedItemSchedules", fields: [feedItemId], references: [id])
+  feedTime        String   // HH:MM
+  durationMinutes Int?
+  feedAmountKg    Float
+  staffId         String?
+  staff           DairyStaff? @relation("DairyStaffFeedSchedules", fields: [staffId], references: [id])
+  feedDate        DateTime @default(now())
+  createdAt       DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([cowId])
+  @@index([feedDate])
+}
+
+// ─── 7. Task Assignment (Excel §17) ───
+model DairyTaskAssignment {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation("TenantDairyTasks", fields: [tenantId], references: [id])
+  staffId         String
+  staff           DairyStaff @relation("DairyStaffTasks", fields: [staffId], references: [id])
+  cowId           String?
+  cow             DairyCow? @relation("DairyCowTasks", fields: [cowId], references: [id])
+  taskType        String   @default("Milking") // Milking / Feeding / Cleaning / Veterinary
+  taskDate        DateTime
+  taskStatus      String   @default("Pending") // Pending / Completed
+  notes           String?
+  photoUrl        String?
+  completedAt     DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([staffId])
+  @@index([taskDate])
+}
+
+// ─── 8. Vaccination Management (Excel §18) ───
+model DairyVaccination {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation("TenantDairyVaccinations", fields: [tenantId], references: [id])
+  cowId           String
+  cow             DairyCow @relation("DairyCowVaccinations", fields: [cowId], references: [id], onDelete: Cascade)
+  vaccineName     String
+  vaccinationDate DateTime
+  dose            String   // mg or ml
+  nextDueDate     DateTime?
+  effectObserved  String?
+  administeredBy  String?  // vet name or staff ID
+  createdAt       DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([cowId])
+  @@index([vaccinationDate])
+}
+
+// ─── 9. Milking & Production (Excel §5 + §19) ───
+model DairyMilkingRecord {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation("TenantDairyMilking", fields: [tenantId], references: [id])
+  cowId           String
+  cow             DairyCow @relation("DairyCowMilking", fields: [cowId], references: [id], onDelete: Cascade)
+  milkingDate     DateTime
+  session         String   @default("Morning") // Morning / Midday / Evening
+  milkYieldLitres Float
+  fatContentPct   Float?
+  proteinContentPct Float?
+  qualityGrade    String?  // A / B / C
+  storageTempC    Float?   // cold-chain compliance
+  bulkTankId      String?
+  recordedBy      String?  // staff ID or user ID
+  createdAt       DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([cowId])
+  @@index([milkingDate])
+}
+
+// ─── 10. Health & Veterinary Monitoring (Excel §4) ───
+model DairyHealthCheck {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation("TenantDairyHealthChecks", fields: [tenantId], references: [id])
+  cowId           String
+  cow             DairyCow @relation("DairyCowHealthChecks", fields: [cowId], references: [id], onDelete: Cascade)
+  checkDate       DateTime @default(now())
+  healthStatus    String   @default("Good") // Good / Fair / Poor
+  diseaseObserved String?  // JSON array from disease master
+  treatmentAdministered String? // text: medication/vaccine details
+  nextCheckDate   DateTime?
+  veterinarian    String?
+  createdAt       DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([cowId])
+  @@index([checkDate])
+}
+
+// ─── 11. Breeding Management (Excel §2) ───
+model DairyBreedingEvent {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation("TenantDairyBreeding", fields: [tenantId], references: [id])
+  damId           String   // the cow being inseminated
+  dam             DairyCow @relation("DairyBreedingDam", fields: [damId], references: [id])
+  sireId          String?  // the bull (or semen batch ID)
+  sire            DairyCow? @relation("DairyBreedingSire", fields: [sireId], references: [id])
+  breedingDate    DateTime
+  breedingType    String   @default("AI") // AI (Artificial Insemination) / Natural
+  semenBatch      String?  // semen batch number
+  aiTechnician    String?  // AI technician name
+  expectedBirthDate DateTime?
+  actualBirthDate DateTime?
+  offspringCount  Int?
+  pregnancyConfirmed Boolean?
+  pregnancyCheckDate DateTime?
+  notes           String?
+  createdAt       DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([damId])
+  @@index([breedingDate])
+}
+
+// ─── 12. Animal Weight & BCS (ZIWA360 §AI-05) ───
+model DairyAnimalWeight {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation("TenantDairyWeights", fields: [tenantId], references: [id])
+  cowId           String
+  cow             DairyCow @relation("DairyCowWeights", fields: [cowId], references: [id], onDelete: Cascade)
+  weightDate      DateTime @default(now())
+  weightKg        Float
+  bodyConditionScore Float? // 1-5 scale
+  measurementMethod String? // Scale / Heart-girth tape / Visual
+  notes           String?
+  createdAt       DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([cowId])
+}
+
+// ─── 13. Milk Quality Traceability (Excel §20) ───
+model DairyMilkQualityTest {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation("TenantDairyQualityTests", fields: [tenantId], references: [id])
+  batchId         String   // bulk tank batch
+  tankId          String?
+  collectionDate  DateTime
+  samplingTime    String   // HH:MM
+  testParameter   String   // Fat Content / Protein / Antibiotics / Somatic Cell Count
+  testResult      String
+  labName         String?
+  reportUrl       String?
+  createdAt       DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([batchId])
+}
+
+// ─── 14. Waste & Manure Management (Excel §7) ───
+model DairyWasteRecord {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation("TenantDairyWaste", fields: [tenantId], references: [id])
+  wasteDate       DateTime @default(now())
+  wasteType       String   @default("Manure") // Manure / Slaughter Waste / Bedding
+  quantityKg      Float?
+  handlingMethod  String   @default("Composting") // Composting / Biogas / Direct Field Application
+  treatmentDurationDays Int?
+  notes           String?
+  createdAt       DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([wasteDate])
+}
+
+// ─── 15. Carbon & Emissions Tracking (Excel §8) ───
+model DairyEmissionRecord {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation("TenantDairyEmissions", fields: [tenantId], references: [id])
+  recordDate      DateTime @default(now())
+  species         String   @default("Cattle")
+  animalCount     Int
+  entericMethaneKgDay Float? // kg/day per animal
+  manureEmissionsKgDay Float?
+  totalEmissionsKgCO2e Float? // auto-calc or manual
+  notes           String?
+  createdAt       DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([recordDate])
+}
+
+// ─── 16. Certification & Inspection (Excel §10) ───
+model DairyCertification {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation("TenantDairyCerts", fields: [tenantId], references: [id])
+  standard        String   @default("G.R.A.S") // Global Animal Partnership / Organic / BAP
+  assessmentDate  DateTime
+  assessorName    String
+  animalWelfare   String   @default("Compliant") // Compliant / Non-Compliant
+  biosecurity     String   @default("Compliant")
+  wasteManagement String   @default("Compliant")
+  climateSmart    String   @default("Compliant")
+  outcome         String   @default("Passed") // Passed / Failed
+  totalScorePct   Float?
+  notes           String?
+  createdAt       DateTime @default(now())
+
+  @@index([tenantId])
+}
+
+model DairyInspection {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation("TenantDairyInspections", fields: [tenantId], references: [id])
+  batchOrFarmId   String
+  inspectionDate  DateTime
+  inspector       String
+  scope           String   @default("Farm") // Farm / Facility
+  observations    String?
+  nonConformance  Boolean  @default(false)
+  correctiveActions String?
+  followUpDate    DateTime?
+  status          String   @default("Open") // Open / Closed
+  reportUrl       String?
+  createdAt       DateTime @default(now())
+
+  @@index([tenantId])
+}
+
+// ─── 17. Feed Management (Excel §3) ───
+model DairyFeedLog {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation("TenantDairyFeedLogs", fields: [tenantId], references: [id])
+  feedDate        DateTime @default(now())
+  feedType        String   @default("Forage") // Forage / Concentrate / Mix / Formulated
+  quantityKg      Float
+  costPerUnit     Float?
+  totalCost       Float?   // auto-calc: quantity × cost
+  feedConversionRatio Float?
+  cowId           String?
+  notes           String?
+  createdAt        DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([feedDate])
+}
+
+// ─── 18. Meat Production & Processing (Excel §6) ───
+model DairyProcessingRecord {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation("TenantDairyProcessing", fields: [tenantId], references: [id])
+  processingDate  DateTime @default(now())
+  species         String   @default("Cattle") // Cattle / Pig / Chicken / Sheep / Goat
+  numberProcessed Int
+  carcassWeightKg Float
+  yieldPct        Float?   // edible portion %
+  processingPlantId String?
+  productCategories String? // JSON: ["Meat", "Sausage"]
+  coldStorageId   String?
+  notes           String?
+  createdAt       DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([processingDate])
+}
+
+// ─── 19. Farm Registration (Excel §1) ───
+model DairyFarm {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation("TenantDairyFarms", fields: [tenantId], references: [id])
+  farmCode        String?  // auto-gen
+  farmerName      String
+  location        String?  // district/village
+  farmAreaHa      Float?   // pasture/pen area
+  productionType  String   @default("Dairy") // Dairy / Beef / Poultry / Pig / Sheep / Goat
+  registrationDate DateTime @default(now())
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([tenantId])
+  @@unique([tenantId, farmCode])
+}
+
+// ─── Add Tenant relations for all dairy models ───
+// (Tenant model already exists — we add the back-relations)

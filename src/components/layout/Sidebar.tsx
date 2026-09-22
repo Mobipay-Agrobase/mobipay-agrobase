@@ -13,7 +13,7 @@ import {
   Stethoscope, Activity, Smartphone, TreePine, UsersRound, Landmark, MapPin,
   Cloud, Calculator, BookOpen, KeyRound, Boxes, Database, Wheat, Calendar, FlaskConical,
   Tractor, SprayCan, Bug, Mountain, UserCog,
-  ChevronRight, ShieldCheck
+  ChevronRight, ShieldCheck, Milk
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
@@ -134,6 +134,8 @@ const ALL_MODULES: NavItem[] = [
   { key: 'reset-merchants', label: 'Merchants', icon: Store, group: 'ReSET MarketLink', permModule: 'reset' },
   { key: 'reset-cash', label: 'Cash Disbursement', icon: DollarSign, group: 'ReSET MarketLink', permModule: 'reset' },
   { key: 'reset-reports', label: 'Reports', icon: BarChart3, group: 'ReSET MarketLink', permModule: 'reset' },
+  // ─── ZIWA360 Dairy Farm Management ───
+  { key: 'dairy', label: 'Dairy (ZIWA360)', icon: Milk, group: 'Livestock', permModule: 'farmers' },
   // Super Admin (only visible to SUPER_ADMIN role)
   { key: 'super-admin-overview', label: 'Platform Overview', icon: LayoutDashboard, group: 'Super Admin' },
   { key: 'super-admin-tenants', label: 'Tenants', icon: Building2, group: 'Super Admin' },

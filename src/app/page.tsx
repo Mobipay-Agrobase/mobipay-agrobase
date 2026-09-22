@@ -135,6 +135,8 @@ const QuotesView = lazy(() => import('@/components/billing/QuotesView'))
 const NssfContributionsView = lazy(() => import('@/components/nssf/NssfContributionsView'))
 const NssfSettlementView = lazy(() => import('@/components/nssf/NssfSettlementView'))
 const ResetView = lazy(() => import('@/components/modules/ResetView'))
+// ZIWA360 Dairy Farm Management
+const DairyDashboard = lazy(() => import('@/components/modules/DairyDashboard'))
 
 function ModuleLoader() {
   return (
@@ -291,6 +293,8 @@ function ModuleRouter() {
     case 'transport': return <TransportPortalView />
     // Plot-Level Traceability
     case 'plots': return <PlotsView />
+    // ZIWA360 Dairy Farm Management
+    case 'dairy': return <DairyDashboard />
     // Super Admin
     case 'super-admin-overview': return <SuperAdminOverviewView />
     case 'super-admin-tenants': return <SuperAdminTenantsView />
@@ -364,6 +368,7 @@ export default function HomePage() {
         'profile', 'settings', 'roles-permissions', 'billing',
         'platform-recovery', 'farmer-detail',
         'farmland-detail', 'cultivation-detail',
+        'dairy',
         ...MASTER_DATA_KEYS,
       ])
       const isAllowedForSuperAdmin =
@@ -398,7 +403,7 @@ export default function HomePage() {
       // SACCO_ADMIN / SACCO_OFFICER: redirect to dashboard if on an irrelevant module
       const saccoAllowed = new Set([
         'dashboard', 'sacco', 'farmers', 'farm-lands', 'cultivations',
-        'reports', 'training', 'profile',
+        'reports', 'training', 'profile', 'dairy',
         'farmer-detail', 'farmer-create', 'farmer-edit',
         'farmland-detail', 'farmland-create', 'farmland-edit',
         'cultivation-detail', 'cultivation-create', 'cultivation-edit',
@@ -412,7 +417,7 @@ export default function HomePage() {
       // VSLA_PROVIDER_ADMIN: redirect to dashboard if on an irrelevant module
       const vslaProviderAllowed = new Set([
         'dashboard', 'vsla', 'farmers', 'farm-lands', 'cultivations',
-        'reports', 'training', 'profile',
+        'reports', 'training', 'profile', 'dairy',
         'farmer-detail', 'farmer-create', 'farmer-edit',
         'farmland-detail', 'farmland-create', 'farmland-edit',
         'cultivation-detail', 'cultivation-create', 'cultivation-edit',
@@ -445,7 +450,7 @@ export default function HomePage() {
         'input-aggregation', 'input-distribution', 'approvals', 'processing', 'deliveries',
         'consignments', 'trace', 'reports', 'training', 'farm-visits', 'surveys',
         'compliance', 'cost-of-cultivation', 'farmer-ledger',
-        'agritrack',
+        'agritrack', 'dairy',
         'profile', 'support-tickets', 'farmer-detail', 'farmer-create', 'farmer-edit',
         'farmland-detail', 'farmland-create', 'farmland-edit',
         'cultivation-detail', 'cultivation-create', 'cultivation-edit',

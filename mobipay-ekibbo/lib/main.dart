@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:mobipay_ekibbo/constant/color_constant.dart';
 import 'package:mobipay_ekibbo/constant/text_style_constant.dart';
 import 'package:mobipay_ekibbo/routes/routes_manager.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:mobipay_ekibbo/l10n/app_localizations.dart';
 
 void main() {
   runApp(const MyApp());

@@ -283,7 +283,7 @@ class _CropsPerPlotTabState extends State<CropsPerPlotTab> {
 
   String _variety(Map<String, dynamic> c) => _str(c['bambooVariety'] ?? c['variety']);
 
-  String _season(Map<String, dynamic> c) => _str(c['season']);
+  String _formatSeason(Map<String, dynamic> c) => _str(c['season']);
 
   int _plantCount(Map<String, dynamic> c) {
     final v = c['seedlingCount'] ?? c['plantCount'] ?? c['count'];
@@ -495,7 +495,7 @@ class _CropsPerPlotTabState extends State<CropsPerPlotTab> {
     final id = _id(c);
     final name = _cropName(c);
     final variety = _variety(c);
-    final season = _season(c);
+    final season = _formatSeason(c);
     final count = _plantCount(c);
     final area = _area(c);
     final isDeleting = _deletingId && _deleteTargetId == id;

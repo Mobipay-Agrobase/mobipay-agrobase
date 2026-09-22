@@ -445,7 +445,7 @@ class _SyncScreenState extends State<SyncScreen> {
                   padding: EdgeInsets.zero,
                   iconSize: 18,
                   icon: syncing
-                      ? const SizedBox(
+                      ? SizedBox(
                           width: 16,
                           height: 16,
                           child: CircularProgressIndicator(

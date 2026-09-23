@@ -177,8 +177,8 @@ class _LoginScreenState extends State<LoginScreen> {
                         // Phone number / email
                         AppFormField(
                           controller: _phoneCtrl,
-                          hint: AppLang.local.phone_number,
-                          keyboardType: TextInputType.phone,
+                          hint: AppLang.local.email_or_phone,
+                          keyboardType: TextInputType.emailAddress,
                         ),
                         const SizedBox(height: 16),
                         // Password with show/hide toggle

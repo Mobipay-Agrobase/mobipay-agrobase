@@ -47,8 +47,13 @@ class _FarmerRegistrationScreenState extends State<FarmerRegistrationScreen> {
   String? _gender;
   String? _idType;
 
-  // Contact Info
+  // Contact Info — full 7-level Uganda location hierarchy
+  final _regionCtrl = TextEditingController();
+  final _subRegionCtrl = TextEditingController();
   final _districtCtrl = TextEditingController();
+  final _countyCtrl = TextEditingController();
+  final _subCountyCtrl = TextEditingController();
+  final _parishCtrl = TextEditingController();
   final _villageCtrl = TextEditingController();
   String _country = 'Uganda';
 
@@ -96,7 +101,12 @@ class _FarmerRegistrationScreenState extends State<FarmerRegistrationScreen> {
     _phoneCtrl.dispose();
     _idNoCtrl.dispose();
     _dobCtrl.dispose();
+    _regionCtrl.dispose();
+    _subRegionCtrl.dispose();
     _districtCtrl.dispose();
+    _countyCtrl.dispose();
+    _subCountyCtrl.dispose();
+    _parishCtrl.dispose();
     _villageCtrl.dispose();
     _nextOfKinAltPhoneCtrl.dispose();
     _householdSizeCtrl.dispose();
@@ -147,7 +157,9 @@ class _FarmerRegistrationScreenState extends State<FarmerRegistrationScreen> {
         'nationalIdNo': _idNoCtrl.text.isNotEmpty ? _idNoCtrl.text : null,
         // Contact
         'country': _country,
+        'province': _regionCtrl.text.isNotEmpty ? _regionCtrl.text : null,
         'district': _districtCtrl.text.isNotEmpty ? _districtCtrl.text : null,
+        'commune': _subCountyCtrl.text.isNotEmpty ? _subCountyCtrl.text : null,
         'villageName': _villageCtrl.text.isNotEmpty ? _villageCtrl.text : null,
         // Family — EKiBBO Sheet-3 fields
         'spouseName': _nextOfKinAltPhoneCtrl.text.isNotEmpty
@@ -350,15 +362,43 @@ class _FarmerRegistrationScreenState extends State<FarmerRegistrationScreen> {
       children: [
         _sectionHeader(AppLang.local.contact_information),
         const SizedBox(height: 16),
+        // Country (locked to Uganda per gov policy)
         AppFormField(
           hint: AppLang.local.country,
           controller: TextEditingController(text: _country),
           readOnly: true,
         ),
         const SizedBox(height: 12),
+        // Full 7-level Uganda location hierarchy per gov policy:
+        // Region → Sub Region → District → County → Sub County → Parish → Village
+        AppFormField(
+          controller: _regionCtrl,
+          hint: 'Region',
+        ),
+        const SizedBox(height: 12),
+        AppFormField(
+          controller: _subRegionCtrl,
+          hint: 'Sub Region',
+        ),
+        const SizedBox(height: 12),
         AppFormField(
           controller: _districtCtrl,
           hint: AppLang.local.district,
+        ),
+        const SizedBox(height: 12),
+        AppFormField(
+          controller: _countyCtrl,
+          hint: 'County',
+        ),
+        const SizedBox(height: 12),
+        AppFormField(
+          controller: _subCountyCtrl,
+          hint: 'Sub County',
+        ),
+        const SizedBox(height: 12),
+        AppFormField(
+          controller: _parishCtrl,
+          hint: 'Parish',
         ),
         const SizedBox(height: 12),
         AppFormField(

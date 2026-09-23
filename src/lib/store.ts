@@ -115,3 +115,47 @@ export const EKB_HIDDEN_MODULES = [
   'farmer-animals',                              // Sheet-3 E: "Remove livestock module"
   'farmer-equipment',                            // Sheet-3 F: "Remove farm equipments sub-module"
 ] as const
+// ZIWA360 (Dairy) — hidden modules. Only dairy + essential admin menus shown.
+// All crop/farmer/coffee/NSSF/VSLA/trace/carbon modules are irrelevant for dairy.
+export const ZIWA_HIDDEN_MODULES = [
+  // Core Operations — not relevant for dairy
+  'marketplace', 'payments', 'loans',
+  // Farm Management — crops are irrelevant for dairy
+  'farm-lands', 'cultivations', 'carbon', 'crop-insurance', 'crop-stages',
+  'cost-of-cultivation', 'crop-variety',
+  // Intelligence — not relevant for dairy
+  'impact-assessment', 'agritrack',
+  // Engagement — not relevant for dairy
+  'communication', 'feedback', 'channel-sim',
+  // Finance — NSSF/MFI not relevant for dairy
+  'mfi', 'nssf-contributions', 'nssf-settlement',
+  // Traceability — coffee traceability, not dairy
+  'trace',
+  // Compliance — coffee certifications, not dairy
+  'compliance',
+  // Programs — CCRP/SMILE/Nakivaale are health programs, not dairy
+  'ccrp', 'cohort1', 'cohort2', 'smile', 'nakivaale',
+  // Reset — mobile money reset, not relevant
+  'reset-dashboard', 'reset-beneficiaries', 'reset-vouchers', 'reset-merchants', 'reset-cash', 'reset-reports',
+  // VSLA — savings groups, not relevant for dairy farm
+  'vsla', 'sacco',
+  // Purchases/Sales — these are coffee purchases, not dairy
+  'purchases', 'sales', 'input-aggregation', 'input-distribution',
+  'approvals', 'processing', 'deliveries', 'consignments',
+  // Master data — most are crop-focused
+  'season-master', 'crop-master', 'seed-master', 'fertilizer-master',
+  'equipment-master', 'pesticide-master', 'weed-master', 'disease-master', 'pest-master',
+  'soiltype-master', 'cooperatives', 'farmer-groups', 'farmer-mapping',
+  'cultivation-detail', 'cultivation-create', 'cultivation-edit',
+  // Farmer detail sub-modules — dairy doesn't use this farmer CRUD
+  'farmer-detail', 'farmer-create', 'farmer-edit',
+  'farmland-detail', 'farmland-create', 'farmland-edit',
+  // Training — dairy has its own training in the dairy module
+  'training-create', 'training-edit', 'training-detail',
+  // Carbon/billing modules — not relevant for dairy
+  'carbon', 'billing-operations', 'platform-recovery',
+  // IVR — not relevant
+  'ivr',
+  // Plots — land management, not dairy
+  'plots',
+] as const

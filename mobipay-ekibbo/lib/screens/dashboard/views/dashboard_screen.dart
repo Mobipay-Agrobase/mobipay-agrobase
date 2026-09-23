@@ -238,67 +238,74 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildQuickActions() {
+    // Tenant-specific menu filtering:
+    // ZIWA360 (dairy) — only show dairy + profile + settings
+    // EKiBBO / Agrotel / others — show all regular menus
+    final isZiwa360 = ApiClient().tenantId == DairyModules.ziwa360TenantId;
     final actions = <Map<String, dynamic>>[
-      {
-        'label': AppLang.local.farmers,
-        'icon': Icons.people_outline,
-        'color': ColorConstant.secondary,
-        'route': RouterName.farmersList,
-      },
-      {
-        'label': AppLang.local.add_farmer,
-        'icon': Icons.person_add_outlined,
-        'color': ColorConstant.secondary,
-        'route': RouterName.farmerRegistration,
-      },
-      {
-        'label': 'Farm Lands',
-        'icon': Icons.landscape_outlined,
-        'color': ColorConstant.primaryLight,
-        'route': RouterName.farmLandsList,
-      },
-      {
-        'label': AppLang.local.trainings,
-        'icon': Icons.school_outlined,
-        'color': ColorConstant.gold,
-        'route': RouterName.trainingsList,
-      },
-      {
-        'label': AppLang.local.crops,
-        'icon': Icons.grass_outlined,
-        'color': ColorConstant.secondaryLight,
-        'route': RouterName.cropsList,
-      },
-      {
-        'label': 'Procurement',
-        'icon': Icons.shopping_cart_outlined,
-        'color': ColorConstant.gold,
-        'route': RouterName.procurementList,
-      },
-      {
-        'label': 'Transactions',
-        'icon': Icons.receipt_long_outlined,
-        'color': ColorConstant.info,
-        'route': RouterName.transactionsList,
-      },
-      {
-        'label': AppLang.local.breakdowns_dashboard,
-        'icon': Icons.bar_chart,
-        'color': ColorConstant.info,
-        'route': RouterName.breakdownsDashboard,
-      },
-      {
-        'label': AppLang.local.qr_scan,
-        'icon': Icons.qr_code_scanner,
-        'color': ColorConstant.gold,
-        'route': RouterName.qrScan,
-      },
-      {
-        'label': 'Vehicles',
-        'icon': Icons.local_shipping_outlined,
-        'color': ColorConstant.textSecondary,
-        'route': RouterName.vehiclesList,
-      },
+      if (!isZiwa360) ...[
+        {
+          'label': AppLang.local.farmers,
+          'icon': Icons.people_outline,
+          'color': ColorConstant.secondary,
+          'route': RouterName.farmersList,
+        },
+        {
+          'label': AppLang.local.add_farmer,
+          'icon': Icons.person_add_outlined,
+          'color': ColorConstant.secondary,
+          'route': RouterName.farmerRegistration,
+        },
+        {
+          'label': 'Farm Lands',
+          'icon': Icons.landscape_outlined,
+          'color': ColorConstant.primaryLight,
+          'route': RouterName.farmLandsList,
+        },
+        {
+          'label': AppLang.local.trainings,
+          'icon': Icons.school_outlined,
+          'color': ColorConstant.gold,
+          'route': RouterName.trainingsList,
+        },
+        {
+          'label': AppLang.local.crops,
+          'icon': Icons.grass_outlined,
+          'color': ColorConstant.secondaryLight,
+          'route': RouterName.cropsList,
+        },
+        {
+          'label': 'Procurement',
+          'icon': Icons.shopping_cart_outlined,
+          'color': ColorConstant.gold,
+          'route': RouterName.procurementList,
+        },
+        {
+          'label': 'Transactions',
+          'icon': Icons.receipt_long_outlined,
+          'color': ColorConstant.info,
+          'route': RouterName.transactionsList,
+        },
+        {
+          'label': AppLang.local.breakdowns_dashboard,
+          'icon': Icons.bar_chart,
+          'color': ColorConstant.info,
+          'route': RouterName.breakdownsDashboard,
+        },
+        {
+          'label': AppLang.local.qr_scan,
+          'icon': Icons.qr_code_scanner,
+          'color': ColorConstant.gold,
+          'route': RouterName.qrScan,
+        },
+        {
+          'label': 'Vehicles',
+          'icon': Icons.local_shipping_outlined,
+          'color': ColorConstant.textSecondary,
+          'route': RouterName.vehiclesList,
+        },
+      ],
+      // Always shown (all tenants):
       {
         'label': AppLang.local.profile,
         'icon': Icons.person_outline,

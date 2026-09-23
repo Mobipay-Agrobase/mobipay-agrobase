@@ -91,7 +91,7 @@ class DairyModule {
   String get endpoint => '/api/dairy/$key';
 
   /// Table name in the local SQLite cache.
-  String get tableName => 'dairy_$key';
+  String get tableName => 'dairy_${key.replaceAll('-', '_')}';
 }
 
 /// Static registry of all 65 ZIWA360 dairy modules.

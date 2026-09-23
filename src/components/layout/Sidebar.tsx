@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { useAppStore, type ModuleKey, EKB_HIDDEN_MODULES } from '@/lib/store'
+import { useAppStore, type ModuleKey, EKB_HIDDEN_MODULES, ZIWA_HIDDEN_MODULES } from '@/lib/store'
 import { cn } from '@/lib/utils'
 import { hasPermission, getRoleModules } from '@/lib/permissions'
 import {
@@ -195,6 +195,7 @@ export function Sidebar() {
   const [disabledModules, setDisabledModules] = useState<Set<string>>(new Set())
   const [entitlementsLoaded, setEntitlementsLoaded] = useState(false)
   const [tenantIsEkibbo, setTenantIsEkibbo] = useState(false)
+  const [tenantIsZiwa, setTenantIsZiwa] = useState(false)
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(() => {
     if (typeof window === 'undefined') return new Set()
     try {
@@ -246,6 +247,9 @@ export function Sidebar() {
         setDisabledModules(new Set(data.disabledModules || []))
         if (typeof data.tenantName === 'string' && /ekibbo/i.test(data.tenantName)) {
           setTenantIsEkibbo(true)
+        }
+        if (typeof data.tenantName === 'string' && /ziwa/i.test(data.tenantName)) {
+          setTenantIsZiwa(true)
         }
         setEntitlementsLoaded(true)
       })
@@ -319,6 +323,7 @@ export function Sidebar() {
                 // EKIBBO roles: only show specific groups
                 const isEkbRole = role.startsWith('EKB_')
                 const ekibboTenant = isEkbRole || tenantIsEkibbo
+                const ziwaTenant = tenantIsZiwa
                 if (isEkbRole) {
                   const ekbAllowedGroups = ['Overview', 'Core Operations', 'Supply Chain', 'Farm Management', 'Master Data', 'Intelligence', 'Engagement', 'Finance', 'Admin']
                   if (!ekbAllowedGroups.includes(groupLabel)) return null
@@ -403,6 +408,7 @@ export function Sidebar() {
                   // EKIBBO roles / tenant: hide menus not applicable to the Ekibbo tenant
                   // (applies to shared roles like TENANT_ADMIN on the Ekibbo tenant too)
                   if (ekibboTenant && (EKB_HIDDEN_MODULES as readonly string[]).includes(item.key)) return false
+                  if (ziwaTenant && (ZIWA_HIDDEN_MODULES as readonly string[]).includes(item.key)) return false
 
                   // Check role permission
                   if (item.permModule && !hasPermission(role, `${item.permModule}:read`)) return false

@@ -51,6 +51,7 @@ const ROLE_PERMISSIONS: RolePerms = {
     'feedback:*', 'farm_visits:*', 'impact_assessment:*',
     'carbon:*', 'mfi:*', 'transport:*',
     'nssf:*',
+    'dairy:*',  // ZIWA360 dairy farm management
   ],
 
   // ─── EKIBBO-Specific Roles (from EKIBBO requirements Excel) ───
@@ -199,6 +200,7 @@ const ROLE_PERMISSIONS: RolePerms = {
     'carbon:read',
     'transport:read',
     'profile:read', 'profile:update',
+    'dairy:*',  // ZIWA360 dairy farm management
   ],
 
   // CBT (Community Based Trainer): assessment

@@ -7,6 +7,7 @@ import 'package:mobipay_ekibbo/components/my_app_bar.dart';
 import 'package:mobipay_ekibbo/constant/color_constant.dart';
 import 'package:mobipay_ekibbo/constant/text_style_constant.dart';
 import 'package:mobipay_ekibbo/data/api_client.dart';
+import 'package:mobipay_ekibbo/components/location_picker.dart';
 import 'package:mobipay_ekibbo/l10n/app_lang.dart';
 
 /// EKiBBO Farmer Registration — multi-section form per Sheet-3 spec:
@@ -47,15 +48,8 @@ class _FarmerRegistrationScreenState extends State<FarmerRegistrationScreen> {
   String? _gender;
   String? _idType;
 
-  // Contact Info — full 7-level Uganda location hierarchy
-  final _regionCtrl = TextEditingController();
-  final _subRegionCtrl = TextEditingController();
-  final _districtCtrl = TextEditingController();
-  final _countyCtrl = TextEditingController();
-  final _subCountyCtrl = TextEditingController();
-  final _parishCtrl = TextEditingController();
-  final _villageCtrl = TextEditingController();
-  String _country = 'Uganda';
+  // Contact Info — 7-level dependent dropdown (LocationPicker)
+  LocationSelection? _location;
 
   // Family Info
   final _nextOfKinAltPhoneCtrl = TextEditingController();
@@ -101,13 +95,7 @@ class _FarmerRegistrationScreenState extends State<FarmerRegistrationScreen> {
     _phoneCtrl.dispose();
     _idNoCtrl.dispose();
     _dobCtrl.dispose();
-    _regionCtrl.dispose();
-    _subRegionCtrl.dispose();
-    _districtCtrl.dispose();
-    _countyCtrl.dispose();
-    _subCountyCtrl.dispose();
-    _parishCtrl.dispose();
-    _villageCtrl.dispose();
+
     _nextOfKinAltPhoneCtrl.dispose();
     _householdSizeCtrl.dispose();
     _childrenUnder18Ctrl.dispose();
@@ -156,11 +144,12 @@ class _FarmerRegistrationScreenState extends State<FarmerRegistrationScreen> {
         'nationalIdType': _idType,
         'nationalIdNo': _idNoCtrl.text.isNotEmpty ? _idNoCtrl.text : null,
         // Contact
-        'country': _country,
-        'province': _regionCtrl.text.isNotEmpty ? _regionCtrl.text : null,
-        'district': _districtCtrl.text.isNotEmpty ? _districtCtrl.text : null,
-        'commune': _subCountyCtrl.text.isNotEmpty ? _subCountyCtrl.text : null,
-        'villageName': _villageCtrl.text.isNotEmpty ? _villageCtrl.text : null,
+        'country': _location?.country ?? 'Uganda',
+        'province': _location?.regionName,
+        'district': _location?.districtName,
+        'commune': _location?.subCountyName,
+        'villageName': _location?.villageName,
+        'villageId': _location?.villageId,
         // Family — EKiBBO Sheet-3 fields
         'spouseName': _nextOfKinAltPhoneCtrl.text.isNotEmpty
             ? _nextOfKinAltPhoneCtrl.text
@@ -362,48 +351,12 @@ class _FarmerRegistrationScreenState extends State<FarmerRegistrationScreen> {
       children: [
         _sectionHeader(AppLang.local.contact_information),
         const SizedBox(height: 16),
-        // Country (locked to Uganda per gov policy)
-        AppFormField(
-          hint: AppLang.local.country,
-          controller: TextEditingController(text: _country),
-          readOnly: true,
-        ),
-        const SizedBox(height: 12),
-        // Full 7-level Uganda location hierarchy per gov policy:
+        // 7-level dependent dropdown — same as web app's LocationPicker.
         // Region → Sub Region → District → County → Sub County → Parish → Village
-        AppFormField(
-          controller: _regionCtrl,
-          hint: 'Region',
-        ),
-        const SizedBox(height: 12),
-        AppFormField(
-          controller: _subRegionCtrl,
-          hint: 'Sub Region',
-        ),
-        const SizedBox(height: 12),
-        AppFormField(
-          controller: _districtCtrl,
-          hint: AppLang.local.district,
-        ),
-        const SizedBox(height: 12),
-        AppFormField(
-          controller: _countyCtrl,
-          hint: 'County',
-        ),
-        const SizedBox(height: 12),
-        AppFormField(
-          controller: _subCountyCtrl,
-          hint: 'Sub County',
-        ),
-        const SizedBox(height: 12),
-        AppFormField(
-          controller: _parishCtrl,
-          hint: 'Parish',
-        ),
-        const SizedBox(height: 12),
-        AppFormField(
-          controller: _villageCtrl,
-          hint: AppLang.local.village,
+        LocationPicker(
+          onChange: (sel) {
+            _location = sel;
+          },
         ),
       ],
     );

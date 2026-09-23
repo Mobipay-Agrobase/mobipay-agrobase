@@ -175,6 +175,15 @@ model Tenant {
   dairyFeedLogs          DairyFeedLog[]          @relation("TenantDairyFeedLogs")
   dairyProcessingRecords DairyProcessingRecord[] @relation("TenantDairyProcessing")
   dairyFarms             DairyFarm[]             @relation("TenantDairyFarms")
+  // ZIWA360 Phase 2: Health & Herd
+  dairyVets               DairyVet[]               @relation("TenantDairyVets")
+  dairyVetRequests       DairyVetRequest[]        @relation("TenantDairyVetRequests")
+  dairyVaxProtocols      DairyVaccinationProtocol[] @relation("TenantDairyVaxProtocols")
+  dairyDewormingRecords  DairyDewormingRecord[]   @relation("TenantDairyDeworming")
+  dairyWithdrawalLocks   DairyWithdrawalLock[]    @relation("TenantDairyWithdrawals")
+  dairyLactations        DairyLactation[]         @relation("TenantDairyLactations")
+  dairyDiseases          DairyDisease[]           @relation("TenantDairyDiseases")
+  dairyDrugCatalog       DairyDrugCatalog[]       @relation("TenantDairyDrugCatalog")
 }
 
 // --- USERS & AUTH ---
@@ -5423,6 +5432,11 @@ model DairyCow {
   weights           DairyAnimalWeight[]  @relation("DairyCowWeights")
   breedingEvents    DairyBreedingEvent[]  @relation("DairyBreedingDam")  // as dam
   aiRecords         DairyBreedingEvent[]  @relation("DairyBreedingSire")  // as sire
+  // Phase 2 relations
+  vetRequests       DairyVetRequest[]      @relation("DairyCowVetRequests")
+  dewormingRecords  DairyDewormingRecord[] @relation("DairyCowDeworming")
+  withdrawalLocks   DairyWithdrawalLock[]  @relation("DairyCowWithdrawals")
+  lactations        DairyLactation[]      @relation("DairyCowLactations")
 
   @@index([tenantId])
   @@index([farmerId])
@@ -5822,3 +5836,238 @@ model DairyFarm {
 
 // ─── Add Tenant relations for all dairy models ───
 // (Tenant model already exists — we add the back-relations)
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ZIWA360 Phase 2: Health & Herd
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ─── P2-1. Vet Registry (VT-01) ───
+model DairyVet {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation("TenantDairyVets", fields: [tenantId], references: [id])
+  vetCode         String?  // system-generated
+  fullName        String
+  licenseNumber   String?  // veterinary license
+  isVerified      Boolean  @default(false)  // verified by admin
+  verifiedAt      DateTime?
+  verifiedBy      String?  // admin user ID
+  phone           String?
+  email           String?
+  specialties     String?  // JSON: ["Dairy", "AI", "Surgery"]
+  workingHours    String?  // JSON: {"mon": "8-17", ...}
+  rating          Float?   @default(0) // avg rating 1-5
+  totalReviews    Int      @default(0)
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  serviceAreas    DairyVetServiceArea[]  @relation("DairyVetAreas")
+  vetRequests     DairyVetRequest[]  @relation("DairyVetRequestVet")
+  reviews         DairyVetReview[]  @relation("DairyVetReviews")
+  // Note: vaccinations, healthChecks, breedingEvents reference vet by name
+  // (administeredBy/veterinarian/aiTechnician text fields), not by FK.
+
+  @@index([tenantId])
+  @@unique([tenantId, licenseNumber])
+}
+
+// ─── P2-2. Vet Service Areas (VT-01) ───
+model DairyVetServiceArea {
+  id              String   @id @default(cuid())
+  vetId           String
+  vet             DairyVet @relation("DairyVetAreas", fields: [vetId], references: [id], onDelete: Cascade)
+  district        String   // district name
+  subCounty       String?  // optional sub-county
+  radiusKm        Float?   // service radius
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+
+  @@index([vetId])
+  @@index([district])
+}
+
+// ─── P2-3. Vet Request / "Need Vet" flow (VT-02) ───
+model DairyVetRequest {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation("TenantDairyVetRequests", fields: [tenantId], references: [id])
+  cowId           String?
+  cow             DairyCow? @relation("DairyCowVetRequests", fields: [cowId], references: [id])
+  farmerId        String?
+  farmerName      String?  // denormalized for quick display
+  farmerPhone     String?
+  vetId           String?  // assigned vet (first to accept)
+  vet             DairyVet? @relation("DairyVetRequestVet", fields: [vetId], references: [id])
+  symptom         String   // farmer's description
+  urgency         String   @default("Normal") // Normal / Urgent / Emergency
+  status          String   @default("PENDING") // PENDING / ACCEPTED / DECLINED / COMPLETED / CANCELLED
+  acceptedAt      DateTime?
+  completedAt     DateTime?
+  diagnosis       String?  // vet's diagnosis
+  treatment       String?  // treatment given
+  prescriptionUrl String?  // prescription document
+  visitFee        Float?   // consultation fee
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([vetId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+// ─── P2-4. Vet Reviews (VT-03) ───
+model DairyVetReview {
+  id              String   @id @default(cuid())
+  vetId           String
+  vet             DairyVet @relation("DairyVetReviews", fields: [vetId], references: [id], onDelete: Cascade)
+  vetRequestId    String?  // linked vet request
+  farmerName      String
+  rating          Int      // 1-5 stars
+  tags            String?  // JSON: ["Fast", "Knowledgeable", "Affordable"]
+  comment         String?
+  responseTimeMin Int?     // minutes from request to arrival
+  createdAt       DateTime @default(now())
+
+  @@index([vetId])
+  @@index([rating])
+}
+
+// ─── P2-5. Vaccination Protocol Engine (VT-05) ───
+// Configurable national vaccination schedule per country
+model DairyVaccinationProtocol {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation("TenantDairyVaxProtocols", fields: [tenantId], references: [id])
+  country         String   @default("UG") // Uganda, Kenya, etc.
+  vaccineName     String   // FMD, LSD, ECF, Brucellosis, etc.
+  disease         String?  // disease it prevents
+  species         String   @default("Cattle") // Cattle, Goat, Sheep
+  ageStartMonths  Int      // minimum age for first dose
+  ageEndMonths    Int?     // max age (null = no limit)
+  doseSchedule    String?  // JSON: [{dose: 1, intervalDays: 0}, {dose: 2, intervalDays: 21}, ...]
+  boosterIntervalDays Int? // booster interval (e.g. 180 = 6 months)
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([country])
+  @@index([vaccineName])
+}
+
+// ─── P2-6. Deworming Records (VT-08) ───
+model DairyDewormingRecord {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation("TenantDairyDeworming", fields: [tenantId], references: [id])
+  cowId           String
+  cow             DairyCow @relation("DairyCowDeworming", fields: [cowId], references: [id], onDelete: Cascade)
+  dewormingDate   DateTime
+  productUsed     String   // dewormer name
+  dose            String   // mg or ml
+  administrationRoute String @default("Oral") // Oral / Injectable / Topical
+  nextDueDate     DateTime?
+  administeredBy  String?  // vet or staff name
+  notes           String?
+  createdAt       DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([cowId])
+  @@index([dewormingDate])
+}
+
+// ─── P2-7. Withdrawal Lock (VT-07) ───
+// When a cow is under treatment (antibiotics, deworming), its milk
+// is flagged "Not for sale" until the withdrawal period ends.
+model DairyWithdrawalLock {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation("TenantDairyWithdrawals", fields: [tenantId], references: [id])
+  cowId           String
+  cow             DairyCow @relation("DairyCowWithdrawals", fields: [cowId], references: [id], onDelete: Cascade)
+  reason          String   // "Antibiotic: Oxytetracycline", "Deworming", etc.
+  treatmentType   String   @default("Medication") // Medication / Vaccination / Deworming
+  startDate       DateTime @default(now())
+  endDate         DateTime // withdrawal period end
+  milkWithheld    Boolean  @default(true) // milk not for sale
+  meatWithheld    Boolean  @default(true) // meat not for sale
+  isActive        Boolean  @default(true) // auto-deactivated when endDate passes
+  triggeredBy     String?  // vet request ID or health check ID
+  notes           String?
+  createdAt       DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([cowId])
+  @@index([isActive])
+  @@index([endDate])
+}
+
+// ─── P2-8. Lactation Curve (per-cow) ───
+model DairyLactation {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation("TenantDairyLactations", fields: [tenantId], references: [id])
+  cowId           String
+  cow             DairyCow @relation("DairyCowLactations", fields: [cowId], references: [id], onDelete: Cascade)
+  lactationNumber Int      // 1st, 2nd, 3rd lactation
+  calvingDate     DateTime
+  startDate       DateTime @default(now())
+  endDate         DateTime? // dry-off date
+  peakYieldLitres Float?   // peak daily yield
+  peakDay         Int?     // day of peak (e.g. day 45)
+  totalYieldLitres Float?  // cumulative yield for this lactation
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([cowId])
+  @@index([isActive])
+}
+
+// ─── P2-9. Disease Master ───
+model DairyDisease {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation("TenantDairyDiseases", fields: [tenantId], references: [id])
+  name            String   // FMD, Mastitis, Brucellosis, etc.
+  category        String?  // Infectious / Metabolic / Parasitic / Nutritional
+  symptoms        String?  // JSON array of common symptoms
+  isNotifiable    Boolean  @default(false) // must report to authorities
+  treatmentProtocol String? // standard treatment steps
+  preventionMeasures String?
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+
+  @@index([tenantId])
+  @@unique([tenantId, name])
+}
+
+// ─── P2-10. Drug Catalog ───
+model DairyDrugCatalog {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation("TenantDairyDrugCatalog", fields: [tenantId], references: [id])
+  drugName        String
+  genericName     String?
+  category        String?  // Antibiotic / Anti-inflammatory / Vaccine / Dewormer / Vitamin
+  manufacturer    String?
+  unitSize        String?  // 100ml, 50 tablets
+  unitPrice       Float?
+  withdrawalPeriodDays Int? // milk withdrawal period
+  batchNumber     String?
+  expiryDate      DateTime?
+  stockQuantity   Float?   // units in stock
+  minStockLevel   Float?   // reorder trigger
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([drugName])
+}
+
+// ─── Add Phase 2 back-relations to Tenant ───
+// (already added dairyVets, dairyVetRequests etc. above — need to add to Tenant model)

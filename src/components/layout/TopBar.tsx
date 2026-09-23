@@ -53,6 +53,32 @@ const MODULE_TITLES: Record<string, string> = {
   compliance: 'Compliance Hub',
   profile: 'Profile',
   companies: 'Companies',
+  // ZIWA360 Dairy sub-modules — top-level sidebar entries
+  'dairy': 'Dairy (ZIWA360)',
+  'dairy-cows': 'Cow Master',
+  'dairy-sheds': 'Sheds',
+  'dairy-staff': 'Staff',
+  'dairy-suppliers': 'Suppliers',
+  'dairy-feed-items': 'Feed Items',
+  'dairy-feed-schedules': 'Feed Schedules',
+  'dairy-tasks': 'Tasks',
+  'dairy-vaccinations': 'Vaccinations',
+  'dairy-milking': 'Milking',
+  'dairy-health-checks': 'Health Checks',
+  'dairy-breeding': 'Breeding',
+  'dairy-weights': 'Weights',
+  'dairy-quality-tests': 'Quality Tests',
+  'dairy-waste': 'Waste',
+  'dairy-emissions': 'Emissions',
+  'dairy-certifications': 'Certifications',
+  'dairy-inspections': 'Inspections',
+  'dairy-feed-logs': 'Feed Logs',
+  'dairy-processing': 'Processing',
+  // Master data
+  'catalog-manager': 'Dropdown Catalog',
+  'location-master': 'Location Master',
+  'field-staff': 'Field Staff',
+  'roles-permissions': 'Roles & Permissions',
 }
 
 interface TopBarProps {

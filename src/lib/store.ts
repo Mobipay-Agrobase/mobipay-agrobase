@@ -25,8 +25,14 @@ export type ModuleKey =
   'season-master' | 'crop-master' | 'seed-master' | 'fertilizer-master' | 'master-data' |
   'equipment-master' | 'pesticide-master' | 'weed-master' | 'disease-master' | 'pest-master' | 'soiltype-master' |
   'location-master' | 'field-staff' | 'cooperatives' | 'farmer-groups' | 'farmer-mapping' |
-  // ZIWA360 Dairy Farm Management
+  // ZIWA360 Dairy Farm Management — single dashboard entry (legacy)
   'dairy' |
+  // ZIWA360 Dairy Farm Management — top-level sidebar modules (one entry per dairy sub-module)
+  'dairy-cows' | 'dairy-sheds' | 'dairy-staff' | 'dairy-suppliers' |
+  'dairy-feed-items' | 'dairy-feed-schedules' | 'dairy-tasks' | 'dairy-vaccinations' |
+  'dairy-milking' | 'dairy-health-checks' | 'dairy-breeding' | 'dairy-weights' |
+  'dairy-quality-tests' | 'dairy-waste' | 'dairy-emissions' | 'dairy-certifications' |
+  'dairy-inspections' | 'dairy-feed-logs' | 'dairy-processing' |
   'farmer-detail' | 'farmer-create' | 'farmer-edit' |
   'farmland-detail' | 'farmland-create' | 'farmland-edit' |
   'cultivation-detail' | 'cultivation-create' | 'cultivation-edit' |

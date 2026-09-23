@@ -886,8 +886,27 @@ function ModuleList({ module, refreshKey, onRefresh }: { module: ModuleConfig; r
 /*                              Main dashboard                                 */
 /* -------------------------------------------------------------------------- */
 
-export default function DairyDashboard() {
-  const [activeKey, setActiveKey] = useState<string>('cows')
+interface DairyDashboardProps {
+  /** Initial sub-module to display (e.g. 'cows', 'sheds', 'milking').
+   *  When the sidebar is rendered in "top-level" mode (ZIWA360 tenant), each
+   *  of the 19 dairy sub-modules is a top-level sidebar entry. Clicking one
+   *  routes to `/` with `activeModule='dairy-cows'`, which renders
+   *  `<DairyDashboard initialModule="cows" />`.
+   *
+   *  When `initialModule` is provided, the internal sub-sidebar is hidden
+   *  (the navigation happens via the main left sidebar) and the KPI row
+   *  is suppressed (the per-module list takes the full width).
+   *
+   *  When `initialModule` is omitted (legacy `dairy` entry used by SUPER_ADMIN),
+   *  the full dashboard with its own internal sub-sidebar is shown.
+   */
+  initialModule?: string
+  /** When true, hide the internal sub-sidebar and KPI row (top-level sidebar mode). */
+  topLevel?: boolean
+}
+
+export default function DairyDashboard({ initialModule, topLevel = false }: DairyDashboardProps = {}) {
+  const [activeKey, setActiveKey] = useState<string>(initialModule && MODULES.some(m => m.key === initialModule) ? initialModule : 'cows')
   const [refreshKey, setRefreshKey] = useState(0)
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
 
@@ -900,10 +919,10 @@ export default function DairyDashboard() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
             <Milk className="h-6 w-6 text-primary" />
-            ZIWA360 Dairy Management
+            {topLevel ? activeModule.label : 'ZIWA360 Dairy Management'}
           </h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            Complete dairy farm operations — herd, milk, health, breeding & compliance.
+            {topLevel ? activeModule.description : 'Complete dairy farm operations — herd, milk, health, breeding & compliance.'}
           </p>
         </div>
         <Button variant="outline" size="sm" onClick={() => setRefreshKey(k => k + 1)}>
@@ -911,50 +930,56 @@ export default function DairyDashboard() {
         </Button>
       </div>
 
-      {/* KPI tiles */}
-      <KpiRow />
+      {/* KPI tiles — only show in legacy "single dairy entry" mode (topLevel=false).
+          In topLevel mode the user is navigating via the main sidebar, so the
+          per-module list takes the full width and KPIs are hidden. */}
+      {!topLevel && <KpiRow />}
 
-      {/* Body: sidebar nav + module list */}
-      <div className="grid grid-cols-1 lg:grid-cols-[220px_1fr] gap-4">
-        {/* Sidebar nav (sticky on desktop, collapsible on mobile) */}
-        <Card className="lg:sticky lg:top-4 h-fit">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm uppercase tracking-wide text-muted-foreground flex items-center justify-between">
-              Modules
-              <Button
-                variant="ghost"
-                size="sm"
-                className="lg:hidden h-7 w-7 p-0"
-                onClick={() => setMobileNavOpen(o => !o)}
-              >
-                {mobileNavOpen ? <X className="h-4 w-4" /> : <ListChecks className="h-4 w-4" />}
-              </Button>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className={`p-2 pt-0 ${mobileNavOpen ? 'block' : 'hidden lg:block'}`}>
-            <nav className="space-y-0.5 max-h-[70vh] overflow-y-auto pr-1">
-              {MODULES.map(m => {
-                const Icon = m.icon
-                const active = m.key === activeKey
-                return (
-                  <button
-                    key={m.key}
-                    onClick={() => { setActiveKey(m.key); setMobileNavOpen(false) }}
-                    className={cn(
-                      'w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors text-left',
-                      active
-                        ? 'bg-primary/10 text-primary'
-                        : 'text-muted-foreground hover:bg-muted hover:text-foreground',
-                    )}
-                  >
-                    <Icon className="h-4 w-4 shrink-0" />
-                    <span className="truncate">{m.label}</span>
-                  </button>
-                )
-              })}
-            </nav>
-          </CardContent>
-        </Card>
+      {/* Body: sidebar nav + module list
+          In topLevel mode, the main left sidebar handles navigation, so we
+          don't render the internal sub-sidebar here. */}
+      <div className={topLevel ? 'grid grid-cols-1 gap-4' : 'grid grid-cols-1 lg:grid-cols-[220px_1fr] gap-4'}>
+        {/* Sidebar nav (sticky on desktop, collapsible on mobile) — only in legacy mode */}
+        {!topLevel && (
+          <Card className="lg:sticky lg:top-4 h-fit">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm uppercase tracking-wide text-muted-foreground flex items-center justify-between">
+                Modules
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="lg:hidden h-7 w-7 p-0"
+                  onClick={() => setMobileNavOpen(o => !o)}
+                >
+                  {mobileNavOpen ? <X className="h-4 w-4" /> : <ListChecks className="h-4 w-4" />}
+                </Button>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className={`p-2 pt-0 ${mobileNavOpen ? 'block' : 'hidden lg:block'}`}>
+              <nav className="space-y-0.5 max-h-[70vh] overflow-y-auto pr-1">
+                {MODULES.map(m => {
+                  const Icon = m.icon
+                  const active = m.key === activeKey
+                  return (
+                    <button
+                      key={m.key}
+                      onClick={() => { setActiveKey(m.key); setMobileNavOpen(false) }}
+                      className={cn(
+                        'w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors text-left',
+                        active
+                          ? 'bg-primary/10 text-primary'
+                          : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                      )}
+                    >
+                      <Icon className="h-4 w-4 shrink-0" />
+                      <span className="truncate">{m.label}</span>
+                    </button>
+                  )
+                })}
+              </nav>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Active module list */}
         <ModuleList

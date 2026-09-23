@@ -31,6 +31,8 @@ const MASTER_DATA_KEYS = [
   'farmer-mapping',
 ] as const
 import { useIsEkibboTenant } from '@/hooks/use-is-ekibbo'
+import { useIsZiwaTenant } from '@/hooks/use-is-ziwa'
+import { ZIWA_HIDDEN_MODULES } from '@/lib/store'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { TopBar } from '@/components/layout/TopBar'
 import { LoginPage } from '@/components/auth/LoginPage'
@@ -295,6 +297,28 @@ function ModuleRouter() {
     case 'plots': return <PlotsView />
     // ZIWA360 Dairy Farm Management
     case 'dairy': return <DairyDashboard />
+    // ZIWA360 top-level sidebar entries — one case per dairy sub-module.
+    // Each renders the DairyDashboard in "top-level" mode, which hides its
+    // internal sub-sidebar (since navigation happens via the main left sidebar).
+    case 'dairy-cows':           return <DairyDashboard initialModule="cows"           topLevel />
+    case 'dairy-sheds':          return <DairyDashboard initialModule="sheds"          topLevel />
+    case 'dairy-staff':          return <DairyDashboard initialModule="staff"          topLevel />
+    case 'dairy-suppliers':      return <DairyDashboard initialModule="suppliers"      topLevel />
+    case 'dairy-feed-items':     return <DairyDashboard initialModule="feed-items"     topLevel />
+    case 'dairy-feed-schedules': return <DairyDashboard initialModule="feed-schedules" topLevel />
+    case 'dairy-tasks':          return <DairyDashboard initialModule="tasks"          topLevel />
+    case 'dairy-vaccinations':   return <DairyDashboard initialModule="vaccinations"   topLevel />
+    case 'dairy-milking':        return <DairyDashboard initialModule="milking"        topLevel />
+    case 'dairy-health-checks':  return <DairyDashboard initialModule="health-checks"  topLevel />
+    case 'dairy-breeding':       return <DairyDashboard initialModule="breeding"       topLevel />
+    case 'dairy-weights':        return <DairyDashboard initialModule="weights"        topLevel />
+    case 'dairy-quality-tests':  return <DairyDashboard initialModule="quality-tests"  topLevel />
+    case 'dairy-waste':          return <DairyDashboard initialModule="waste"          topLevel />
+    case 'dairy-emissions':      return <DairyDashboard initialModule="emissions"      topLevel />
+    case 'dairy-certifications': return <DairyDashboard initialModule="certifications" topLevel />
+    case 'dairy-inspections':    return <DairyDashboard initialModule="inspections"    topLevel />
+    case 'dairy-feed-logs':      return <DairyDashboard initialModule="feed-logs"      topLevel />
+    case 'dairy-processing':     return <DairyDashboard initialModule="processing"     topLevel />
     // Super Admin
     case 'super-admin-overview': return <SuperAdminOverviewView />
     case 'super-admin-tenants': return <SuperAdminTenantsView />
@@ -349,6 +373,7 @@ export default function HomePage() {
   const setActiveModule = useAppStore((s) => s.setActiveModule)
   const activeModule = useAppStore((s) => s.activeModule)
   const isEkibbo = useIsEkibboTenant((session?.user as { role?: string } | undefined)?.role)
+  const isZiwa = useIsZiwaTenant()
 
   useEffect(() => {
     if (session?.user) {
@@ -445,6 +470,14 @@ export default function HomePage() {
       if (isEkibbo && (EKB_HIDDEN_MODULES as readonly string[]).includes(activeModule as string)) {
         setActiveModule('dashboard')
       }
+
+      // ZIWA360 tenant: bounce off any module in the ZIWA_HIDDEN_MODULES list.
+      // This catches the case where a ZIWA360 user lands on (or navigates to)
+      // a non-dairy module. The sidebar already hides these entries, but this
+      // is a defense-in-depth guard.
+      if (isZiwa && (ZIWA_HIDDEN_MODULES as readonly string[]).includes(activeModule as string)) {
+        setActiveModule('dashboard')
+      }
       const ekbAllowed = new Set([
         'dashboard', 'farmers', 'farm-lands', 'cultivations', 'purchases', 'sales',
         'input-aggregation', 'input-distribution', 'approvals', 'processing', 'deliveries',
@@ -474,7 +507,7 @@ export default function HomePage() {
     } else {
       setUser(null)
     }
-  }, [session, setUser, setActiveModule, activeModule, isEkibbo])
+  }, [session, setUser, setActiveModule, activeModule, isEkibbo, isZiwa])
 
   if (status === 'loading') {
     return (

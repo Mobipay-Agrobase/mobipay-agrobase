@@ -13,7 +13,11 @@ import {
   Stethoscope, Activity, Smartphone, TreePine, UsersRound, Landmark, MapPin,
   Cloud, Calculator, BookOpen, KeyRound, Boxes, Database, Wheat, Calendar, FlaskConical,
   Tractor, SprayCan, Bug, Mountain, UserCog,
-  ChevronRight, ShieldCheck, Milk
+  ChevronRight, ShieldCheck, Milk,
+  // Dairy sub-module icons (ZIWA360 — top-level sidebar entries)
+  PawPrint as CowIcon, Home as ShedIcon, CalendarClock, ListChecks, Syringe,
+  Droplet, HeartPulse, GitMerge, Scale, Trash2, CloudSun, BadgeCheck,
+  ClipboardList, Beef
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
@@ -135,7 +139,33 @@ const ALL_MODULES: NavItem[] = [
   { key: 'reset-cash', label: 'Cash Disbursement', icon: DollarSign, group: 'ReSET MarketLink', permModule: 'reset' },
   { key: 'reset-reports', label: 'Reports', icon: BarChart3, group: 'ReSET MarketLink', permModule: 'reset' },
   // ─── ZIWA360 Dairy Farm Management ───
+  // Legacy single-entry — kept for backwards-compat (used by SUPER_ADMIN who wants the full
+  // dairy dashboard with its own internal sub-nav). Hidden from ZIWA360 tenant users
+  // (they get the 19 top-level entries below instead, so the dairy sub-modules appear
+  // directly in the left sidebar).
   { key: 'dairy', label: 'Dairy (ZIWA360)', icon: Milk, group: 'Livestock', permModule: 'farmers' },
+  // ZIWA360 top-level sidebar entries — one per dairy sub-module.
+  // When a ZIWA360 tenant user logs in, these appear as top-level items in the
+  // left sidebar (not buried under a parent "Dairy" menu).
+  { key: 'dairy-cows',         label: 'Cow Master',         icon: CowIcon,       group: 'Dairy Management', permModule: 'farmers' },
+  { key: 'dairy-sheds',        label: 'Sheds',              icon: ShedIcon,      group: 'Dairy Management', permModule: 'farmers' },
+  { key: 'dairy-staff',        label: 'Staff',              icon: Users,         group: 'Dairy Management', permModule: 'farmers' },
+  { key: 'dairy-suppliers',    label: 'Suppliers',          icon: Truck,         group: 'Dairy Management', permModule: 'farmers' },
+  { key: 'dairy-feed-items',   label: 'Feed Items',         icon: Package,       group: 'Dairy Management', permModule: 'farmers' },
+  { key: 'dairy-feed-schedules', label: 'Feed Schedules',  icon: CalendarClock, group: 'Dairy Management', permModule: 'farmers' },
+  { key: 'dairy-tasks',        label: 'Tasks',              icon: ListChecks,    group: 'Dairy Management', permModule: 'farmers' },
+  { key: 'dairy-vaccinations', label: 'Vaccinations',       icon: Syringe,       group: 'Dairy Management', permModule: 'farmers' },
+  { key: 'dairy-milking',      label: 'Milking',            icon: Droplet,        group: 'Dairy Management', permModule: 'farmers' },
+  { key: 'dairy-health-checks', label: 'Health Checks',    icon: HeartPulse,    group: 'Dairy Management', permModule: 'farmers' },
+  { key: 'dairy-breeding',     label: 'Breeding',           icon: GitMerge,      group: 'Dairy Management', permModule: 'farmers' },
+  { key: 'dairy-weights',      label: 'Weights',            icon: Scale,         group: 'Dairy Management', permModule: 'farmers' },
+  { key: 'dairy-quality-tests', label: 'Quality Tests',    icon: FlaskConical,  group: 'Dairy Management', permModule: 'farmers' },
+  { key: 'dairy-waste',        label: 'Waste',               icon: Trash2,        group: 'Dairy Management', permModule: 'farmers' },
+  { key: 'dairy-emissions',    label: 'Emissions',          icon: CloudSun,      group: 'Dairy Management', permModule: 'farmers' },
+  { key: 'dairy-certifications', label: 'Certifications',  icon: BadgeCheck,    group: 'Dairy Management', permModule: 'farmers' },
+  { key: 'dairy-inspections',  label: 'Inspections',        icon: ClipboardList, group: 'Dairy Management', permModule: 'farmers' },
+  { key: 'dairy-feed-logs',    label: 'Feed Logs',          icon: BookOpen,      group: 'Dairy Management', permModule: 'farmers' },
+  { key: 'dairy-processing',   label: 'Processing',         icon: Beef,          group: 'Dairy Management', permModule: 'farmers' },
   // Super Admin (only visible to SUPER_ADMIN role)
   { key: 'super-admin-overview', label: 'Platform Overview', icon: LayoutDashboard, group: 'Super Admin' },
   { key: 'super-admin-tenants', label: 'Tenants', icon: Building2, group: 'Super Admin' },
@@ -340,70 +370,84 @@ export function Sidebar() {
                 const ekibboTenant = isEkbRole || tenantIsEkibbo
                 const ziwaTenant = tenantIsZiwa
 
-                // ZIWA360: COMPLETELY replace the sidebar — only show Dashboard,
-                // Dairy (ZIWA360), and Admin (Profile + Settings). No other groups.
+                // ZIWA360 sidebar redesign:
+                // Show ONLY the following groups as top-level sidebar items:
+                //   1. Dairy Management  — 19 dairy sub-modules (cows, sheds, staff, milking, …)
+                //   2. Master Data      — catalog-manager + location-master + field-staff (dairy-relevant subset)
+                //   3. Intelligence      — Reports & Analytics only
+                //   4. Admin            — Profile, Settings, Users, Roles & Permissions
+                // The "Livestock" group (which holds the legacy single 'dairy' entry) is hidden
+                // because its content is now distributed across the 19 top-level Dairy Management entries.
                 if (ziwaTenant) {
-                  if (groupLabel === 'Overview') return null // we'll render a custom overview below
-                  if (groupLabel === 'Livestock') {
-                    // Show the Dairy entry as a top-level group, not a sub-menu
-                    return (
-                      <div key="ziwa-dairy" className="mb-1">
-                        <div className="px-3 py-2 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-                          Dairy Management
-                        </div>
-                        {items.filter(i => i.key === 'dairy').map(item => {
-                          const Icon = item.icon
-                          return (
-                            <button
-                              key={item.key}
-                              onClick={() => handleNav(item.key)}
-                              className={cn(
-                                'w-full flex items-center gap-2.5 px-3 py-2 text-sm rounded-lg transition-colors text-left',
-                                activeModule === item.key
-                                  ? 'bg-primary text-primary-foreground font-medium'
-                                  : 'hover:bg-accent text-muted-foreground hover:text-foreground',
-                              )}
-                            >
-                              <Icon className="w-4 h-4 shrink-0" />
-                              <span className="truncate">{item.label}</span>
-                            </button>
-                          )
-                        })}
-                      </div>
-                    )
+                  // Hide groups that aren't relevant for a dairy tenant
+                  const ZIWA_ALLOWED_GROUPS = ['Dairy Management', 'Master Data', 'Intelligence', 'Admin']
+                  if (!ZIWA_ALLOWED_GROUPS.includes(groupLabel)) return null
+
+                  // Within Master Data, only show items relevant to dairy operations
+                  const ZIWA_MASTER_DATA_KEYS = ['catalog-manager', 'location-master', 'field-staff']
+                  // Within Intelligence, only show Reports & Analytics
+                  const ZIWA_INTELLIGENCE_KEYS = ['reports']
+                  // Within Admin, only show Profile + Settings + Users + Roles & Permissions
+                  const ZIWA_ADMIN_KEYS = ['profile', 'settings', 'users', 'roles-permissions']
+
+                  let visibleZiwaItems = items
+                  if (groupLabel === 'Master Data') {
+                    visibleZiwaItems = items.filter(i => ZIWA_MASTER_DATA_KEYS.includes(i.key))
+                  } else if (groupLabel === 'Intelligence') {
+                    visibleZiwaItems = items.filter(i => ZIWA_INTELLIGENCE_KEYS.includes(i.key))
+                  } else if (groupLabel === 'Admin') {
+                    visibleZiwaItems = items.filter(i => ZIWA_ADMIN_KEYS.includes(i.key))
                   }
-                  if (groupLabel === 'Admin') {
-                    // Only show Profile + Settings for ZIWA360
-                    const ziwaAdminItems = items.filter(i => ['profile', 'settings'].includes(i.key))
-                    if (ziwaAdminItems.length === 0) return null
-                    return (
-                      <div key="ziwa-admin" className="mb-1">
-                        <div className="px-3 py-2 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-                          Admin
-                        </div>
-                        {ziwaAdminItems.map(item => {
+                  // For the Dairy Management group, show all 19 entries.
+
+                  if (visibleZiwaItems.length === 0) return null
+
+                  const isCollapsed = collapsedGroups.has(groupLabel)
+                  return (
+                    <div key={groupLabel} className="mb-1">
+                      <button
+                        type="button"
+                        onClick={() => toggleGroup(groupLabel)}
+                        className="group-header w-full flex items-center justify-between px-3 py-1.5 rounded-md text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/40 hover:text-sidebar-foreground/70 transition-colors"
+                      >
+                        <span>{groupLabel}</span>
+                        <span className="flex items-center gap-1.5">
+                          <span className="text-[10px] bg-sidebar-accent rounded px-1.5 py-px">{visibleZiwaItems.length}</span>
+                          <ChevronRight className={cn('w-3.5 h-3.5 transition-transform duration-150', isCollapsed ? '' : 'rotate-90')} />
+                        </span>
+                      </button>
+                      {isCollapsed ? null : (
+                        visibleZiwaItems.map((item) => {
                           const Icon = item.icon
+                          const isActive = activeModule === item.key
                           return (
-                            <button
-                              key={item.key}
-                              onClick={() => handleNav(item.key)}
-                              className={cn(
-                                'w-full flex items-center gap-2.5 px-3 py-2 text-sm rounded-lg transition-colors text-left',
-                                activeModule === item.key
-                                  ? 'bg-primary text-primary-foreground font-medium'
-                                  : 'hover:bg-accent text-muted-foreground hover:text-foreground',
-                              )}
-                            >
-                              <Icon className="w-4 h-4 shrink-0" />
-                              <span className="truncate">{item.label}</span>
-                            </button>
+                            <Tooltip key={item.key} delayDuration={0}>
+                              <TooltipTrigger asChild>
+                                <button
+                                  onClick={() => handleNav(item.key)}
+                                  className={cn(
+                                    'w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150',
+                                    isActive
+                                      ? 'bg-sidebar-primary text-sidebar-primary-foreground shadow-sm'
+                                      : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground'
+                                  )}
+                                >
+                                  <Icon className="w-4 h-4 shrink-0" />
+                                  <span className="truncate">{item.label}</span>
+                                  {isActive && (
+                                    <div className="ml-auto w-1.5 h-1.5 rounded-full bg-sidebar-primary-foreground" />
+                                  )}
+                                </button>
+                              </TooltipTrigger>
+                              <TooltipContent side="right" className="lg:hidden">
+                                {item.label}
+                              </TooltipContent>
+                            </Tooltip>
                           )
-                        })}
-                      </div>
-                    )
-                  }
-                  // Hide ALL other groups for ZIWA360
-                  return null
+                        })
+                      )}
+                    </div>
+                  )
                 }
 
                 if (isEkbRole) {

@@ -303,6 +303,21 @@ export function Sidebar() {
         {/* Navigation */}
         <nav className="flex-1 overflow-y-auto py-3">
           <div className="px-3 space-y-1">
+            {/* ZIWA360: Dashboard as a standalone top-level item (not in a group) */}
+            {tenantIsZiwa && (
+              <button
+                onClick={() => handleNav('dashboard')}
+                className={cn(
+                  'w-full flex items-center gap-2.5 px-3 py-2 text-sm rounded-lg transition-colors text-left mb-2',
+                  activeModule === 'dashboard'
+                    ? 'bg-primary text-primary-foreground font-medium'
+                    : 'hover:bg-accent text-muted-foreground hover:text-foreground',
+                )}
+              >
+                <LayoutDashboard className="w-4 h-4 shrink-0" />
+                <span>Dashboard</span>
+              </button>
+            )}
             {(() => {
               const role = user?.role || ''
               const allowedModules = new Set(getRoleModules(role))
@@ -324,6 +339,73 @@ export function Sidebar() {
                 const isEkbRole = role.startsWith('EKB_')
                 const ekibboTenant = isEkbRole || tenantIsEkibbo
                 const ziwaTenant = tenantIsZiwa
+
+                // ZIWA360: COMPLETELY replace the sidebar — only show Dashboard,
+                // Dairy (ZIWA360), and Admin (Profile + Settings). No other groups.
+                if (ziwaTenant) {
+                  if (groupLabel === 'Overview') return null // we'll render a custom overview below
+                  if (groupLabel === 'Livestock') {
+                    // Show the Dairy entry as a top-level group, not a sub-menu
+                    return (
+                      <div key="ziwa-dairy" className="mb-1">
+                        <div className="px-3 py-2 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                          Dairy Management
+                        </div>
+                        {items.filter(i => i.key === 'dairy').map(item => {
+                          const Icon = item.icon
+                          return (
+                            <button
+                              key={item.key}
+                              onClick={() => handleNav(item.key)}
+                              className={cn(
+                                'w-full flex items-center gap-2.5 px-3 py-2 text-sm rounded-lg transition-colors text-left',
+                                activeModule === item.key
+                                  ? 'bg-primary text-primary-foreground font-medium'
+                                  : 'hover:bg-accent text-muted-foreground hover:text-foreground',
+                              )}
+                            >
+                              <Icon className="w-4 h-4 shrink-0" />
+                              <span className="truncate">{item.label}</span>
+                            </button>
+                          )
+                        })}
+                      </div>
+                    )
+                  }
+                  if (groupLabel === 'Admin') {
+                    // Only show Profile + Settings for ZIWA360
+                    const ziwaAdminItems = items.filter(i => ['profile', 'settings'].includes(i.key))
+                    if (ziwaAdminItems.length === 0) return null
+                    return (
+                      <div key="ziwa-admin" className="mb-1">
+                        <div className="px-3 py-2 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                          Admin
+                        </div>
+                        {ziwaAdminItems.map(item => {
+                          const Icon = item.icon
+                          return (
+                            <button
+                              key={item.key}
+                              onClick={() => handleNav(item.key)}
+                              className={cn(
+                                'w-full flex items-center gap-2.5 px-3 py-2 text-sm rounded-lg transition-colors text-left',
+                                activeModule === item.key
+                                  ? 'bg-primary text-primary-foreground font-medium'
+                                  : 'hover:bg-accent text-muted-foreground hover:text-foreground',
+                              )}
+                            >
+                              <Icon className="w-4 h-4 shrink-0" />
+                              <span className="truncate">{item.label}</span>
+                            </button>
+                          )
+                        })}
+                      </div>
+                    )
+                  }
+                  // Hide ALL other groups for ZIWA360
+                  return null
+                }
+
                 if (isEkbRole) {
                   const ekbAllowedGroups = ['Overview', 'Core Operations', 'Supply Chain', 'Farm Management', 'Master Data', 'Intelligence', 'Engagement', 'Finance', 'Admin']
                   if (!ekbAllowedGroups.includes(groupLabel)) return null

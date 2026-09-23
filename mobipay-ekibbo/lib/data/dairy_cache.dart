@@ -28,7 +28,7 @@ class DairyCache {
   bool _initializing = false;
 
   /// Open or create the SQLite database. Idempotent + safe to call repeatedly.
-  Future<Database> db() async {
+  Future<Database> getDatabase() async {
     if (_db != null && _db!.isOpen) return _db!;
     if (_initializing) {
       // Another caller is mid-init — busy-wait briefly.
@@ -114,7 +114,7 @@ class DairyCache {
 
   /// Fetch all cached rows for [moduleKey], newest-first.
   Future<List<Map<String, dynamic>>> listAll(String moduleKey) async {
-    final db = await db();
+    final db = await getDatabase();
     final module = DairyModules.byKey(moduleKey);
     if (module == null) return const [];
     try {
@@ -131,7 +131,7 @@ class DairyCache {
 
   /// Fetch one cached row by id (returns null if missing).
   Future<Map<String, dynamic>?> getById(String moduleKey, String id) async {
-    final db = await db();
+    final db = await getDatabase();
     final module = DairyModules.byKey(moduleKey);
     if (module == null) return null;
     try {
@@ -157,7 +157,7 @@ class DairyCache {
     Map<String, dynamic> row, {
     bool dirty = false,
   }) async {
-    final db = await db();
+    final db = await getDatabase();
     final module = DairyModules.byKey(moduleKey);
     if (module == null) return;
     final id = (row['id'] ?? row['_id'])?.toString();
@@ -187,7 +187,7 @@ class DairyCache {
     String moduleKey,
     List<Map<String, dynamic>> rows,
   ) async {
-    final db = await db();
+    final db = await getDatabase();
     final module = DairyModules.byKey(moduleKey);
     if (module == null) return;
     try {
@@ -229,7 +229,7 @@ class DairyCache {
 
   /// Delete one cached row by id.
   Future<void> deleteRow(String moduleKey, String id) async {
-    final db = await db();
+    final db = await getDatabase();
     final module = DairyModules.byKey(moduleKey);
     if (module == null) return;
     try {
@@ -245,7 +245,7 @@ class DairyCache {
 
   /// Drop every cached row for [moduleKey] (used on full refresh).
   Future<void> clear(String moduleKey) async {
-    final db = await db();
+    final db = await getDatabase();
     final module = DairyModules.byKey(moduleKey);
     if (module == null) return;
     try {
@@ -257,7 +257,7 @@ class DairyCache {
 
   /// Wipe all dairy tables + the pending_sync queue (logout / reset).
   Future<void> clearAll() async {
-    final db = await db();
+    final db = await getDatabase();
     try {
       for (final module in DairyModules.all) {
         await db.delete(module.tableName);
@@ -278,7 +278,7 @@ class DairyCache {
     required PendingOp op,
     Map<String, dynamic>? payload,
   }) async {
-    final db = await db();
+    final db = await getDatabase();
     try {
       return await db.insert('pending_sync', {
         'module': moduleKey,
@@ -295,7 +295,7 @@ class DairyCache {
 
   /// Return all pending sync operations, oldest first.
   Future<List<PendingSyncRow>> listPending() async {
-    final db = await db();
+    final db = await getDatabase();
     try {
       final rows = await db.query(
         'pending_sync',
@@ -310,7 +310,7 @@ class DairyCache {
 
   /// Remove one row from the pending queue (after a successful replay).
   Future<void> dequeuePending(int queueId) async {
-    final db = await db();
+    final db = await getDatabase();
     try {
       await db.delete(
         'pending_sync',
@@ -324,7 +324,7 @@ class DairyCache {
 
   /// Count of pending operations (used by the dashboard banner).
   Future<int> pendingCount() async {
-    final db = await db();
+    final db = await getDatabase();
     try {
       final rows = await db.rawQuery('SELECT COUNT(*) AS n FROM pending_sync');
       if (rows.isEmpty) return 0;

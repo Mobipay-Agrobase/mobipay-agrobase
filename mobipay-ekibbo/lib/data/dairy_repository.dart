@@ -51,7 +51,7 @@ class DairyRepository {
   /// background sync.
   Future<void> init() async {
     // Ensure the cache (SQLite) is open + all 29 tables exist.
-    await _cache.db();
+    await _cache.getDatabase();
     _connSub ??= _connectivity.onConnectivityChanged.listen((results) {
       // `results` is a non-empty list since connectivity_plus 5.x.
       final online = results.any((r) => r != ConnectivityResult.none);

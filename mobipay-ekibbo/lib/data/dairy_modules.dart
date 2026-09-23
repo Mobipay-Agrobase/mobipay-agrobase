@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:mobipay_ekibbo/constant/color_constant.dart';
 
-/// ZIWA360 Dairy — Module configurations for all 29 dairy sub-modules.
+/// ZIWA360 Dairy — Module configurations for all 41 dairy sub-modules.
 ///
 /// Each module declares:
 ///   - `key`           — endpoint slug used in `/api/dairy/<key>`
@@ -93,7 +93,7 @@ class DairyModule {
   String get tableName => 'dairy_$key';
 }
 
-/// Static registry of all 29 ZIWA360 dairy modules.
+/// Static registry of all 41 ZIWA360 dairy modules.
 ///
 /// Order here is the order tiles appear in the dashboard grid.
 class DairyModules {
@@ -1076,6 +1076,591 @@ class DairyModules {
           label: 'Active?',
           type: DairyFieldType.switch_,
         ),
+        DairyField(key: 'notes', label: 'Notes', type: DairyFieldType.textarea),
+      ],
+    ),
+
+    // ──────────────────────────────────────────────────────────────────────
+    // ZIWA360 Phase 3 — Logistics & Quality modules (30-41)
+    // ──────────────────────────────────────────────────────────────────────
+
+    // 30 ─ Transporters ─────────────────────────────────────────────────────
+    DairyModule(
+      key: 'transporters',
+      title: 'Transporters',
+      icon: Icons.local_shipping,
+      color: ColorConstant.primaryLight,
+      description: 'Transporter / driver registry',
+      columns: ['fullName', 'companyName', 'transporterType', 'verificationStatus'],
+      searchFields: ['fullName', 'companyName', 'transporterCode', 'licenceNo', 'phone'],
+      fields: [
+        DairyField(key: 'fullName', label: 'Full Name', required: true),
+        DairyField(key: 'companyName', label: 'Company Name'),
+        DairyField(key: 'transporterCode', label: 'Transporter Code'),
+        DairyField(
+          key: 'transporterType',
+          label: 'Type',
+          type: DairyFieldType.dropdown,
+          options: ['pickup', 'bulk', 'motorcycle', 'bicycle'],
+        ),
+        DairyField(key: 'licenceNo', label: 'Licence No.'),
+        DairyField(
+          key: 'insuranceExpiry',
+          label: 'Insurance Expiry',
+          type: DairyFieldType.date,
+        ),
+        DairyField(key: 'phone', label: 'Phone'),
+        DairyField(
+          key: 'verificationStatus',
+          label: 'Verification Status',
+          type: DairyFieldType.dropdown,
+          options: ['pending', 'verified', 'rejected'],
+        ),
+        DairyField(
+          key: 'avgRating',
+          label: 'Avg Rating',
+          type: DairyFieldType.number,
+        ),
+        DairyField(
+          key: 'totalReviews',
+          label: 'Total Reviews',
+          type: DairyFieldType.number,
+        ),
+        DairyField(
+          key: 'isActive',
+          label: 'Active?',
+          type: DairyFieldType.switch_,
+        ),
+      ],
+    ),
+
+    // 31 ─ Vehicles ────────────────────────────────────────────────────────
+    DairyModule(
+      key: 'vehicles',
+      title: 'Vehicles',
+      icon: Icons.directions_bus,
+      color: ColorConstant.secondary,
+      description: 'Transport vehicles & tankers',
+      columns: ['plateNo', 'vehicleType', 'capacityLitres', 'coldChain'],
+      searchFields: ['plateNo', 'tempLoggerUid', 'gpsUid'],
+      fields: [
+        DairyField(key: 'transporterId', label: 'Transporter ID', required: true),
+        DairyField(key: 'plateNo', label: 'Plate Number', required: true),
+        DairyField(
+          key: 'vehicleType',
+          label: 'Vehicle Type',
+          type: DairyFieldType.dropdown,
+          options: ['pickup', 'bulk_tanker', 'motorcycle', 'bicycle'],
+        ),
+        DairyField(
+          key: 'capacityLitres',
+          label: 'Capacity (Litres)',
+          type: DairyFieldType.number,
+          required: true,
+        ),
+        DairyField(
+          key: 'coldChain',
+          label: 'Cold Chain?',
+          type: DairyFieldType.switch_,
+        ),
+        DairyField(key: 'tempLoggerUid', label: 'Temp Logger UID'),
+        DairyField(key: 'gpsUid', label: 'GPS UID'),
+        DairyField(
+          key: 'isActive',
+          label: 'Active?',
+          type: DairyFieldType.switch_,
+        ),
+      ],
+    ),
+
+    // 32 ─ Transport Routes ─────────────────────────────────────────────────
+    DairyModule(
+      key: 'routes',
+      title: 'Transport Routes',
+      icon: Icons.alt_route,
+      color: ColorConstant.info,
+      description: 'Milk collection routes',
+      columns: ['name', 'mccId', 'distanceKm', 'cutoffTime'],
+      searchFields: ['name', 'cutoffTime'],
+      fields: [
+        DairyField(key: 'name', label: 'Route Name', required: true),
+        DairyField(key: 'mccId', label: 'MCC ID'),
+        DairyField(key: 'processorId', label: 'Processor ID'),
+        DairyField(
+          key: 'distanceKm',
+          label: 'Distance (km)',
+          type: DairyFieldType.number,
+        ),
+        DairyField(key: 'cutoffTime', label: 'Cutoff Time (HH:mm)'),
+        DairyField(
+          key: 'stopsJson',
+          label: 'Stops (JSON)',
+          type: DairyFieldType.textarea,
+        ),
+        DairyField(
+          key: 'isActive',
+          label: 'Active?',
+          type: DairyFieldType.switch_,
+        ),
+      ],
+    ),
+
+    // 33 ─ Transport Trips ─────────────────────────────────────────────────
+    DairyModule(
+      key: 'trips',
+      title: 'Transport Trips',
+      icon: Icons.timeline,
+      color: ColorConstant.gold,
+      description: 'Milk transport trips',
+      columns: ['tripDate', 'tripType', 'status', 'litresPicked'],
+      searchFields: ['sealNoOut', 'sealNoIn', 'notes'],
+      fields: [
+        DairyField(key: 'transporterId', label: 'Transporter ID', required: true),
+        DairyField(key: 'vehicleId', label: 'Vehicle ID', required: true),
+        DairyField(key: 'routeId', label: 'Route ID'),
+        DairyField(
+          key: 'tripDate',
+          label: 'Trip Date',
+          type: DairyFieldType.date,
+          required: true,
+        ),
+        DairyField(
+          key: 'tripType',
+          label: 'Trip Type',
+          type: DairyFieldType.dropdown,
+          options: ['farm_to_mcc', 'mcc_to_processor', 'farm_to_processor'],
+        ),
+        DairyField(
+          key: 'status',
+          label: 'Status',
+          type: DairyFieldType.dropdown,
+          options: ['planned', 'in_transit', 'completed', 'cancelled'],
+        ),
+        DairyField(
+          key: 'distanceKm',
+          label: 'Distance (km)',
+          type: DairyFieldType.number,
+        ),
+        DairyField(
+          key: 'litresPicked',
+          label: 'Litres Picked',
+          type: DairyFieldType.number,
+        ),
+        DairyField(
+          key: 'litresDelivered',
+          label: 'Litres Delivered',
+          type: DairyFieldType.number,
+        ),
+        DairyField(
+          key: 'costTotal',
+          label: 'Cost Total',
+          type: DairyFieldType.number,
+        ),
+        DairyField(
+          key: 'costPerLitre',
+          label: 'Cost / Litre',
+          type: DairyFieldType.number,
+        ),
+        DairyField(key: 'sealNoOut', label: 'Seal No (Out)'),
+        DairyField(key: 'sealNoIn', label: 'Seal No (In)'),
+        DairyField(key: 'notes', label: 'Notes', type: DairyFieldType.textarea),
+      ],
+    ),
+
+    // 34 ─ Pickups (e-Receipts) ─────────────────────────────────────────────
+    DairyModule(
+      key: 'pickups',
+      title: 'Pickups',
+      icon: Icons.receipt_long,
+      color: ColorConstant.success,
+      description: 'Milk pickup e-receipts',
+      columns: ['receiptNo', 'farmerName', 'litres', 'grade', 'pickedAt'],
+      searchFields: ['receiptNo', 'farmerName', 'notes'],
+      fields: [
+        DairyField(key: 'tripId', label: 'Trip ID', required: true),
+        DairyField(key: 'farmerId', label: 'Farmer ID'),
+        DairyField(key: 'farmerName', label: 'Farmer Name', required: true),
+        DairyField(key: 'receiptNo', label: 'Receipt No.', required: true),
+        DairyField(
+          key: 'litres',
+          label: 'Litres',
+          type: DairyFieldType.number,
+          required: true,
+        ),
+        DairyField(
+          key: 'pickedAt',
+          label: 'Picked At',
+          type: DairyFieldType.date,
+        ),
+        DairyField(
+          key: 'lat',
+          label: 'Latitude',
+          type: DairyFieldType.number,
+        ),
+        DairyField(
+          key: 'lng',
+          label: 'Longitude',
+          type: DairyFieldType.number,
+        ),
+        DairyField(
+          key: 'qrVerified',
+          label: 'QR Verified?',
+          type: DairyFieldType.switch_,
+        ),
+        DairyField(
+          key: 'farmerConfirmed',
+          label: 'Farmer Confirmed?',
+          type: DairyFieldType.switch_,
+        ),
+        DairyField(
+          key: 'grade',
+          label: 'Grade',
+          type: DairyFieldType.dropdown,
+          options: ['A', 'B', 'C', 'Reject'],
+        ),
+        DairyField(
+          key: 'pricePerLitre',
+          label: 'Price / Litre',
+          type: DairyFieldType.number,
+        ),
+        DairyField(
+          key: 'grossAmount',
+          label: 'Gross Amount',
+          type: DairyFieldType.number,
+        ),
+        DairyField(
+          key: 'quickTestJson',
+          label: 'Quick Test (JSON)',
+          type: DairyFieldType.textarea,
+        ),
+        DairyField(key: 'notes', label: 'Notes', type: DairyFieldType.textarea),
+      ],
+    ),
+
+    // 35 ─ Temperature Logs ─────────────────────────────────────────────────
+    DairyModule(
+      key: 'temp-logs',
+      title: 'Temperature Logs',
+      icon: Icons.thermostat,
+      color: ColorConstant.warning,
+      description: 'Cold-chain temperature readings',
+      columns: ['tripId', 'tempC', 'loggedAt'],
+      searchFields: ['tripId'],
+      fields: [
+        DairyField(key: 'tripId', label: 'Trip ID', required: true),
+        DairyField(
+          key: 'tempC',
+          label: 'Temperature (°C)',
+          type: DairyFieldType.number,
+          required: true,
+        ),
+        DairyField(
+          key: 'loggedAt',
+          label: 'Logged At',
+          type: DairyFieldType.date,
+        ),
+      ],
+    ),
+
+    // 36 ─ Tamper Events ───────────────────────────────────────────────────
+    DairyModule(
+      key: 'tamper-events',
+      title: 'Tamper Events',
+      icon: Icons.warning_amber,
+      color: ColorConstant.danger,
+      description: 'Seal / equipment tamper alerts',
+      columns: ['tripId', 'eventType', 'detectedAt', 'resolved'],
+      searchFields: ['eventType', 'detailsJson', 'resolvedBy', 'notes'],
+      fields: [
+        DairyField(key: 'tripId', label: 'Trip ID', required: true),
+        DairyField(
+          key: 'eventType',
+          label: 'Event Type',
+          required: true,
+          type: DairyFieldType.dropdown,
+          options: [
+            'seal_broken',
+            'lid_opened',
+            'temp_breach',
+            'gps_loss',
+            'route_deviation',
+            'other',
+          ],
+        ),
+        DairyField(
+          key: 'detectedAt',
+          label: 'Detected At',
+          type: DairyFieldType.date,
+        ),
+        DairyField(
+          key: 'detailsJson',
+          label: 'Details (JSON)',
+          type: DairyFieldType.textarea,
+        ),
+        DairyField(
+          key: 'resolved',
+          label: 'Resolved?',
+          type: DairyFieldType.switch_,
+        ),
+        DairyField(
+          key: 'resolvedAt',
+          label: 'Resolved At',
+          type: DairyFieldType.date,
+        ),
+        DairyField(key: 'resolvedBy', label: 'Resolved By'),
+        DairyField(key: 'notes', label: 'Notes', type: DairyFieldType.textarea),
+      ],
+    ),
+
+    // 37 ─ Milk Losses ─────────────────────────────────────────────────────
+    DairyModule(
+      key: 'milk-losses',
+      title: 'Milk Losses',
+      icon: Icons.water_drop,
+      color: ColorConstant.danger,
+      description: 'Milk loss / rejection records',
+      columns: ['lossDate', 'lossType', 'litresLost', 'valueLost', 'reconciled'],
+      searchFields: ['lossType', 'responsibleParty', 'notes'],
+      fields: [
+        DairyField(key: 'tripId', label: 'Trip ID'),
+        DairyField(key: 'pickupId', label: 'Pickup ID'),
+        DairyField(
+          key: 'lossDate',
+          label: 'Loss Date',
+          type: DairyFieldType.date,
+        ),
+        DairyField(
+          key: 'lossType',
+          label: 'Loss Type',
+          type: DairyFieldType.dropdown,
+          options: [
+            'spillage',
+            'spoilage',
+            'rejection',
+            'leakage',
+            'theft',
+            'other',
+          ],
+        ),
+        DairyField(
+          key: 'litresLost',
+          label: 'Litres Lost',
+          type: DairyFieldType.number,
+          required: true,
+        ),
+        DairyField(
+          key: 'valueLost',
+          label: 'Value Lost',
+          type: DairyFieldType.number,
+        ),
+        DairyField(key: 'responsibleParty', label: 'Responsible Party'),
+        DairyField(
+          key: 'reconciled',
+          label: 'Reconciled?',
+          type: DairyFieldType.switch_,
+        ),
+        DairyField(key: 'notes', label: 'Notes', type: DairyFieldType.textarea),
+      ],
+    ),
+
+    // 38 ─ Offtakers ─────────────────────────────────────────────────────────
+    DairyModule(
+      key: 'offtakers',
+      title: 'Offtakers',
+      icon: Icons.factory,
+      color: ColorConstant.primaryDark,
+      description: 'MCC / processor buyers',
+      columns: ['name', 'offtakerType', 'location', 'paymentTerms'],
+      searchFields: ['name', 'location', 'contactPhone', 'contactEmail'],
+      fields: [
+        DairyField(key: 'name', label: 'Name', required: true),
+        DairyField(
+          key: 'offtakerType',
+          label: 'Type',
+          type: DairyFieldType.dropdown,
+          options: ['mcc', 'processor', 'cooperative', 'retailer'],
+        ),
+        DairyField(key: 'contactPhone', label: 'Contact Phone'),
+        DairyField(key: 'contactEmail', label: 'Contact Email'),
+        DairyField(key: 'location', label: 'Location'),
+        DairyField(
+          key: 'paymentTerms',
+          label: 'Payment Terms',
+          type: DairyFieldType.dropdown,
+          options: ['daily', 'weekly', 'biweekly', 'monthly'],
+        ),
+        DairyField(
+          key: 'isActive',
+          label: 'Active?',
+          type: DairyFieldType.switch_,
+        ),
+      ],
+    ),
+
+    // 39 ─ MCC Centers ──────────────────────────────────────────────────────
+    DairyModule(
+      key: 'mcc-centers',
+      title: 'MCC Centers',
+      icon: Icons.warehouse,
+      color: ColorConstant.secondaryLight,
+      description: 'Milk Cooling & Collection centers',
+      columns: ['name', 'offtakerId', 'capacityLitres', 'hasCooler'],
+      searchFields: ['name'],
+      fields: [
+        DairyField(key: 'offtakerId', label: 'Offtaker ID'),
+        DairyField(key: 'name', label: 'Name', required: true),
+        DairyField(
+          key: 'capacityLitres',
+          label: 'Capacity (Litres)',
+          type: DairyFieldType.number,
+        ),
+        DairyField(
+          key: 'hasCooler',
+          label: 'Has Cooler?',
+          type: DairyFieldType.switch_,
+        ),
+        DairyField(
+          key: 'hasAnalyzer',
+          label: 'Has Analyzer?',
+          type: DairyFieldType.switch_,
+        ),
+        DairyField(
+          key: 'lat',
+          label: 'Latitude',
+          type: DairyFieldType.number,
+        ),
+        DairyField(
+          key: 'lng',
+          label: 'Longitude',
+          type: DairyFieldType.number,
+        ),
+        DairyField(
+          key: 'isActive',
+          label: 'Active?',
+          type: DairyFieldType.switch_,
+        ),
+      ],
+    ),
+
+    // 40 ─ MCC Intakes ──────────────────────────────────────────────────────
+    DairyModule(
+      key: 'mcc-intakes',
+      title: 'MCC Intakes',
+      icon: Icons.input,
+      color: ColorConstant.info,
+      description: 'MCC daily milk intakes',
+      columns: ['mccId', 'farmerName', 'litresAccepted', 'grade', 'intakeDate'],
+      searchFields: ['farmerName', 'rejectReason', 'notes'],
+      fields: [
+        DairyField(key: 'mccId', label: 'MCC ID', required: true),
+        DairyField(key: 'farmerId', label: 'Farmer ID'),
+        DairyField(key: 'farmerName', label: 'Farmer Name', required: true),
+        DairyField(key: 'pickupId', label: 'Pickup ID'),
+        DairyField(
+          key: 'intakeDate',
+          label: 'Intake Date',
+          type: DairyFieldType.date,
+        ),
+        DairyField(
+          key: 'session',
+          label: 'Session',
+          type: DairyFieldType.dropdown,
+          options: ['morning', 'evening'],
+        ),
+        DairyField(
+          key: 'litresReceived',
+          label: 'Litres Received',
+          type: DairyFieldType.number,
+          required: true,
+        ),
+        DairyField(
+          key: 'litresAccepted',
+          label: 'Litres Accepted',
+          type: DairyFieldType.number,
+          required: true,
+        ),
+        DairyField(
+          key: 'litresRejected',
+          label: 'Litres Rejected',
+          type: DairyFieldType.number,
+        ),
+        DairyField(key: 'rejectReason', label: 'Reject Reason'),
+        DairyField(
+          key: 'grade',
+          label: 'Grade',
+          type: DairyFieldType.dropdown,
+          options: ['A', 'B', 'C', 'Reject'],
+        ),
+        DairyField(
+          key: 'pricePerLitre',
+          label: 'Price / Litre',
+          type: DairyFieldType.number,
+          required: true,
+        ),
+        DairyField(
+          key: 'grossAmount',
+          label: 'Gross Amount',
+          type: DairyFieldType.number,
+        ),
+        DairyField(
+          key: 'currency',
+          label: 'Currency',
+          type: DairyFieldType.dropdown,
+          options: ['UGX', 'USD', 'KES', 'TZS', 'RWF'],
+        ),
+        DairyField(key: 'notes', label: 'Notes', type: DairyFieldType.textarea),
+      ],
+    ),
+
+    // 41 ─ Farm Quality Tests ───────────────────────────────────────────────
+    DairyModule(
+      key: 'farm-quality-tests',
+      title: 'Farm Quality Tests',
+      icon: Icons.science_outlined,
+      color: ColorConstant.warning,
+      description: 'Farm-level milk quality tests',
+      columns: ['farmerName', 'testType', 'result', 'isAbnormal', 'testDate'],
+      searchFields: ['farmerName', 'testType', 'result', 'mastitisRisk', 'testedBy', 'notes'],
+      fields: [
+        DairyField(key: 'cowId', label: 'Cow ID'),
+        DairyField(key: 'farmerId', label: 'Farmer ID'),
+        DairyField(key: 'farmerName', label: 'Farmer Name'),
+        DairyField(
+          key: 'testDate',
+          label: 'Test Date',
+          type: DairyFieldType.date,
+        ),
+        DairyField(
+          key: 'testType',
+          label: 'Test Type',
+          required: true,
+          type: DairyFieldType.dropdown,
+          options: [
+            'alcohol',
+            'clot_on_boiling',
+            'density',
+            'antibiotics',
+            'mastitis_cmt',
+            'somatic_cell_count',
+            'bacteriological',
+            'adulteration',
+            'other',
+          ],
+        ),
+        DairyField(key: 'result', label: 'Result', required: true),
+        DairyField(key: 'unit', label: 'Unit'),
+        DairyField(
+          key: 'isAbnormal',
+          label: 'Abnormal?',
+          type: DairyFieldType.switch_,
+        ),
+        DairyField(
+          key: 'mastitisRisk',
+          label: 'Mastitis Risk',
+          type: DairyFieldType.dropdown,
+          options: ['low', 'medium', 'high'],
+        ),
+        DairyField(key: 'testedBy', label: 'Tested By'),
         DairyField(key: 'notes', label: 'Notes', type: DairyFieldType.textarea),
       ],
     ),

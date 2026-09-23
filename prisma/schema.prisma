@@ -184,6 +184,18 @@ model Tenant {
   dairyLactations        DairyLactation[]         @relation("TenantDairyLactations")
   dairyDiseases          DairyDisease[]           @relation("TenantDairyDiseases")
   dairyDrugCatalog       DairyDrugCatalog[]       @relation("TenantDairyDrugCatalog")
+  // ZIWA360 Phase 3: Logistics & Quality
+  dairyTransporters       DairyTransporter[]       @relation("TenantDairyTransporters")
+  dairyVehicles           DairyVehicle[]           @relation("TenantDairyVehicles")
+  dairyTransportRoutes    DairyTransportRoute[]   @relation("TenantDairyRoutes")
+  dairyTransportTrips     DairyTransportTrip[]     @relation("TenantDairyTrips")
+  dairyPickups            DairyPickup[]            @relation("TenantDairyPickups")
+  dairyTamperEvents       DairyTamperEvent[]       @relation("TenantDairyTamperEvents")
+  dairyMilkLosses         DairyMilkLoss[]          @relation("TenantDairyMilkLosses")
+  dairyOfftakers          DairyOfftaker[]          @relation("TenantDairyOfftakers")
+  dairyMccCenters         DairyMccCenter[]         @relation("TenantDairyMccCenters")
+  dairyMccIntakes         DairyMccIntake[]         @relation("TenantDairyMccIntakes")
+  dairyFarmQualityTests   DairyFarmQualityTest[]   @relation("TenantDairyFarmQualityTests")
 }
 
 // --- USERS & AUTH ---
@@ -6071,3 +6083,280 @@ model DairyDrugCatalog {
 
 // ─── Add Phase 2 back-relations to Tenant ───
 // (already added dairyVets, dairyVetRequests etc. above — need to add to Tenant model)
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ZIWA360 Phase 3: Logistics & Quality
+// ═══════════════════════════════════════════════════════════════════════════
+
+model DairyTransporter {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation("TenantDairyTransporters", fields: [tenantId], references: [id])
+  transporterCode String?
+  fullName        String
+  companyName     String?
+  transporterType String   @default("pickup")
+  licenceNo       String?
+  insuranceExpiry DateTime?
+  phone           String?
+  verificationStatus String @default("pending")
+  avgRating       Float    @default(0)
+  totalReviews    Int      @default(0)
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  vehicles        DairyVehicle[]  @relation("DairyTransporterVehicles")
+  trips           DairyTransportTrip[]  @relation("DairyTransporterTrips")
+
+  @@index([tenantId])
+  @@unique([tenantId, transporterCode])
+}
+
+model DairyVehicle {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation("TenantDairyVehicles", fields: [tenantId], references: [id])
+  transporterId   String
+  transporter     DairyTransporter @relation("DairyTransporterVehicles", fields: [transporterId], references: [id], onDelete: Cascade)
+  plateNo         String
+  vehicleType     String   @default("pickup")
+  capacityLitres  Int
+  coldChain       Boolean  @default(false)
+  tempLoggerUid   String?
+  gpsUid          String?
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  trips           DairyTransportTrip[]  @relation("DairyVehicleTrips")
+
+  @@index([tenantId])
+  @@index([transporterId])
+  @@unique([tenantId, plateNo])
+}
+
+model DairyTransportRoute {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation("TenantDairyRoutes", fields: [tenantId], references: [id])
+  name            String
+  mccId           String?
+  processorId     String?
+  distanceKm      Float?
+  cutoffTime      String?
+  stopsJson       String?
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  trips           DairyTransportTrip[]  @relation("DairyRouteTrips")
+
+  @@index([tenantId])
+}
+
+model DairyTransportTrip {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation("TenantDairyTrips", fields: [tenantId], references: [id])
+  routeId         String?
+  route           DairyTransportRoute? @relation("DairyRouteTrips", fields: [routeId], references: [id])
+  transporterId   String
+  transporter     DairyTransporter @relation("DairyTransporterTrips", fields: [transporterId], references: [id])
+  vehicleId       String
+  vehicle         DairyVehicle @relation("DairyVehicleTrips", fields: [vehicleId], references: [id])
+  tripDate        DateTime
+  tripType        String   @default("farm_to_mcc")
+  status          String   @default("planned")
+  startedAt       DateTime?
+  endedAt         DateTime?
+  distanceKm      Float?
+  litresPicked    Float?
+  litresDelivered Float?
+  costTotal       Float?
+  costPerLitre    Float?
+  sealNoOut       String?
+  sealNoIn        String?
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  pickups         DairyPickup[]  @relation("DairyTripPickups")
+  tempLogs        DairyTempLog[]  @relation("DairyTripTempLogs")
+  tamperEvents    DairyTamperEvent[]  @relation("DairyTripTamperEvents")
+
+  @@index([tenantId])
+  @@index([transporterId])
+  @@index([tripDate])
+  @@index([status])
+}
+
+model DairyPickup {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation("TenantDairyPickups", fields: [tenantId], references: [id])
+  tripId          String
+  trip            DairyTransportTrip @relation("DairyTripPickups", fields: [tripId], references: [id], onDelete: Cascade)
+  farmerId        String?
+  farmerName      String
+  receiptNo       String
+  litres          Float
+  pickedAt        DateTime @default(now())
+  lat             Float?
+  lng             Float?
+  qrVerified      Boolean  @default(false)
+  smsSentAt       DateTime?
+  farmerConfirmed Boolean  @default(false)
+  quickTestJson   String?
+  grade           String?
+  pricePerLitre   Float?
+  grossAmount     Float?
+  notes           String?
+  createdAt       DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([tripId])
+  @@index([farmerId])
+  @@unique([tenantId, receiptNo])
+}
+
+model DairyTempLog {
+  id              String   @id @default(cuid())
+  tripId          String
+  trip            DairyTransportTrip @relation("DairyTripTempLogs", fields: [tripId], references: [id], onDelete: Cascade)
+  tempC           Float
+  loggedAt        DateTime @default(now())
+
+  @@index([tripId])
+  @@index([loggedAt])
+}
+
+model DairyTamperEvent {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation("TenantDairyTamperEvents", fields: [tenantId], references: [id])
+  tripId          String
+  trip            DairyTransportTrip @relation("DairyTripTamperEvents", fields: [tripId], references: [id], onDelete: Cascade)
+  eventType       String
+  detectedAt      DateTime @default(now())
+  detailsJson     String?
+  resolved        Boolean  @default(false)
+  resolvedAt      DateTime?
+  resolvedBy      String?
+  notes           String?
+  createdAt       DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([tripId])
+  @@index([eventType])
+}
+
+model DairyMilkLoss {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation("TenantDairyMilkLosses", fields: [tenantId], references: [id])
+  tripId          String?
+  pickupId        String?
+  lossDate        DateTime @default(now())
+  lossType        String   @default("spillage")
+  litresLost     Float
+  valueLost       Float?
+  responsibleParty String?
+  reconciled      Boolean  @default(false)
+  notes           String?
+  createdAt       DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([lossDate])
+  @@index([tripId])
+}
+
+model DairyOfftaker {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation("TenantDairyOfftakers", fields: [tenantId], references: [id])
+  name            String
+  offtakerType    String   @default("mcc")
+  contactPhone    String?
+  contactEmail    String?
+  location        String?
+  paymentTerms    String   @default("weekly")
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  mccCenters      DairyMccCenter[]  @relation("DairyOfftakerMccCenters")
+
+  @@index([tenantId])
+}
+
+model DairyMccCenter {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation("TenantDairyMccCenters", fields: [tenantId], references: [id])
+  offtakerId      String?
+  offtaker        DairyOfftaker? @relation("DairyOfftakerMccCenters", fields: [offtakerId], references: [id])
+  name            String
+  capacityLitres  Int?
+  hasCooler       Boolean  @default(false)
+  hasAnalyzer     Boolean  @default(false)
+  lat             Float?
+  lng             Float?
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  intakes         DairyMccIntake[]  @relation("DairyMccIntakes")
+
+  @@index([tenantId])
+}
+
+model DairyMccIntake {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation("TenantDairyMccIntakes", fields: [tenantId], references: [id])
+  mccId           String
+  mcc             DairyMccCenter @relation("DairyMccIntakes", fields: [mccId], references: [id], onDelete: Cascade)
+  farmerId        String?
+  farmerName      String
+  pickupId        String?
+  intakeDate      DateTime @default(now())
+  session         String   @default("morning")
+  litresReceived  Float
+  litresAccepted  Float
+  litresRejected  Float    @default(0)
+  rejectReason    String?
+  grade           String   @default("A")
+  pricePerLitre   Float
+  grossAmount     Float
+  currency        String   @default("UGX")
+  notes           String?
+  createdAt       DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([mccId])
+  @@index([farmerId])
+  @@index([intakeDate])
+}
+
+model DairyFarmQualityTest {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation("TenantDairyFarmQualityTests", fields: [tenantId], references: [id])
+  cowId           String?
+  farmerId        String?
+  farmerName      String?
+  testDate        DateTime @default(now())
+  testType        String
+  result          String
+  unit            String?
+  isAbnormal      Boolean  @default(false)
+  mastitisRisk    String?
+  notes           String?
+  testedBy        String?
+  createdAt       DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([cowId])
+  @@index([testDate])
+}

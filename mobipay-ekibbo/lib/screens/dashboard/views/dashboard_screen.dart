@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:mobipay_ekibbo/constant/color_constant.dart';
 import 'package:mobipay_ekibbo/constant/text_style_constant.dart';
 import 'package:mobipay_ekibbo/data/api_client.dart';
+import 'package:mobipay_ekibbo/data/dairy_modules.dart';
 import 'package:mobipay_ekibbo/l10n/app_lang.dart';
 import 'package:mobipay_ekibbo/routes/routes_manager.dart';
 
@@ -311,6 +312,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
         'route': RouterName.settings,
       },
     ];
+
+    // ─── Tenant isolation: only show the ZIWA360 Dairy tile to users whose
+    //     logged-in tenant is ZIWA360. Other tenants (EKiBBO, Agrotel, etc.)
+    //     must NOT see any dairy-related UI.
+    final isZiwa360Tenant =
+        ApiClient().tenantId == DairyModules.ziwa360TenantId;
+    if (isZiwa360Tenant) {
+      actions.insert(
+        0,
+        {
+          'label': 'Dairy (ZIWA360)',
+          'icon': Icons.water_drop,
+          'color': ColorConstant.primary,
+          'route': RouterName.dairyDashboard,
+        },
+      );
+    }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [

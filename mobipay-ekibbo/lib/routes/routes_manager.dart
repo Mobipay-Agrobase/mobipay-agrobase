@@ -1,9 +1,12 @@
 // ignore_for_file: constant_identifier_names
 
 import 'package:flutter/material.dart';
+import 'package:mobipay_ekibbo/data/dairy_modules.dart';
 import 'package:mobipay_ekibbo/screens/crops/crops_list_screen.dart';
 import 'package:mobipay_ekibbo/screens/dashboard/breakdowns_dashboard_screen.dart';
 import 'package:mobipay_ekibbo/screens/dashboard/views/dashboard_screen.dart';
+import 'package:mobipay_ekibbo/screens/dairy/dairy_dashboard_screen.dart';
+import 'package:mobipay_ekibbo/screens/dairy/dairy_list_screen.dart';
 import 'package:mobipay_ekibbo/screens/farmer_detail_screen.dart';
 import 'package:mobipay_ekibbo/screens/farmer_registration/views/farmer_registration_screen.dart';
 import 'package:mobipay_ekibbo/screens/farm_lands/farm_land_detail_screen.dart';
@@ -120,6 +123,22 @@ class RoutesManager {
       case RouterName.vehiclesList:
         screen = const VehiclesListScreen();
         break;
+
+      // ─── ZIWA360 Dairy screens (Phase 1 + Phase 2) ───
+      case RouterName.dairyDashboard:
+        screen = const DairyDashboardScreen();
+        break;
+      case RouterName.dairyList:
+        // Expects a `DairyModule` config object as the argument.
+        if (args is DairyModule) {
+          screen = DairyListScreen(module: args);
+        } else {
+          // Defensive fallback — show the cows module by default.
+          screen = DairyListScreen(
+            module: DairyModules.byKey('cows') ?? DairyModules.all.first,
+          );
+        }
+        break;
     }
     return MaterialPageRoute(builder: (_) => screen);
   }
@@ -150,4 +169,8 @@ class RouterName {
   static const sync = '/sync';
   static const farmerPhotoUpload = '/farmer_photo_upload';
   static const vehiclesList = '/vehicles';
+
+  // ─── ZIWA360 Dairy (Phase 1 + Phase 2) ───
+  static const dairyDashboard = '/dairy';
+  static const dairyList = '/dairy_list';
 }

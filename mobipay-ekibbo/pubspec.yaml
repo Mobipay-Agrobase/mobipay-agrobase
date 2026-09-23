@@ -29,6 +29,7 @@ dependencies:
   mobile_scanner: ^5.2.3                   # QR code scanning
   sqflite: ^2.4.0                          # offline cache (farmer list, trainings)
   path_provider: ^2.1.0                    # file paths for sqflite
+  connectivity_plus: ^6.1.0               # online/offline detection (dairy sync engine)
   fl_chart: ^0.69.0                        # breakdown dashboard charts
 
 dev_dependencies:

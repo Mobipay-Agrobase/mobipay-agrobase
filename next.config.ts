@@ -5,6 +5,18 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   serverExternalPackages: ["bcryptjs", "ioredis"],
 
+  // ─── Build optimization for large schemas (66 dairy models + 200 existing) ───
+  // Skip TypeScript checking during Next.js build — tsc OOMs on Vercel Hobby (1GB).
+  // Type errors are caught separately in CI via `npx tsc --noEmit`.
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+  // Skip ESLint during build — also memory-intensive with 130+ API routes.
+  // Lint errors are caught separately in CI.
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+
   // Production security headers
   async headers() {
     return [

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:mobipay_ekibbo/constant/color_constant.dart';
 
-/// ZIWA360 Dairy — Module configurations for all 41 dairy sub-modules.
+/// ZIWA360 Dairy — Module configurations for all 51 dairy sub-modules.
 ///
 /// Each module declares:
 ///   - `key`           — endpoint slug used in `/api/dairy/<key>`
@@ -93,7 +93,7 @@ class DairyModule {
   String get tableName => 'dairy_$key';
 }
 
-/// Static registry of all 41 ZIWA360 dairy modules.
+/// Static registry of all 51 ZIWA360 dairy modules.
 ///
 /// Order here is the order tiles appear in the dashboard grid.
 class DairyModules {
@@ -1662,6 +1662,715 @@ class DairyModules {
         ),
         DairyField(key: 'testedBy', label: 'Tested By'),
         DairyField(key: 'notes', label: 'Notes', type: DairyFieldType.textarea),
+      ],
+    ),
+
+    // 42 ─ Price Rules ───────────────────────────────────────────────────────
+    DairyModule(
+      key: 'price-rules',
+      title: 'Price Rules',
+      icon: Icons.price_change_outlined,
+      color: ColorConstant.success,
+      description: 'Milk pricing rules (base + bonuses + penalties)',
+      columns: ['name', 'basePrice', 'season', 'priority', 'isActive'],
+      searchFields: ['name', 'season', 'currency'],
+      fields: [
+        DairyField(key: 'offtakerId', label: 'Offtaker ID (blank = all)'),
+        DairyField(key: 'name', label: 'Rule Name', required: true),
+        DairyField(
+          key: 'currency',
+          label: 'Currency',
+          type: DairyFieldType.dropdown,
+          options: ['UGX', 'USD', 'KES', 'TZS', 'RWF'],
+        ),
+        DairyField(
+          key: 'basePrice',
+          label: 'Base Price / Litre',
+          type: DairyFieldType.number,
+          required: true,
+        ),
+        DairyField(
+          key: 'season',
+          label: 'Season',
+          type: DairyFieldType.dropdown,
+          options: ['all', 'dry', 'wet'],
+        ),
+        DairyField(
+          key: 'fatBonusPerPct',
+          label: 'Fat Bonus / % over baseline',
+          type: DairyFieldType.number,
+        ),
+        DairyField(
+          key: 'snfBonusPerPct',
+          label: 'SNF Bonus / % over baseline',
+          type: DairyFieldType.number,
+        ),
+        DairyField(key: 'gradeAdjustJson', label: 'Grade Adjustments (JSON)'),
+        DairyField(key: 'penaltyJson', label: 'Penalties (JSON)'),
+        DairyField(
+          key: 'coolingBonus',
+          label: 'Pre-Cooling Bonus',
+          type: DairyFieldType.number,
+        ),
+        DairyField(
+          key: 'minPrice',
+          label: 'Min Price',
+          type: DairyFieldType.number,
+        ),
+        DairyField(
+          key: 'maxPrice',
+          label: 'Max Price',
+          type: DairyFieldType.number,
+        ),
+        DairyField(
+          key: 'priority',
+          label: 'Priority (lower = higher)',
+          type: DairyFieldType.number,
+        ),
+        DairyField(
+          key: 'validFrom',
+          label: 'Valid From',
+          type: DairyFieldType.date,
+          required: true,
+        ),
+        DairyField(key: 'validTo', label: 'Valid To', type: DairyFieldType.date),
+        DairyField(
+          key: 'isActive',
+          label: 'Active?',
+          type: DairyFieldType.switch_,
+        ),
+      ],
+    ),
+
+    // 43 ─ Contracts ────────────────────────────────────────────────────────
+    DairyModule(
+      key: 'contracts',
+      title: 'Contracts',
+      icon: Icons.handshake_outlined,
+      color: ColorConstant.primaryDark,
+      description: 'Seller ↔ buyer milk supply contracts',
+      columns: ['contractNo', 'pricingType', 'status', 'startDate', 'endDate'],
+      searchFields: ['contractNo', 'pricingType', 'status', 'notes', 'penaltyTerms'],
+      fields: [
+        DairyField(key: 'sellerOrgUnitId', label: 'Seller Org Unit ID'),
+        DairyField(key: 'buyerOfftakerId', label: 'Buyer Offtaker ID'),
+        DairyField(key: 'contractNo', label: 'Contract No.', required: true),
+        DairyField(
+          key: 'pricingType',
+          label: 'Pricing Type',
+          type: DairyFieldType.dropdown,
+          options: ['spot', 'fixed', 'floor', 'formula'],
+        ),
+        DairyField(
+          key: 'pricePerLitre',
+          label: 'Fixed Price / Litre',
+          type: DairyFieldType.number,
+        ),
+        DairyField(
+          key: 'currency',
+          label: 'Currency',
+          type: DairyFieldType.dropdown,
+          options: ['UGX', 'USD', 'KES', 'TZS', 'RWF'],
+        ),
+        DairyField(
+          key: 'minLitresDay',
+          label: 'Min Litres / Day',
+          type: DairyFieldType.number,
+        ),
+        DairyField(
+          key: 'maxLitresDay',
+          label: 'Max Litres / Day',
+          type: DairyFieldType.number,
+        ),
+        DairyField(
+          key: 'startDate',
+          label: 'Start Date',
+          type: DairyFieldType.date,
+          required: true,
+        ),
+        DairyField(
+          key: 'endDate',
+          label: 'End Date',
+          type: DairyFieldType.date,
+          required: true,
+        ),
+        DairyField(
+          key: 'penaltyTerms',
+          label: 'Penalty Terms',
+          type: DairyFieldType.textarea,
+        ),
+        DairyField(
+          key: 'status',
+          label: 'Status',
+          type: DairyFieldType.dropdown,
+          options: ['draft', 'active', 'expired', 'terminated'],
+        ),
+        DairyField(key: 'documentUrl', label: 'Document URL'),
+        DairyField(key: 'notes', label: 'Notes', type: DairyFieldType.textarea),
+      ],
+    ),
+
+    // 44 ─ Deduction Rules ──────────────────────────────────────────────────
+    DairyModule(
+      key: 'deduction-rules',
+      title: 'Deduction Rules',
+      icon: Icons.remove_circle_outline,
+      color: ColorConstant.danger,
+      description: 'Auto-deduction rules applied to farmer payments',
+      columns: ['name', 'deductionType', 'amount', 'appliesTo', 'isActive'],
+      searchFields: ['name', 'deductionType', 'appliesTo', 'currency'],
+      fields: [
+        DairyField(key: 'name', label: 'Rule Name', required: true),
+        DairyField(
+          key: 'deductionType',
+          label: 'Deduction Type',
+          type: DairyFieldType.dropdown,
+          options: [
+            'fixed_per_litre',
+            'fixed_per_day',
+            'percentage',
+            'fixed_amount',
+          ],
+        ),
+        DairyField(
+          key: 'amount',
+          label: 'Amount',
+          type: DairyFieldType.number,
+          required: true,
+        ),
+        DairyField(
+          key: 'currency',
+          label: 'Currency',
+          type: DairyFieldType.dropdown,
+          options: ['UGX', 'USD', 'KES', 'TZS', 'RWF'],
+        ),
+        DairyField(
+          key: 'appliesTo',
+          label: 'Applies To',
+        ),
+        DairyField(
+          key: 'isActive',
+          label: 'Active?',
+          type: DairyFieldType.switch_,
+        ),
+      ],
+    ),
+
+    // 45 ─ Farmer Ledger ───────────────────────────────────────────────────
+    DairyModule(
+      key: 'farmer-ledger',
+      title: 'Farmer Ledger',
+      icon: Icons.account_balance_wallet_outlined,
+      color: ColorConstant.gold,
+      description: 'Farmer double-entry ledger (append-only)',
+      columns: ['farmerName', 'entryType', 'direction', 'amount', 'postedAt'],
+      searchFields: ['farmerName', 'entryType', 'direction', 'narrative', 'refType', 'currency'],
+      fields: [
+        DairyField(key: 'farmerId', label: 'Farmer ID', required: true),
+        DairyField(key: 'farmerName', label: 'Farmer Name', required: true),
+        DairyField(
+          key: 'entryType',
+          label: 'Entry Type',
+          type: DairyFieldType.dropdown,
+          required: true,
+          options: [
+            'milk_earning',
+            'deduction',
+            'payment',
+            'adjustment',
+            'reversal',
+            'fee',
+            'bonus',
+            'loan_disbursement',
+            'loan_repayment',
+          ],
+        ),
+        DairyField(
+          key: 'direction',
+          label: 'Direction',
+          type: DairyFieldType.dropdown,
+          required: true,
+          options: ['credit', 'debit'],
+        ),
+        DairyField(
+          key: 'amount',
+          label: 'Amount',
+          type: DairyFieldType.number,
+          required: true,
+        ),
+        DairyField(
+          key: 'currency',
+          label: 'Currency',
+          type: DairyFieldType.dropdown,
+          options: ['UGX', 'USD', 'KES', 'TZS', 'RWF'],
+        ),
+        DairyField(
+          key: 'refType',
+          label: 'Ref Type',
+          type: DairyFieldType.dropdown,
+          options: ['mcc_intake', 'payment', 'deduction', 'contract', ''],
+        ),
+        DairyField(key: 'refId', label: 'Ref ID'),
+        DairyField(
+          key: 'runningBalance',
+          label: 'Running Balance',
+          type: DairyFieldType.number,
+        ),
+        DairyField(
+          key: 'narrative',
+          label: 'Narrative',
+          type: DairyFieldType.textarea,
+        ),
+        DairyField(key: 'postedAt', label: 'Posted At', type: DairyFieldType.date),
+      ],
+    ),
+
+    // 46 ─ Payment Batches ─────────────────────────────────────────────────
+    DairyModule(
+      key: 'payment-batches',
+      title: 'Payment Batches',
+      icon: Icons.payments_outlined,
+      color: ColorConstant.success,
+      description: 'Bulk payment batches (dual approval)',
+      columns: ['batchNo', 'totalAmount', 'totalPayments', 'channel', 'status'],
+      searchFields: ['batchNo', 'channel', 'status', 'currency', 'notes'],
+      fields: [
+        DairyField(key: 'batchNo', label: 'Batch No.', required: true),
+        DairyField(key: 'batchDate', label: 'Batch Date', type: DairyFieldType.date),
+        DairyField(
+          key: 'totalAmount',
+          label: 'Total Amount',
+          type: DairyFieldType.number,
+          required: true,
+        ),
+        DairyField(
+          key: 'totalPayments',
+          label: 'Total Payments',
+          type: DairyFieldType.number,
+          required: true,
+        ),
+        DairyField(
+          key: 'currency',
+          label: 'Currency',
+          type: DairyFieldType.dropdown,
+          options: ['UGX', 'USD', 'KES', 'TZS', 'RWF'],
+        ),
+        DairyField(
+          key: 'channel',
+          label: 'Channel',
+          type: DairyFieldType.dropdown,
+          options: [
+            'mobipay_wallet',
+            'mtn_momo',
+            'airtel_money',
+            'mpesa',
+            'bank',
+            'cash',
+          ],
+        ),
+        DairyField(
+          key: 'status',
+          label: 'Status',
+          type: DairyFieldType.dropdown,
+          options: [
+            'draft',
+            'submitted',
+            'approved',
+            'processing',
+            'completed',
+            'failed',
+          ],
+        ),
+        DairyField(key: 'submittedBy', label: 'Submitted By'),
+        DairyField(
+          key: 'submittedAt',
+          label: 'Submitted At',
+          type: DairyFieldType.date,
+        ),
+        DairyField(key: 'approvedBy', label: 'Approved By'),
+        DairyField(
+          key: 'approvedAt',
+          label: 'Approved At',
+          type: DairyFieldType.date,
+        ),
+        DairyField(
+          key: 'processedAt',
+          label: 'Processed At',
+          type: DairyFieldType.date,
+        ),
+        DairyField(
+          key: 'completedAt',
+          label: 'Completed At',
+          type: DairyFieldType.date,
+        ),
+        DairyField(key: 'notes', label: 'Notes', type: DairyFieldType.textarea),
+      ],
+    ),
+
+    // 47 ─ Payments ────────────────────────────────────────────────────────
+    DairyModule(
+      key: 'payments',
+      title: 'Payments',
+      icon: Icons.payment_outlined,
+      color: ColorConstant.info,
+      description: 'Individual farmer / vendor payments',
+      columns: ['payeeName', 'payeeType', 'amount', 'channel', 'status'],
+      searchFields: [
+        'payeeName',
+        'payeePhone',
+        'payeeType',
+        'status',
+        'channel',
+        'providerRef',
+        'idempotencyKey',
+        'failureReason',
+        'currency',
+      ],
+      fields: [
+        DairyField(key: 'batchId', label: 'Batch ID'),
+        DairyField(
+          key: 'payeeType',
+          label: 'Payee Type',
+          type: DairyFieldType.dropdown,
+          options: ['farmer', 'vet', 'transporter', 'supplier', 'mcc'],
+        ),
+        DairyField(key: 'payeeId', label: 'Payee ID', required: true),
+        DairyField(key: 'payeeName', label: 'Payee Name', required: true),
+        DairyField(key: 'payeePhone', label: 'Payee Phone (MSISDN)'),
+        DairyField(
+          key: 'amount',
+          label: 'Amount',
+          type: DairyFieldType.number,
+          required: true,
+        ),
+        DairyField(
+          key: 'feeAmount',
+          label: 'Fee Amount',
+          type: DairyFieldType.number,
+        ),
+        DairyField(
+          key: 'currency',
+          label: 'Currency',
+          type: DairyFieldType.dropdown,
+          options: ['UGX', 'USD', 'KES', 'TZS', 'RWF'],
+        ),
+        DairyField(
+          key: 'channel',
+          label: 'Channel',
+          type: DairyFieldType.dropdown,
+          options: [
+            'mobipay_wallet',
+            'mtn_momo',
+            'airtel_money',
+            'mpesa',
+            'bank',
+            'cash',
+          ],
+        ),
+        DairyField(key: 'idempotencyKey', label: 'Idempotency Key', required: true),
+        DairyField(key: 'providerRef', label: 'Provider Reference'),
+        DairyField(
+          key: 'status',
+          label: 'Status',
+          type: DairyFieldType.dropdown,
+          options: ['pending', 'processing', 'success', 'failed', 'reversed'],
+        ),
+        DairyField(key: 'failureReason', label: 'Failure Reason'),
+        DairyField(
+          key: 'initiatedAt',
+          label: 'Initiated At',
+          type: DairyFieldType.date,
+        ),
+        DairyField(
+          key: 'completedAt',
+          label: 'Completed At',
+          type: DairyFieldType.date,
+        ),
+      ],
+    ),
+
+    // 48 ─ Credit Scores ────────────────────────────────────────────────────
+    DairyModule(
+      key: 'credit-scores',
+      title: 'Credit Scores',
+      icon: Icons.credit_score_outlined,
+      color: ColorConstant.secondaryLight,
+      description: 'Data-driven farmer credit scores',
+      columns: ['farmerName', 'score', 'band', 'scoredOn'],
+      searchFields: ['farmerName', 'band', 'modelVersion', 'notes'],
+      fields: [
+        DairyField(key: 'farmerId', label: 'Farmer ID', required: true),
+        DairyField(key: 'farmerName', label: 'Farmer Name', required: true),
+        DairyField(
+          key: 'scoredOn',
+          label: 'Scored On',
+          type: DairyFieldType.date,
+        ),
+        DairyField(
+          key: 'score',
+          label: 'Score (300-900)',
+          type: DairyFieldType.number,
+          required: true,
+        ),
+        DairyField(
+          key: 'band',
+          label: 'Band',
+          type: DairyFieldType.dropdown,
+          required: true,
+          options: ['A', 'B', 'C', 'D', 'E'],
+        ),
+        DairyField(
+          key: 'monthsOfHistory',
+          label: 'Months of History',
+          type: DairyFieldType.number,
+        ),
+        DairyField(
+          key: 'avgMonthlyIncome',
+          label: 'Avg Monthly Income',
+          type: DairyFieldType.number,
+        ),
+        DairyField(
+          key: 'volumeConsistency',
+          label: 'Volume Consistency (0-1)',
+          type: DairyFieldType.number,
+        ),
+        DairyField(
+          key: 'qualityIndex',
+          label: 'Quality Index (0-1)',
+          type: DairyFieldType.number,
+        ),
+        DairyField(
+          key: 'herdHealthIndex',
+          label: 'Herd Health Index (0-1)',
+          type: DairyFieldType.number,
+        ),
+        DairyField(key: 'modelVersion', label: 'Model Version'),
+        DairyField(key: 'notes', label: 'Notes', type: DairyFieldType.textarea),
+      ],
+    ),
+
+    // 49 ─ Market Listings ─────────────────────────────────────────────────
+    DairyModule(
+      key: 'market-listings',
+      title: 'Market Listings',
+      icon: Icons.storefront_outlined,
+      color: ColorConstant.secondary,
+      description: 'Marketplace: live animals, feed, drugs, equipment',
+      columns: ['title', 'listingType', 'price', 'quantity', 'status'],
+      searchFields: [
+        'title',
+        'sellerName',
+        'description',
+        'listingType',
+        'unit',
+        'location',
+        'currency',
+        'status',
+      ],
+      fields: [
+        DairyField(
+          key: 'sellerType',
+          label: 'Seller Type',
+          type: DairyFieldType.dropdown,
+          options: ['farmer', 'vet', 'supplier', 'offtaker'],
+        ),
+        DairyField(key: 'sellerId', label: 'Seller ID', required: true),
+        DairyField(key: 'sellerName', label: 'Seller Name', required: true),
+        DairyField(
+          key: 'listingType',
+          label: 'Listing Type',
+          type: DairyFieldType.dropdown,
+          options: ['live_animal', 'feed', 'vet_drug', 'equipment', 'semen'],
+        ),
+        DairyField(key: 'animalId', label: 'Animal ID (if live_animal)'),
+        DairyField(key: 'title', label: 'Title', required: true),
+        DairyField(
+          key: 'description',
+          label: 'Description',
+          type: DairyFieldType.textarea,
+        ),
+        DairyField(
+          key: 'price',
+          label: 'Price',
+          type: DairyFieldType.number,
+          required: true,
+        ),
+        DairyField(
+          key: 'currency',
+          label: 'Currency',
+          type: DairyFieldType.dropdown,
+          options: ['UGX', 'USD', 'KES', 'TZS', 'RWF'],
+        ),
+        DairyField(
+          key: 'quantity',
+          label: 'Quantity',
+          type: DairyFieldType.number,
+        ),
+        DairyField(
+          key: 'unit',
+          label: 'Unit',
+          type: DairyFieldType.dropdown,
+          options: ['each', 'kg', 'litres', 'doses'],
+        ),
+        DairyField(key: 'imageUrl', label: 'Image URL'),
+        DairyField(key: 'location', label: 'Location'),
+        DairyField(
+          key: 'status',
+          label: 'Status',
+          type: DairyFieldType.dropdown,
+          options: ['active', 'sold', 'cancelled', 'expired'],
+        ),
+        DairyField(
+          key: 'expiresAt',
+          label: 'Expires At',
+          type: DairyFieldType.date,
+        ),
+      ],
+    ),
+
+    // 50 ─ Market Orders ───────────────────────────────────────────────────
+    DairyModule(
+      key: 'market-orders',
+      title: 'Market Orders',
+      icon: Icons.shopping_cart_outlined,
+      color: ColorConstant.warning,
+      description: 'Buy orders on marketplace listings',
+      columns: ['buyerName', 'quantity', 'unitPrice', 'totalAmount', 'status'],
+      searchFields: [
+        'buyerName',
+        'buyerType',
+        'status',
+        'paymentStatus',
+        'escrowRef',
+        'currency',
+        'notes',
+      ],
+      fields: [
+        DairyField(key: 'listingId', label: 'Listing ID', required: true),
+        DairyField(
+          key: 'buyerType',
+          label: 'Buyer Type',
+          type: DairyFieldType.dropdown,
+          options: ['farmer', 'vet', 'supplier', 'offtaker'],
+        ),
+        DairyField(key: 'buyerId', label: 'Buyer ID', required: true),
+        DairyField(key: 'buyerName', label: 'Buyer Name', required: true),
+        DairyField(
+          key: 'quantity',
+          label: 'Quantity',
+          type: DairyFieldType.number,
+        ),
+        DairyField(
+          key: 'unitPrice',
+          label: 'Unit Price',
+          type: DairyFieldType.number,
+          required: true,
+        ),
+        DairyField(
+          key: 'totalAmount',
+          label: 'Total Amount',
+          type: DairyFieldType.number,
+        ),
+        DairyField(
+          key: 'currency',
+          label: 'Currency',
+          type: DairyFieldType.dropdown,
+          options: ['UGX', 'USD', 'KES', 'TZS', 'RWF'],
+        ),
+        DairyField(
+          key: 'status',
+          label: 'Status',
+          type: DairyFieldType.dropdown,
+          options: [
+            'pending',
+            'accepted',
+            'rejected',
+            'paid',
+            'shipped',
+            'completed',
+            'cancelled',
+          ],
+        ),
+        DairyField(key: 'escrowRef', label: 'Escrow Reference'),
+        DairyField(
+          key: 'paymentStatus',
+          label: 'Payment Status',
+          type: DairyFieldType.dropdown,
+          options: ['unpaid', 'escrow_held', 'released', 'refunded'],
+        ),
+        DairyField(key: 'notes', label: 'Notes', type: DairyFieldType.textarea),
+      ],
+    ),
+
+    // 51 ─ Farmer Statements ────────────────────────────────────────────────
+    DairyModule(
+      key: 'farmer-statements',
+      title: 'Farmer Statements',
+      icon: Icons.summarize_outlined,
+      color: ColorConstant.primaryLight,
+      description: 'Periodic farmer statements (earnings, deductions, payments)',
+      columns: ['farmerName', 'statementNo', 'periodStart', 'periodEnd', 'closingBalance'],
+      searchFields: ['farmerName', 'statementNo', 'status', 'currency'],
+      fields: [
+        DairyField(key: 'farmerId', label: 'Farmer ID', required: true),
+        DairyField(key: 'farmerName', label: 'Farmer Name', required: true),
+        DairyField(key: 'statementNo', label: 'Statement No.', required: true),
+        DairyField(
+          key: 'periodStart',
+          label: 'Period Start',
+          type: DairyFieldType.date,
+          required: true,
+        ),
+        DairyField(
+          key: 'periodEnd',
+          label: 'Period End',
+          type: DairyFieldType.date,
+          required: true,
+        ),
+        DairyField(
+          key: 'totalMilkLitres',
+          label: 'Total Milk (Litres)',
+          type: DairyFieldType.number,
+        ),
+        DairyField(
+          key: 'totalEarnings',
+          label: 'Total Earnings',
+          type: DairyFieldType.number,
+        ),
+        DairyField(
+          key: 'totalDeductions',
+          label: 'Total Deductions',
+          type: DairyFieldType.number,
+        ),
+        DairyField(
+          key: 'totalPayments',
+          label: 'Total Payments',
+          type: DairyFieldType.number,
+        ),
+        DairyField(
+          key: 'closingBalance',
+          label: 'Closing Balance',
+          type: DairyFieldType.number,
+        ),
+        DairyField(
+          key: 'currency',
+          label: 'Currency',
+          type: DairyFieldType.dropdown,
+          options: ['UGX', 'USD', 'KES', 'TZS', 'RWF'],
+        ),
+        DairyField(key: 'pdfUrl', label: 'PDF URL'),
+        DairyField(
+          key: 'status',
+          label: 'Status',
+          type: DairyFieldType.dropdown,
+          options: ['generated', 'sent', 'acknowledged'],
+        ),
+        DairyField(key: 'sentAt', label: 'Sent At', type: DairyFieldType.date),
+        DairyField(
+          key: 'acknowledgedAt',
+          label: 'Acknowledged At',
+          type: DairyFieldType.date,
+        ),
       ],
     ),
   ];

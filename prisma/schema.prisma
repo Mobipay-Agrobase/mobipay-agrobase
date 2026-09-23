@@ -196,6 +196,17 @@ model Tenant {
   dairyMccCenters         DairyMccCenter[]         @relation("TenantDairyMccCenters")
   dairyMccIntakes         DairyMccIntake[]         @relation("TenantDairyMccIntakes")
   dairyFarmQualityTests   DairyFarmQualityTest[]   @relation("TenantDairyFarmQualityTests")
+  // ZIWA360 Phase 4: Money & Market
+  dairyPriceRules          DairyPriceRule[]          @relation("TenantDairyPriceRules")
+  dairyContracts           DairyContract[]           @relation("TenantDairyContracts")
+  dairyDeductionRules      DairyDeductionRule[]      @relation("TenantDairyDeductionRules")
+  dairyFarmerLedger        DairyFarmerLedger[]       @relation("TenantDairyFarmerLedger")
+  dairyPaymentBatches      DairyPaymentBatch[]       @relation("TenantDairyPaymentBatches")
+  dairyPayments            DairyPayment[]            @relation("TenantDairyPayments")
+  dairyCreditScores        DairyCreditScore[]        @relation("TenantDairyCreditScores")
+  dairyMarketListings      DairyMarketListing[]      @relation("TenantDairyMarketListings")
+  dairyMarketOrders        DairyMarketOrder[]        @relation("TenantDairyMarketOrders")
+  dairyFarmerStatements    DairyFarmerStatement[]    @relation("TenantDairyFarmerStatements")
 }
 
 // --- USERS & AUTH ---
@@ -6360,3 +6371,275 @@ model DairyFarmQualityTest {
   @@index([cowId])
   @@index([testDate])
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ZIWA360 Phase 4: Money & Market
+// Contracts, pricing, deductions, payments, farmer ledger, marketplace, credit scores
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ─── P4-1. Price Rules (dynamic pricing engine) ───
+model DairyPriceRule {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation("TenantDairyPriceRules", fields: [tenantId], references: [id])
+  offtakerId      String?  // linked offtaker (null = all offtakers)
+  name            String   // rule name
+  currency        String   @default("UGX")
+  basePrice       Float    // base price per litre
+  season          String   @default("all") // dry / wet / all
+  fatBonusPerPct  Float    @default(0) // bonus per 1% fat above baseline
+  snfBonusPerPct   Float    @default(0) // bonus per 1% SNF above baseline
+  gradeAdjustJson String?  // JSON: {"A":+50,"B":0,"C":-100}
+  penaltyJson     String?  // JSON: {"water_added":-200,"high_temp":-50}
+  coolingBonus    Float    @default(0) // bonus for pre-cooled milk
+  minPrice        Float?
+  maxPrice        Float?
+  priority        Int      @default(100) // lower = higher priority
+  validFrom       DateTime
+  validTo         DateTime?
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([offtakerId])
+  @@index([validFrom])
+}
+
+// ─── P4-2. Contracts (seller ↔ buyer agreements) ───
+model DairyContract {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation("TenantDairyContracts", fields: [tenantId], references: [id])
+  sellerOrgUnitId String?  // cooperative/group ID
+  buyerOfftakerId String?  // offtaker/processor ID
+  contractNo      String   // unique contract number
+  pricingType     String   @default("fixed") // spot / fixed / floor / formula
+  pricePerLitre   Float?   // fixed price (if pricingType = fixed)
+  currency        String   @default("UGX")
+  minLitresDay    Int?     // minimum daily volume
+  maxLitresDay    Int?     // maximum daily volume
+  startDate       DateTime
+  endDate         DateTime
+  penaltyTerms    String?  // text: penalty clauses
+  status          String   @default("draft") // draft / active / expired / terminated
+  documentUrl     String?  // signed contract PDF
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([tenantId])
+  @@unique([tenantId, contractNo])
+  @@index([status])
+}
+
+// ─── P4-3. Deduction Rules (auto-deductions from farmer payments) ───
+model DairyDeductionRule {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation("TenantDairyDeductionRules", fields: [tenantId], references: [id])
+  name            String   // "AI Service Fee", "Cooperative Dues", "Feed Loan Recovery"
+  deductionType   String   @default("fixed_per_litre") // fixed_per_litre / fixed_per_day / percentage / fixed_amount
+  amount          Float    // per litre / per day / percentage / flat amount
+  currency        String   @default("UGX")
+  appliesTo       String   @default("all") // all / farmer_group:X / farmer:Y
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([tenantId])
+}
+
+// ─── P4-4. Farmer Ledger (double-entry, append-only) ───
+model DairyFarmerLedger {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation("TenantDairyFarmerLedger", fields: [tenantId], references: [id])
+  farmerId        String   // links to FarmerProfile
+  farmerName      String   // denormalized
+  entryType       String   // milk_earning / deduction / payment / adjustment / reversal / fee / bonus / loan_disbursement / loan_repayment
+  direction       String   // credit / debit
+  amount          Float    // always positive; direction determines sign
+  currency        String   @default("UGX")
+  refType         String?  // mcc_intake / payment / deduction / contract
+  refId           String?  // linked record ID
+  runningBalance  Float    // balance after this entry
+  narrative       String?  // human-readable description
+  postedAt        DateTime @default(now())
+  createdAt       DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([farmerId])
+  @@index([postedAt])
+  @@index([refType, refId])
+}
+
+// ─── P4-5. Payment Batches (dual approval) ───
+model DairyPaymentBatch {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation("TenantDairyPaymentBatches", fields: [tenantId], references: [id])
+  batchNo         String   // system-generated batch number
+  batchDate       DateTime @default(now())
+  totalAmount     Float
+  totalPayments   Int
+  currency        String   @default("UGX")
+  channel         String   @default("mobipay_wallet") // mobipay_wallet / mtn_momo / airtel_money / mpesa / bank / cash
+  status          String   @default("draft") // draft / submitted / approved / processing / completed / failed
+  submittedBy     String?
+  submittedAt     DateTime?
+  approvedBy      String?  // second approver
+  approvedAt      DateTime?
+  processedAt     DateTime?
+  completedAt     DateTime?
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  payments        DairyPayment[]  @relation("DairyBatchPayments")
+
+  @@index([tenantId])
+  @@unique([tenantId, batchNo])
+  @@index([status])
+}
+
+// ─── P4-6. Payments (individual farmer payments) ───
+model DairyPayment {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation("TenantDairyPayments", fields: [tenantId], references: [id])
+  batchId         String?
+  batch           DairyPaymentBatch? @relation("DairyBatchPayments", fields: [batchId], references: [id])
+  payeeType       String   @default("farmer") // farmer / vet / transporter / supplier / mcc
+  payeeId         String   // farmer profile ID or other entity ID
+  payeeName       String   // denormalized
+  payeePhone      String?  // MSISDN for mobile money
+  amount          Float
+  feeAmount       Float    @default(0)
+  currency        String   @default("UGX")
+  channel         String   @default("mobipay_wallet") // mobipay_wallet / mtn_momo / airtel_money / mpesa / bank / cash
+  idempotencyKey  String   // UUID for dedup
+  providerRef     String?  // mobile money transaction reference
+  status          String   @default("pending") // pending / processing / success / failed / reversed
+  failureReason   String?
+  initiatedAt     DateTime @default(now())
+  completedAt     DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([batchId])
+  @@index([payeeType, payeeId])
+  @@index([status])
+  @@unique([idempotencyKey])
+}
+
+// ─── P4-7. Credit Scores (data-driven farmer credit) ───
+model DairyCreditScore {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation("TenantDairyCreditScores", fields: [tenantId], references: [id])
+  farmerId        String
+  farmerName      String   // denormalized
+  scoredOn         DateTime @default(now())
+  score           Int      // 300-900
+  band            String   // A / B / C / D / E
+  monthsOfHistory Int      // how many months of data used
+  avgMonthlyIncome Float?
+  volumeConsistency Float?  // 0-1 (how consistent is milk volume)
+  qualityIndex    Float?   // 0-1 (avg quality grade)
+  herdHealthIndex Float?   // 0-1 (health check pass rate)
+  modelVersion    String   @default("v1.0")
+  notes           String?
+  createdAt       DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([farmerId])
+  @@index([scoredOn])
+}
+
+// ─── P4-8. Marketplace Listings (live animals, feed, drugs, equipment) ───
+model DairyMarketListing {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation("TenantDairyMarketListings", fields: [tenantId], references: [id])
+  sellerType      String   @default("farmer") // farmer / vet / supplier / offtaker
+  sellerId        String
+  sellerName      String   // denormalized
+  listingType     String   @default("live_animal") // live_animal / feed / vet_drug / equipment / semen
+  animalId        String?  // linked DairyCow if listing_type = live_animal
+  title           String
+  description     String?
+  price           Float
+  currency        String   @default("UGX")
+  quantity        Int      @default(1)
+  unit            String   @default("each") // each / kg / litres / doses
+  imageUrl        String?
+  location        String?
+  status          String   @default("active") // active / sold / cancelled / expired
+  expiresAt       DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  orders          DairyMarketOrder[]  @relation("DairyListingOrders")
+
+  @@index([tenantId])
+  @@index([listingType])
+  @@index([status])
+}
+
+// ─── P4-9. Market Orders (buy orders on marketplace listings) ───
+model DairyMarketOrder {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation("TenantDairyMarketOrders", fields: [tenantId], references: [id])
+  listingId       String
+  listing         DairyMarketListing @relation("DairyListingOrders", fields: [listingId], references: [id], onDelete: Cascade)
+  buyerType       String   @default("farmer") // farmer / vet / supplier / offtaker
+  buyerId         String
+  buyerName       String   // denormalized
+  quantity        Int      @default(1)
+  unitPrice       Float
+  totalAmount     Float
+  currency        String   @default("UGX")
+  status          String   @default("pending") // pending / accepted / rejected / paid / shipped / completed / cancelled
+  escrowRef       String?  // MobiPay escrow reference
+  paymentStatus   String   @default("unpaid") // unpaid / escrow_held / released / refunded
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([listingId])
+  @@index([buyerId])
+  @@index([status])
+}
+
+// ─── P4-10. Farmer Statements (periodic summary) ───
+model DairyFarmerStatement {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation("TenantDairyFarmerStatements", fields: [tenantId], references: [id])
+  farmerId        String
+  farmerName      String   // denormalized
+  statementNo     String   // system-generated
+  periodStart     DateTime
+  periodEnd       DateTime
+  totalMilkLitres Float
+  totalEarnings   Float
+  totalDeductions Float
+  totalPayments   Float
+  closingBalance  Float
+  currency        String   @default("UGX")
+  pdfUrl          String?  // generated PDF URL
+  status          String   @default("generated") // generated / sent / acknowledged
+  sentAt          DateTime?
+  acknowledgedAt  DateTime?
+  createdAt       DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([farmerId])
+  @@unique([tenantId, statementNo])
+}
+
+// ─── Add Phase 4 back-relations to Tenant ───

@@ -45,5 +45,10 @@
     "src/app/api/admin/revenue/route.ts": {
       "maxDuration": 15
     }
+  },
+  "build": {
+    "env": {
+      "NODE_OPTIONS": "--max-old-space-size=4096"
+    }
   }
 }

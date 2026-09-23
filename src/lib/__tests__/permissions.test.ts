@@ -3,6 +3,8 @@
  * Run: npx jest src/lib/__tests__/permissions.test.ts
  */
 import { hasPermission, getRolePermissions, getRoleModules } from '../permissions'
+import { convert, formatCurrency } from '../currency/rates'
+import { t } from '../i18n'
 
 describe('Permission System', () => {
   describe('SUPER_ADMIN', () => {
@@ -143,19 +145,16 @@ describe('Permission System', () => {
 
 describe('Currency Conversion', () => {
   it('should convert UGX to USD', () => {
-    const { convert } = require('../currency/rates')
     const result = convert(1000000, 'UGX', 'USD')
     expect(result).toBeGreaterThan(0)
     expect(result).toBeLessThan(1000) // 1M UGX should be < $1000
   })
 
   it('should convert same currency to same value', () => {
-    const { convert } = require('../currency/rates')
     expect(convert(50000, 'UGX', 'UGX')).toBe(50000)
   })
 
   it('should format currency with symbol', () => {
-    const { formatCurrency } = require('../currency/rates')
     const formatted = formatCurrency(50000, 'UGX')
     expect(formatted).toContain('USh')
     expect(formatted).toContain('50,000')
@@ -164,17 +163,14 @@ describe('Currency Conversion', () => {
 
 describe('i18n', () => {
   it('should return English by default', () => {
-    const { t } = require('../i18n')
     expect(t('dashboard.title')).toBe('Dashboard')
   })
 
   it('should return Swahili translation', () => {
-    const { t } = require('../i18n')
     expect(t('dashboard.title', 'sw')).toBe('Dashibodi')
   })
 
   it('should fall back to English for missing translation', () => {
-    const { t } = require('../i18n')
     expect(t('nonexistent.key', 'sw')).toBe('nonexistent.key')
   })
 })

@@ -1,5 +1,6 @@
 import type { NextAuthOptions } from 'next-auth'
 import CredentialsProvider from 'next-auth/providers/credentials'
+import * as crypto from 'crypto'
 import { db } from '@/lib/db'
 import { verifyPassword } from '@/lib/password'
 import { entitlementEngine } from '@/lib/entitlements/engine'
@@ -163,7 +164,6 @@ export const authOptions: NextAuthOptions = {
     if (!secret) {
       // Non-fatal: use a random ephemeral secret so the app still starts.
       // Sessions won't persist across cold starts until NEXTAUTH_SECRET is set.
-      const crypto = require('crypto')
       const ephemeral = crypto.randomBytes(32).toString('base64')
       console.error('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
       console.error('!! CRITICAL: NEXTAUTH_SECRET is NOT set!')

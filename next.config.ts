@@ -8,13 +8,11 @@ const nextConfig: NextConfig = {
   // ─── Build optimization for large schemas (66 dairy models + 200 existing) ───
   // Skip TypeScript checking during Next.js build — tsc OOMs on Vercel Hobby (1GB).
   // Type errors are caught separately in CI via `npx tsc --noEmit`.
+  // NOTE: Next.js 16 removed the `eslint: { ignoreDuringBuilds: true }` option from
+  // NextConfig. To skip ESLint during build, pass `--no-eslint` to `next build`
+  // (see package.json `build` script) or set `ESLINT_IGNORE_DURING_BUILD=true`.
   typescript: {
     ignoreBuildErrors: true,
-  },
-  // Skip ESLint during build — also memory-intensive with 130+ API routes.
-  // Lint errors are caught separately in CI.
-  eslint: {
-    ignoreDuringBuilds: true,
   },
 
   // Production security headers

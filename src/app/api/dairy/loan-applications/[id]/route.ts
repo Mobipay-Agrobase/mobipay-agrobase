@@ -41,7 +41,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
           body.requestedAmount !== undefined
             ? body.requestedAmount !== null && body.requestedAmount !== ''
               ? parseFloat(body.requestedAmount)
-              : null
+              : undefined  // requestedAmount is non-nullable (Float) — skip update on empty
             : undefined,
         approvedAmount:
           body.approvedAmount !== undefined

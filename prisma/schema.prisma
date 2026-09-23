@@ -207,6 +207,21 @@ model Tenant {
   dairyMarketListings      DairyMarketListing[]      @relation("TenantDairyMarketListings")
   dairyMarketOrders        DairyMarketOrder[]        @relation("TenantDairyMarketOrders")
   dairyFarmerStatements    DairyFarmerStatement[]    @relation("TenantDairyFarmerStatements")
+  // ZIWA360 Phase 5: Regional Expansion
+  dairyCountryConfigs      DairyCountryConfig[]      @relation("TenantDairyCountryConfigs")
+  dairyTranslations        DairyTranslation[]        @relation("TenantDairyTranslations")
+  dairyLocalPartners       DairyLocalPartner[]       @relation("TenantDairyLocalPartners")
+  dairyExchangeRates       DairyExchangeRate[]       @relation("TenantDairyExchangeRates")
+  // ZIWA360 Phase 6: Scale & Intelligence
+  dairyIoTDevices          DairyIoTDevice[]          @relation("TenantDairyIoTDevices")
+  dairyGeofences           DairyGeofence[]           @relation("TenantDairyGeofences")
+  dairyLenders             DairyLender[]             @relation("TenantDairyLenders")
+  dairyLoanApplications    DairyLoanApplication[]    @relation("TenantDairyLoanApplications")
+  dairyPredictions         DairyPrediction[]          @relation("TenantDairyPredictions")
+  dairyInsuranceProducts   DairyInsuranceProduct[]   @relation("TenantDairyInsuranceProducts")
+  dairyInsuranceEnrollments DairyInsuranceEnrollment[] @relation("TenantDairyInsuranceEnrollments")
+  dairyPartnerApiKeys      DairyPartnerApiKey[]       @relation("TenantDairyPartnerApiKeys")
+  dairySustainability      DairySustainabilityRecord[] @relation("TenantDairySustainability")
 }
 
 // --- USERS & AUTH ---
@@ -6643,3 +6658,337 @@ model DairyFarmerStatement {
 }
 
 // ─── Add Phase 4 back-relations to Tenant ───
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ZIWA360 Phase 5: Regional Expansion
+// Country config, languages, currencies, vet protocols per country, partners
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ─── P5-1. Country Configuration ───
+model DairyCountryConfig {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation("TenantDairyCountryConfigs", fields: [tenantId], references: [id])
+  countryCode     String   @unique // UG, KE, RW, TZ
+  countryName     String   // Uganda, Kenya, Rwanda, Tanzania
+  currency        String   @default("UGX") // UGX, KES, RWF, TZS
+  defaultLanguage String   @default("en") // en, sw, rw
+  supportedLanguages String? // JSON: ["en", "sw", "rw"]
+  vetAuthority    String?  // DVS Uganda / Kenya Vet Board
+  ussdShortcode   String?  // short code per country
+  ussdGateway     String?  // telco aggregator
+  minFarmgatePrice Float?  // regulatory minimum
+  maxFarmgatePrice Float?  // regulatory maximum
+  nationalLivestockIdApi String? // API URL for national ID sync [VALIDATE]
+  eVetApiUrl      String?  // national e-vet system API [VALIDATE]
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([tenantId])
+}
+
+// ─── P5-2. Language Translations (dairy-specific) ───
+model DairyTranslation {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation("TenantDairyTranslations", fields: [tenantId], references: [id])
+  languageCode    String   // en, sw, rw, luganda, runyankole
+  key             String   // translation key
+  value           String   // translated text
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([tenantId])
+  @@unique([tenantId, languageCode, key])
+}
+
+// ─── P5-3. Local Partners (cooperatives, MCC networks, telcos) ───
+model DairyLocalPartner {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation("TenantDairyLocalPartners", fields: [tenantId], references: [id])
+  partnerName     String
+  partnerType     String   @default("cooperative") // cooperative / mcc_network / telco / vet_board / processor
+  countryCode     String   @default("UG")
+  contactName     String?
+  contactPhone    String?
+  contactEmail    String?
+  agreementUrl    String?  // partnership agreement PDF
+  status          String   @default("pending") // pending / active / suspended / terminated
+  startDate       DateTime?
+  endDate         DateTime?
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([partnerType])
+  @@index([countryCode])
+}
+
+// ─── P5-4. Multi-Currency Exchange Rates ───
+model DairyExchangeRate {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation("TenantDairyExchangeRates", fields: [tenantId], references: [id])
+  baseCurrency    String   @default("UGX")
+  quoteCurrency   String   // KES, RWF, TZS
+  rate            Float    // 1 base = rate quote
+  rateDate        DateTime @default(now())
+  source          String   @default("manual") // manual / API / central_bank
+  createdAt       DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([rateDate])
+  @@unique([tenantId, baseCurrency, quoteCurrency, rateDate])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ZIWA360 Phase 6: Scale & Intelligence
+// Credit scoring with lenders, IoT devices, GPS collars, predictive analytics,
+// insurance products, open partner API
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ─── P6-1. IoT Device Registry (GPS collars, temp loggers, analyzers) ───
+model DairyIoTDevice {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation("TenantDairyIoTDevices", fields: [tenantId], references: [id])
+  deviceUid       String   @unique // hardware serial / MAC
+  deviceType      String   @default("gps_collar") // gps_collar / temp_logger / milk_analyzer / rfid_reader / ble_scale
+  manufacturer    String?
+  model           String?
+  firmwareVersion String?
+  cowId           String?  // linked DairyCow (if animal-mounted)
+  vehicleId       String?  // linked DairyVehicle (if vehicle-mounted)
+  mccCenterId     String?  // linked DairyMccCenter (if MCC-installed)
+  batteryPct      Float?
+  lastPingAt      DateTime?
+  lastPingLat     Float?
+  lastPingLng     Float?
+  config          String?  // JSON: {pingInterval: 300, geofence: [...]}
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  pings           DairyIoTPing[]  @relation("DairyIoTDevicePings")
+
+  @@index([tenantId])
+  @@index([deviceType])
+  @@index([cowId])
+}
+
+// ─── P6-2. IoT Pings (location, temperature, analyzer readings) ───
+model DairyIoTPing {
+  id              String   @id @default(cuid())
+  deviceId        String
+  device          DairyIoTDevice @relation("DairyIoTDevicePings", fields: [deviceId], references: [id], onDelete: Cascade)
+  pingType        String   @default("location") // location / temperature / analysis / battery
+  lat             Float?
+  lng             Float?
+  tempC           Float?
+  data            String?  // JSON: analyzer readings, scale weight, etc.
+  batteryPct      Float?
+  pingedAt        DateTime @default(now())
+
+  @@index([deviceId])
+  @@index([pingedAt])
+}
+
+// ─── P6-3. Geo-fences (grazing zones, theft alerts) ───
+model DairyGeofence {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation("TenantDairyGeofences", fields: [tenantId], references: [id])
+  name            String   // "Karamoja Grazing Zone A"
+  fenceType       String   @default("grazing") // grazing / restricted / safe_zone
+  polygonJson     String   // GeoJSON polygon coordinates
+  centerLat       Float?
+  centerLng       Float?
+  radiusKm        Float?    // for circular fences
+  alertOnExit     Boolean  @default(true)
+  alertOnEntry    Boolean  @default(false) // for restricted zones
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([fenceType])
+}
+
+// ─── P6-4. Lender Partners (credit scoring integration) ───
+model DairyLender {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation("TenantDairyLenders", fields: [tenantId], references: [id])
+  lenderName      String   // Bank, SACCO, MFI name
+  lenderType      String   @default("bank") // bank / sacco / mfi / digital_lender
+  countryCode     String   @default("UG")
+  contactName     String?
+  contactPhone    String?
+  contactEmail    String?
+  apiUrl          String?  // lender's API for loan applications
+  apiKey          String?  // API key for lender integration
+  maxLoanAmount   Float?
+  minCreditScore  Int?     // minimum credit score to qualify
+  interestRate    Float?   // annual %
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  loanApplications DairyLoanApplication[]  @relation("DairyLenderApplications")
+
+  @@index([tenantId])
+}
+
+// ─── P6-5. Loan Applications (credit score → lender) ───
+model DairyLoanApplication {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation("TenantDairyLoanApplications", fields: [tenantId], references: [id])
+  lenderId        String
+  lender          DairyLender @relation("DairyLenderApplications", fields: [lenderId], references: [id])
+  farmerId        String
+  farmerName      String   // denormalized
+  farmerPhone     String?
+  creditScoreId   String?  // linked DairyCreditScore
+  requestedAmount Float
+  approvedAmount  Float?
+  currency        String   @default("UGX")
+  purpose         String?  // loan purpose
+  durationMonths  Int?
+  interestRate    Float?
+  status          String   @default("pending") // pending / submitted / approved / rejected / disbursed / repaid
+  lenderRef       String?  // lender's internal reference
+  appliedAt      DateTime @default(now())
+  submittedAt     DateTime?
+  approvedAt      DateTime?
+  disbursedAt     DateTime?
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([lenderId])
+  @@index([farmerId])
+  @@index([status])
+}
+
+// ─── P6-6. Predictive Analytics (yield, disease risk, price forecasts) ───
+model DairyPrediction {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation("TenantDairyPredictions", fields: [tenantId], references: [id])
+  predictionType  String   @default("yield") // yield / disease_risk / price_forecast / mastitis_risk / heat_detection
+  targetType      String   @default("cow") // cow / herd / district / mcc / market
+  targetId        String?   // cow ID, district name, MCC ID, etc.
+  predictionDate  DateTime @default(now())
+  targetDate      DateTime // date the prediction is FOR
+  predictedValue Float?   // predicted yield (litres), risk score (0-1), price (UGX/L)
+  unit            String?  // litres, score, UGX/L, %
+  confidence      Float?   // 0-1 confidence level
+  modelVersion    String   @default("v1.0")
+  features        String?  // JSON: input features used
+  notes           String?
+  createdAt       DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([predictionType])
+  @@index([targetDate])
+}
+
+// ─── P6-7. Insurance Products (index-based livestock insurance) ───
+model DairyInsuranceProduct {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation("TenantDairyInsuranceProducts", fields: [tenantId], references: [id])
+  productName     String
+  insurer         String   // insurance company name
+  productType     String   @default("index_based") // index_based / mortality / disease / climate
+  coverageType    String   @default("per_animal") // per_animal / per_herd / per_litre
+  premiumPerAnimal Float?  // annual premium per animal
+  coverageAmount  Float?   // payout per animal
+  triggerType     String?  // rainfall_below / temp_above / mortality_above
+  triggerThreshold Float?  // mm, °C, %
+  payoutAmount    Float?   // payout when trigger hits
+  currency        String   @default("UGX")
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  enrollments     DairyInsuranceEnrollment[]  @relation("DairyInsuranceEnrollments")
+
+  @@index([tenantId])
+}
+
+// ─── P6-8. Insurance Enrollments (farmer + animal enrolled) ───
+model DairyInsuranceEnrollment {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation("TenantDairyInsuranceEnrollments", fields: [tenantId], references: [id])
+  productId       String
+  product         DairyInsuranceProduct @relation("DairyInsuranceEnrollments", fields: [productId], references: [id])
+  farmerId        String
+  farmerName      String   // denormalized
+  cowId           String?  // optional: per-animal enrollment
+  enrollmentDate  DateTime @default(now())
+  premiumPaid     Float?
+  coverageStart   DateTime
+  coverageEnd     DateTime?
+  status          String   @default("active") // active / lapsed / claimed / cancelled
+  claimAmount     Float?
+  claimDate       DateTime?
+  claimStatus     String?  // filed / approved / rejected / paid
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([productId])
+  @@index([farmerId])
+  @@index([status])
+}
+
+// ─── P6-9. Open Partner API Keys (third-party access) ───
+model DairyPartnerApiKey {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation("TenantDairyPartnerApiKeys", fields: [tenantId], references: [id])
+  partnerName     String
+  partnerType     String   @default("processor") // processor / lender / insurer / government / research
+  apiKey          String   @unique // hashed API key
+  scopes          String?  // JSON: ["milk:read", "cows:read", "payments:read"]
+  rateLimitPerMin Int      @default(60)
+  rateLimitPerDay Int      @default(1000)
+  lastUsedAt      DateTime?
+  expiresAt       DateTime?
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([tenantId])
+}
+
+// ─── P6-10. Sustainability / Traceability Data ───
+model DairySustainabilityRecord {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation("TenantDairySustainability", fields: [tenantId], references: [id])
+  recordType      String   @default("carbon_footprint") // carbon_footprint / water_usage / waste_recycled / biodiversity
+  recordDate      DateTime @default(now())
+  farmerId        String?
+  farmerName      String?
+  cowId           String?
+  metric          String   // kg_co2e_per_litre / litres_water_per_litre_milk / kg_waste_recycled / biodiversity_index
+  value           Float
+  unit            String
+  notes           String?
+  createdAt       DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([recordType])
+  @@index([recordDate])
+}
+
+// ─── Add Phase 5+6 back-relations to Tenant ───

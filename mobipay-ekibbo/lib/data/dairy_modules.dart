@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:mobipay_ekibbo/constant/color_constant.dart';
 
-/// ZIWA360 Dairy — Module configurations for all 51 dairy sub-modules.
+/// ZIWA360 Dairy — Module configurations for all 65 dairy sub-modules
+/// (51 Phase 1-4 modules + 14 Phase 5+6 modules).
 ///
 /// Each module declares:
 ///   - `key`           — endpoint slug used in `/api/dairy/<key>`
@@ -93,7 +94,7 @@ class DairyModule {
   String get tableName => 'dairy_$key';
 }
 
-/// Static registry of all 51 ZIWA360 dairy modules.
+/// Static registry of all 65 ZIWA360 dairy modules.
 ///
 /// Order here is the order tiles appear in the dashboard grid.
 class DairyModules {
@@ -2371,6 +2372,760 @@ class DairyModules {
           label: 'Acknowledged At',
           type: DairyFieldType.date,
         ),
+      ],
+    ),
+
+    // 52 ─ Country Configs (Phase 5) ─────────────────────────────────────
+    DairyModule(
+      key: 'country-configs',
+      title: 'Country Configs',
+      icon: Icons.public,
+      color: ColorConstant.info,
+      description: 'Per-country regulatory & currency settings',
+      columns: ['countryCode', 'countryName', 'currency', 'defaultLanguage'],
+      searchFields: [
+        'countryCode',
+        'countryName',
+        'currency',
+        'defaultLanguage',
+        'vetAuthority',
+        'ussdShortcode',
+      ],
+      fields: [
+        DairyField(key: 'countryCode', label: 'Country Code', required: true),
+        DairyField(key: 'countryName', label: 'Country Name', required: true),
+        DairyField(
+          key: 'currency',
+          label: 'Currency',
+          type: DairyFieldType.dropdown,
+          options: ['UGX', 'KES', 'RWF', 'TZS', 'USD'],
+        ),
+        DairyField(
+          key: 'defaultLanguage',
+          label: 'Default Language',
+          type: DairyFieldType.dropdown,
+          options: ['en', 'sw', 'rw', 'fr'],
+        ),
+        DairyField(key: 'supportedLanguages', label: 'Supported Languages (JSON)'),
+        DairyField(key: 'vetAuthority', label: 'Vet Authority'),
+        DairyField(key: 'ussdShortcode', label: 'USSD Shortcode'),
+        DairyField(key: 'ussdGateway', label: 'USSD Gateway'),
+        DairyField(
+          key: 'minFarmgatePrice',
+          label: 'Min Farmgate Price',
+          type: DairyFieldType.number,
+        ),
+        DairyField(
+          key: 'maxFarmgatePrice',
+          label: 'Max Farmgate Price',
+          type: DairyFieldType.number,
+        ),
+        DairyField(key: 'nationalLivestockIdApi', label: 'National Livestock ID API'),
+        DairyField(key: 'eVetApiUrl', label: 'e-Vet API URL'),
+        DairyField(
+          key: 'isActive',
+          label: 'Active',
+          type: DairyFieldType.switch_,
+          defaultValue: true,
+        ),
+      ],
+    ),
+
+    // 53 ─ Translations (Phase 5) ────────────────────────────────────────
+    DairyModule(
+      key: 'translations',
+      title: 'Translations',
+      icon: Icons.translate,
+      color: ColorConstant.secondaryLight,
+      description: 'Dairy UI translations (en, sw, rw, luganda, runyankole)',
+      columns: ['languageCode', 'key', 'value'],
+      searchFields: ['languageCode', 'key', 'value'],
+      fields: [
+        DairyField(
+          key: 'languageCode',
+          label: 'Language Code',
+          required: true,
+        ),
+        DairyField(key: 'key', label: 'Translation Key', required: true),
+        DairyField(
+          key: 'value',
+          label: 'Value',
+          type: DairyFieldType.textarea,
+          required: true,
+        ),
+      ],
+    ),
+
+    // 54 ─ Local Partners (Phase 5) ───────────────────────────────────────
+    DairyModule(
+      key: 'local-partners',
+      title: 'Local Partners',
+      icon: Icons.handshake_outlined,
+      color: ColorConstant.gold,
+      description: 'Cooperatives, MCC networks, telcos, vet boards',
+      columns: ['partnerName', 'partnerType', 'countryCode', 'status'],
+      searchFields: [
+        'partnerName',
+        'partnerType',
+        'countryCode',
+        'contactName',
+        'contactPhone',
+        'contactEmail',
+        'status',
+      ],
+      fields: [
+        DairyField(key: 'partnerName', label: 'Partner Name', required: true),
+        DairyField(
+          key: 'partnerType',
+          label: 'Partner Type',
+          type: DairyFieldType.dropdown,
+          options: [
+            'cooperative',
+            'mcc_network',
+            'telco',
+            'vet_board',
+            'processor',
+          ],
+        ),
+        DairyField(
+          key: 'countryCode',
+          label: 'Country Code',
+          type: DairyFieldType.dropdown,
+          options: ['UG', 'KE', 'RW', 'TZ'],
+        ),
+        DairyField(key: 'contactName', label: 'Contact Name'),
+        DairyField(key: 'contactPhone', label: 'Contact Phone'),
+        DairyField(key: 'contactEmail', label: 'Contact Email'),
+        DairyField(key: 'agreementUrl', label: 'Agreement URL'),
+        DairyField(
+          key: 'status',
+          label: 'Status',
+          type: DairyFieldType.dropdown,
+          options: ['pending', 'active', 'suspended', 'terminated'],
+        ),
+        DairyField(
+          key: 'startDate',
+          label: 'Start Date',
+          type: DairyFieldType.date,
+        ),
+        DairyField(key: 'endDate', label: 'End Date', type: DairyFieldType.date),
+        DairyField(key: 'notes', label: 'Notes', type: DairyFieldType.textarea),
+      ],
+    ),
+
+    // 55 ─ Exchange Rates (Phase 5) ───────────────────────────────────────
+    DairyModule(
+      key: 'exchange-rates',
+      title: 'Exchange Rates',
+      icon: Icons.currency_exchange,
+      color: ColorConstant.secondary,
+      description: 'Multi-currency exchange rates (UGX / KES / RWF / TZS)',
+      columns: ['baseCurrency', 'quoteCurrency', 'rate', 'rateDate'],
+      searchFields: ['baseCurrency', 'quoteCurrency', 'source'],
+      fields: [
+        DairyField(
+          key: 'baseCurrency',
+          label: 'Base Currency',
+          type: DairyFieldType.dropdown,
+          options: ['UGX', 'KES', 'RWF', 'TZS', 'USD'],
+        ),
+        DairyField(
+          key: 'quoteCurrency',
+          label: 'Quote Currency',
+          required: true,
+        ),
+        DairyField(
+          key: 'rate',
+          label: 'Rate (1 base = ? quote)',
+          type: DairyFieldType.number,
+          required: true,
+        ),
+        DairyField(
+          key: 'rateDate',
+          label: 'Rate Date',
+          type: DairyFieldType.date,
+        ),
+        DairyField(
+          key: 'source',
+          label: 'Source',
+          type: DairyFieldType.dropdown,
+          options: ['manual', 'API', 'central_bank'],
+        ),
+      ],
+    ),
+
+    // 56 ─ IoT Devices (Phase 6) ──────────────────────────────────────────
+    DairyModule(
+      key: 'iot-devices',
+      title: 'IoT Devices',
+      icon: Icons.sensors,
+      color: ColorConstant.info,
+      description: 'GPS collars, temp loggers, milk analyzers, RFID readers',
+      columns: ['deviceUid', 'deviceType', 'manufacturer', 'isActive'],
+      searchFields: [
+        'deviceUid',
+        'deviceType',
+        'manufacturer',
+        'model',
+        'firmwareVersion',
+      ],
+      fields: [
+        DairyField(key: 'deviceUid', label: 'Device UID', required: true),
+        DairyField(
+          key: 'deviceType',
+          label: 'Device Type',
+          type: DairyFieldType.dropdown,
+          options: [
+            'gps_collar',
+            'temp_logger',
+            'milk_analyzer',
+            'rfid_reader',
+            'ble_scale',
+          ],
+        ),
+        DairyField(key: 'manufacturer', label: 'Manufacturer'),
+        DairyField(key: 'model', label: 'Model'),
+        DairyField(key: 'firmwareVersion', label: 'Firmware Version'),
+        DairyField(key: 'cowId', label: 'Linked Cow ID'),
+        DairyField(key: 'vehicleId', label: 'Linked Vehicle ID'),
+        DairyField(key: 'mccCenterId', label: 'Linked MCC Center ID'),
+        DairyField(
+          key: 'batteryPct',
+          label: 'Battery %',
+          type: DairyFieldType.number,
+        ),
+        DairyField(key: 'config', label: 'Config (JSON)'),
+        DairyField(
+          key: 'isActive',
+          label: 'Active',
+          type: DairyFieldType.switch_,
+          defaultValue: true,
+        ),
+      ],
+    ),
+
+    // 57 ─ IoT Pings (Phase 6) ────────────────────────────────────────────
+    DairyModule(
+      key: 'iot-pings',
+      title: 'IoT Pings',
+      icon: Icons.radar,
+      color: ColorConstant.primaryLight,
+      description: 'Telemetry pings: location, temperature, battery, analyzers',
+      columns: ['deviceId', 'pingType', 'pingedAt', 'batteryPct'],
+      searchFields: ['deviceId', 'pingType', 'data'],
+      fields: [
+        DairyField(key: 'deviceId', label: 'Device ID', required: true),
+        DairyField(
+          key: 'pingType',
+          label: 'Ping Type',
+          type: DairyFieldType.dropdown,
+          options: ['location', 'temperature', 'analysis', 'battery'],
+        ),
+        DairyField(key: 'lat', label: 'Latitude', type: DairyFieldType.number),
+        DairyField(key: 'lng', label: 'Longitude', type: DairyFieldType.number),
+        DairyField(key: 'tempC', label: 'Temperature (°C)', type: DairyFieldType.number),
+        DairyField(key: 'data', label: 'Data (JSON)'),
+        DairyField(
+          key: 'batteryPct',
+          label: 'Battery %',
+          type: DairyFieldType.number,
+        ),
+        DairyField(
+          key: 'pingedAt',
+          label: 'Pinged At',
+          type: DairyFieldType.date,
+        ),
+      ],
+    ),
+
+    // 58 ─ Geofences (Phase 6) ────────────────────────────────────────────
+    DairyModule(
+      key: 'geofences',
+      title: 'Geofences',
+      icon: Icons.map_outlined,
+      color: ColorConstant.success,
+      description: 'Grazing zones, restricted areas, safe zones, theft alerts',
+      columns: ['name', 'fenceType', 'radiusKm', 'isActive'],
+      searchFields: ['name', 'fenceType'],
+      fields: [
+        DairyField(key: 'name', label: 'Name', required: true),
+        DairyField(
+          key: 'fenceType',
+          label: 'Fence Type',
+          type: DairyFieldType.dropdown,
+          options: ['grazing', 'restricted', 'safe_zone'],
+        ),
+        DairyField(
+          key: 'polygonJson',
+          label: 'Polygon (GeoJSON)',
+          type: DairyFieldType.textarea,
+          required: true,
+        ),
+        DairyField(key: 'centerLat', label: 'Center Lat', type: DairyFieldType.number),
+        DairyField(key: 'centerLng', label: 'Center Lng', type: DairyFieldType.number),
+        DairyField(
+          key: 'radiusKm',
+          label: 'Radius (km)',
+          type: DairyFieldType.number,
+        ),
+        DairyField(
+          key: 'alertOnExit',
+          label: 'Alert on Exit',
+          type: DairyFieldType.switch_,
+          defaultValue: true,
+        ),
+        DairyField(
+          key: 'alertOnEntry',
+          label: 'Alert on Entry',
+          type: DairyFieldType.switch_,
+        ),
+        DairyField(
+          key: 'isActive',
+          label: 'Active',
+          type: DairyFieldType.switch_,
+          defaultValue: true,
+        ),
+      ],
+    ),
+
+    // 59 ─ Lenders (Phase 6) ──────────────────────────────────────────────
+    DairyModule(
+      key: 'lenders',
+      title: 'Lenders',
+      icon: Icons.account_balance,
+      color: ColorConstant.primaryDark,
+      description: 'Banks, SACCOs, MFIs, digital lenders',
+      columns: ['lenderName', 'lenderType', 'countryCode', 'isActive'],
+      searchFields: [
+        'lenderName',
+        'lenderType',
+        'countryCode',
+        'contactName',
+        'contactEmail',
+        'contactPhone',
+      ],
+      fields: [
+        DairyField(key: 'lenderName', label: 'Lender Name', required: true),
+        DairyField(
+          key: 'lenderType',
+          label: 'Lender Type',
+          type: DairyFieldType.dropdown,
+          options: ['bank', 'sacco', 'mfi', 'digital_lender'],
+        ),
+        DairyField(
+          key: 'countryCode',
+          label: 'Country Code',
+          type: DairyFieldType.dropdown,
+          options: ['UG', 'KE', 'RW', 'TZ'],
+        ),
+        DairyField(key: 'contactName', label: 'Contact Name'),
+        DairyField(key: 'contactPhone', label: 'Contact Phone'),
+        DairyField(key: 'contactEmail', label: 'Contact Email'),
+        DairyField(key: 'apiUrl', label: 'API URL'),
+        DairyField(key: 'apiKey', label: 'API Key'),
+        DairyField(
+          key: 'maxLoanAmount',
+          label: 'Max Loan Amount',
+          type: DairyFieldType.number,
+        ),
+        DairyField(
+          key: 'minCreditScore',
+          label: 'Min Credit Score',
+          type: DairyFieldType.number,
+        ),
+        DairyField(
+          key: 'interestRate',
+          label: 'Interest Rate (%)',
+          type: DairyFieldType.number,
+        ),
+        DairyField(
+          key: 'isActive',
+          label: 'Active',
+          type: DairyFieldType.switch_,
+          defaultValue: true,
+        ),
+      ],
+    ),
+
+    // 60 ─ Loan Applications (Phase 6) ────────────────────────────────────
+    DairyModule(
+      key: 'loan-applications',
+      title: 'Loan Applications',
+      icon: Icons.request_quote_outlined,
+      color: ColorConstant.warning,
+      description: 'Farmer loan applications via credit score → lender',
+      columns: ['farmerName', 'requestedAmount', 'status', 'appliedAt'],
+      searchFields: [
+        'farmerName',
+        'farmerPhone',
+        'lenderRef',
+        'purpose',
+        'status',
+        'currency',
+      ],
+      fields: [
+        DairyField(key: 'lenderId', label: 'Lender ID', required: true),
+        DairyField(key: 'farmerId', label: 'Farmer ID', required: true),
+        DairyField(key: 'farmerName', label: 'Farmer Name', required: true),
+        DairyField(key: 'farmerPhone', label: 'Farmer Phone'),
+        DairyField(key: 'creditScoreId', label: 'Credit Score ID'),
+        DairyField(
+          key: 'requestedAmount',
+          label: 'Requested Amount',
+          type: DairyFieldType.number,
+          required: true,
+        ),
+        DairyField(
+          key: 'approvedAmount',
+          label: 'Approved Amount',
+          type: DairyFieldType.number,
+        ),
+        DairyField(
+          key: 'currency',
+          label: 'Currency',
+          type: DairyFieldType.dropdown,
+          options: ['UGX', 'USD', 'KES', 'TZS', 'RWF'],
+        ),
+        DairyField(key: 'purpose', label: 'Purpose'),
+        DairyField(
+          key: 'durationMonths',
+          label: 'Duration (Months)',
+          type: DairyFieldType.number,
+        ),
+        DairyField(
+          key: 'interestRate',
+          label: 'Interest Rate (%)',
+          type: DairyFieldType.number,
+        ),
+        DairyField(
+          key: 'status',
+          label: 'Status',
+          type: DairyFieldType.dropdown,
+          options: [
+            'pending',
+            'submitted',
+            'approved',
+            'rejected',
+            'disbursed',
+            'repaid',
+          ],
+        ),
+        DairyField(key: 'lenderRef', label: 'Lender Reference'),
+        DairyField(key: 'appliedAt', label: 'Applied At', type: DairyFieldType.date),
+        DairyField(key: 'submittedAt', label: 'Submitted At', type: DairyFieldType.date),
+        DairyField(key: 'approvedAt', label: 'Approved At', type: DairyFieldType.date),
+        DairyField(key: 'disbursedAt', label: 'Disbursed At', type: DairyFieldType.date),
+        DairyField(key: 'notes', label: 'Notes', type: DairyFieldType.textarea),
+      ],
+    ),
+
+    // 61 ─ Predictions (Phase 6) ──────────────────────────────────────────
+    DairyModule(
+      key: 'predictions',
+      title: 'Predictions',
+      icon: Icons.insights,
+      color: ColorConstant.secondary,
+      description: 'Predictive analytics: yield, disease, price, mastitis, heat',
+      columns: [
+        'predictionType',
+        'targetType',
+        'targetDate',
+        'predictedValue',
+        'confidence',
+      ],
+      searchFields: [
+        'predictionType',
+        'targetType',
+        'targetId',
+        'unit',
+        'modelVersion',
+        'notes',
+      ],
+      fields: [
+        DairyField(
+          key: 'predictionType',
+          label: 'Prediction Type',
+          type: DairyFieldType.dropdown,
+          options: [
+            'yield',
+            'disease_risk',
+            'price_forecast',
+            'mastitis_risk',
+            'heat_detection',
+          ],
+        ),
+        DairyField(
+          key: 'targetType',
+          label: 'Target Type',
+          type: DairyFieldType.dropdown,
+          options: ['cow', 'herd', 'district', 'mcc', 'market'],
+        ),
+        DairyField(key: 'targetId', label: 'Target ID'),
+        DairyField(
+          key: 'predictionDate',
+          label: 'Prediction Date',
+          type: DairyFieldType.date,
+        ),
+        DairyField(
+          key: 'targetDate',
+          label: 'Target Date',
+          type: DairyFieldType.date,
+          required: true,
+        ),
+        DairyField(
+          key: 'predictedValue',
+          label: 'Predicted Value',
+          type: DairyFieldType.number,
+        ),
+        DairyField(key: 'unit', label: 'Unit'),
+        DairyField(
+          key: 'confidence',
+          label: 'Confidence (0-1)',
+          type: DairyFieldType.number,
+        ),
+        DairyField(key: 'modelVersion', label: 'Model Version'),
+        DairyField(key: 'features', label: 'Features (JSON)'),
+        DairyField(key: 'notes', label: 'Notes', type: DairyFieldType.textarea),
+      ],
+    ),
+
+    // 62 ─ Insurance Products (Phase 6) ───────────────────────────────────
+    DairyModule(
+      key: 'insurance-products',
+      title: 'Insurance Products',
+      icon: Icons.shield_outlined,
+      color: ColorConstant.danger,
+      description: 'Index-based livestock & mortality insurance products',
+      columns: [
+        'productName',
+        'insurer',
+        'productType',
+        'coverageType',
+        'isActive',
+      ],
+      searchFields: [
+        'productName',
+        'insurer',
+        'productType',
+        'coverageType',
+        'triggerType',
+        'currency',
+      ],
+      fields: [
+        DairyField(key: 'productName', label: 'Product Name', required: true),
+        DairyField(key: 'insurer', label: 'Insurer', required: true),
+        DairyField(
+          key: 'productType',
+          label: 'Product Type',
+          type: DairyFieldType.dropdown,
+          options: ['index_based', 'mortality', 'disease', 'climate'],
+        ),
+        DairyField(
+          key: 'coverageType',
+          label: 'Coverage Type',
+          type: DairyFieldType.dropdown,
+          options: ['per_animal', 'per_herd', 'per_litre'],
+        ),
+        DairyField(
+          key: 'premiumPerAnimal',
+          label: 'Premium per Animal',
+          type: DairyFieldType.number,
+        ),
+        DairyField(
+          key: 'coverageAmount',
+          label: 'Coverage Amount',
+          type: DairyFieldType.number,
+        ),
+        DairyField(
+          key: 'triggerType',
+          label: 'Trigger Type',
+          type: DairyFieldType.dropdown,
+          options: ['rainfall_below', 'temp_above', 'mortality_above'],
+        ),
+        DairyField(
+          key: 'triggerThreshold',
+          label: 'Trigger Threshold',
+          type: DairyFieldType.number,
+        ),
+        DairyField(
+          key: 'payoutAmount',
+          label: 'Payout Amount',
+          type: DairyFieldType.number,
+        ),
+        DairyField(
+          key: 'currency',
+          label: 'Currency',
+          type: DairyFieldType.dropdown,
+          options: ['UGX', 'USD', 'KES', 'TZS', 'RWF'],
+        ),
+        DairyField(
+          key: 'isActive',
+          label: 'Active',
+          type: DairyFieldType.switch_,
+          defaultValue: true,
+        ),
+      ],
+    ),
+
+    // 63 ─ Insurance Enrollments (Phase 6) ────────────────────────────────
+    DairyModule(
+      key: 'insurance-enrollments',
+      title: 'Insurance Enrollments',
+      icon: Icons.fact_check_outlined,
+      color: ColorConstant.secondaryLight,
+      description: 'Farmer / animal enrollments in insurance products',
+      columns: ['farmerName', 'status', 'coverageStart', 'premiumPaid'],
+      searchFields: ['farmerName', 'status', 'claimStatus', 'notes'],
+      fields: [
+        DairyField(key: 'productId', label: 'Product ID', required: true),
+        DairyField(key: 'farmerId', label: 'Farmer ID', required: true),
+        DairyField(key: 'farmerName', label: 'Farmer Name', required: true),
+        DairyField(key: 'cowId', label: 'Cow ID (optional)'),
+        DairyField(
+          key: 'enrollmentDate',
+          label: 'Enrollment Date',
+          type: DairyFieldType.date,
+        ),
+        DairyField(
+          key: 'premiumPaid',
+          label: 'Premium Paid',
+          type: DairyFieldType.number,
+        ),
+        DairyField(
+          key: 'coverageStart',
+          label: 'Coverage Start',
+          type: DairyFieldType.date,
+          required: true,
+        ),
+        DairyField(
+          key: 'coverageEnd',
+          label: 'Coverage End',
+          type: DairyFieldType.date,
+        ),
+        DairyField(
+          key: 'status',
+          label: 'Status',
+          type: DairyFieldType.dropdown,
+          options: ['active', 'lapsed', 'claimed', 'cancelled'],
+        ),
+        DairyField(
+          key: 'claimAmount',
+          label: 'Claim Amount',
+          type: DairyFieldType.number,
+        ),
+        DairyField(
+          key: 'claimDate',
+          label: 'Claim Date',
+          type: DairyFieldType.date,
+        ),
+        DairyField(
+          key: 'claimStatus',
+          label: 'Claim Status',
+          type: DairyFieldType.dropdown,
+          options: ['filed', 'approved', 'rejected', 'paid'],
+        ),
+        DairyField(key: 'notes', label: 'Notes', type: DairyFieldType.textarea),
+      ],
+    ),
+
+    // 64 ─ Partner API Keys (Phase 6) ────────────────────────────────────
+    DairyModule(
+      key: 'partner-api-keys',
+      title: 'Partner API Keys',
+      icon: Icons.vpn_key_outlined,
+      color: ColorConstant.primary,
+      description: 'Third-party partner API keys (hashed on create)',
+      columns: ['partnerName', 'partnerType', 'isActive', 'expiresAt'],
+      searchFields: ['partnerName', 'partnerType', 'apiKey', 'scopes'],
+      fields: [
+        DairyField(key: 'partnerName', label: 'Partner Name', required: true),
+        DairyField(
+          key: 'partnerType',
+          label: 'Partner Type',
+          type: DairyFieldType.dropdown,
+          options: [
+            'processor',
+            'lender',
+            'insurer',
+            'government',
+            'research',
+          ],
+        ),
+        DairyField(
+          key: 'apiKey',
+          label: 'API Key (will be hashed)',
+          required: true,
+          hint: 'Stored as SHA-256 hash; returned in plaintext only once.',
+        ),
+        DairyField(key: 'scopes', label: 'Scopes (JSON)'),
+        DairyField(
+          key: 'rateLimitPerMin',
+          label: 'Rate Limit / Min',
+          type: DairyFieldType.number,
+        ),
+        DairyField(
+          key: 'rateLimitPerDay',
+          label: 'Rate Limit / Day',
+          type: DairyFieldType.number,
+        ),
+        DairyField(
+          key: 'expiresAt',
+          label: 'Expires At',
+          type: DairyFieldType.date,
+        ),
+        DairyField(
+          key: 'isActive',
+          label: 'Active',
+          type: DairyFieldType.switch_,
+          defaultValue: true,
+        ),
+      ],
+    ),
+
+    // 65 ─ Sustainability Records (Phase 6) ──────────────────────────────
+    DairyModule(
+      key: 'sustainability',
+      title: 'Sustainability',
+      icon: Icons.eco_outlined,
+      color: ColorConstant.secondary,
+      description: 'Carbon footprint, water usage, waste recycled, biodiversity',
+      columns: ['recordType', 'metric', 'value', 'unit', 'recordDate'],
+      searchFields: [
+        'recordType',
+        'farmerName',
+        'metric',
+        'unit',
+        'notes',
+      ],
+      fields: [
+        DairyField(
+          key: 'recordType',
+          label: 'Record Type',
+          type: DairyFieldType.dropdown,
+          options: [
+            'carbon_footprint',
+            'water_usage',
+            'waste_recycled',
+            'biodiversity',
+          ],
+        ),
+        DairyField(
+          key: 'recordDate',
+          label: 'Record Date',
+          type: DairyFieldType.date,
+        ),
+        DairyField(key: 'farmerId', label: 'Farmer ID'),
+        DairyField(key: 'farmerName', label: 'Farmer Name'),
+        DairyField(key: 'cowId', label: 'Cow ID'),
+        DairyField(key: 'metric', label: 'Metric', required: true),
+        DairyField(
+          key: 'value',
+          label: 'Value',
+          type: DairyFieldType.number,
+          required: true,
+        ),
+        DairyField(key: 'unit', label: 'Unit', required: true),
+        DairyField(key: 'notes', label: 'Notes', type: DairyFieldType.textarea),
       ],
     ),
   ];

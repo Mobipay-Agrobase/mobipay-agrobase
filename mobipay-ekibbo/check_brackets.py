@@ -155,8 +155,14 @@ def check_balance(path: str) -> tuple[bool, str]:
 
 
 def main():
-    base = "/home/z/my-project/mobipay-ekibbo/lib"
+    # Resolve paths relative to the script's own location so the checker works
+    # from any clone directory (the original project lives at
+    # /home/z/my-project/mobipay-ekibbo, this clone at
+    # /home/z/my-project/p4-clone/mobipay-ekibbo).
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    base = os.path.join(script_dir, "lib")
     files = [
+        "screens/shell/main_shell.dart",
         "screens/crops/crops_list_screen.dart",
         "screens/trainings/training_form_screen.dart",
         "screens/trainings/trainings_list_screen.dart",

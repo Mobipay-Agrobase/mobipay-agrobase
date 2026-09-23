@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:mobipay_ekibbo/data/dairy_modules.dart';
 import 'package:mobipay_ekibbo/screens/crops/crops_list_screen.dart';
 import 'package:mobipay_ekibbo/screens/dashboard/breakdowns_dashboard_screen.dart';
-import 'package:mobipay_ekibbo/screens/dashboard/views/dashboard_screen.dart';
 import 'package:mobipay_ekibbo/screens/dairy/dairy_dashboard_screen.dart';
 import 'package:mobipay_ekibbo/screens/dairy/dairy_list_screen.dart';
 import 'package:mobipay_ekibbo/screens/farmer_detail_screen.dart';
@@ -20,6 +19,7 @@ import 'package:mobipay_ekibbo/screens/profile/profile_screen.dart';
 import 'package:mobipay_ekibbo/screens/qr_scan/qr_scan_screen.dart';
 import 'package:mobipay_ekibbo/screens/settings/settings_screen.dart';
 import 'package:mobipay_ekibbo/screens/settings/sync_screen.dart';
+import 'package:mobipay_ekibbo/screens/shell/main_shell.dart';
 import 'package:mobipay_ekibbo/screens/trainings/training_form_screen.dart';
 import 'package:mobipay_ekibbo/screens/trainings/trainings_list_screen.dart';
 import 'package:mobipay_ekibbo/screens/transactions/transactions_list_screen.dart';
@@ -39,8 +39,15 @@ class RoutesManager {
       case RouterName.login:
         screen = const LoginScreen();
         break;
+      case RouterName.mainShell:
+        // MainShell hosts the Dashboard + left Drawer + speed-dial FAB.
+        screen = const MainShell();
+        break;
       case RouterName.dashboard:
-        screen = const DashboardScreen();
+        // Legacy: dashboard is now hosted inside MainShell. We still expose
+        // this route for any code that pushes directly — it renders the
+        // MainShell wrapper so the drawer + FAB remain available.
+        screen = const MainShell();
         break;
       case RouterName.farmerRegistration:
         // Existing FarmerRegistrationScreen takes no args (per task rules we
@@ -146,6 +153,9 @@ class RoutesManager {
 
 class RouterName {
   static const login = '/login';
+  /// Hosts the Dashboard + left Drawer + speed-dial FAB. Initial route after
+  /// a successful login (set as the post-login destination in login_screen).
+  static const mainShell = '/main_shell';
   static const dashboard = '/dashboard';
   static const farmerRegistration = '/farmer_registration';
   static const farmersList = '/farmers';

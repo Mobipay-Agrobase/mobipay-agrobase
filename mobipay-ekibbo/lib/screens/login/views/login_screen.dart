@@ -82,8 +82,8 @@ class _LoginScreenState extends State<LoginScreen> {
       ApiClient().setAuth(token, tenantId);
 
       if (!mounted) return;
-      // Navigate to dashboard, replace login route
-      navigatorKey.currentState?.pushReplacementNamed(RouterName.dashboard);
+      // Navigate to MainShell (dashboard + drawer + FAB), replacing login route.
+      navigatorKey.currentState?.pushReplacementNamed(RouterName.mainShell);
     } catch (e) {
       _showError('Network error: $e');
     } finally {

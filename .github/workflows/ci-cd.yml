@@ -110,6 +110,23 @@ jobs:
       - name: Install Vercel CLI
         run: npm install -g vercel@latest
 
+      # Create a `.vercel/project.json` file so `vercel pull` knows which project
+      # + org to authenticate as. Without this, `vercel pull` fails with:
+      #   "Could not retrieve Project Settings. To link your Project, remove the
+      #    `.vercel` directory and deploy again."
+      # The standard fix is to run `vercel link`, but that requires interactive
+      # input. Writing the file directly is the recommended CI pattern.
+      - name: Link Vercel project
+        env:
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+        run: |
+          mkdir -p .vercel
+          printf '{\n  "projectId": "%s",\n  "orgId": "%s",\n  "settings": {\n    "createdAt": 1690000000000,\n    "framework": "nextjs"\n  }\n}\n' \
+            "$VERCEL_PROJECT_ID" "$VERCEL_ORG_ID" > .vercel/project.json
+          echo "✓ Linked .vercel/project.json (projectId=$VERCEL_PROJECT_ID, orgId=$VERCEL_ORG_ID)"
+          cat .vercel/project.json
+
       - name: Pull Vercel Environment
         run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
         env:

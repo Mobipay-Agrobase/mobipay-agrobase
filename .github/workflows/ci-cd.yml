@@ -73,6 +73,10 @@ jobs:
           NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
 
   # ─── Stage 3: Deploy to Vercel (main only) ──────────────────────
+  # NOTE: Vercel's native GitHub integration auto-deploys on every push to main.
+  # This CI/CD stage is a SECOND deploy mechanism that uses the Vercel CLI to
+  # build artifacts in CI (where we control NODE_OPTIONS, cache, etc.) and push
+  # them via `vercel deploy --prebuilt`. This stage runs AFTER the build stage.
   deploy:
     name: Deploy to Vercel
     runs-on: ubuntu-latest
@@ -82,8 +86,8 @@ jobs:
       - uses: actions/checkout@v4
 
       # Fail fast with a clear, actionable message if any of the 3 required Vercel
-      # secrets are missing. Without this, the next step (`vercel pull`) fails with
-      # the cryptic "Could not retrieve Project Settings" error which is hard to debug.
+      # secrets are missing. Without this, the next step fails with the cryptic
+      # "Could not retrieve Project Settings" error which is hard to debug.
       - name: Verify Vercel secrets are set
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
@@ -110,40 +114,102 @@ jobs:
       - name: Install Vercel CLI
         run: npm install -g vercel@latest
 
-      # Create a `.vercel/project.json` file so `vercel pull` knows which project
-      # + org to authenticate as. Without this, `vercel pull` fails with:
-      #   "Could not retrieve Project Settings. To link your Project, remove the
-      #    `.vercel` directory and deploy again."
-      # The standard fix is to run `vercel link`, but that requires interactive
-      # input. Writing the file directly is the recommended CI pattern.
-      - name: Link Vercel project
+      # Trigger a fresh production deployment via the Vercel REST API.
+      # This approach is more robust than `vercel pull` + `vercel build` +
+      # `vercel deploy --prebuilt` because:
+      #   1. The Vercel-native GitHub integration handles the actual build, so we
+      #      don't need to replicate build env vars / NODE_OPTIONS / Prisma
+      #      generate in CI.
+      #   2. `vercel pull` requires a user-scoped token (full /v2/user access).
+      #      The vcp_*** token is project-scoped, which is more secure but
+      #      doesn't have permission to call /v2/user — so `vercel pull` fails
+      #      with "Could not retrieve Project Settings" even when project.json is
+      #      set up correctly.
+      #   3. The REST API approach works with project-scoped tokens.
+      - name: Trigger Vercel production deployment
         env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          COMMIT_SHA: ${{ github.sha }}
+          COMMIT_REF: ${{ github.ref_name }}
         run: |
-          mkdir -p .vercel
-          printf '{\n  "projectId": "%s",\n  "orgId": "%s",\n  "settings": {\n    "createdAt": 1690000000000,\n    "framework": "nextjs"\n  }\n}\n' \
-            "$VERCEL_PROJECT_ID" "$VERCEL_ORG_ID" > .vercel/project.json
-          echo "✓ Linked .vercel/project.json (projectId=$VERCEL_PROJECT_ID, orgId=$VERCEL_ORG_ID)"
-          cat .vercel/project.json
+          set -euo pipefail
+          echo "Triggering Vercel production deployment for commit $COMMIT_SHA..."
 
-      - name: Pull Vercel Environment
-        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
-        env:
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          RESPONSE=$(curl -sS -X POST \
+            "https://api.vercel.com/v13/deployments?forceNewDeployment=true" \
+            -H "Authorization: Bearer $VERCEL_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"name\": \"mobipay-agrobase\",
+              \"project\": \"mobipay-agrobase\",
+              \"gitSource\": {
+                \"type\": \"github\",
+                \"org\": \"Mobipay-Agrobase\",
+                \"repo\": \"mobipay-agrobase\",
+                \"ref\": \"$COMMIT_SHA\"
+              },
+              \"target\": \"production\"
+            }")
 
-      - name: Build Project Artifacts
-        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
-        env:
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          DEPLOYMENT_ID=$(echo "$RESPONSE" | python3 -c "import json,sys; print(json.load(sys.stdin).get('id',''))" 2>/dev/null || echo "")
+          DEPLOYMENT_URL=$(echo "$RESPONSE" | python3 -c "import json,sys; print(json.load(sys.stdin).get('url',''))" 2>/dev/null || echo "")
+          ERROR_MSG=$(echo "$RESPONSE" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('error',{}).get('message','')) if 'error' in d else print('')" 2>/dev/null || echo "")
 
-      - name: Deploy to Vercel
-        run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
+          if [ -n "$ERROR_MSG" ] && [ "$ERROR_MSG" != "" ]; then
+            echo "::error::Vercel API error: $ERROR_MSG"
+            echo "::error::Full response: $RESPONSE"
+            exit 1
+          fi
+
+          if [ -z "$DEPLOYMENT_ID" ]; then
+            echo "::error::Failed to trigger Vercel deployment — no deployment ID returned"
+            echo "::error::Full response: $RESPONSE"
+            exit 1
+          fi
+
+          echo "✓ Vercel deployment triggered: $DEPLOYMENT_ID"
+          echo "✓ Deployment URL: https://$DEPLOYMENT_URL"
+          echo "DEPLOYMENT_ID=$DEPLOYMENT_ID" >> $GITHUB_ENV
+          echo "DEPLOYMENT_URL=$DEPLOYMENT_URL" >> $GITHUB_ENV
+
+      # Poll the deployment until it reaches a terminal state.
+      - name: Wait for Vercel deployment to be ready
         env:
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          set -euo pipefail
+          echo "Waiting for deployment $DEPLOYMENT_ID to be ready..."
+          for i in $(seq 1 60); do  # 60 attempts × 15s = 15 minutes max
+            STATUS=$(curl -sS \
+              -H "Authorization: Bearer $VERCEL_TOKEN" \
+              "https://api.vercel.com/v13/deployments/$DEPLOYMENT_ID" \
+              | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('status','UNKNOWN'))" 2>/dev/null || echo "UNKNOWN")
+
+            echo "Attempt $i: status=$STATUS"
+
+            if [ "$STATUS" = "READY" ]; then
+              echo "✓ Deployment is READY"
+              exit 0
+            fi
+
+            if [ "$STATUS" = "ERROR" ]; then
+              echo "::error::Vercel deployment failed with status ERROR"
+              exit 1
+            fi
+
+            sleep 15
+          done
+          echo "::error::Timed out waiting for Vercel deployment to be ready (15 min)"
+          exit 1
+
+      - name: Report deployment URL
+        run: |
+          echo "## 🚀 Vercel Production Deployment" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Deployment URL:** https://$DEPLOYMENT_URL" >> $GITHUB_STEP_SUMMARY
+          echo "**Production URL:** https://mobipay-agrobase.vercel.app" >> $GITHUB_STEP_SUMMARY
 
   # ─── Stage 4: Post-Deploy DB Migration ──────────────────────────
   migrate:

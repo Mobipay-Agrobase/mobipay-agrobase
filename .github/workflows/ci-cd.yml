@@ -81,6 +81,32 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Fail fast with a clear, actionable message if any of the 3 required Vercel
+      # secrets are missing. Without this, the next step (`vercel pull`) fails with
+      # the cryptic "Could not retrieve Project Settings" error which is hard to debug.
+      - name: Verify Vercel secrets are set
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+        run: |
+          echo "Checking required Vercel secrets..."
+          missing=()
+          [ -z "$VERCEL_TOKEN" ]      && missing+=("VERCEL_TOKEN")
+          [ -z "$VERCEL_PROJECT_ID" ] && missing+=("VERCEL_PROJECT_ID")
+          [ -z "$VERCEL_ORG_ID" ]    && missing+=("VERCEL_ORG_ID")
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "::error::Missing required Vercel secrets: ${missing[*]}"
+            echo "::error::Configure them at: https://github.com/${{ github.repository }}/settings/secrets/actions"
+            echo ""
+            echo "Required secrets:"
+            echo "  VERCEL_TOKEN       — Vercel API token (create at https://vercel.com/account/tokens)"
+            echo "  VERCEL_PROJECT_ID  — Run: vercel project ls (or: vercel link && cat .vercel/project.json)"
+            echo "  VERCEL_ORG_ID       — Run: vercel teams ls (your team ID)"
+            exit 1
+          fi
+          echo "✓ All Vercel secrets present."
+
       - name: Install Vercel CLI
         run: npm install -g vercel@latest
 

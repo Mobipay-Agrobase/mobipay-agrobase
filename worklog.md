@@ -147,3 +147,46 @@ Stage Summary:
 - Nightly cron job auto-computes all KPIs + climate scores for every active farmer
 - Flutter app now has 11 features (added Impact) with 3 new screens
 - Codebase: 138 → 143 Prisma models, 229 → 237 API routes, 10 → 11 Flutter features
+
+---
+Task ID: ekibbo-feedback-2026-09
+Agent: Super Z (main agent)
+Task: EKiBBO review-3 feedback — restore fully-removed MD dashboard sections (web + mobile parity) + fix Docker Deploy CI failure
+
+Work Log:
+- Reviewed Isaac's 2026-09 feedback: "some of the sections as guided in the first sheet were fully removed"
+- Root cause: commit 32c0231 (Phase A, Sheet-1) removed dashboard sections — 'Active Loans'
+  mini-stat, entire 'Purchase Performance' section, entire 'Sales Performance' section,
+  and 5 loyalty engagement mini-stats (Total Sales, Input Buyers, Training Attendees,
+  Farm Visits, Crops Sold) — when the guidance was to simplify, not remove.
+- Web (EkbiboDashboards.tsx / EkbMdDashboard): restored all four removals verbatim.
+  Data pipeline (purchases/sales fetch + commodity aggregation) and the loyalty API
+  engagement fields were never removed, so this is a pure rendering restoration.
+- Mobile (mobile/ app dashboard_page.dart): loyalty section extended from 3 mini-stats
+  to the full engagement signal set (Total Sales, Repeat Sellers, Multi-Crop, Input
+  Buyers, Trained, Farm Visits, Crops Sold, Avg Sales/Farmer) — parity with web.
+- API (src/lib/mobile/sync.ts computeLoyaltyKpis): added totalSalesCount,
+  cropsSoldCount, multiCropFarmerCount, avgSalesPerFarmer (additive fields;
+  distinct-product queries mirror the web loyalty route; uses Sale.product field).
+- CI fix (Dockerfile): Docker Deploy workflow failed at `npm ci` because the
+  postinstall hook (`prisma generate`) ran before prisma/schema.prisma was copied
+  into the builder stage. Now `COPY prisma ./prisma` precedes npm ci in both
+  deps and builder stages.
+
+Verification:
+- npx tsc --noEmit --skipLibCheck: 0 errors
+- eslint (changed files): 0 errors, 0 warnings
+- next build: compiled successfully (334 pages, all ekibbo dashboard routes present)
+- jest: 28/28 passed (permissions suite)
+- Dart structural balance check on dashboard_page.dart: balanced
+- Note: node_modules symlink in repo left untouched (not part of this commit)
+
+Stage Summary:
+- EKiBBO MD dashboard back to full section set: Operations Snapshot (with Active
+  Loans), Purchase Performance, Sales Performance, Customer Loyalty (full 8
+  engagement signals), plus all post-removal sections (Breakdowns, Loyalty Cycle,
+  Geographic, Trends) retained — nothing from the newer work was dropped.
+- Mobile loyalty section now mirrors web engagement signals.
+- Docker Deploy CI unblocked.
+- Feedback-25092026.xlsx was not present in the upload directory — second-last and
+  last sheet additions could not be read; restore scope derived from git evidence.

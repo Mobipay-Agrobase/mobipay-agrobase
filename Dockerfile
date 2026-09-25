@@ -12,6 +12,12 @@ WORKDIR /app
 # Copy lockfiles first for cache optimization
 COPY package.json package-lock.json* ./
 
+# Prisma schema must be present BEFORE npm ci — package.json declares
+# "postinstall": "prisma generate", which fails with "Could not find
+# Prisma Schema" when the schema isn't in the image yet (this was the
+# root cause of the failing Docker Deploy GitHub Action).
+COPY prisma ./prisma
+
 # Install dependencies only (skip devDependencies in production)
 RUN \
   if [ -f package-lock.json ]; then npm ci --omit=dev; \
@@ -25,6 +31,10 @@ WORKDIR /app
 
 # Copy ALL dependencies (including dev) for build
 COPY package.json package-lock.json* ./
+
+# Prisma schema must be present BEFORE npm ci (postinstall runs
+# `prisma generate` — see note in Stage 1 above).
+COPY prisma ./prisma
 RUN npm ci
 
 # Copy source

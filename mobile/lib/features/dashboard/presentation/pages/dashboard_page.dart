@@ -208,6 +208,13 @@ class _DashboardPageState extends State<DashboardPage> {
     final repeatCount = loyalty['repeatSellerCount'] as int? ?? 0;
     final inputBuyers = loyalty['inputPurchaseFarmerCount'] as int? ?? 0;
     final trainingCount = loyalty['trainingFarmerCount'] as int? ?? 0;
+    final farmVisits = loyalty['farmVisitFarmerCount'] as int? ?? 0;
+    // Restored engagement signals (parity with the web EKIBBO MD dashboard):
+    // the API now also returns these in the loyalty block.
+    final totalSales = _loyaltyInt(loyalty, 'totalSalesCount');
+    final cropsSold = _loyaltyInt(loyalty, 'cropsSoldCount');
+    final multiCrop = _loyaltyInt(loyalty, 'multiCropFarmerCount');
+    final avgSales = _loyaltyDouble(loyalty, 'avgSalesPerFarmer');
     final period = loyalty['period'] as Map<String, dynamic>?;
 
     return Card(
@@ -311,20 +318,56 @@ class _DashboardPageState extends State<DashboardPage> {
               ],
             ),
             const SizedBox(height: 16),
-            // Mini stats grid
+            // Mini stats grid — full engagement signal set, mirroring the web
+            // EKIBBO MD dashboard loyalty section (restored 2026-09).
             Row(
               children: [
+                Expanded(child: _buildLoyaltyMiniStat('Total Sales', totalSales.toString(), const Color(0xFF60A5FA))),
+                const SizedBox(width: 8),
                 Expanded(child: _buildLoyaltyMiniStat('Repeat Sellers', repeatCount.toString(), const Color(0xFFFBBF24))),
                 const SizedBox(width: 8),
-                Expanded(child: _buildLoyaltyMiniStat('Input Buyers', inputBuyers.toString(), const Color(0xFF60A5FA))),
+                Expanded(child: _buildLoyaltyMiniStat('Multi-Crop', multiCrop.toString(), const Color(0xFF34D399))),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(child: _buildLoyaltyMiniStat('Input Buyers', inputBuyers.toString(), const Color(0xFF93C5FD))),
                 const SizedBox(width: 8),
                 Expanded(child: _buildLoyaltyMiniStat('Trained', trainingCount.toString(), const Color(0xFFA78BFA))),
+                const SizedBox(width: 8),
+                Expanded(child: _buildLoyaltyMiniStat('Farm Visits', farmVisits.toString(), const Color(0xFF5EEAD4))),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(child: _buildLoyaltyMiniStat('Crops Sold', cropsSold.toString(), const Color(0xFF818CF8))),
+                const SizedBox(width: 8),
+                Expanded(child: _buildLoyaltyMiniStat('Avg Sales / Farmer', avgSales == 0 ? '—' : avgSales.toString(), const Color(0xFF6EE7B7))),
               ],
             ),
           ],
         ),
       ),
     );
+  }
+
+  /// Reads an int from the loyalty JSON block (handles int/double/String).
+  int _loyaltyInt(Map<String, dynamic> loyalty, String key) {
+    final v = loyalty[key];
+    if (v is int) return v;
+    if (v is num) return v.toInt();
+    if (v is String) return int.tryParse(v) ?? 0;
+    return 0;
+  }
+
+  /// Reads a double from the loyalty JSON block (handles int/double/String).
+  double _loyaltyDouble(Map<String, dynamic> loyalty, String key) {
+    final v = loyalty[key];
+    if (v is num) return v.toDouble();
+    if (v is String) return double.tryParse(v) ?? 0.0;
+    return 0.0;
   }
 
   Widget _buildLoyaltyMiniStat(String label, String value, Color color) {

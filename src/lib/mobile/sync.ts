@@ -446,9 +446,11 @@ export class MobileSyncEngine {
 
       const sellers = new Set<string>()
       let repeatSellerCount = 0
+      let totalSalesCount = 0
       for (const row of salesGrouped as any[]) {
         if (!row.farmerId) continue
         sellers.add(row.farmerId)
+        totalSalesCount += row._count._all
         if (row._count._all >= 2) repeatSellerCount++
       }
       const inputBuyers = new Set<string>()
@@ -462,6 +464,35 @@ export class MobileSyncEngine {
         ...sellers, ...inputBuyers, ...trainingAttendees, ...farmVisitFarmers,
       ])
 
+      // Distinct crops sold (for cropsSoldCount + multiCropFarmerCount) —
+      // mirrors the web /api/dashboard/ekibbo-loyalty engagement block so the
+      // mobile loyalty section can show the same engagement signals.
+      // NOTE: the Sale model field is `product` (not commodity).
+      const [distinctCrops, multiCropRows] = await Promise.all([
+        db.sale.findMany({
+          where: { ...tf, category: 'PRODUCE', status: 'COMPLETED', createdAt: { gte: ytdFrom, lte: now }, farmerId: { not: null } },
+          select: { product: true },
+          distinct: ['product'],
+        }),
+        db.sale.findMany({
+          where: { ...tf, category: 'PRODUCE', status: 'COMPLETED', createdAt: { gte: ytdFrom, lte: now }, farmerId: { not: null } },
+          select: { farmerId: true, product: true },
+          distinct: ['farmerId', 'product'],
+        }),
+      ])
+      const cropsSoldCount = distinctCrops.length
+      const farmerCrops = new Map<string, Set<string>>()
+      for (const row of multiCropRows as any[]) {
+        const fid = row.farmerId
+        if (!fid) continue
+        if (!farmerCrops.has(fid)) farmerCrops.set(fid, new Set())
+        farmerCrops.get(fid)!.add(row.product)
+      }
+      let multiCropFarmerCount = 0
+      for (const crops of farmerCrops.values()) {
+        if (crops.size >= 2) multiCropFarmerCount++
+      }
+
       const loyalFarmerCount = sellers.size
       const activeFarmerCount = activeFarmers.size
       return {
@@ -469,6 +500,10 @@ export class MobileSyncEngine {
         activeFarmerCount,
         loyalFarmerRate: activeFarmerCount > 0 ? Math.round((loyalFarmerCount / activeFarmerCount) * 1000) / 10 : null,
         repeatSellerCount,
+        totalSalesCount,
+        cropsSoldCount,
+        multiCropFarmerCount,
+        avgSalesPerFarmer: loyalFarmerCount > 0 ? Math.round((totalSalesCount / loyalFarmerCount) * 10) / 10 : 0,
         inputPurchaseFarmerCount: inputBuyers.size,
         trainingFarmerCount: trainingAttendees.size,
         farmVisitFarmerCount: farmVisitFarmers.size,

@@ -596,10 +596,168 @@ export function EkbMdDashboard() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <EkbMiniStat label="Total Farmers" value={fmtNum(stats.farmerCount)} icon={Users} color="text-emerald-600" hint="Registered in your tenant" />
           <EkbMiniStat label="Pending Approvals" value={pendingApprovals} icon={Clock} color="text-amber-600" hint="Awaiting your review" />
+          <EkbMiniStat label="Active Loans" value={stats.activeLoanCount} icon={CreditCard} color="text-teal-600" hint="Disbursed + outstanding" />
           <EkbMiniStat label="Trainings" value={stats.trainingCount} icon={GraduationCap} color="text-cyan-600" hint="Total conducted" />
         </div>
       </EkbDashboardSection>
 
+      {/* ─── Section 2 · Purchase Performance ─── */}
+      {/* Restored per EKiBBO review 2026-09: this section was guided in Sheet-1
+          but was fully removed in the earlier implementation. The data pipeline
+          (purchases fetch + commodity aggregation) was never removed, so this
+          is a pure rendering restoration. */}
+      <EkbDashboardSection
+        icon={ShoppingCart}
+        title="Purchase Performance"
+        description="Volume and value by commodity value chain"
+        accent="bg-blue-50 dark:bg-blue-950/40 text-blue-600"
+        collapsible
+        onViewAll={() => setActiveModule('purchases')}
+        viewAllLabel="Open Purchases"
+        right={
+          <Badge variant="outline" className="text-[11px] font-normal">
+            <ShoppingCart className="w-3 h-3 mr-1" />
+            {purchases.length} purchases
+          </Badge>
+        }
+      >
+        <div className="space-y-4">
+          <Card>
+            <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
+              <CardTitle className="text-sm">Purchase Volume by Value Chain (kg)</CardTitle>
+              <BarChart3 className="w-4 h-4 text-muted-foreground/60" />
+            </CardHeader>
+            <CardContent>
+              {purchaseChart.length === 0 ? (
+                <EmptyState message="No purchases recorded yet" />
+              ) : (
+                <ChartContainer config={volumeConfig} className="h-[260px] w-full">
+                  <BarChart data={purchaseChart}>
+                    <CartesianGrid vertical={false} strokeDasharray="3 3" opacity={0.3} />
+                    <XAxis dataKey="name" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Bar dataKey="volume" fill="var(--chart-1)" radius={[6, 6, 0, 0]}>
+                      {purchaseChart.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                    </Bar>
+                  </BarChart>
+                </ChartContainer>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2"><CardTitle className="text-sm">Purchase Summary by Value Chain</CardTitle></CardHeader>
+            <CardContent className="p-0">
+              {Object.keys(purchaseByCommodity).length === 0 ? (
+                <EmptyState message="No purchases recorded yet" />
+              ) : (
+                <Table>
+                  <TableHeader><TableRow>
+                    <TableHead>Value Chain</TableHead>
+                    <TableHead className="text-right">Transactions</TableHead>
+                    <TableHead className="text-right">Total Volume (kg)</TableHead>
+                    <TableHead className="text-right">Avg per Txn (kg)</TableHead>
+                    <TableHead className="text-right">Total Value (UGX)</TableHead>
+                    <TableHead className="text-right">Avg Price/kg</TableHead>
+                  </TableRow></TableHeader>
+                  <TableBody>
+                    {Object.entries(purchaseByCommodity)
+                      .sort(([, a], [, b]) => b.volume - a.volume)
+                      .map(([commodity, v]) => (
+                        <TableRow key={commodity}>
+                          <TableCell className="font-medium text-sm">{commodity}</TableCell>
+                          <TableCell className="text-right text-sm">{v.count}</TableCell>
+                          <TableCell className="text-right text-sm font-medium">{fmtNum(v.volume)}</TableCell>
+                          <TableCell className="text-right text-sm">{fmtNum(v.volume / v.count)}</TableCell>
+                          <TableCell className="text-right text-sm font-medium">{fmtUGX(v.value)}</TableCell>
+                          <TableCell className="text-right text-sm">{v.volume > 0 ? fmtUGX(v.value / v.volume) : '—'}</TableCell>
+                        </TableRow>
+                      ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </EkbDashboardSection>
+
+      {/* ─── Section 3 · Sales Performance ─── */}
+      {/* Restored per EKiBBO review 2026-09 — same rationale as Purchase
+          Performance above: guided in Sheet-1, fully removed, now restored. */}
+      <EkbDashboardSection
+        icon={Receipt}
+        title="Sales Performance"
+        description="Volume and revenue by commodity value chain"
+        accent="bg-purple-50 dark:bg-purple-950/40 text-purple-600"
+        collapsible
+        onViewAll={() => setActiveModule('sales')}
+        viewAllLabel="Open Sales"
+        right={
+          <Badge variant="outline" className="text-[11px] font-normal">
+            <Receipt className="w-3 h-3 mr-1" />
+            {sales.length} sales
+          </Badge>
+        }
+      >
+        <div className="space-y-4">
+          <Card>
+            <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
+              <CardTitle className="text-sm">Sales Volume by Value Chain (kg)</CardTitle>
+              <BarChart3 className="w-4 h-4 text-muted-foreground/60" />
+            </CardHeader>
+            <CardContent>
+              {salesChart.length === 0 ? (
+                <EmptyState message="No sales recorded yet" />
+              ) : (
+                <ChartContainer config={salesConfig} className="h-[260px] w-full">
+                  <BarChart data={salesChart}>
+                    <CartesianGrid vertical={false} strokeDasharray="3 3" opacity={0.3} />
+                    <XAxis dataKey="name" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Bar dataKey="volume" fill="var(--chart-3)" radius={[6, 6, 0, 0]}>
+                      {salesChart.map((_, i) => <Cell key={i} fill={COLORS[(i + 3) % COLORS.length]} />)}
+                    </Bar>
+                  </BarChart>
+                </ChartContainer>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2"><CardTitle className="text-sm">Sales Summary by Value Chain</CardTitle></CardHeader>
+            <CardContent className="p-0">
+              {Object.keys(salesByCommodity).length === 0 ? (
+                <EmptyState message="No sales recorded yet" />
+              ) : (
+                <Table>
+                  <TableHeader><TableRow>
+                    <TableHead>Value Chain</TableHead>
+                    <TableHead className="text-right">Transactions</TableHead>
+                    <TableHead className="text-right">Total Volume (kg)</TableHead>
+                    <TableHead className="text-right">Total Value (UGX)</TableHead>
+                    <TableHead className="text-right">Avg Price/kg</TableHead>
+                  </TableRow></TableHeader>
+                  <TableBody>
+                    {Object.entries(salesByCommodity)
+                      .sort(([, a], [, b]) => b.volume - a.volume)
+                      .map(([commodity, v]) => (
+                        <TableRow key={commodity}>
+                          <TableCell className="font-medium text-sm">{commodity}</TableCell>
+                          <TableCell className="text-right text-sm">{v.count}</TableCell>
+                          <TableCell className="text-right text-sm font-medium">{fmtNum(v.volume)}</TableCell>
+                          <TableCell className="text-right text-sm font-medium">{fmtUGX(v.value)}</TableCell>
+                          <TableCell className="text-right text-sm">{v.volume > 0 ? fmtUGX(v.value / v.volume) : '—'}</TableCell>
+                        </TableRow>
+                      ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </EkbDashboardSection>
 
       {/* ─── Section 3.5 · Customer Loyalty (Phase 1) ─── */}
       <EkbDashboardSection
@@ -715,13 +873,23 @@ export function EkbMdDashboard() {
               </Card>
             </div>
 
-            {/* ─── Loyalty key metrics (simplified per EKiBBO Sheet-1) ─── */}
+            {/* ─── Engagement signals (restored per EKiBBO review 2026-09) ─── */}
+            {/* Total Sales, Input Buyers, Training Attendees, Farm Visits and
+                Crops Sold were removed in the earlier simplification; the API
+                still returns every field, so all eight signals are back. */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <EkbMiniStat label="Total Sales" value={loyalty.engagement.totalSalesCount} icon={ShoppingCart} color="text-blue-600" hint="Produce sold" />
+              <EkbMiniStat label="Multi-Crop Farmers" value={loyalty.engagement.multiCropFarmerCount} icon={Leaf} color="text-emerald-600" hint="≥2 distinct crops" />
+              <EkbMiniStat label="Input Buyers" value={loyalty.engagement.inputPurchaseFarmerCount} icon={Package} color="text-amber-600" hint="took inputs" />
+              <EkbMiniStat label="Training Attendees" value={loyalty.engagement.trainingFarmerCount} icon={GraduationCap} color="text-purple-600" hint="attended ≥1" />
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <EkbMiniStat label="Farm Visits" value={loyalty.engagement.farmVisitFarmerCount} icon={MapPin} color="text-teal-600" hint="≥1 visit" />
+              <EkbMiniStat label="Crops Sold" value={loyalty.engagement.cropsSoldCount} icon={Sprout} color="text-indigo-600" hint="distinct products" />
               <EkbMiniStat label="Loyal Farmers" value={loyalty.kpi.loyalFarmerCount} icon={Heart} color="text-rose-600" hint="≥1 sale" />
               <EkbMiniStat label="Repeat Sellers" value={loyalty.kpi.repeatSellerCount} icon={RefreshCw} color="text-amber-700" hint="≥2 sales" />
-              <EkbMiniStat label="Multi-Crop Farmers" value={loyalty.engagement.multiCropFarmerCount} icon={Leaf} color="text-emerald-600" hint="≥2 distinct crops" />
-              <EkbMiniStat label="Avg Sales / Farmer" value={loyalty.engagement.avgSalesPerFarmer} icon={TrendingUp} color="text-blue-600" hint="among loyal" />
             </div>
+            {/* Avg Sales / Farmer remains in the Loyalty Breakdown card above. */}
 
             {/* ─── Monthly trend mini-chart ─── */}
             {loyalty.trend && loyalty.trend.length > 0 && (

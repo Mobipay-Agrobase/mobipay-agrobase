@@ -68,7 +68,7 @@ class _NssfFarmerRegistrationScreenState extends State<NssfFarmerRegistrationScr
       _showError('Please select at least one value chain');
       return;
     }
-    if (_location?.village == null) {
+    if (_location?.villageId == null) {
       _showError('Please select the full location hierarchy (down to village)');
       return;
     }
@@ -89,7 +89,12 @@ class _NssfFarmerRegistrationScreenState extends State<NssfFarmerRegistrationScr
         'nssfActivationStatus': 'PENDING',
         'nssfEnrolledAt': DateTime.now().toIso8601String(),
         // Location (7-level hierarchy → flat FarmerProfile fields)
-        ...?_location?.toFarmerPayload(),
+        'country': _location?.country,
+        'province': _location?.regionName,
+        'district': _location?.districtName,
+        'commune': _location?.countyName,  // Sub-county / Constituency
+        'villageId': _location?.villageId,
+        'villageName': _location?.villageName ?? _location?.parishName,
         // Farmer status
         'status': 'ACTIVE',
         'memberType': 'General',
@@ -203,7 +208,7 @@ class _NssfFarmerRegistrationScreenState extends State<NssfFarmerRegistrationScr
                 controller: _ninCtrl,
                 hint: 'e.g. CM94023102GHK5X',
                 // NIN in Uganda is 14 alphanumeric chars
-                inputType: TextInputType.visiblePassword,
+                keyboardType: TextInputType.visiblePassword,
               ),
               const SizedBox(height: 16),
               // 3. Phone
@@ -212,7 +217,7 @@ class _NssfFarmerRegistrationScreenState extends State<NssfFarmerRegistrationScr
               AppFormField(
                 controller: _phoneCtrl,
                 hint: '+2567XX XXX XXX',
-                inputType: TextInputType.phone,
+                keyboardType: TextInputType.phone,
               ),
               const SizedBox(height: 16),
               // 4. Value Chain (multi-select)
@@ -227,14 +232,14 @@ class _NssfFarmerRegistrationScreenState extends State<NssfFarmerRegistrationScr
               Text('5. Location *', style: TextStyleConstant.quicksandW700(fontSize: 13)),
               const SizedBox(height: 8),
               LocationPicker(
-                onChanged: (sel) => setState(() => _location = sel),
+                onChange: (sel) => setState(() => _location = sel),
               ),
               const SizedBox(height: 32),
               // Submit button
               AppButton(
-                buttonText: _saving ? 'Enrolling...' : 'Enroll Farmer',
+                title: _saving ? 'Enrolling...' : 'Enroll Farmer',
                 isLoading: _saving,
-                onPressed: _saving ? null : _save,
+                onTap: _saving ? null : _save,
               ),
               const SizedBox(height: 24),
             ],

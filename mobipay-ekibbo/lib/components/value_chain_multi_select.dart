@@ -98,7 +98,7 @@ class _ValueChainMultiSelectState extends State<ValueChainMultiSelect> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         decoration: BoxDecoration(
-          border: Border.all(color: ColorConstant.d9d9d9),
+          border: Border.all(color: ColorConstant.grayEB),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Column(

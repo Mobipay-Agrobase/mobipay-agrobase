@@ -38,12 +38,11 @@ class _MyFarmersScreenState extends State<MyFarmersScreen> {
   Future<void> _loadFarmers() async {
     setState(() => _loading = true);
     try {
-      // API auto-scopes to ctx.userId if role == EXTENSION_OFFICER
-      final uri = Uri.parse(
-        '${(await ApiClient().getBaseUrl())}/api/farmers?limit=200'
-        '${_search.isNotEmpty ? '&search=${Uri.encodeComponent(_search)}' : ''}',
-      );
-      final res = await ApiClient().get(uri.toString().split(await ApiClient().getBaseUrl()).last);
+      // API auto-scopes to ctx.userId if role == EXTENSION_OFFICER.
+      // Use the instance .get() helper which automatically prepends the base URL.
+      final path = '/api/farmers?limit=200'
+          '${_search.isNotEmpty ? '&search=${Uri.encodeComponent(_search)}' : ''}';
+      final res = await ApiClient().get(path);
       if (res.statusCode == 200) {
         final d = jsonDecode(res.body);
         setState(() {

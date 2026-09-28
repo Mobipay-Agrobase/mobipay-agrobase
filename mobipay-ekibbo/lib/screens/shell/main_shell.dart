@@ -118,9 +118,31 @@ class _MainShellState extends State<MainShell>
   /// Tenant-aware speed-dial action list.
   List<_SpeedDialAction> _speedDialActions() {
     final isZiwa360 = ApiClient().tenantId == DairyModules.ziwa360TenantId;
-    // ─── NSSF Extension Officer: show NSSF-specific quick actions ───
-    // The officer can enroll a new farmer (NSSF form — 5 data points only)
-    // and view their own enrolled farmers list.
+    // ─── NSSF Extension Officer: ONLY show NSSF-specific quick actions ───
+    // Per product spec: NSSF officers enroll farmers via the NSSF form
+    // (5 data points) — they don't use the regular "Add Farmer" flow
+    // (which captures 80+ fields irrelevant to NSSF). They also have a
+    // "My Farmers" view that lists the farmers they personally enrolled.
+    if (ApiClient().isNssfOfficer) {
+      return [
+        _SpeedDialAction(
+          label: 'Enroll Farmer',
+          icon: Icons.assignment_ind_outlined,
+          color: const Color(0xFF4F46E5),  // indigo
+          route: RouterName.nssfFarmerRegistration,
+        ),
+        _SpeedDialAction(
+          label: 'My Farmers',
+          icon: Icons.people_outline,
+          color: const Color(0xFF10B981),  // green
+          route: RouterName.myFarmers,
+        ),
+      ];
+    }
+    // ─── Non-NSSF Extension Officer (e.g. Ekibbo): show NSSF actions alongside regular ones ───
+    // We still surface the NSSF actions for any extension officer — they may
+    // want to use the lightweight form for quick enrollment. But the regular
+    // Add Farmer + Farm Land + Training actions remain available.
     if (ApiClient().isExtensionOfficer) {
       return [
         _SpeedDialAction(
@@ -318,7 +340,8 @@ class _MainShellState extends State<MainShell>
 
   String _roleDisplayName() {
     final tid = ApiClient().tenantId;
-    if (ApiClient().isExtensionOfficer) return 'NSSF · Extension Officer';
+    if (ApiClient().isNssfOfficer) return 'NSSF · Extension Officer';
+    if (ApiClient().isExtensionOfficer) return 'Extension Officer';
     if (tid == DairyModules.ziwa360TenantId) return 'Dairy · Field Officer';
     return 'Coffee · Field Officer';
   }
@@ -340,6 +363,7 @@ class _MainShellState extends State<MainShell>
   /// Tenant-aware drawer menu items (top section, above divider).
   List<_DrawerItem> _drawerMenuItems() {
     final isZiwa360 = ApiClient().tenantId == DairyModules.ziwa360TenantId;
+    final isNssfOfficer = ApiClient().isNssfOfficer;
     final isExtensionOfficer = ApiClient().isExtensionOfficer;
     final items = <_DrawerItem>[
       _DrawerItem(
@@ -348,7 +372,34 @@ class _MainShellState extends State<MainShell>
         onTap: _closeDrawer,
       ),
     ];
-    // ─── NSSF Extension Officer: add "My Farmers" + "Enroll Farmer" at the top ───
+
+    // ─── NSSF-only menu set (Klimotrust EXTENSION_OFFICER) ───
+    // NSSF officers don't see the regular agribusiness menus (Farmers list,
+    // Farm Lands, Trainings, Crops, Procurement, Transactions, Vehicles, QR).
+    // They only get:
+    //   - Enroll Farmer (the lightweight 5-data-point NSSF form)
+    //   - My Farmers (list of farmers they personally enrolled, with detail
+    //     view that supports Edit + Delete)
+    if (isNssfOfficer) {
+      items.add(_DrawerItem(
+        label: 'Enroll Farmer',
+        icon: Icons.assignment_ind_outlined,
+        color: const Color(0xFF4F46E5),
+        route: RouterName.nssfFarmerRegistration,
+      ));
+      items.add(_DrawerItem(
+        label: 'My Farmers',
+        icon: Icons.people_outline,
+        color: const Color(0xFF10B981),
+        route: RouterName.myFarmers,
+      ));
+      // Return early — no other menu items for NSSF officers.
+      // The bottom section (Profile / Settings / Sync / Sign Out) is added
+      // by _drawerBottomItems() and remains visible.
+      return items;
+    }
+
+    // ─── Non-NSSF Extension Officer (e.g. Ekibbo): show NSSF actions at top ───
     if (isExtensionOfficer) {
       items.add(_DrawerItem(
         label: 'Enroll Farmer (NSSF)',

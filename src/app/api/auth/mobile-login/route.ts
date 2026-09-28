@@ -42,6 +42,7 @@ export async function POST(request: NextRequest) {
         firstName: true,
         lastName: true,
         twoFactorEnabled: true,
+        tenant: { select: { name: true } },
       },
     })
 
@@ -89,8 +90,11 @@ export async function POST(request: NextRequest) {
         email: user.email,
         phone: user.phone,
         name: `${user.firstName} ${user.lastName}`,
+        firstName: user.firstName,
+        lastName: user.lastName,
         role: user.role,
         tenantId: user.tenantId,
+        tenantName: user.tenant?.name ?? '',
       },
     })
   } catch (error) {

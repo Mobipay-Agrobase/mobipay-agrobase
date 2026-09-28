@@ -51,23 +51,43 @@ class ApiClient {
 
   String? _token;
   String? _tenantId;
+  String? _tenantName;     // Kilimo / EKiBBO / ZIWA360 / etc.
   String? _userRole;       // EXTENSION_OFFICER / TENANT_ADMIN / etc.
   String? _userId;         // for /api/farmers (enrolledByOfficerId scoping)
   String? _userName;      // for display in drawer header
 
   bool get isAuthenticated => _token != null;
   String? get tenantId => _tenantId;
+  String? get tenantName => _tenantName;
   String? get token => _token;
   String? get userRole => _userRole;
   String? get userId => _userId;
   String? get userName => _userName;
 
+  /// True when the logged-in user is an EXTENSION_OFFICER on any tenant.
+  /// Use this for general extension-officer UI affordances.
   bool get isExtensionOfficer => _userRole == 'EXTENSION_OFFICER';
+
+  /// True when the logged-in user is an NSSF extension officer — i.e. on the
+  /// Klimotrust tenant (the NGO that operates NSSF voluntary savings on behalf
+  /// of NSSF Uganda). We detect this by checking both the role AND the tenant
+  /// name (case-insensitive contains 'klimo' or 'nssf').
+  ///
+  /// When true, the mobile app shows ONLY the NSSF workflow:
+  ///   - Speed-dial: "Enroll Farmer (NSSF)" + "My Farmers" (no Add Farmer / Farm Land / Trainings)
+  ///   - Drawer: same — only Enroll Farmer + My Farmers + Profile + Settings + Sign Out
+  ///   - "Add Farmer" taps redirect to the NSSF enrollment screen
+  bool get isNssfOfficer {
+    if (_userRole != 'EXTENSION_OFFICER') return false;
+    final name = (_tenantName ?? '').toLowerCase();
+    return name.contains('klimo') || name.contains('nssf');
+  }
 
   Future<void> init() async {
     final prefs = await SharedPreferences.getInstance();
     _token = prefs.getString('auth_token');
     _tenantId = prefs.getString('tenant_id');
+    _tenantName = prefs.getString('tenant_name');
     _userRole = prefs.getString('user_role');
     _userId = prefs.getString('user_id');
     _userName = prefs.getString('user_name');
@@ -78,43 +98,56 @@ class ApiClient {
     _tenantId = tenantId;
   }
 
-  void setUser({String? role, String? userId, String? name}) {
+  void setUser({String? role, String? userId, String? name, String? tenantName}) {
     _userRole = role;
     _userId = userId;
     _userName = name;
+    _tenantName = tenantName;
   }
 
   void clearAuth() {
     _token = null;
     _tenantId = null;
+    _tenantName = null;
     _userRole = null;
     _userId = null;
     _userName = null;
   }
 
-  Future<void> saveSession(String token, String tenantId, {String? role, String? userId, String? name}) async {
+  Future<void> saveSession(
+    String token,
+    String tenantId, {
+    String? role,
+    String? userId,
+    String? name,
+    String? tenantName,
+  }) async {
     _token = token;
     _tenantId = tenantId;
     _userRole = role;
     _userId = userId;
     _userName = name;
+    _tenantName = tenantName;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('auth_token', token);
     await prefs.setString('tenant_id', tenantId);
     if (role != null) await prefs.setString('user_role', role);
     if (userId != null) await prefs.setString('user_id', userId);
     if (name != null) await prefs.setString('user_name', name);
+    if (tenantName != null) await prefs.setString('tenant_name', tenantName);
   }
 
   Future<void> clearSession() async {
     _token = null;
     _tenantId = null;
+    _tenantName = null;
     _userRole = null;
     _userId = null;
     _userName = null;
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('auth_token');
     await prefs.remove('tenant_id');
+    await prefs.remove('tenant_name');
     await prefs.remove('user_role');
     await prefs.remove('user_id');
     await prefs.remove('user_name');

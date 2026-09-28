@@ -15,6 +15,7 @@ import 'package:mobipay_ekibbo/screens/farmers/farmers_list_screen.dart';
 import 'package:mobipay_ekibbo/screens/farmers/farmer_photo_upload_screen.dart';
 import 'package:mobipay_ekibbo/screens/login/views/login_screen.dart';
 import 'package:mobipay_ekibbo/screens/my_farmers/views/my_farmers_screen.dart';
+import 'package:mobipay_ekibbo/screens/nssf_farmer_detail/views/nssf_farmer_detail_screen.dart';
 import 'package:mobipay_ekibbo/screens/nssf_farmer_registration/views/nssf_farmer_registration_screen.dart';
 import 'package:mobipay_ekibbo/screens/procurement/procurement_list_screen.dart';
 import 'package:mobipay_ekibbo/screens/profile/profile_screen.dart';
@@ -135,7 +136,26 @@ class RoutesManager {
 
       // ─── NSSF Extension Officer screens (Sept 2026 go-live) ───
       case RouterName.nssfFarmerRegistration:
-        screen = const NssfFarmerRegistrationScreen();
+        // Accepts an optional farmerId argument for EDIT mode.
+        // When called from the speed-dial / drawer, args is null → CREATE mode.
+        // When called from NssfFarmerDetailScreen's Edit button, args is the farmerId.
+        String? farmerId;
+        if (args is String) {
+          farmerId = args;
+        } else if (args is Map) {
+          farmerId = args['farmerId'] as String?;
+        }
+        screen = NssfFarmerRegistrationScreen(farmerId: farmerId);
+        break;
+      case RouterName.nssfFarmerDetail:
+        // Expects farmerId as the route argument.
+        String? farmerId;
+        if (args is String) {
+          farmerId = args;
+        } else if (args is Map) {
+          farmerId = args['farmerId'] as String?;
+        }
+        screen = NssfFarmerDetailScreen(farmerId: farmerId ?? '');
         break;
       case RouterName.myFarmers:
         screen = const MyFarmersScreen();
@@ -192,6 +212,7 @@ class RouterName {
 
   // ─── NSSF Extension Officer (Sept 2026 go-live) ───
   static const nssfFarmerRegistration = '/nssf_farmer_registration';
+  static const nssfFarmerDetail = '/nssf_farmer_detail';
   static const myFarmers = '/my_farmers';
 
   // ─── ZIWA360 Dairy (Phase 1 + Phase 2) ───

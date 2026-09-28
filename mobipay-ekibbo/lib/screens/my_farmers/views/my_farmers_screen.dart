@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:mobipay_ekibbo/constant/color_constant.dart';
 import 'package:mobipay_ekibbo/constant/text_style_constant.dart';
 import 'package:mobipay_ekibbo/data/api_client.dart';
+import 'package:mobipay_ekibbo/routes/routes_manager.dart';
 
 /// "My Enrolled Farmers" screen for NSSF Extension Officers.
 ///
@@ -146,6 +147,13 @@ class _MyFarmersScreenState extends State<MyFarmersScreen> {
                                 margin: const EdgeInsets.symmetric(vertical: 4),
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                 child: ListTile(
+                                  onTap: () {
+                                    // Open the NSSF Farmer Detail screen (read-only + Edit + Delete)
+                                    Navigator.of(context).pushNamed(
+                                      RouterName.nssfFarmerDetail,
+                                      arguments: f['id'],
+                                    );
+                                  },
                                   leading: CircleAvatar(
                                     backgroundColor: ColorConstant.primary,
                                     child: Text(

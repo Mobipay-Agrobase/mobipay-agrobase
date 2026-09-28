@@ -165,7 +165,35 @@ export default function FarmersView() {
           <Button variant="outline" onClick={() => setShowImport(true)} className="gap-2">
             <Upload className="w-4 h-4" /> Import CSV
           </Button>
-          <Button variant="outline" size="sm" onClick={() => exportToCSV(farmers, 'farmers')} disabled={farmers.length === 0} className="gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={async () => {
+              // Use the dedicated export endpoint — it returns a CSV with NSSF fields
+              // (value chains, NIN, enrolling officer, full 7-level location hierarchy)
+              // that the in-memory exportToCSV helper can't produce.
+              try {
+                const res = await fetch('/api/farmers/export')
+                if (!res.ok) throw new Error(`Export failed (${res.status})`)
+                const blob = await res.blob()
+                const url = URL.createObjectURL(blob)
+                const a = document.createElement('a')
+                a.href = url
+                a.download = `nssf-farmers-${new Date().toISOString().slice(0, 10)}.csv`
+                document.body.appendChild(a)
+                a.click()
+                document.body.removeChild(a)
+                URL.revokeObjectURL(url)
+                toast.success('Farmers exported (NSSF format)')
+              } catch (err) {
+                // Fallback to in-memory export
+                exportToCSV(farmers, 'farmers')
+                toast.info('Used basic export (NSSF export endpoint unavailable)')
+              }
+            }}
+            disabled={farmers.length === 0}
+            className="gap-2"
+          >
             <Download className="w-4 h-4" /> Export CSV
           </Button>
           <Button onClick={() => setActiveModule('farmer-create')} className="gap-2">
@@ -235,6 +263,9 @@ export default function FarmersView() {
                   <TableHead>Farmer</TableHead>
                   <TableHead className="hidden md:table-cell">Phone</TableHead>
                   <TableHead className="hidden md:table-cell">Field Officer</TableHead>
+                  <TableHead className="hidden lg:table-cell">NIN</TableHead>
+                  <TableHead className="hidden lg:table-cell">Value Chain(s)</TableHead>
+                  <TableHead className="hidden xl:table-cell">Enrolled By</TableHead>
                   <TableHead className="hidden xl:table-cell">Village</TableHead>
                   <TableHead className="hidden xl:table-cell">Cooperative</TableHead>
                   <TableHead className="hidden sm:table-cell">Gender</TableHead>
@@ -266,6 +297,24 @@ export default function FarmersView() {
                     <TableCell className="hidden md:table-cell text-sm">{f.phone}</TableCell>
                     <TableCell className="hidden md:table-cell text-sm">
                       {f.extensionOfficer || '—'}
+                    </TableCell>
+                    <TableCell className="hidden lg:table-cell text-sm text-muted-foreground font-mono text-[11px]">
+                      {f.nssfNationalId || f.nationalIdNo || '—'}
+                    </TableCell>
+                    <TableCell className="hidden lg:table-cell text-sm text-muted-foreground">
+                      {Array.isArray(f.nssfValueChains) && f.nssfValueChains.length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {f.nssfValueChains.slice(0, 3).map((vc: string) => (
+                            <Badge key={vc} variant="outline" className="text-[9px] py-0 px-1.5">{vc}</Badge>
+                          ))}
+                          {f.nssfValueChains.length > 3 && (
+                            <Badge variant="outline" className="text-[9px] py-0 px-1.5">+{f.nssfValueChains.length - 3}</Badge>
+                          )}
+                        </div>
+                      ) : (f.nssfValueChain || '—')}
+                    </TableCell>
+                    <TableCell className="hidden xl:table-cell text-sm text-muted-foreground truncate max-w-[140px]">
+                      {f.enrolledByOfficerName || '—'}
                     </TableCell>
                     <TableCell className="hidden xl:table-cell text-sm text-muted-foreground truncate max-w-[150px]">
                       {f.villageName || '—'}

@@ -118,6 +118,31 @@ class _MainShellState extends State<MainShell>
   /// Tenant-aware speed-dial action list.
   List<_SpeedDialAction> _speedDialActions() {
     final isZiwa360 = ApiClient().tenantId == DairyModules.ziwa360TenantId;
+    // ─── NSSF Extension Officer: show NSSF-specific quick actions ───
+    // The officer can enroll a new farmer (NSSF form — 5 data points only)
+    // and view their own enrolled farmers list.
+    if (ApiClient().isExtensionOfficer) {
+      return [
+        _SpeedDialAction(
+          label: 'Enroll Farmer (NSSF)',
+          icon: Icons.assignment_ind_outlined,
+          color: const Color(0xFF4F46E5),  // indigo
+          route: RouterName.nssfFarmerRegistration,
+        ),
+        _SpeedDialAction(
+          label: 'My Farmers',
+          icon: Icons.people_outline,
+          color: const Color(0xFF10B981),  // green
+          route: RouterName.myFarmers,
+        ),
+        _SpeedDialAction(
+          label: AppLang.local.add_farmer,
+          icon: Icons.person_add_outlined,
+          color: ColorConstant.secondary,
+          route: RouterName.farmerRegistration,
+        ),
+      ];
+    }
     if (isZiwa360) {
       return [
         _SpeedDialAction(
@@ -293,11 +318,21 @@ class _MainShellState extends State<MainShell>
 
   String _roleDisplayName() {
     final tid = ApiClient().tenantId;
+    if (ApiClient().isExtensionOfficer) return 'NSSF · Extension Officer';
     if (tid == DairyModules.ziwa360TenantId) return 'Dairy · Field Officer';
     return 'Coffee · Field Officer';
   }
 
   String _userInitials() {
+    final name = ApiClient().userName;
+    if (name != null && name.isNotEmpty) {
+      final parts = name.split(' ').where((s) => s.isNotEmpty).toList();
+      if (parts.length >= 2) {
+        return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+      } else if (parts.length == 1) {
+        return parts[0][0].toUpperCase();
+      }
+    }
     final tid = ApiClient().tenantId;
     return tid == DairyModules.ziwa360TenantId ? 'Z3' : 'FO';
   }
@@ -305,6 +340,7 @@ class _MainShellState extends State<MainShell>
   /// Tenant-aware drawer menu items (top section, above divider).
   List<_DrawerItem> _drawerMenuItems() {
     final isZiwa360 = ApiClient().tenantId == DairyModules.ziwa360TenantId;
+    final isExtensionOfficer = ApiClient().isExtensionOfficer;
     final items = <_DrawerItem>[
       _DrawerItem(
         label: AppLang.local.dashboard,
@@ -312,6 +348,21 @@ class _MainShellState extends State<MainShell>
         onTap: _closeDrawer,
       ),
     ];
+    // ─── NSSF Extension Officer: add "My Farmers" + "Enroll Farmer" at the top ───
+    if (isExtensionOfficer) {
+      items.add(_DrawerItem(
+        label: 'Enroll Farmer (NSSF)',
+        icon: Icons.assignment_ind_outlined,
+        color: const Color(0xFF4F46E5),
+        route: RouterName.nssfFarmerRegistration,
+      ));
+      items.add(_DrawerItem(
+        label: 'My Farmers',
+        icon: Icons.people_outline,
+        color: const Color(0xFF10B981),
+        route: RouterName.myFarmers,
+      ));
+    }
     if (isZiwa360) {
       items.add(
         _DrawerItem(

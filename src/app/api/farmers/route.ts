@@ -23,6 +23,7 @@ export async function GET(request: Request) {
     const gender = searchParams.get('gender') || ''
     const status = searchParams.get('status') || ''
     const isCertified = searchParams.get('isCertified')
+    const enrolledByOfficerId = searchParams.get('enrolledByOfficerId') || ''
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '20')
 
@@ -34,6 +35,14 @@ export async function GET(request: Request) {
     if (gender) where.gender = gender
     if (isCertified === 'true') where.isCertified = true
     if (isCertified === 'false') where.isCertified = false
+    // ─── NSSF: extension officers see only their own enrolled farmers ───
+    // If the caller is an EXTENSION_OFFICER, scope to their enrolledByOfficerId
+    // (unless they explicitly pass enrolledByOfficerId=all to override — only admins can do that).
+    if (enrolledByOfficerId && enrolledByOfficerId !== 'all') {
+      where.enrolledByOfficerId = enrolledByOfficerId
+    } else if (ctx.role === 'EXTENSION_OFFICER') {
+      where.enrolledByOfficerId = ctx.userId
+    }
     if (search) where.OR = [
       { firstName: { contains: search, mode: 'insensitive' } },
       { lastName: { contains: search, mode: 'insensitive' } },
@@ -50,6 +59,8 @@ export async function GET(request: Request) {
         take: limit,
         include: {
           group: { select: { id: true, name: true } },
+          // ─── NSSF: include the enrolling officer (for "Enrolled By" column in admin dashboard) ───
+          enrolledByOfficer: { select: { id: true, firstName: true, lastName: true, email: true } },
         },
         orderBy: { createdAt: 'desc' },
       }),
@@ -71,6 +82,12 @@ export async function GET(request: Request) {
       nationalIdNo: safeDecryptField(f.nationalIdNo),
       bankAccountNo: safeDecryptField(f.bankAccountNo),
       email: safeDecryptField(f.email),
+      // ─── NSSF fields (Sept 2026 go-live) ───
+      nssfValueChains: f.nssfValueChains ? JSON.parse(f.nssfValueChains) : [],
+      // Include the enrolling officer name so the web admin dashboard can show "enrolled by"
+      enrolledByOfficerName: f.enrolledByOfficer
+        ? `${f.enrolledByOfficer.firstName} ${f.enrolledByOfficer.lastName}`
+        : null,
     }))
 
     return NextResponse.json({ farmers: farmersParsed, total, page, totalPages: Math.ceil(total / limit) })
@@ -85,6 +102,34 @@ export async function POST(request: Request) {
     const ctx = await getTenantContext()
     const body = await request.json()
 
+    // ─── NSSF: validate phone uniqueness per tenant ───
+    // The phone field is encrypted at rest, so we can't do a simple WHERE phone = ?
+    // Instead, we encrypt the incoming phone the same way and look it up by hash.
+    // For the common case (no ENCRYPTION_KEY set on dev / fallback), encryptField
+    // returns the value unchanged — so this lookup still works.
+    if (body.phone) {
+      const encryptedPhone = encryptField(body.phone) || body.phone
+      const existing = await db.farmerProfile.findFirst({
+        where: {
+          ...buildTenantFilter(ctx, 'tenantId'),
+          phone: encryptedPhone,
+        },
+        select: { id: true, firstName: true, lastName: true, enrolledByOfficerId: true },
+      })
+      if (existing) {
+        // Return 409 Conflict with details so the mobile app can show a helpful error
+        return NextResponse.json({
+          error: 'DUPLICATE_PHONE',
+          message: `A farmer with phone ${body.phone} is already enrolled on this tenant.`,
+          existingFarmer: {
+            id: existing.id,
+            name: `${existing.firstName} ${existing.lastName}`,
+            enrolledByOfficerId: existing.enrolledByOfficerId,
+          },
+        }, { status: 409 })
+      }
+    }
+
     // Generate tenant-aware farmer code (e.g. EKB-00001 for EKIBBO, SAA-00001 for SAA-WFP-AMS)
     const farmerCode = await generateFarmerCode(ctx.tenantId, body.farmerCode)
 
@@ -97,6 +142,14 @@ export async function POST(request: Request) {
     if (body.farmEquipment) jsonData.farmEquipment = JSON.stringify(body.farmEquipment)
     if (body.mainCrops) jsonData.mainCrops = JSON.stringify(body.mainCrops)
     if (body.livestockTypes) jsonData.livestockTypes = JSON.stringify(body.livestockTypes)
+    // ─── NSSF: multi-value-chain stored as JSON array ───
+    if (body.nssfValueChains) jsonData.nssfValueChains = JSON.stringify(body.nssfValueChains)
+
+    // ─── NSSF: if the caller is an EXTENSION_OFFICER, auto-map them as the enrolling officer ───
+    // This binds the farmer to the officer so the officer sees only their own farmers in mobile.
+    const enrolledByOfficerId =
+      body.enrolledByOfficerId ||
+      (ctx.role === 'EXTENSION_OFFICER' ? ctx.userId : null)
 
     // Create the farmer
     const farmer = await db.farmerProfile.create({
@@ -178,6 +231,15 @@ export async function POST(request: Request) {
         farmSize: body.farmSize,
         farmOwnership: body.farmOwnership || body.housingOwnership,
         groupId: body.groupId,
+
+        // ─── NSSF fields (Kilimo/NSSF go-live Sept 26 2026) ───
+        nssfNationalId: body.nssfNationalId || body.nationalIdNo || null,
+        nssfValueChain: body.nssfValueChain || (Array.isArray(body.nssfValueChains) && body.nssfValueChains.length > 0 ? body.nssfValueChains[0] : null),
+        nssfValueChains: jsonData.nssfValueChains,  // JSON array — set above
+        nssfActivationStatus: body.nssfActivationStatus || 'PENDING',
+        nssfEnrolledAt: body.nssfEnrolledAt ? new Date(body.nssfEnrolledAt) : new Date(),
+        // Officer who enrolled this farmer (auto-set from ctx if EXTENSION_OFFICER)
+        enrolledByOfficerId: enrolledByOfficerId || undefined,
       },
     })
 

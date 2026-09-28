@@ -78,8 +78,18 @@ class _LoginScreenState extends State<LoginScreen> {
 
       // Persist session
       final tenantId = (user['tenantId'] ?? '') as String;
-      await ApiClient().saveSession(token, tenantId);
+      final role = (user['role'] ?? '') as String;
+      final userId = (user['userId'] ?? user['id'] ?? '') as String;
+      final userName = '${user['firstName'] ?? ''} ${user['lastName'] ?? ''}'.trim();
+      await ApiClient().saveSession(
+        token,
+        tenantId,
+        role: role.isNotEmpty ? role : null,
+        userId: userId.isNotEmpty ? userId : null,
+        name: userName.isNotEmpty ? userName : null,
+      );
       ApiClient().setAuth(token, tenantId);
+      ApiClient().setUser(role: role, userId: userId, name: userName);
 
       if (!mounted) return;
       // Navigate to MainShell (dashboard + drawer + FAB), replacing login route.

@@ -14,6 +14,8 @@ import 'package:mobipay_ekibbo/screens/farm_lands/farm_lands_list_screen.dart';
 import 'package:mobipay_ekibbo/screens/farmers/farmers_list_screen.dart';
 import 'package:mobipay_ekibbo/screens/farmers/farmer_photo_upload_screen.dart';
 import 'package:mobipay_ekibbo/screens/login/views/login_screen.dart';
+import 'package:mobipay_ekibbo/screens/my_farmers/views/my_farmers_screen.dart';
+import 'package:mobipay_ekibbo/screens/nssf_farmer_registration/views/nssf_farmer_registration_screen.dart';
 import 'package:mobipay_ekibbo/screens/procurement/procurement_list_screen.dart';
 import 'package:mobipay_ekibbo/screens/profile/profile_screen.dart';
 import 'package:mobipay_ekibbo/screens/qr_scan/qr_scan_screen.dart';
@@ -131,6 +133,14 @@ class RoutesManager {
         screen = const VehiclesListScreen();
         break;
 
+      // ─── NSSF Extension Officer screens (Sept 2026 go-live) ───
+      case RouterName.nssfFarmerRegistration:
+        screen = const NssfFarmerRegistrationScreen();
+        break;
+      case RouterName.myFarmers:
+        screen = const MyFarmersScreen();
+        break;
+
       // ─── ZIWA360 Dairy screens (Phase 1 + Phase 2) ───
       case RouterName.dairyDashboard:
         screen = const DairyDashboardScreen();
@@ -179,6 +189,10 @@ class RouterName {
   static const sync = '/sync';
   static const farmerPhotoUpload = '/farmer_photo_upload';
   static const vehiclesList = '/vehicles';
+
+  // ─── NSSF Extension Officer (Sept 2026 go-live) ───
+  static const nssfFarmerRegistration = '/nssf_farmer_registration';
+  static const myFarmers = '/my_farmers';
 
   // ─── ZIWA360 Dairy (Phase 1 + Phase 2) ───
   static const dairyDashboard = '/dairy';

@@ -1,44 +1,26 @@
 import { PrismaClient } from '@prisma/client'
-import * as dotenv from 'dotenv'
-import * as path from 'path'
-dotenv.config({ path: path.join(process.cwd(), '.env'), override: true })
-
+const db = new PrismaClient()
 async function main() {
-  const db = new PrismaClient()
-
-  console.log('=== EKIBBO Tenant Users ===')
-  const ekibboTenant = await db.tenant.findFirst({ where: { name: 'EKIBBO Coffee Exporters' } })
-  if (ekibboTenant) {
-    const users = await db.user.findMany({
-      where: { tenantId: ekibboTenant.id },
-      select: { id: true, email: true, role: true, isActive: true, firstName: true, lastName: true, phone: true, passwordHash: true },
-    })
-    for (const u of users) {
-      console.log(`  ${u.email} | role: ${u.role} | active: ${u.isActive} | name: ${u.firstName} ${u.lastName} | phone: ${u.phone} | hasPassword: ${!!u.passwordHash}`)
-    }
+  console.log('=== ALL TENANTS ===')
+  const tenants: any[] = await db.tenant.findMany({ orderBy: { name: 'asc' } })
+  for (const t of tenants) {
+    console.log(`${t.id} | ${t.name} | ${t.plan || '-'} | ${t.country || '-'} | status=${t.status || '?'}`)
   }
-
-  console.log('\n=== Ghana + Kenya Tenants ===')
-  const ghanaTenant = await db.tenant.findFirst({ where: { name: 'Agrobase Ghana' } })
-  const kenyaTenant = await db.tenant.findFirst({ where: { name: 'Agrobase Kenya' } })
-  for (const t of [ghanaTenant, kenyaTenant]) {
-    if (!t) continue
-    console.log(`\n  Tenant: ${t.name} (${t.id})`)
-    const [users, farmers, farmLands, vslaGroups] = await Promise.all([
-      db.user.count({ where: { tenantId: t.id } }),
-      db.farmerProfile.count({ where: { tenantId: t.id } }),
-      db.farmLand.count({ where: { farmer: { tenantId: t.id } } }),
-      db.vslaGroup.count({ where: { tenantId: t.id } }),
-    ])
-    console.log(`    Users: ${users}, Farmers: ${farmers}, FarmLands: ${farmLands}, VSLA Groups: ${vslaGroups}`)
+  console.log('\n=== USERS WITH NSSF / KILIMO / EXTENSION ===')
+  const users: any[] = await db.user.findMany({
+    where: {
+      OR: [
+        { email: { contains: 'klimo' } },
+        { email: { contains: 'nssf' } },
+        { email: { contains: 'extension' } },
+        { role: 'EXTENSION_OFFICER' },
+      ]
+    },
+    include: { tenant: { select: { name: true } } }
+  })
+  for (const u of users) {
+    console.log(`${u.email || u.phone} | ${u.role} | ${u.firstName} ${u.lastName} | tenant=${u.tenant?.name || '?'} | active=${u.isActive}`)
   }
-
-  console.log('\n=== All Tenants ===')
-  const allTenants = await db.tenant.findMany({ select: { id: true, name: true, type: true, isActive: true, country: true } })
-  for (const t of allTenants) {
-    console.log(`  ${t.name} | type: ${t.type} | active: ${t.isActive} | country: ${t.country || '—'}`)
-  }
-
-  await db.$disconnect()
+  console.log(`\n=== TOTAL: ${tenants.length} tenants, ${users.length} NSSF/extension users ===`)
 }
-main().catch(e => { console.error(e); process.exit(1) })
+main().catch(e => { console.error(e); process.exit(1) }).finally(() => db.$disconnect())

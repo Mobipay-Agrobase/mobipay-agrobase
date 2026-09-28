@@ -265,6 +265,8 @@ model User {
   supportTicketsAssigned SupportTicket[]    @relation("SupportTicketAssignee")
   ticketReplies          SupportTicketReply[] @relation("TicketReplyUser")
   quotesCreated          Quote[]            @relation("QuoteCreator")
+  // ─── NSSF: farmers enrolled by this extension officer (officer→farmer mapping) ───
+  enrolledFarmers        FarmerProfile[]    @relation("EnrolledByOfficer")
 }
 
 model AgentAssignment {
@@ -558,6 +560,18 @@ model FarmerProfile {
   nssfEnrolledAt      DateTime? // When the farmer was enrolled in NSSF
   nssfActivatedAt     DateTime? // When NSSF confirmed the activation
   nssfValueChain      String?   // Coffee, Cocoa, Vanilla, etc. (for NSSF reporting)
+  // ─── NSSF Multi-Value-Chain (Sept 2026 go-live) ───
+  // Per NSSF requirement, a farmer can be in MULTIPLE value chains simultaneously
+  // (e.g. a farmer may grow Coffee AND keep Dairy cattle). Stored as JSON array of
+  // the 12 official NSSF value chains:
+  //   ["Maize","Rice","Banana (matooke)","Cassava","Irish potato","Beans",
+  //    "Fruits and vegetables","Coffee","Tea","Dairy cattle","Beef cattle / meat",
+  //    "Fish / Aquaculture"]
+  nssfValueChains     String?   // JSON array of value chains
+  // Officer who enrolled this farmer (for "my farmers" view in mobile + web admin).
+  // Maps farmer → extension officer so the officer sees only their enrolled farmers.
+  enrolledByOfficerId String?
+  enrolledByOfficer   User?    @relation("EnrolledByOfficer", fields: [enrolledByOfficerId], references: [id])
   // Relations
   nssfRegistration    NssfRegistration? @relation("NssfRegistrationFarmer")
   nssfContributions   NssfContribution[] @relation("NssfContributionFarmer")
@@ -571,6 +585,12 @@ model FarmerProfile {
   @@index([phone])
   @@index([district])
   @@index([gender])
+  @@index([enrolledByOfficerId])  // NSSF: quick lookup of farmers by officer
+  // NSSF: phone uniqueness is enforced at the API layer (not via DB constraint)
+  // because the production DB has historical duplicate phones from CSV imports that
+  // would otherwise block the migration. The /api/farmers POST route checks for
+  // duplicates before inserting and returns a 409 Conflict if the phone already
+  // exists in the same tenant.
 }
 
 model ChildProfile {

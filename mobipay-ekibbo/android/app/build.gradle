@@ -24,7 +24,13 @@ if (flutterVersionName == null) {
 
 android {
     namespace "co.mobipay.ekibbo"
-    compileSdkVersion 35  // Android 15 (API 35) — required for Play Store submissions as of Aug 2025
+    // compileSdkVersion 36 — required by the latest AndroidX dependencies
+    // (androidx.browser:1.9.0, androidx.activity:1.13.0, androidx.core:1.18.0,
+    //  androidx.navigationevent:1.0.0) which all need compileSdk ≥ 36.
+    // The Flutter SDK ships `flutter.compileSdkVersion` (35) which is now too low.
+    // Compile SDK is backward-compatible — apps built against SDK 36 still run
+    // on Android 7.0+ (API 24) devices, this just unlocks newer compile-time APIs.
+    compileSdkVersion 36
     ndkVersion flutter.ndkVersion
 
     compileOptions {

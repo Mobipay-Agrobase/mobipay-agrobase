@@ -71,14 +71,22 @@ class DashboardScreenState extends State<DashboardScreen> {
       _error = null;
     });
 
-    // NSSF officers: also load the pending-sync count in parallel with the
-    // dashboard stats. We do this even when offline (the local DB is always
-    // readable) so the dashboard "Pending Sync" KPI reflects reality.
+    // NSSF officers: load the pending-sync count from local SQLite FIRST
+    // (instant — no network call). This makes the dashboard show the correct
+    // "Pending Sync" count immediately, even before the network request completes.
     if (ApiClient().isNssfOfficer) {
       try {
         _pendingSyncCount = await NssfSyncEngine().countPending();
       } catch (_) {
         _pendingSyncCount = 0;
+      }
+      // If we already have stats (from a previous load), update them immediately
+      // so the UI re-renders with the new pending count without waiting for the
+      // network round-trip.
+      if (_stats != null && mounted) {
+        setState(() {
+          // Force a re-render with the updated _pendingSyncCount
+        });
       }
     }
 
@@ -104,7 +112,6 @@ class DashboardScreenState extends State<DashboardScreen> {
           _refreshing = false;
         });
       } else if (res.statusCode == 401) {
-        // Session expired — back to login.
         if (!mounted) return;
         await ApiClient().clearSession();
         navigatorKey.currentState?.pushReplacementNamed(RouterName.login);
@@ -119,18 +126,15 @@ class DashboardScreenState extends State<DashboardScreen> {
     } catch (e) {
       if (!mounted) return;
       // NSSF officers: when offline, the dashboard still shows local data.
-      // We construct a minimal stats payload from the local pending count so
-      // the "My Farmers" KPI shows "0" (offline = nothing synced yet) and
-      // the "Pending Sync" KPI shows the real local count.
       if (ApiClient().isNssfOfficer) {
         setState(() {
           _stats = {
-            'farmerCount': 0,  // we don't know the server count when offline
+            'farmerCount': 0,  // unknown offline
             'isExtensionOfficer': true,
             'isNssfOfficer': true,
             'offline': true,
           };
-          _error = null;  // suppress the error banner — offline is normal
+          _error = null;
           _loading = false;
           _refreshing = false;
         });

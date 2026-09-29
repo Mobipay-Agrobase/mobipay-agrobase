@@ -203,12 +203,16 @@ class _MyFarmersScreenState extends State<MyFarmersScreen> {
                                 margin: const EdgeInsets.symmetric(vertical: 4),
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                 child: ListTile(
-                                  onTap: () {
-                                    // Open the NSSF Farmer Detail screen (read-only + Edit + Delete)
-                                    Navigator.of(context).pushNamed(
+                                  onTap: () async {
+                                    // Open the NSSF Farmer Detail screen.
+                                    // After it pops (with refresh=true), reload the list.
+                                    final result = await Navigator.of(context).pushNamed(
                                       RouterName.nssfFarmerDetail,
                                       arguments: f['id'],
                                     );
+                                    if (result == true && mounted) {
+                                      _loadFarmers();
+                                    }
                                   },
                                   leading: CircleAvatar(
                                     backgroundColor: ColorConstant.primary,

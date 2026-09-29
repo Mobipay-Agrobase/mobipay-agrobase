@@ -13,7 +13,9 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     where: { id, ...tf },
     include: {
       group: true,
-      village: { include: { parish: { include: { subCounty: { include: { county: { include: { district: { include: { subRegion: { include: { region: true } } } } } } } } } } } },
+      village: { include: { parish: { include: { subCounty: { include: { county: { include: { district: { include: { subRegion: { include: { region: true } } } } } } } } } } },
+      // NSSF: include the enrolling officer so the detail screen can show "Enrolled By <name>"
+      enrolledByOfficer: { select: { id: true, firstName: true, lastName: true, email: true, phone: true } },
       creditScores: { orderBy: { scoreDate: 'desc' }, take: 1 },
       savings: { take: 10, orderBy: { createdAt: 'desc' } },
       vslaLoans: { take: 10, orderBy: { createdAt: 'desc' } },
@@ -45,11 +47,25 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     farmEquipment: parseJson(farmer.farmEquipment, []),
     mainCrops: parseJson(farmer.mainCrops, []),
     livestockTypes: parseJson(farmer.livestockTypes, []),
+    // NSSF: parse the multi-value-chain JSON into a proper array
+    nssfValueChains: parseJson(farmer.nssfValueChains, []),
     // P7: Decrypt PII fields for the response — safe decrypt (never leaks ciphertext)
     phone: safeDecryptField(farmer.phone),
     nationalIdNo: safeDecryptField(farmer.nationalIdNo),
     bankAccountNo: safeDecryptField(farmer.bankAccountNo),
     email: safeDecryptField(farmer.email),
+    // NSSF: convenience fields so the detail screen doesn't need to construct them
+    enrolledByOfficerName: farmer.enrolledByOfficer
+      ? `${farmer.enrolledByOfficer.firstName} ${farmer.enrolledByOfficer.lastName}`
+      : null,
+    // Full 7-level location hierarchy names (from the village relation)
+    regionName: farmer.village?.parish?.subCounty?.county?.district?.subRegion?.region?.name ?? null,
+    subRegionName: farmer.village?.parish?.subCounty?.county?.district?.subRegion?.name ?? null,
+    districtName: farmer.village?.parish?.subCounty?.county?.district?.name ?? farmer.district,
+    countyName: farmer.village?.parish?.subCounty?.county?.name ?? null,
+    subCountyName: farmer.village?.parish?.subCounty?.name ?? null,
+    parishName: farmer.village?.parish?.name ?? null,
+    villageName: farmer.village?.name ?? farmer.villageName,
   }
 
   // ─── Inline loyalty summary (year-to-date) ─────────────────────────────
@@ -135,6 +151,8 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     for (const key of ['consumerElectronics', 'vehicle', 'bankAccounts', 'insuranceData', 'farmEquipment', 'mainCrops', 'livestockTypes']) {
       if (body[key] !== undefined) jsonData[key] = JSON.stringify(body[key])
     }
+    // NSSF: multi-value-chain stored as JSON array
+    if (body.nssfValueChains !== undefined) jsonData.nssfValueChains = JSON.stringify(body.nssfValueChains)
 
     const scalar: Record<string, unknown> = {}
     const textFields = [
@@ -147,6 +165,8 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       // New fields from the rebuilt AddFarmerForm
       'certificationType', 'primaryIncomeSource', 'secondaryIncomeSource',
       'livingConditions', 'fuelType', 'mealsPerDay', 'farmOwnership',
+      // NSSF fields
+      'nssfNationalId', 'nssfNumber', 'nssfActivationStatus', 'nssfValueChain',
     ]
     for (const k of textFields) if (body[k] !== undefined) scalar[k] = body[k]
 
@@ -162,7 +182,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     const boolFields = ['isCertified', 'loanTakenLastYear', 'loanHasSecurity']
     for (const k of boolFields) if (body[k] !== undefined) scalar[k] = !!body[k]
 
-    const dateFields = ['dateOfBirth', 'enrollmentDate', 'loanRepaymentDate']
+    const dateFields = ['dateOfBirth', 'enrollmentDate', 'loanRepaymentDate', 'nssfEnrolledAt', 'nssfActivatedAt']
     for (const k of dateFields) if (body[k] !== undefined) scalar[k] = new Date(body[k])
 
     const updated = await db.farmerProfile.update({

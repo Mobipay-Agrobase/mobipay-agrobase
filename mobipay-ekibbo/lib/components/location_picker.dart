@@ -28,16 +28,31 @@ class LocationPicker extends StatefulWidget {
   final ValueChanged<LocationSelection> onChange;
 
   /// Optional initial selection (for edit mode — loads the full chain via ancestors API).
+  /// Pass a [LocationSelection] with just [LocationSelection.villageId] set, and
+  /// the picker will call /api/settings/geo/ancestors?villageId=X to fetch the
+  /// full chain, then pre-select each level + load children for the next level.
   final LocationSelection? initial;
+
+  /// A counter that, when changed, resets the picker to empty (no selection).
+  /// Pass `resetTrigger: ++_resetCounter` from the parent form after a successful
+  /// submit so the location dropdowns clear alongside the other text fields.
+  final int resetTrigger;
 
   const LocationPicker({
     super.key,
     required this.onChange,
     this.initial,
+    this.resetTrigger = 0,
   });
 
   @override
   State<LocationPicker> createState() => _LocationPickerState();
+
+  /// Static helper to build a [LocationSelection] from a farmer record's
+  /// `villageId` (used by the edit screen to seed the picker).
+  static LocationSelection fromVillageId(String? villageId) {
+    return LocationSelection(villageId: villageId);
+  }
 }
 
 class _LocationPickerState extends State<LocationPicker> {
@@ -65,11 +80,104 @@ class _LocationPickerState extends State<LocationPicker> {
   bool _loadingSubCounties = false;
   bool _loadingParishes = false;
   bool _loadingVillages = false;
+  bool _loadingInitial = false;  // loading ancestors for edit mode
 
   @override
   void initState() {
     super.initState();
-    _loadRegions();
+    _loadRegions().then((_) {
+      // After regions are loaded, if an initial villageId was provided,
+      // fetch the ancestor chain and pre-select each level.
+      if (widget.initial?.villageId != null && widget.initial!.villageId!.isNotEmpty) {
+        _loadInitialChain(widget.initial!.villageId!);
+      }
+    });
+  }
+
+  @override
+  void didUpdateWidget(covariant LocationPicker oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // If the parent bumped resetTrigger, clear all selections.
+    if (widget.resetTrigger != oldWidget.resetTrigger && widget.resetTrigger > 0) {
+      _resetSelections();
+    }
+    // If the initial villageId changed (e.g. navigating to a different farmer's edit page),
+    // load the new chain.
+    final newVid = widget.initial?.villageId;
+    final oldVid = oldWidget.initial?.villageId;
+    if (newVid != oldVid && newVid != null && newVid.isNotEmpty) {
+      _loadInitialChain(newVid);
+    }
+  }
+
+  void _resetSelections() {
+    setState(() {
+      _regionId = _subRegionId = _districtId = _countyId = _subCountyId = _parishId = _villageId = null;
+      _subRegions = _districts = _counties = _subCounties = _parishes = _villages = [];
+    });
+    widget.onChange(LocationSelection());
+  }
+
+  /// Loads the full ancestor chain for edit mode (villageId → region).
+  /// Then iteratively loads the children for each level so the dropdowns
+  /// can show the selected option.
+  Future<void> _loadInitialChain(String villageId) async {
+    setState(() => _loadingInitial = true);
+    try {
+      final res = await ApiClient().get('/api/settings/geo/ancestors?villageId=$villageId');
+      if (res.statusCode != 200) {
+        if (mounted) setState(() => _loadingInitial = false);
+        return;
+      }
+      final d = jsonDecode(res.body);
+      final chain = d['data'];
+      if (chain == null) {
+        if (mounted) setState(() => _loadingInitial = false);
+        return;
+      }
+      // Set the selected IDs from the chain
+      setState(() {
+        _regionId = chain['regionId'] as String?;
+        _subRegionId = chain['subRegionId'] as String?;
+        _districtId = chain['districtId'] as String?;
+        _countyId = chain['countyId'] as String?;
+        _subCountyId = chain['subCountyId'] as String?;
+        _parishId = chain['parishId'] as String?;
+        _villageId = chain['villageId'] as String?;
+      });
+      // Load children for each level in parallel (so the dropdowns have options
+      // matching the selected ID).
+      final futures = <Future<void>>[];
+      if (_regionId != null) futures.add(_loadSubRegions(_regionId!));
+      if (_subRegionId != null) futures.add(_loadDistricts(_subRegionId!));
+      if (_districtId != null) futures.add(_loadCounties(_districtId!));
+      if (_countyId != null) futures.add(_loadSubCounties(_countyId!));
+      if (_subCountyId != null) futures.add(_loadParishes(_subCountyId!));
+      if (_parishId != null) futures.add(_loadVillages(_parishId!));
+      await Future.wait(futures);
+      // Emit the initial selection to the parent so it has the full chain
+      widget.onChange(LocationSelection(
+        country: chain['country'] ?? 'Uganda',
+        regionId: _regionId,
+        regionName: chain['region'] as String?,
+        subRegionId: _subRegionId,
+        subRegionName: chain['subRegion'] as String?,
+        districtId: _districtId,
+        districtName: chain['district'] as String?,
+        countyId: _countyId,
+        countyName: chain['county'] as String?,
+        subCountyId: _subCountyId,
+        subCountyName: chain['subCounty'] as String?,
+        parishId: _parishId,
+        parishName: chain['parish'] as String?,
+        villageId: _villageId,
+        villageName: chain['village'] as String?,
+      ));
+    } catch (_) {
+      // Non-fatal — picker just shows blank selections
+    } finally {
+      if (mounted) setState(() => _loadingInitial = false);
+    }
   }
 
   Future<void> _loadRegions() async {
@@ -326,6 +434,24 @@ class _LocationPickerState extends State<LocationPicker> {
           style: TextStyleConstant.robotoW600(fontSize: 13, color: ColorConstant.text79),
         ),
         const SizedBox(height: 12),
+        // Loading banner shown while fetching ancestors for edit mode
+        if (_loadingInitial)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Row(
+              children: [
+                const SizedBox(
+                  width: 14, height: 14,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: ColorConstant.primary),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Loading location...',
+                  style: TextStyleConstant.robotoW400(fontSize: 12, color: ColorConstant.text79),
+                ),
+              ],
+            ),
+          ),
         // Level 1: Region
         _buildDropdown(
           label: 'Region',

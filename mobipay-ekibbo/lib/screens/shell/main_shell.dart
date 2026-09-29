@@ -257,11 +257,16 @@ class _MainShellState extends State<MainShell>
                         action: actions[i],
                         fadeIn: _dialFade,
                         index: i,
-                        onTap: () {
+                        onTap: () async {
                           _closeSpeedDial();
                           final route = actions[i].route;
                           if (route != null) {
-                            Navigator.of(context).pushNamed(route);
+                            // Push the route + wait for result. After it pops,
+                            // refresh the dashboard so KPI counts update instantly
+                            // (no manual sync needed — the save already wrote to
+                            // local SQLite which the dashboard reads from).
+                            await Navigator.of(context).pushNamed(route);
+                            if (mounted) _dashboardKey.currentState?.refreshStats();
                           }
                         },
                       ),
@@ -538,13 +543,16 @@ class _MainShellState extends State<MainShell>
           color: ColorConstant.textPrimary,
         ),
       ),
-      onTap: () {
+      onTap: () async {
         _closeDrawer();
         // Delay so the drawer close animation can start before navigation.
         if (item.onTap != null) {
           item.onTap!();
         } else if (item.route != null) {
-          Navigator.of(context).pushNamed(item.route!);
+          await Navigator.of(context).pushNamed(item.route!);
+          // After returning from the route (e.g. Enroll Farmer or My Farmers),
+          // refresh the dashboard so KPI counts update instantly.
+          if (mounted) _dashboardKey.currentState?.refreshStats();
         }
       },
     );

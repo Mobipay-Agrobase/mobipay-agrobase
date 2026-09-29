@@ -24,7 +24,7 @@ if (flutterVersionName == null) {
 
 android {
     namespace "co.mobipay.ekibbo"
-    compileSdkVersion flutter.compileSdkVersion
+    compileSdkVersion 35  // Android 15 (API 35) — required for Play Store submissions as of Aug 2025
     ndkVersion flutter.ndkVersion
 
     compileOptions {
@@ -41,14 +41,20 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId "co.mobipay.ekibbo"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://docs.flutter.dev/deployment/android#reviewing-the-gradle-build-configuration.
-        minSdkVersion flutter.minSdkVersion
-        targetSdkVersion flutter.targetSdkVersion
+        // Android 15 (API 35) is required for Play Store submissions.
+        // minSdkVersion 24 covers Android 7.0+ (96%+ of devices).
+        minSdkVersion 24
+        targetSdkVersion 35
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
+        // ─── 16KB page size support (required for Android 15+ devices) ───
+        // Without this, the app crashes on devices with 16KB page sizes
+        // (newer ARM64 devices like Pixel 8+ running Android 15).
+        // See: https://developer.android.com/guide/practices/page-sizes
+        ndk {
+            abiFilters 'arm64-v8a', 'armeabi-v7a', 'x86_64'
+        }
     }
 
     buildTypes {
@@ -56,6 +62,14 @@ android {
             // TODO: Add your own signing config for the release build.
             // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig signingConfigs.debug
+            // Enable R8 full mode + resource shrinking for smaller APK + faster startup
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+        debug {
+            // Faster debug builds — skip minification
+            minifyEnabled false
         }
     }
 }

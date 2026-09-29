@@ -34,7 +34,9 @@ class NssfSyncEngine {
   NssfSyncEngine._internal();
 
   Database? _db;
-  StreamSubscription<ConnectivityResult>? _connSub;
+  // connectivity_plus 6.x emits `List<ConnectivityResult>` (a device can have
+  // multiple simultaneous connections, e.g. WiFi + VPN). Use the list type here.
+  StreamSubscription<List<ConnectivityResult>>? _connSub;
   bool _isSyncing = false;
 
   /// Singleton DB getter — opens + migrates on first call.
@@ -88,10 +90,19 @@ class NssfSyncEngine {
   /// Start listening for connectivity changes. When connectivity returns
   /// (any of WiFi/Ethernet/Mobile), triggers an automatic sync.
   /// Call this from main.dart on app launch.
+  ///
+  /// NOTE: connectivity_plus 6.x changed `onConnectivityChanged` from
+  /// `Stream<ConnectivityResult>` to `Stream<List<ConnectivityResult>>`
+  /// (a device can have multiple simultaneous connections, e.g. WiFi + VPN).
+  /// We treat the stream as "online" if ANY of the results is not `none`.
   void startAutoSync() {
     _connSub?.cancel();
-    _connSub = Connectivity().onConnectivityChanged.listen((result) {
-      if (result != ConnectivityResult.none) {
+    _connSub = Connectivity().onConnectivityChanged.listen((List<ConnectivityResult> results) {
+      // `results` is a list because a device can have multiple active
+      // connections (e.g. WiFi + Mobile simultaneously). We're "online" if
+      // ANY result is not `none`.
+      final isOnline = results.any((r) => r != ConnectivityResult.none);
+      if (isOnline) {
         // Network is back — wait 2s for the OS to stabilize, then sync.
         Future.delayed(const Duration(seconds: 2), () => syncNow());
       }

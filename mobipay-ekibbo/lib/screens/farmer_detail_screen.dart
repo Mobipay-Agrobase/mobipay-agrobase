@@ -502,7 +502,7 @@ class _FarmerDetailScreenState extends State<FarmerDetailScreen>
           label: AppLang.local.group_name_code,
           value: _str(f['groupName'] ?? f['groupId'])),
       InfoField(
-          label: 'Field Officer',
+          label: 'Extension Officer',
           value: _str(f['extensionOfficer'] ?? f['fieldOfficer'])),
       InfoField(label: AppLang.local.gender, value: _str(f['gender'])),
       InfoField(label: AppLang.local.date_of_birth, value: _str(f['dateOfBirth'])),

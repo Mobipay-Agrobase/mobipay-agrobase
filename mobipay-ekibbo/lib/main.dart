@@ -1,10 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:mobipay_ekibbo/constant/color_constant.dart';
 import 'package:mobipay_ekibbo/constant/text_style_constant.dart';
+import 'package:mobipay_ekibbo/data/api_client.dart';
+import 'package:mobipay_ekibbo/data/nssf_sync_engine.dart';
 import 'package:mobipay_ekibbo/routes/routes_manager.dart';
 import 'package:mobipay_ekibbo/l10n/app_localizations.dart';
 
 void main() {
+  // Initialize the API client (loads token + tenantId from SharedPreferences)
+  // and start the NSSF offline-sync engine (listens for connectivity changes
+  // and auto-pushes pending farmers to the server when internet returns).
+  //
+  // We do this in a post-frame callback so the Widget tree binds first.
+  WidgetsFlutterBinding.ensureInitialized();
+  ApiClient().init().then((_) {
+    // Start the auto-sync listener — only affects NSSF officers (the sync
+    // engine's local DB is empty for non-NSSF users, so syncNow is a no-op).
+    NssfSyncEngine().startAutoSync();
+  });
   runApp(const MyApp());
 }
 
@@ -14,7 +27,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'EKiBBO Agrobase',
+      title: 'Agrobase',
       debugShowCheckedModeBanner: false,
       onGenerateRoute: RoutesManager.onGenerateRoute,
       initialRoute: RouterName.login,

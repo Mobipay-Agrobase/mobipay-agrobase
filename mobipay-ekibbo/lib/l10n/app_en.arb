@@ -1,6 +1,6 @@
 {
   "@@locale": "en",
-  "app_name": "EKiBBO Agrobase",
+  "app_name": "Agrobase",
   "@app_name": {
     "description": "App name shown in titles"
   },
@@ -10,7 +10,7 @@
   "select_role": "Select Role",
   "password": "Password",
   "forgot_password": "Forgot Password?",
-  "field_officer": "Field Officer",
+  "field_officer": "Extension Officer",
   "farmer": "Farmer",
   "admin": "Admin",
   "please_fill_phone": "Please fill phone number!",

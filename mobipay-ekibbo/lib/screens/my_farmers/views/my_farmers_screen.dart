@@ -3,14 +3,21 @@ import 'package:flutter/material.dart';
 import 'package:mobipay_ekibbo/constant/color_constant.dart';
 import 'package:mobipay_ekibbo/constant/text_style_constant.dart';
 import 'package:mobipay_ekibbo/data/api_client.dart';
+import 'package:mobipay_ekibbo/data/nssf_sync_engine.dart';
 import 'package:mobipay_ekibbo/routes/routes_manager.dart';
 
 /// "My Enrolled Farmers" screen for NSSF Extension Officers.
 ///
-/// Calls GET /api/farmers — the API auto-scopes to the calling officer's
-/// enrolledByOfficerId (set during farmer registration). So each officer
-/// sees ONLY the farmers they personally enrolled. The NSSF Admin (TENANT_ADMIN)
-/// sees ALL enrolled farmers across all officers (no scoping).
+/// Displays a MERGED list of:
+///   1. Farmers already synced to the server (GET /api/farmers — auto-scoped
+///      to the calling officer's enrolledByOfficerId)
+///   2. Farmers saved locally but not yet synced (from SQLite nssf_farmers table)
+///
+/// Local-only (pending) farmers appear with an amber "Pending sync" badge so
+/// the officer can distinguish them from synced ones.
+///
+/// Tapping a farmer opens the NSSF Farmer Detail screen, which shows the
+/// full record + sync status + Edit + Delete actions.
 class MyFarmersScreen extends StatefulWidget {
   const MyFarmersScreen({super.key});
 
@@ -39,20 +46,66 @@ class _MyFarmersScreenState extends State<MyFarmersScreen> {
   Future<void> _loadFarmers() async {
     setState(() => _loading = true);
     try {
-      // API auto-scopes to ctx.userId if role == EXTENSION_OFFICER.
-      // Use the instance .get() helper which automatically prepends the base URL.
-      final path = '/api/farmers?limit=200'
-          '${_search.isNotEmpty ? '&search=${Uri.encodeComponent(_search)}' : ''}';
-      final res = await ApiClient().get(path);
-      if (res.statusCode == 200) {
-        final d = jsonDecode(res.body);
-        setState(() {
-          _farmers = List<Map<String, dynamic>>.from(d['farmers'] ?? []);
-          _loading = false;
-        });
-      } else {
-        setState(() => _loading = false);
+      // 1. Always load local farmers from SQLite (works offline)
+      final localFarmers = await NssfSyncEngine().listAllFarmers();
+      // Convert local rows to the same shape as server farmers
+      final localMapped = localFarmers.map((r) => <String, dynamic>{
+        'id': r['server_id'] ?? r['local_id'],  // prefer server_id if synced
+        'local_id': r['local_id'],
+        'firstName': r['first_name'] ?? '',
+        'lastName': r['last_name'] ?? '',
+        'phone': r['phone'] ?? '',
+        'nssfNationalId': r['nin'],
+        'nssfValueChains': r['value_chains'] ?? <String>[],
+        'district': r['district'],
+        'villageName': r['village_name'],
+        'status': 'ACTIVE',
+        'sync_status': r['sync_status'] ?? 'PENDING',
+        '_source': 'local',
+      }).toList();
+
+      // 2. Try to fetch server farmers (auto-scoped to calling officer)
+      List<Map<String, dynamic>> serverFarmers = [];
+      try {
+        final path = '/api/farmers?limit=200'
+            '${_search.isNotEmpty ? '&search=${Uri.encodeComponent(_search)}' : ''}';
+        final res = await ApiClient().get(path);
+        if (res.statusCode == 200) {
+          final d = jsonDecode(res.body);
+          serverFarmers = List<Map<String, dynamic>>.from(d['farmers'] ?? []);
+          // Tag each server farmer with _source: 'server' + sync_status: 'SYNCED'
+          for (final f in serverFarmers) {
+            f['_source'] = 'server';
+            f['sync_status'] = 'SYNCED';
+          }
+        }
+      } catch (_) {
+        // Offline — only show local farmers (including pending sync)
       }
+
+      // 3. Merge: server farmers first, then local-only pending farmers
+      //    (deduplicate by phone — if a farmer exists on both, keep the server version)
+      final seenPhones = <String>{};
+      final merged = <Map<String, dynamic>>[];
+      for (final f in serverFarmers) {
+        final phone = (f['phone'] ?? '').toString();
+        if (phone.isNotEmpty) seenPhones.add(phone);
+        merged.add(f);
+      }
+      for (final f in localMapped) {
+        final phone = (f['phone'] ?? '').toString();
+        final status = (f['sync_status'] ?? '').toString();
+        // Only add local farmers that are NOT already on the server
+        // (i.e. pending sync, or phone not in server list)
+        if (status == 'PENDING' && !seenPhones.contains(phone)) {
+          merged.add(f);
+        }
+      }
+
+      setState(() {
+        _farmers = merged;
+        _loading = false;
+      });
     } catch (_) {
       if (mounted) setState(() => _loading = false);
     }
@@ -143,6 +196,9 @@ class _MyFarmersScreenState extends State<MyFarmersScreen> {
                               final district = f['district'] ?? '';
                               final villageName = f['villageName'] ?? '';
                               final status = f['status'] ?? '';
+                              final syncStatus = (f['sync_status'] ?? 'SYNCED').toString();
+                              final isPending = syncStatus == 'PENDING';
+                              final isLocalOnly = (f['_source'] ?? 'server') == 'local';
                               return Card(
                                 margin: const EdgeInsets.symmetric(vertical: 4),
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -176,9 +232,7 @@ class _MyFarmersScreenState extends State<MyFarmersScreen> {
                                         Text('Location: $district${villageName != null && villageName.toString().isNotEmpty ? ' / $villageName' : ''}', style: TextStyleConstant.robotoW400(fontSize: 12, color: ColorConstant.text79)),
                                     ],
                                   ),
-                                  trailing: status == 'ACTIVE'
-                                      ? const Icon(Icons.check_circle, color: Colors.green, size: 18)
-                                      : Icon(Icons.pending, color: Colors.orange.shade400, size: 18),
+                                  trailing: _buildTrailing(status, syncStatus, isLocalOnly),
                                 ),
                               );
                             },
@@ -189,5 +243,54 @@ class _MyFarmersScreenState extends State<MyFarmersScreen> {
         ),
       ),
     );
+  }
+
+  /// Builds the trailing badge for each farmer row.
+  ///   - SYNCED (server): green check icon
+  ///   - SYNCED (local):  green check + "Synced" text
+  ///   - PENDING:         amber clock + "Pending sync" pill
+  ///   - FAILED:          red error + "Sync failed" pill
+  Widget _buildTrailing(String status, String syncStatus, bool isLocalOnly) {
+    if (syncStatus == 'PENDING') {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: ColorConstant.warning.withOpacity(0.15),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.sync_problem, size: 14, color: ColorConstant.warning),
+            const SizedBox(width: 4),
+            Text(
+              'Pending sync',
+              style: TextStyleConstant.robotoW400(fontSize: 10, color: ColorConstant.warning),
+            ),
+          ],
+        ),
+      );
+    }
+    if (syncStatus == 'FAILED') {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: ColorConstant.danger.withOpacity(0.15),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.error_outline, size: 14, color: ColorConstant.danger),
+            const SizedBox(width: 4),
+            Text(
+              'Sync failed',
+              style: TextStyleConstant.robotoW400(fontSize: 10, color: ColorConstant.danger),
+            ),
+          ],
+        ),
+      );
+    }
+    return const Icon(Icons.check_circle, color: Colors.green, size: 18);
   }
 }

@@ -162,7 +162,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         const SizedBox(height: 24),
                         Text(
-                          'EKiBBO Agrobase',
+                          'Agrobase',
                           textAlign: TextAlign.center,
                           style: TextStyleConstant.quicksandW700(fontSize: 24),
                         ),

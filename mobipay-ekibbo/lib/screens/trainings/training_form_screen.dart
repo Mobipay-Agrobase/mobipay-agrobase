@@ -108,7 +108,7 @@ class _TrainingFormScreenState extends State<TrainingFormScreen>
     'Regenerative Agriculture',
     'Financial Literacy',
   ];
-  static const _funders = ['EKiBBO', 'ETG', 'Enabel', 'Doen'];
+  static const _funders = ['Agrobase', 'ETG', 'Enabel', 'Doen'];
   static const _statuses = [
     'PLANNED',
     'SCHEDULED',

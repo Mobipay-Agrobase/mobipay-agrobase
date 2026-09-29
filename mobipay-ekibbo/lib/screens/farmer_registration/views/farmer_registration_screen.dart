@@ -278,7 +278,7 @@ class _FarmerRegistrationScreenState extends State<FarmerRegistrationScreen> {
         const SizedBox(height: 12),
         AppFormField(
           controller: _fieldOfficerCtrl,
-          hint: 'Field Officer',
+          hint: 'Extension Officer',
         ),
       ],
     );

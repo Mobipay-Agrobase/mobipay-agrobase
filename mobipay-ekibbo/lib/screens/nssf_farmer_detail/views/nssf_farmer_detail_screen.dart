@@ -333,6 +333,24 @@ class _NssfFarmerDetailScreenState extends State<NssfFarmerDetailScreen> {
       } catch (_) {}
     }
     final activationStatus = (_farmer?['nssfActivationStatus'] ?? 'PENDING') as String;
+    // Sync status — comes from the My Farmers list (which merges local + server)
+    // For local-only (pending) farmers, this is 'PENDING'. For server farmers, 'SYNCED'.
+    final syncStatus = (_farmer?['sync_status'] ?? 'SYNCED').toString();
+    final syncLabel = syncStatus == 'PENDING'
+        ? 'Pending sync (offline)'
+        : syncStatus == 'FAILED'
+            ? 'Sync failed'
+            : 'Synced to server';
+    final syncIcon = syncStatus == 'PENDING'
+        ? Icons.sync_problem_outlined
+        : syncStatus == 'FAILED'
+            ? Icons.error_outline
+            : Icons.cloud_done_outlined;
+    final syncColor = syncStatus == 'PENDING'
+        ? ColorConstant.warning
+        : syncStatus == 'FAILED'
+            ? ColorConstant.danger
+            : ColorConstant.success;
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
@@ -347,6 +365,30 @@ class _NssfFarmerDetailScreenState extends State<NssfFarmerDetailScreen> {
             _buildRow(Icons.schedule_outlined, 'Enrolled At', enrolledAtStr),
             const SizedBox(height: 10),
             _buildRow(Icons.verified_outlined, 'NSSF Status', activationStatus),
+            const SizedBox(height: 10),
+            _buildRow(syncIcon, 'Sync Status', syncLabel),
+            // Color-code the sync status row
+            // (the icon + label above use the same color via the _buildRow helper,
+            // but we want to emphasize the sync badge with a colored pill)
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: syncColor.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(syncIcon, size: 14, color: syncColor),
+                  const SizedBox(width: 6),
+                  Text(
+                    syncLabel,
+                    style: TextStyleConstant.robotoW400(fontSize: 11, color: syncColor),
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
       ),

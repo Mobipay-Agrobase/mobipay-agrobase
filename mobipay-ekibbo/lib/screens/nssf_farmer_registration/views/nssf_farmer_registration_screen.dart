@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:mobipay_ekibbo/components/app_button.dart';
 import 'package:mobipay_ekibbo/components/app_form_field.dart';
 import 'package:mobipay_ekibbo/components/location_picker.dart';
@@ -8,6 +7,7 @@ import 'package:mobipay_ekibbo/components/value_chain_multi_select.dart';
 import 'package:mobipay_ekibbo/constant/color_constant.dart';
 import 'package:mobipay_ekibbo/constant/text_style_constant.dart';
 import 'package:mobipay_ekibbo/data/api_client.dart';
+import 'package:mobipay_ekibbo/data/nssf_sync_engine.dart';
 
 /// NSSF Extension Officer — Farmer Enroll / Edit screen.
 ///
@@ -118,75 +118,122 @@ class _NssfFarmerRegistrationScreenState extends State<NssfFarmerRegistrationScr
 
     setState(() => _saving = true);
     try {
-      final payload = <String, dynamic>{
-        'firstName': _firstNameCtrl.text.trim(),
-        'lastName': _lastNameCtrl.text.trim(),
-        'phone': _phoneCtrl.text.trim(),
-        // NSSF-specific: NIN (National Identification Number)
-        'nssfNationalId': _ninCtrl.text.trim(),
-        'nationalIdType': 'National ID',
-        'nationalIdNo': _ninCtrl.text.trim(),
-        // NSSF multi-value-chain
-        'nssfValueChains': _valueChains,
-        'nssfValueChain': _valueChains.first,  // backward-compat single value chain
-        // Farmer status
-        'status': 'ACTIVE',
-        'memberType': 'General',
-      };
+      // ─── Offline-first: always save to local SQLite first ───
+      // The sync engine will then attempt to push to /api/farmers immediately
+      // (if online) OR mark as PENDING for later auto-sync.
+      final firstName = _firstNameCtrl.text.trim();
+      final lastName = _lastNameCtrl.text.trim();
+      final phone = _phoneCtrl.text.trim();
+      final nin = _ninCtrl.text.trim();
+      final valueChains = _valueChains;
+      final country = _location?.country;
+      final province = _location?.regionName;
+      final district = _location?.districtName;
+      final commune = _location?.countyName;
+      final villageId = _location?.villageId;
+      final villageName = _location?.villageName ?? _location?.parishName;
 
-      // Only send location fields if user re-selected (in edit mode, this is optional)
-      if (_location?.villageId != null) {
-        payload['country'] = _location?.country;
-        payload['province'] = _location?.regionName;
-        payload['district'] = _location?.districtName;
-        payload['commune'] = _location?.countyName;  // Sub-county / Constituency
-        payload['villageId'] = _location?.villageId;
-        payload['villageName'] = _location?.villageName ?? _location?.parishName;
-      }
-
-      http.Response res;
-      if (_isEdit) {
-        // UPDATE existing farmer — PUT /api/farmers/[id]
-        res = await ApiClient().put('/api/farmers/${widget.farmerId}', body: payload);
-      } else {
-        // CREATE new farmer — POST /api/farmers
-        payload['nssfActivationStatus'] = 'PENDING';
-        payload['nssfEnrolledAt'] = DateTime.now().toIso8601String();
-        res = await ApiClient().post('/api/farmers', body: payload);
-      }
-
-      if (res.statusCode == 201 || res.statusCode == 200) {
+      if (_isEdit && widget.farmerId != null) {
+        // EDIT mode — the farmerId could be either a local_id (offline) or a
+        // server_id (already synced). We attempt a PUT first; if that fails
+        // (offline), we update the local row instead.
+        try {
+          final payload = <String, dynamic>{
+            'firstName': firstName,
+            'lastName': lastName,
+            'phone': phone,
+            'nssfNationalId': nin,
+            'nationalIdType': 'National ID',
+            'nationalIdNo': nin,
+            'nssfValueChains': valueChains,
+            'nssfValueChain': valueChains.first,
+            'status': 'ACTIVE',
+            'memberType': 'General',
+          };
+          if (_location?.villageId != null) {
+            payload['country'] = country;
+            payload['province'] = province;
+            payload['district'] = district;
+            payload['commune'] = commune;
+            payload['villageId'] = villageId;
+            payload['villageName'] = villageName;
+          }
+          final res = await ApiClient().put('/api/farmers/${widget.farmerId}', body: payload);
+          if (res.statusCode == 200 || res.statusCode == 204) {
+            if (!mounted) return;
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Farmer updated successfully'),
+                backgroundColor: ColorConstant.success,
+              ),
+            );
+            Navigator.of(context).pop();
+            return;
+          }
+          // Server error — fall through to local save with error message
+        } catch (_) {
+          // Network error — fall through to local save (offline update)
+        }
+        // Offline / failed — update local row + mark for sync
+        await NssfSyncEngine().updateFarmerLocally(
+          localId: widget.farmerId!,
+          firstName: firstName, lastName: lastName, phone: phone, nin: nin,
+          valueChains: valueChains,
+          country: country, province: province, district: district,
+          commune: commune, villageId: villageId, villageName: villageName,
+        );
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(_isEdit ? 'Farmer updated successfully' : 'Farmer enrolled successfully'),
-            backgroundColor: ColorConstant.success,
+          const SnackBar(
+            content: Text('Farmer updated locally — will sync when online'),
+            backgroundColor: ColorConstant.warning,
           ),
         );
         Navigator.of(context).pop();
-      } else if (res.statusCode == 409) {
-        // Duplicate phone — server already has this farmer
-        try {
-          final d = jsonDecode(res.body);
-          final existing = d['existingFarmer'] ?? {};
-          _showError(
-            'Phone ${_phoneCtrl.text.trim()} already enrolled as: '
-            '${existing['name'] ?? 'another farmer'} '
-            '— please verify the number.',
-          );
-        } catch (_) {
-          _showError('This phone number is already enrolled');
-        }
       } else {
-        String err = 'Failed (HTTP ${res.statusCode})';
-        try {
-          final d = jsonDecode(res.body);
-          err = d['error'] ?? d['message'] ?? err;
-        } catch (_) {}
-        _showError(err);
+        // CREATE mode — always save locally first, then sync engine attempts POST
+        await NssfSyncEngine().saveFarmerLocally(
+          firstName: firstName, lastName: lastName, phone: phone, nin: nin,
+          valueChains: valueChains,
+          country: country, province: province, district: district,
+          commune: commune, villageId: villageId, villageName: villageName,
+          trySync: true,
+        );
+        // Check if it synced successfully
+        final pending = await NssfSyncEngine().countPending();
+        if (!mounted) return;
+        if (pending > 0) {
+          // Either offline OR duplicate phone OR server error
+          // Show a friendly "saved offline" message
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(pending == 1
+                  ? 'Farmer saved offline — will sync when internet is available'
+                  : 'Farmer saved offline'),
+              backgroundColor: ColorConstant.warning,
+              duration: const Duration(seconds: 4),
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Farmer enrolled + synced successfully'),
+              backgroundColor: ColorConstant.success,
+            ),
+          );
+        }
+        // Reset form for next enrollment
+        _firstNameCtrl.clear();
+        _lastNameCtrl.clear();
+        _ninCtrl.clear();
+        _phoneCtrl.clear();
+        setState(() {
+          _valueChains = [];
+          _location = null;
+        });
       }
     } catch (e) {
-      _showError('Network error: $e');
+      _showError('Error: $e');
     } finally {
       if (mounted) setState(() => _saving = false);
     }

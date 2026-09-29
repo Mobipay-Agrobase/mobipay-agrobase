@@ -27,7 +27,7 @@ extension ExtUserRole on UserRole {
       case UserRole.admin:
         return 'Admin';
       case UserRole.fieldOfficer:
-        return 'Field Officer';
+        return 'Extension Officer';
       case UserRole.farmer:
         return 'Farmer';
     }

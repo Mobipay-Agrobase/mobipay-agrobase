@@ -6,6 +6,7 @@ import 'package:mobipay_ekibbo/constant/color_constant.dart';
 import 'package:mobipay_ekibbo/constant/text_style_constant.dart';
 import 'package:mobipay_ekibbo/data/api_client.dart';
 import 'package:mobipay_ekibbo/data/dairy_modules.dart';
+import 'package:mobipay_ekibbo/data/nssf_sync_engine.dart';
 import 'package:mobipay_ekibbo/l10n/app_lang.dart';
 import 'package:mobipay_ekibbo/routes/routes_manager.dart';
 
@@ -49,6 +50,9 @@ class DashboardScreenState extends State<DashboardScreen> {
   bool _loading = true;
   bool _refreshing = false;
   String? _error;
+  // NSSF only: count of farmers saved locally but not yet synced to the server.
+  // Populated by NssfSyncEngine.countPending() on init + on every refresh.
+  int _pendingSyncCount = 0;
 
   @override
   void initState() {
@@ -66,6 +70,18 @@ class DashboardScreenState extends State<DashboardScreen> {
       _refreshing = _stats != null;
       _error = null;
     });
+
+    // NSSF officers: also load the pending-sync count in parallel with the
+    // dashboard stats. We do this even when offline (the local DB is always
+    // readable) so the dashboard "Pending Sync" KPI reflects reality.
+    if (ApiClient().isNssfOfficer) {
+      try {
+        _pendingSyncCount = await NssfSyncEngine().countPending();
+      } catch (_) {
+        _pendingSyncCount = 0;
+      }
+    }
+
     try {
       final res = await ApiClient().get('/api/dashboard/stats');
       if (res.statusCode == 200) {
@@ -102,6 +118,24 @@ class DashboardScreenState extends State<DashboardScreen> {
       }
     } catch (e) {
       if (!mounted) return;
+      // NSSF officers: when offline, the dashboard still shows local data.
+      // We construct a minimal stats payload from the local pending count so
+      // the "My Farmers" KPI shows "0" (offline = nothing synced yet) and
+      // the "Pending Sync" KPI shows the real local count.
+      if (ApiClient().isNssfOfficer) {
+        setState(() {
+          _stats = {
+            'farmerCount': 0,  // we don't know the server count when offline
+            'isExtensionOfficer': true,
+            'isNssfOfficer': true,
+            'offline': true,
+          };
+          _error = null;  // suppress the error banner — offline is normal
+          _loading = false;
+          _refreshing = false;
+        });
+        return;
+      }
       setState(() {
         _error = 'Network error: $e';
         _loading = false;
@@ -113,16 +147,58 @@ class DashboardScreenState extends State<DashboardScreen> {
   bool get _isZiwa360 =>
       ApiClient().tenantId == DairyModules.ziwa360TenantId;
 
-  String get _appBarTitle => _isZiwa360 ? 'ZIWA360' : AppLang.local.dashboard;
+  /// True when the logged-in user is an EXTENSION_OFFICER on the Klimotrust
+  /// tenant (the NGO that operates NSSF voluntary savings on behalf of NSSF
+  /// Uganda). When true, the dashboard shows ONLY NSSF-relevant KPIs:
+  ///   - "My Farmers" (the count of farmers enrolled by this officer)
+  ///   - "Pending Sync" (the count of farmers saved locally but not yet synced)
+  /// All other KPI cards (Trainings, Groups, Loans, VSLA, Marketplace, etc.)
+  /// are hidden — NSSF doesn't have those modules.
+  bool get _isNssfOfficer => ApiClient().isNssfOfficer;
+
+  String get _appBarTitle {
+    if (_isZiwa360) return 'ZIWA360';
+    if (_isNssfOfficer) return 'NSSF Dashboard';
+    return AppLang.local.dashboard;
+  }
 
   String get _userInitials {
-    return _isZiwa360 ? 'Z3' : 'FO';
+    return _isZiwa360 ? 'Z3' : 'EO';
   }
 
   // ─── KPI cards ───────────────────────────────────────────────────────────
 
   List<_KpiCard> _buildKpiCards() {
     final s = _stats ?? <String, dynamic>{};
+    if (_isNssfOfficer) {
+      // NSSF Extension Officer dashboard — minimal KPIs:
+      //   1. "My Farmers" — count of farmers THIS officer enrolled
+      //   2. "Pending Sync" — count of farmers saved locally but not yet synced
+      //   3. "Synced" — count of farmers successfully synced to server
+      // No Trainings / Groups / Loans / VSLA cards (irrelevant for NSSF).
+      return [
+        _KpiCard(
+          label: 'My Farmers',
+          value: _readInt(s, ['farmerCount', 'totalFarmers', 'farmers']),
+          icon: Icons.people_outline,
+          color: ColorConstant.secondary,
+        ),
+        _KpiCard(
+          label: 'Pending Sync',
+          value: _pendingSyncCount,
+          icon: Icons.sync_problem_outlined,
+          color: ColorConstant.warning,
+        ),
+        _KpiCard(
+          label: 'Synced',
+          value: _readInt(s, ['farmerCount', 'totalFarmers']) - _pendingSyncCount < 0
+              ? 0
+              : _readInt(s, ['farmerCount', 'totalFarmers']) - _pendingSyncCount,
+          icon: Icons.cloud_done_outlined,
+          color: ColorConstant.success,
+        ),
+      ];
+    }
     if (_isZiwa360) {
       return [
         _KpiCard(
@@ -313,8 +389,14 @@ class DashboardScreenState extends State<DashboardScreen> {
                 )
               else ...[
                 _buildKpiSliver(),
-                _buildTodayTasksSliver(),
-                _buildActivitySliver(),
+                // NSSF officers: hide "Today's Tasks" + "Recent Activity" sections
+                // (they're about Trainings / Loans / VSLA transactions — NSSF doesn't use those).
+                // Just show KPIs + the offline-sync banner if pending.
+                if (!_isNssfOfficer) ...[
+                  _buildTodayTasksSliver(),
+                  _buildActivitySliver(),
+                ] else
+                  _buildNssfOfflineBannerSliver(),
                 const SliverPadding(padding: EdgeInsets.only(bottom: 96)),
               ],
             ],
@@ -439,6 +521,39 @@ class DashboardScreenState extends State<DashboardScreen> {
   }
 
   // ─── KPI sliver ────────────────────────────────────────────────────────────
+
+  /// NSSF-only: shows an offline-sync banner when there are pending farmers
+  /// in the local SQLite DB. Tapping the banner triggers a manual sync.
+  /// When the pending count is 0, returns an empty sliver (no banner shown).
+  Widget _buildNssfOfflineBannerSliver() {
+    if (_pendingSyncCount == 0) return const SliverToBoxAdapter(child: SizedBox.shrink());
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+        child: Card(
+          color: ColorConstant.warning.withOpacity(0.1),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          child: ListTile(
+            leading: Icon(Icons.sync_problem_outlined, color: ColorConstant.warning),
+            title: Text(
+              '$_pendingSyncCount farmer(s) pending sync',
+              style: TextStyleConstant.quicksandW700(fontSize: 13),
+            ),
+            subtitle: Text(
+              'Tap to sync now (requires internet)',
+              style: TextStyleConstant.robotoW400(fontSize: 11, color: ColorConstant.text79),
+            ),
+            trailing: const Icon(Icons.chevron_right, color: ColorConstant.text79),
+            onTap: () async {
+              // Trigger sync, then refresh dashboard
+              await NssfSyncEngine().syncNow();
+              if (mounted) _loadStats();
+            },
+          ),
+        ),
+      ),
+    );
+  }
 
   Widget _buildKpiSliver() {
     final cards = _buildKpiCards();

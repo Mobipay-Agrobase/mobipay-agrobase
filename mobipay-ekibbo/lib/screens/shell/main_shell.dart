@@ -335,15 +335,15 @@ class _MainShellState extends State<MainShell>
   String _tenantDisplayName() {
     final tid = ApiClient().tenantId;
     if (tid == DairyModules.ziwa360TenantId) return 'ZIWA360 Officer';
-    return 'EKiBBO Field Officer';
+    return 'Extension Officer';
   }
 
   String _roleDisplayName() {
     final tid = ApiClient().tenantId;
     if (ApiClient().isNssfOfficer) return 'NSSF · Extension Officer';
     if (ApiClient().isExtensionOfficer) return 'Extension Officer';
-    if (tid == DairyModules.ziwa360TenantId) return 'Dairy · Field Officer';
-    return 'Coffee · Field Officer';
+    if (tid == DairyModules.ziwa360TenantId) return 'Extension Officer';
+    return 'Extension Officer';
   }
 
   String _userInitials() {
@@ -356,8 +356,8 @@ class _MainShellState extends State<MainShell>
         return parts[0][0].toUpperCase();
       }
     }
-    final tid = ApiClient().tenantId;
-    return tid == DairyModules.ziwa360TenantId ? 'Z3' : 'FO';
+    // No user name stored — fall back to a neutral extension-officer initial.
+    return 'EO';
   }
 
   /// Tenant-aware drawer menu items (top section, above divider).

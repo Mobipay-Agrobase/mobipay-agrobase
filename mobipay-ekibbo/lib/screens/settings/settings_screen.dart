@@ -276,7 +276,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 onTap: () {
                   showLicensePage(
                     context: context,
-                    applicationName: 'EKiBBO Agrobase',
+                    applicationName: 'Agrobase',
                     applicationVersion: '1.0.0+1',
                   );
                 },

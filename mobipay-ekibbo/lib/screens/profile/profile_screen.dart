@@ -245,7 +245,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 icon: Icons.person_outline,
                 label: AppLang.local.role,
                 trailing: const Text(
-                  'Field Officer',
+                  'Extension Officer',
                   style: TextStyle(
                     fontSize: 13,
                     color: ColorConstant.textSecondary,
@@ -357,7 +357,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           const SizedBox(height: 12),
           Text(
-            'Field Officer',
+            'Extension Officer',
             style: TextStyleConstant.quicksandW700(
               fontSize: 20,
               color: Colors.white,
@@ -365,7 +365,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           const SizedBox(height: 4),
           Text(
-            'EKiBBO Coffee Exporters',
+            'Agrobase',
             style: TextStyleConstant.robotoW400(
               fontSize: 13,
               color: Colors.white.withOpacity(0.85),

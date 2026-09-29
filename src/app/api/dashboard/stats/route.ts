@@ -12,11 +12,25 @@ export async function GET() {
   const ctx = await getTenantContext()
   const tf = buildTenantFilter(ctx, 'tenantId') as any
 
+  // ─── NSSF / Extension Officer scoping ───
+  // CRITICAL: An EXTENSION_OFFICER must ONLY see farmers they personally
+  // enrolled (via enrolledByOfficerId), NOT all farmers on the tenant.
+  // Without this, the dashboard shows OTHER officers' farmers — a major
+  // tenant-isolation bug. The same applies to trainings/groups/loans —
+  // these are scoped to the officer's enrolled farmers via the relation.
+  const officerFarmerFilter = ctx.role === 'EXTENSION_OFFICER' && ctx.userId
+    ? { enrolledByOfficerId: ctx.userId }
+    : {}
+
   // Build safe tenant condition for raw SQL (parameterized)
   const isAll = ctx.isSuperAdmin || ctx.tenantScope.length === 0
   const tenantIds = !isAll && ctx.tenantScope.length > 0 ? ctx.tenantScope : null
+  const officerIdForSql = ctx.role === 'EXTENSION_OFFICER' && ctx.userId ? ctx.userId : null
 
   // Use Prisma.sql for parameterized queries — prevents SQL injection
+  // For EXTENSION_OFFICERs, we ALSO scope by enrolledByOfficerId so the dashboard
+  // only shows THEIR OWN enrolled farmers (not other officers' farmers on the
+  // same tenant — this is the tenant-isolation requirement).
   const monthlyRegistrations = tenantIds
     ? await db.$queryRaw<{ month: string; count: number }[]>(
         Prisma.sql`
@@ -24,6 +38,7 @@ export async function GET() {
           FROM "FarmerProfile"
           WHERE "status" = 'ACTIVE'
             AND "tenantId" = ANY(${tenantIds})
+            ${officerIdForSql ? Prisma.sql`AND "enrolledByOfficerId" = ${officerIdForSql}` : Prisma.empty}
           GROUP BY month ORDER BY month LIMIT 12
         `
       )
@@ -32,6 +47,7 @@ export async function GET() {
           SELECT to_char("createdAt", 'YYYY-MM') as month, COUNT(*)::int as count
           FROM "FarmerProfile"
           WHERE "status" = 'ACTIVE'
+            ${officerIdForSql ? Prisma.sql`AND "enrolledByOfficerId" = ${officerIdForSql}` : Prisma.empty}
           GROUP BY month ORDER BY month LIMIT 12
         `
       )
@@ -69,15 +85,15 @@ export async function GET() {
     recentTransactions,
     loanCount, completedLoans, overdueLoans, pendingLoans
   ] = await Promise.all([
-    db.farmerProfile.count({ where: { status: 'ACTIVE', ...tf } }),
+    db.farmerProfile.count({ where: { status: 'ACTIVE', ...tf, ...officerFarmerFilter } }),
     db.vslaGroup.count({ where: { isActive: true, isClosed: false, ...tf } }),
     // VslaSaving has no tenantId — filter through vslaGroup relation
     db.vslaSaving.aggregate({ _sum: { amount: true }, where: { status: 'COMPLETED', ...vslaRelationFilter } }),
     db.vslaLoan.count({ where: { status: { in: ['APPROVED', 'DISBURSED'] }, ...tf } }),
     db.marketProduct.count({ where: { status: 'AVAILABLE', ...tf } }),
     db.training.count({ where: tf }),
-    db.farmerProfile.count({ where: { gender: 'Male', status: 'ACTIVE', ...tf } }),
-    db.farmerProfile.count({ where: { gender: 'Female', status: 'ACTIVE', ...tf } }),
+    db.farmerProfile.count({ where: { gender: 'Male', status: 'ACTIVE', ...tf, ...officerFarmerFilter } }),
+    db.farmerProfile.count({ where: { gender: 'Female', status: 'ACTIVE', ...tf, ...officerFarmerFilter } }),
     db.farmerGroup.count({ where: { isActive: true, ...tf } }),
     // VslaTransaction has no tenantId — filter through vslaGroup relation
     db.vslaTransaction.findMany({ where: vslaRelationFilter, take: 10, orderBy: { createdAt: 'desc' } }),
@@ -130,6 +146,10 @@ export async function GET() {
       completedLoans: n(completedLoans),
       overdueLoans: n(overdueLoans),
       pendingLoans: n(pendingLoans),
+      // Tells the mobile app whether to show the trimmed NSSF dashboard
+      // (only "My Farmers" count + Enroll Farmer CTA) or the full EKB one.
+      isExtensionOfficer: ctx.role === 'EXTENSION_OFFICER',
+      isNssfOfficer: ctx.role === 'EXTENSION_OFFICER' && officerIdForSql !== null,
     },
     recentTransactions: recentPayments,
     monthlyRegistrations: finalMonthlyRegs,

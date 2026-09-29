@@ -13,7 +13,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     where: { id, ...tf },
     include: {
       group: true,
-      village: { include: { parish: { include: { subCounty: { include: { county: { include: { district: { include: { subRegion: { include: { region: true } } } } } } } } } } },
+      village: { include: { parish: { include: { subCounty: { include: { county: { include: { district: { include: { subRegion: { include: { region: true } } } } } } } } } } } },
       // NSSF: include the enrolling officer so the detail screen can show "Enrolled By <name>"
       enrolledByOfficer: { select: { id: true, firstName: true, lastName: true, email: true, phone: true } },
       creditScores: { orderBy: { scoreDate: 'desc' }, take: 1 },

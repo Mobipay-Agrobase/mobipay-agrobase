@@ -214,8 +214,12 @@ export const NSSF_HIDDEN_MODULES = [
   'equipment-master', 'pesticide-master', 'weed-master', 'disease-master', 'pest-master',
   'soiltype-master', 'cooperatives', 'farmer-groups', 'farmer-mapping',
   'data-quality',
-  // Farmer CRUD sub-routes — NSSF uses the lightweight mobile form, not the full web form
-  'farmer-detail', 'farmer-create', 'farmer-edit',
+  // Farmer CRUD sub-routes — the NSSF admin DOES need to view farmer details
+  // (farmer-detail) to see the full profile of an enrolled farmer. But the
+  // full farmer-create / farmer-edit form (80+ EKiBBO-specific fields) is
+  // hidden — NSSF uses the lightweight mobile form, not the web form.
+  // farmland-detail/create/edit + cultivation-detail/create/edit are also hidden.
+  'farmer-create', 'farmer-edit',
   'farmland-detail', 'farmland-create', 'farmland-edit',
   'cultivation-detail', 'cultivation-create', 'cultivation-edit',
   'training-create', 'training-edit', 'training-detail',

@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { useAppStore, type ModuleKey, EKB_HIDDEN_MODULES, ZIWA_HIDDEN_MODULES } from '@/lib/store'
+import { useAppStore, type ModuleKey, EKB_HIDDEN_MODULES, ZIWA_HIDDEN_MODULES, NSSF_HIDDEN_MODULES } from '@/lib/store'
 import { cn } from '@/lib/utils'
 import { hasPermission, getRoleModules } from '@/lib/permissions'
 import {
@@ -226,6 +226,7 @@ export function Sidebar() {
   const [entitlementsLoaded, setEntitlementsLoaded] = useState(false)
   const [tenantIsEkibbo, setTenantIsEkibbo] = useState(false)
   const [tenantIsZiwa, setTenantIsZiwa] = useState(false)
+  const [tenantIsNssf, setTenantIsNssf] = useState(false)
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(() => {
     if (typeof window === 'undefined') return new Set()
     try {
@@ -280,6 +281,9 @@ export function Sidebar() {
         }
         if (typeof data.tenantName === 'string' && /ziwa/i.test(data.tenantName)) {
           setTenantIsZiwa(true)
+        }
+        if (typeof data.tenantName === 'string' && /klimo|nssf/i.test(data.tenantName)) {
+          setTenantIsNssf(true)
         }
         setEntitlementsLoaded(true)
       })
@@ -369,6 +373,95 @@ export function Sidebar() {
                 const isEkbRole = role.startsWith('EKB_')
                 const ekibboTenant = isEkbRole || tenantIsEkibbo
                 const ziwaTenant = tenantIsZiwa
+                const nssfTenant = tenantIsNssf
+
+                // ─── NSSF (Klimotrust tenant) sidebar ───
+                // NSSF admin sees ONLY:
+                //   - Overview       → Dashboard
+                //   - Core Operations → Farmers (list with "Enrolled By" column)
+                //   - Master Data    → Catalog Manager (Dropdown Catalog — manage value chains dynamically)
+                //                      Location Master (7-level location hierarchy)
+                //   - Intelligence    → Reports & Analytics
+                //   - Admin          → User Management (create extension officers),
+                //                      Profile, Settings, Roles & Permissions
+                //
+                // Everything else is hidden — NSSF doesn't have VSLA, carbon,
+                // traceability, supply chain, programs, ReSET, dairy, etc.
+                // (see NSSF_HIDDEN_MODULES in src/lib/store.ts for the full list).
+                if (nssfTenant) {
+                  const NSSF_ALLOWED_GROUPS = ['Overview', 'Core Operations', 'Master Data', 'Intelligence', 'Admin']
+                  if (!NSSF_ALLOWED_GROUPS.includes(groupLabel)) return null
+
+                  // Within Core Operations, only show Farmers (not VSLA, payments, loans, training, etc.)
+                  const NSSF_CORE_OPS_KEYS = ['farmers']
+                  // Within Master Data, only show catalog-manager + location-master
+                  const NSSF_MASTER_DATA_KEYS = ['catalog-manager', 'location-master']
+                  // Within Intelligence, only show reports
+                  const NSSF_INTELLIGENCE_KEYS = ['reports']
+                  // Within Admin, show users + profile + settings + roles-permissions
+                  const NSSF_ADMIN_KEYS = ['users', 'profile', 'settings', 'roles-permissions']
+
+                  let visibleNssfItems = items
+                  if (groupLabel === 'Core Operations') {
+                    visibleNssfItems = items.filter(i => NSSF_CORE_OPS_KEYS.includes(i.key))
+                  } else if (groupLabel === 'Master Data') {
+                    visibleNssfItems = items.filter(i => NSSF_MASTER_DATA_KEYS.includes(i.key))
+                  } else if (groupLabel === 'Intelligence') {
+                    visibleNssfItems = items.filter(i => NSSF_INTELLIGENCE_KEYS.includes(i.key))
+                  } else if (groupLabel === 'Admin') {
+                    visibleNssfItems = items.filter(i => NSSF_ADMIN_KEYS.includes(i.key))
+                  }
+                  // For the Overview group, show only Dashboard.
+
+                  if (visibleNssfItems.length === 0) return null
+
+                  const isCollapsed = collapsedGroups.has(groupLabel)
+                  return (
+                    <div key={groupLabel} className="mb-1">
+                      <button
+                        type="button"
+                        onClick={() => toggleGroup(groupLabel)}
+                        className="group-header w-full flex items-center justify-between px-3 py-1.5 rounded-md text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/40 hover:text-sidebar-foreground/70 transition-colors"
+                      >
+                        <span>{groupLabel}</span>
+                        <span className="flex items-center gap-1.5">
+                          <span className="text-[10px] bg-sidebar-accent rounded px-1.5 py-px">{visibleNssfItems.length}</span>
+                          <ChevronRight className={cn('w-3.5 h-3.5 transition-transform duration-150', isCollapsed ? '' : 'rotate-90')} />
+                        </span>
+                      </button>
+                      {isCollapsed ? null : (
+                        visibleNssfItems.map((item) => {
+                          const Icon = item.icon
+                          const isActive = activeModule === item.key
+                          return (
+                            <Tooltip key={item.key} delayDuration={0}>
+                              <TooltipTrigger asChild>
+                                <button
+                                  onClick={() => handleNav(item.key)}
+                                  className={cn(
+                                    'w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150',
+                                    isActive
+                                      ? 'bg-sidebar-primary text-sidebar-primary-foreground shadow-sm'
+                                      : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground'
+                                  )}
+                                >
+                                  <Icon className="w-4 h-4 shrink-0" />
+                                  <span className="truncate">{item.label}</span>
+                                  {isActive && (
+                                    <div className="ml-auto w-1.5 h-1.5 rounded-full bg-sidebar-primary-foreground" />
+                                  )}
+                                </button>
+                              </TooltipTrigger>
+                              <TooltipContent side="right" className="lg:hidden">
+                                {item.label}
+                              </TooltipContent>
+                            </Tooltip>
+                          )
+                        })
+                      )}
+                    </div>
+                  )
+                }
 
                 // ZIWA360 sidebar redesign:
                 // Show ONLY the following groups as top-level sidebar items:
@@ -535,6 +628,8 @@ export function Sidebar() {
                   // (applies to shared roles like TENANT_ADMIN on the Ekibbo tenant too)
                   if (ekibboTenant && (EKB_HIDDEN_MODULES as readonly string[]).includes(item.key)) return false
                   if (ziwaTenant && (ZIWA_HIDDEN_MODULES as readonly string[]).includes(item.key)) return false
+                  // NSSF (Klimotrust) tenant: hide menus not applicable to NSSF
+                  if (nssfTenant && (NSSF_HIDDEN_MODULES as readonly string[]).includes(item.key)) return false
 
                   // Check role permission
                   if (item.permModule && !hasPermission(role, `${item.permModule}:read`)) return false

@@ -1,33 +1,62 @@
+import { db } from '@/lib/db'
 import { NextResponse } from 'next/server'
 
 /**
  * GET /api/nssf/value-chains
  *
- * Returns the canonical list of 12 NSSF value chains for the mobile app's
- * multi-select dropdown. The same list is also stored in the ModuleEntitlement
- * config when seeding NSSF officers, but exposing it as an endpoint lets the
- * mobile app fetch the latest list without code changes.
+ * Returns the canonical list of NSSF value chains for the mobile app's
+ * multi-select dropdown. The list is DYNAMIC — read from the CatalogMaster
+ * DB table (category='nssf_value_chains') so the NSSF admin can add new
+ * value chains (e.g. "Honey", "Vanilla") via the web Dashboard →
+ * Master Data → Dropdown Catalog screen WITHOUT requiring a code change
+ * or mobile app redeploy.
  *
- * Order matters — this is the official NSSF display order.
+ * The mobile app's ValueChainMultiSelect component fetches this endpoint
+ * on every enrollment, so newly-added value chains appear automatically.
+ *
+ * Response shape:
+ *   {
+ *     "valueChains": [
+ *       { "id": "cmxxx", "value": "Maize", "label": "Maize", "sortOrder": 1 },
+ *       ...
+ *     ],
+ *     "count": 12
+ *   }
  */
-const NSSF_VALUE_CHAINS = [
-  { id: 'maize',         label: 'Maize' },
-  { id: 'rice',          label: 'Rice' },
-  { id: 'banana',        label: 'Banana (matooke)' },
-  { id: 'cassava',       label: 'Cassava' },
-  { id: 'irish-potato',  label: 'Irish potato' },
-  { id: 'beans',         label: 'Beans' },
-  { id: 'fruits-veg',    label: 'Fruits and vegetables' },
-  { id: 'coffee',        label: 'Coffee' },
-  { id: 'tea',           label: 'Tea' },
-  { id: 'dairy',         label: 'Dairy cattle' },
-  { id: 'beef',          label: 'Beef cattle / meat' },
-  { id: 'fish',          label: 'Fish / Aquaculture' },
-]
-
 export async function GET() {
-  return NextResponse.json({
-    valueChains: NSSF_VALUE_CHAINS,
-    count: NSSF_VALUE_CHAINS.length,
-  })
+  try {
+    const items = await db.catalogMaster.findMany({
+      where: {
+        category: 'nssf_value_chains',
+        isActive: true,
+      },
+      orderBy: [{ sortOrder: 'asc' }, { value: 'asc' }],
+      select: {
+        id: true,
+        value: true,
+        label: true,
+        sortOrder: true,
+      },
+    })
+
+    // Map to the shape the mobile app expects (label falls back to value
+    // if the catalog entry has no explicit label).
+    const valueChains = items.map(item => ({
+      id: item.id,
+      value: item.value,
+      label: item.label || item.value,
+      sortOrder: item.sortOrder,
+    }))
+
+    return NextResponse.json({
+      valueChains,
+      count: valueChains.length,
+    })
+  } catch (error) {
+    console.error('NSSF value-chains fetch error:', error)
+    return NextResponse.json(
+      { error: 'Failed to fetch value chains', valueChains: [], count: 0 },
+      { status: 500 },
+    )
+  }
 }

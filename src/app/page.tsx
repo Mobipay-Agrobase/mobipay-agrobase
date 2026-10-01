@@ -32,7 +32,8 @@ const MASTER_DATA_KEYS = [
 ] as const
 import { useIsEkibboTenant } from '@/hooks/use-is-ekibbo'
 import { useIsZiwaTenant } from '@/hooks/use-is-ziwa'
-import { ZIWA_HIDDEN_MODULES } from '@/lib/store'
+import { useIsNssfTenant } from '@/hooks/use-is-nssf'
+import { ZIWA_HIDDEN_MODULES, NSSF_HIDDEN_MODULES } from '@/lib/store'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { TopBar } from '@/components/layout/TopBar'
 import { LoginPage } from '@/components/auth/LoginPage'
@@ -374,6 +375,7 @@ export default function HomePage() {
   const activeModule = useAppStore((s) => s.activeModule)
   const isEkibbo = useIsEkibboTenant((session?.user as { role?: string } | undefined)?.role)
   const isZiwa = useIsZiwaTenant()
+  const isNssf = useIsNssfTenant()
 
   useEffect(() => {
     if (session?.user) {
@@ -478,6 +480,14 @@ export default function HomePage() {
       if (isZiwa && (ZIWA_HIDDEN_MODULES as readonly string[]).includes(activeModule as string)) {
         setActiveModule('dashboard')
       }
+
+      // NSSF (Klimotrust) tenant: bounce off any module in NSSF_HIDDEN_MODULES.
+      // The sidebar already hides these, but this is a defense-in-depth guard
+      // so a NSSF admin can't access e.g. dairy/carbon/VSLA menus by URL
+      // manipulation or stale state.
+      if (isNssf && (NSSF_HIDDEN_MODULES as readonly string[]).includes(activeModule as string)) {
+        setActiveModule('dashboard')
+      }
       const ekbAllowed = new Set([
         'dashboard', 'farmers', 'farm-lands', 'cultivations', 'purchases', 'sales',
         'input-aggregation', 'input-distribution', 'approvals', 'processing', 'deliveries',
@@ -507,7 +517,7 @@ export default function HomePage() {
     } else {
       setUser(null)
     }
-  }, [session, setUser, setActiveModule, activeModule, isEkibbo, isZiwa])
+  }, [session, setUser, setActiveModule, activeModule, isEkibbo, isZiwa, isNssf])
 
   if (status === 'loading') {
     return (

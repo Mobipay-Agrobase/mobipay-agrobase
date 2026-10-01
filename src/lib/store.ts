@@ -165,3 +165,60 @@ export const ZIWA_HIDDEN_MODULES = [
   // Plots — land management, not dairy
   'plots',
 ] as const
+
+// ─── NSSF (Klimotrust tenant) — hidden modules ───
+// The NSSF admin (TENANT_ADMIN on the Klimotrust tenant) should see ONLY:
+//   - Dashboard       (overview of enrolled farmers)
+//   - Farmers         (list of farmers enrolled by all NSSF extension officers, with "Enrolled By" column)
+//   - Reports         (analytics on enrolled farmers — by officer, by value chain, by district)
+//   - User Management  (create new NSSF extension officers — phone/email + password)
+//   - Catalog Manager  (Dropdown Catalog — manage value chains dynamically)
+//   - Profile, Settings, Roles & Permissions
+//
+// Everything else is hidden — NSSF doesn't have VSLA, NSSF contributions,
+// carbon, traceability, supply chain, programs, ReSET, dairy, EKiBBO
+// farmer-detail workflow, etc.
+export const NSSF_HIDDEN_MODULES = [
+  // Core Operations — not relevant for NSSF (NSSF uses the lightweight Enroll Farmer form on mobile)
+  'vsla', 'sacco', 'marketplace', 'payments', 'loans', 'training', 'farm-visits',
+  // Farm Management — NSSF farmers don't have cultivations / farm5x / carbon / crop insurance
+  'farm-lands', 'cultivations', 'carbon', 'crop-insurance', 'crop-stages', 'farm5x',
+  'cost-of-cultivation', 'crop-variety',
+  // Supply Chain — no purchases/sales/input distribution for NSSF
+  'input-aggregation', 'input-distribution', 'purchases', 'approvals', 'processing',
+  'sales', 'deliveries', 'consignments', 'trace', 'plots',
+  // Intelligence — AgriTrack + Impact Assessment not relevant for NSSF
+  'agritrack', 'impact-assessment',
+  // Engagement — not relevant for NSSF
+  'communication', 'surveys', 'feedback', 'channel-sim',
+  // Programs — not relevant for NSSF
+  'ccrp', 'cohort1', 'cohort2', 'smile', 'nakivaale',
+  // Finance — NSSF doesn't use MFI/transport
+  'mfi', 'transport', 'compliance', 'companies', 'billing', 'platform-recovery',
+  // NSSF Contributions/Settlement — NSSF admin uses the dedicated NSSF module,
+  // not the Klimotrust VSLA-style contribution routes
+  'nssf-contributions', 'nssf-settlement',
+  // ReSET — not relevant for NSSF
+  'reset-dashboard', 'reset-beneficiaries', 'reset-vouchers', 'reset-merchants',
+  'reset-cash', 'reset-reports',
+  // Dairy — Klimotrust is NOT ZIWA360, no dairy management
+  'dairy', 'dairy-cows', 'dairy-sheds', 'dairy-staff', 'dairy-suppliers',
+  'dairy-feed-items', 'dairy-feed-schedules', 'dairy-tasks', 'dairy-vaccinations',
+  'dairy-milking', 'dairy-health-checks', 'dairy-breeding', 'dairy-weights',
+  'dairy-quality-tests', 'dairy-waste', 'dairy-emissions', 'dairy-certifications',
+  'dairy-inspections', 'dairy-feed-logs', 'dairy-processing',
+  // Support — NSSF admin doesn't need this (use the MobiPay ticket system directly)
+  'support-tickets', 'quotes',
+  // Master data — keep only catalog-manager + location-master (most are crop-focused)
+  'season-master', 'crop-master', 'seed-master', 'fertilizer-master',
+  'equipment-master', 'pesticide-master', 'weed-master', 'disease-master', 'pest-master',
+  'soiltype-master', 'cooperatives', 'farmer-groups', 'farmer-mapping',
+  'data-quality',
+  // Farmer CRUD sub-routes — NSSF uses the lightweight mobile form, not the full web form
+  'farmer-detail', 'farmer-create', 'farmer-edit',
+  'farmland-detail', 'farmland-create', 'farmland-edit',
+  'cultivation-detail', 'cultivation-create', 'cultivation-edit',
+  'training-create', 'training-edit', 'training-detail',
+  // IVR — not relevant
+  'ivr',
+] as const

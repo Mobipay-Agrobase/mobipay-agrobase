@@ -262,10 +262,9 @@ export default function FarmersView() {
                   </TableHead>
                   <TableHead>Farmer</TableHead>
                   <TableHead className="hidden md:table-cell">Phone</TableHead>
-                  <TableHead className="hidden md:table-cell">Field Officer</TableHead>
+                  <TableHead className="hidden md:table-cell">Ext Officer</TableHead>
                   <TableHead className="hidden lg:table-cell">NIN</TableHead>
                   <TableHead className="hidden lg:table-cell">Value Chain(s)</TableHead>
-                  <TableHead className="hidden xl:table-cell">Enrolled By</TableHead>
                   <TableHead className="hidden xl:table-cell">Village</TableHead>
                   <TableHead className="hidden xl:table-cell">Cooperative</TableHead>
                   <TableHead className="hidden sm:table-cell">Gender</TableHead>
@@ -295,8 +294,8 @@ export default function FarmersView() {
                       </div>
                     </TableCell>
                     <TableCell className="hidden md:table-cell text-sm">{f.phone}</TableCell>
-                    <TableCell className="hidden md:table-cell text-sm">
-                      {f.extensionOfficer || '—'}
+                    <TableCell className="hidden md:table-cell text-sm text-muted-foreground truncate max-w-[140px]">
+                      {f.enrolledByOfficerName || f.extensionOfficer || '—'}
                     </TableCell>
                     <TableCell className="hidden lg:table-cell text-sm text-muted-foreground font-mono text-[11px]">
                       {f.nssfNationalId || f.nationalIdNo || '—'}
@@ -312,9 +311,6 @@ export default function FarmersView() {
                           )}
                         </div>
                       ) : (f.nssfValueChain || '—')}
-                    </TableCell>
-                    <TableCell className="hidden xl:table-cell text-sm text-muted-foreground truncate max-w-[140px]">
-                      {f.enrolledByOfficerName || '—'}
                     </TableCell>
                     <TableCell className="hidden xl:table-cell text-sm text-muted-foreground truncate max-w-[150px]">
                       {f.villageName || '—'}

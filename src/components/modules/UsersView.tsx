@@ -6,9 +6,10 @@ import { cn } from '@/lib/utils'
 import {
   Search, Plus, UserCheck, Phone, Mail, X, Loader2, Filter,
   Eye, Shield, Key, ToggleLeft, ToggleRight, Users, ChevronLeft, ChevronRight, Clock,
-  Trash2
+  Trash2, Pencil
 } from 'lucide-react'
 import { safeFetch, extractArray } from '@/lib/safe-fetch'
+import { useToast } from '@/hooks/use-toast'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -100,6 +101,7 @@ export default function UsersView() {
   const [statusFilter, setStatusFilter] = useState('')
   const [levelFilter, setLevelFilter] = useState('')
   const [showAdd, setShowAdd] = useState(false)
+  const [editingUser, setEditingUser] = useState<User | null>(null)
 
   const fetchUsers = useCallback(async () => {
     setLoading(true)
@@ -404,6 +406,9 @@ export default function UsersView() {
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1">
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditingUser(u)} title="Edit user">
+                              <Pencil className="w-3.5 h-3.5" />
+                            </Button>
                             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleToggleStatus(u)} title={u.status === 'ACTIVE' ? 'Deactivate' : 'Activate'}>
                               {u.status === 'ACTIVE' ? <ToggleRight className="w-4 h-4 text-emerald-600" /> : <ToggleLeft className="w-4 h-4 text-gray-400" />}
                             </Button>
@@ -474,6 +479,14 @@ export default function UsersView() {
           <AddUserForm onClose={() => { setShowAdd(false); fetchUsers() }} />
         </DialogContent>
       </Dialog>
+
+      {/* Edit User Dialog */}
+      {editingUser && (
+        <EditUserDialog
+          user={editingUser}
+          onClose={() => { setEditingUser(null); fetchUsers() }}
+        />
+      )}
     </div>
   )
 }
@@ -559,5 +572,114 @@ function AddUserForm({ onClose }: { onClose: () => void }) {
         </Button>
       </DialogFooter>
     </form>
+  )
+}
+
+// ─── Edit User Dialog ────────────────────────────────────────────────────────
+// Allows the NSSF admin (TENANT_ADMIN) to edit an existing user's profile:
+//   - First Name + Last Name (split from the existing `name` field)
+//   - Phone
+//   - Email
+//   - Role (dropdown — Extension Officer / Tenant Admin / etc.)
+//
+// Submits via PUT /api/users/[id] which already accepts these fields.
+// After a successful update, calls `onClose()` which triggers `fetchUsers()`
+// so the table refreshes with the updated data.
+function EditUserDialog({ user, onClose }: { user: User; onClose: () => void }) {
+  const [saving, setSaving] = useState(false)
+  // Split the existing `name` into first/last for editing. The DB stores
+  // them as separate fields (firstName, lastName), but the User type the
+  // table uses has a combined `name`. We split on the first space.
+  const nameParts = (user.name || '').split(' ')
+  const [firstName, setFirstName] = useState(nameParts[0] || '')
+  const [lastName, setLastName] = useState(nameParts.slice(1).join(' ') || '')
+  const [phone, setPhone] = useState(user.phone || '')
+  const [email, setEmail] = useState(user.email || '')
+  const [role, setRole] = useState(user.role || 'EXTENSION_OFFICER')
+  const { toast } = useToast()
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!firstName.trim() || !email.trim()) {
+      toast.error('First name and email are required')
+      return
+    }
+    setSaving(true)
+    try {
+      const res = await fetch(`/api/users/${user.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          firstName: firstName.trim(),
+          lastName: lastName.trim(),
+          phone: phone.trim(),
+          email: email.trim(),
+          role,
+        }),
+      })
+      if (res.ok) {
+        toast.success('User updated successfully')
+        onClose()
+      } else {
+        const d = await res.json().catch(() => ({}))
+        toast.error(d.error || 'Failed to update user')
+      }
+    } catch {
+      toast.error('Network error — failed to update user')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <Dialog open onOpenChange={(open) => { if (!open) onClose() }}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Pencil className="w-5 h-5 text-primary" />
+            Edit User
+          </DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSave} className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label>First Name *</Label>
+              <Input value={firstName} onChange={e => setFirstName(e.target.value)} placeholder="John" required />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Last Name</Label>
+              <Input value={lastName} onChange={e => setLastName(e.target.value)} placeholder="Mugisha" />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label>Phone</Label>
+              <Input value={phone} onChange={e => setPhone(e.target.value)} placeholder="+256..." />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Email *</Label>
+              <Input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="user@example.com" required />
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Role</Label>
+            <Select value={role} onValueChange={setRole}>
+              <SelectTrigger><SelectValue placeholder="Select role" /></SelectTrigger>
+              <SelectContent>
+                {ROLES.map(r => (
+                  <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter className="gap-2">
+            <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
+            <Button type="submit" disabled={saving} className="gap-2">
+              {saving && <Loader2 className="w-4 h-4 animate-spin" />} Save Changes
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   )
 }

@@ -38,7 +38,7 @@ const nextConfig: NextConfig = {
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: blob: https:",
               "font-src 'self' data: https:",
-              "connect-src 'self' https://mobipay-agrobase.vercel.app https://api.flutterwave.com https://api.africastalking.com wss:",
+              "connect-src 'self' https://mobipay-agrobase.vercel.app https://newagrobase.mobipayagrosys.com https://api.flutterwave.com https://api.africastalking.com wss:",
               "frame-src 'self' https://www.openstreetmap.org",
               "frame-ancestors 'none'",
             ].join("; "),

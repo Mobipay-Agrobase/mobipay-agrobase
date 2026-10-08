@@ -22,6 +22,7 @@ set -euo pipefail
 
 # ─── Config ───────────────────────────────────────────────────────────────────
 VPS_HOST="67.223.117.117"
+VPS_PORT="21098"   # Custom SSH port (not the default 22)
 VPS_USER="farm"
 VPS_APP_DIR="/home/farm/newagrobase"
 LOCAL_BUILD_DIR=".next/standalone"
@@ -91,14 +92,14 @@ TAR_SIZE=$(du -h "$TAR_FILE" | cut -f1)
 ok "Package created: $TAR_FILE ($TAR_SIZE)"
 
 # ─── Step 7: Upload to VPS via SCP ───────────────────────────────────────────
-log "Step 7: Uploading to VPS ($VPS_HOST)..."
+log "Step 7: Uploading to VPS ($VPS_HOST:$VPS_PORT)..."
 log "You may be prompted for the VPS password: CvTd7{%ticr6MW*K"
-scp "$TAR_FILE" "$VPS_USER@$VPS_HOST:/tmp/"
+scp -P "$VPS_PORT" "$TAR_FILE" "$VPS_USER@$VPS_HOST:/tmp/"
 ok "Upload complete"
 
 # ─── Step 8: Extract + restart PM2 on the VPS ────────────────────────────────
 log "Step 8: Extracting + restarting PM2 on the VPS..."
-ssh "$VPS_USER@$VPS_HOST" << EOF
+ssh -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" << EOF
 set -e
 echo "[VPS] Creating app directory..."
 mkdir -p $VPS_APP_DIR
